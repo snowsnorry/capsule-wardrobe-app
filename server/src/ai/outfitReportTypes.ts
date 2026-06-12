@@ -31,12 +31,14 @@ type CategoryCounts = {
   other: number;
 };
 
+type OutfitReportVerdict = {
+  status: "valid" | "acceptable_with_notes" | "incomplete" | "incoherent";
+  score: number;
+  summary: string;
+};
+
 type OutfitReportLlmOutput = {
-  verdict: {
-    status: "valid" | "acceptable_with_notes" | "incomplete" | "incoherent";
-    score: number;
-    summary: string;
-  };
+  verdict: OutfitReportVerdict;
   composition: {
     itemCount: number;
     categoryCounts: CategoryCounts;
@@ -105,7 +107,13 @@ type OutfitReportLlmOutput = {
   };
 };
 
-type OutfitReport = OutfitReportLlmOutput & {
+type OutfitReport = Omit<OutfitReportLlmOutput, "verdict"> & {
+  verdict: {
+    llmScore: number;
+    score: number;
+    status: OutfitReportVerdict["status"];
+    summary: string;
+  };
   schemaVersion: 1;
   itemsHash: string;
 };

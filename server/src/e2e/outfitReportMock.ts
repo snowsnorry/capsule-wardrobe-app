@@ -4,7 +4,8 @@ function buildE2eOutfitReport(outfitId: string) {
     itemsHash: `e2e-items-hash-${outfitId}`,
     verdict: {
       status: "valid",
-      score: 0.9,
+      llmScore: 0.9,
+      score: 0.83,
       summary: "This outfit is ready to wear.",
     },
     composition: {

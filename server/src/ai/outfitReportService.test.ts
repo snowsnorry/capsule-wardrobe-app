@@ -173,15 +173,23 @@ function createDeps({
 }
 
 describe("generateOutfitReport", () => {
-  test("generates, validates, and persists a report with server metadata", async () => {
-    const deps = createDeps();
+  test("generates, validates, computes score, and persists a report with server metadata", async () => {
+    const deps = createDeps({
+      llmJson: buildLlmReport({
+        verdict: {
+          status: "incomplete",
+          score: 0.99,
+          summary: "The outfit needs footwear before it is complete.",
+        },
+      }),
+    });
 
     await expect(
       generateOutfitReport("person@example.com", "outfit-1", deps),
     ).resolves.toMatchObject({
       schemaVersion: 1,
       itemsHash: "items-hash",
-      verdict: { status: "incomplete" },
+      verdict: { llmScore: 0.99, score: 0.58, status: "incomplete" },
     });
     expect(deps.buildPromptDebugImagesForCategoryImpl).toHaveBeenCalledWith({
       category: "Current Outfit",
@@ -239,6 +247,10 @@ describe("generateOutfitReport", () => {
       expect.objectContaining({
         schemaVersion: 1,
         itemsHash: "items-hash",
+        verdict: expect.objectContaining({
+          llmScore: 0.99,
+          score: 0.58,
+        }),
       }),
     );
   });

@@ -22,6 +22,7 @@ import {
   toOutfitReportItem,
   toOutfitReportPromptImageItem,
 } from "./outfitReportItems.js";
+import { applyComputedVerdictScore } from "./outfitReportScoring.js";
 import type {
   ImageAssetLike,
   PromptDebugImageCategory,
@@ -302,7 +303,7 @@ async function generateAndPersistReport({
     itemIds: reportItems.map((item) => item.id),
   });
   const report: OutfitReport = {
-    ...parsedReport,
+    ...applyComputedVerdictScore(parsedReport),
     schemaVersion: OUTFIT_REPORT_SCHEMA_VERSION,
     itemsHash,
   };
