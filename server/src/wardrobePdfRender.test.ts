@@ -1,9 +1,19 @@
 import { test, expect } from "vitest";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
 import { buildLocalImageCachePath } from "./ai/promptImages.js";
 import { buildWardrobePdf } from "./wardrobePdfRender.js";
+import {
+  formatReportValue,
+  getReportChipValues,
+  getReportScoreRows,
+  getReportTemperatureLabel,
+  getReportVerdictLabel,
+  outfitNeedsUnicodeFallback,
+  toPercent,
+} from "./wardrobePdfOutfit.js";
 
 async function withCachedImage(testContext, imageUrl, buffer) {
   const cachePath = buildLocalImageCachePath(imageUrl);
@@ -12,6 +22,62 @@ async function withCachedImage(testContext, imageUrl, buffer) {
   testContext.onTestFinished(async () => {
     await rm(cachePath, { force: true });
   });
+}
+
+async function getPdfPageCount(buffer) {
+  return (await PDFDocument.load(buffer)).getPageCount();
+}
+
+function buildReport(overrides = {}) {
+  return {
+    verdict: {
+      status: "valid",
+      score: 0.9,
+      summary: "This outfit is ready to wear.",
+    },
+    seasonality: {
+      primarySeasons: ["spring"],
+      temperatureBandC: { min: 10, max: 18 },
+      seasonScore: 0.8,
+    },
+    styleProfile: {
+      formalityLevel: "casual",
+      primaryStyle: "minimalistic",
+      styleScore: 0.85,
+    },
+    compatibility: {
+      overallScore: 0.9,
+      styleCoherence: 0.86,
+      formalityCoherence: 0.88,
+      seasonalCoherence: 0.8,
+      colorCoherence: 0.92,
+      mainStrengths: ["Balanced proportions."],
+      mainRisks: ["Needs a warmer layer below 10C."],
+    },
+    colorAnalysis: {
+      paletteType: "neutral",
+      colorScore: 0.92,
+    },
+    issues: [
+      {
+        message: "Low warmth for evening wear.",
+        suggestion: "Add a midlayer.",
+        affectedItemIds: ["item-1"],
+      },
+    ],
+    suggestions: [
+      {
+        priority: "high",
+        message: "Keep the shoes and bag together.",
+        targetItemIds: ["item-2"],
+      },
+    ],
+    confidence: {
+      overall: 0.8,
+      assumptions: ["Based on available item metadata."],
+    },
+    ...overrides,
+  };
 }
 
 test("buildWardrobePdf consumes prepared image assets as pages are rendered", async (_t) => {
@@ -129,4 +195,161 @@ test("buildWardrobePdf renders fallback title and image placeholder without remo
 
   expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
   expect(pdfBuffer.length > 0).toBeTruthy();
+});
+
+test("buildWardrobePdf prepends outfit image cover and appends stale report pages", async (t) => {
+  const imageUrl = "https://images.example.com/outfit-cover.jpg";
+  const imageBuffer = await sharp({
+    create: {
+      width: 900,
+      height: 1200,
+      channels: 3,
+      background: "#d8c0a0",
+    },
+  })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+  await withCachedImage(t, imageUrl, imageBuffer);
+
+  const pdfBuffer = await buildWardrobePdf(
+    [
+      {
+        id: "top-1",
+        name: "Top",
+        category: "top",
+        imageUrl: "",
+      },
+    ],
+    {
+      locale: "en",
+      outfit: {
+        title: "Weekend",
+        imageUrl,
+        imageStale: true,
+        report: buildReport(),
+        reportStale: true,
+      },
+    },
+  );
+
+  expect(await getPdfPageCount(pdfBuffer)).toBe(3);
+});
+
+test("buildWardrobePdf supports image-only report-only and plain product PDFs", async (t) => {
+  const imageUrl = "https://images.example.com/outfit-only.jpg";
+  const imageBuffer = await sharp({
+    create: {
+      width: 800,
+      height: 800,
+      channels: 3,
+      background: "#1c7c7c",
+    },
+  })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+  await withCachedImage(t, imageUrl, imageBuffer);
+
+  const imageOnly = await buildWardrobePdf([], {
+    locale: "en",
+    outfit: { title: "Image only", imageUrl },
+  });
+  const reportOnly = await buildWardrobePdf([], {
+    locale: "en",
+    outfit: { title: "Report only", report: buildReport() },
+  });
+  const productOnly = await buildWardrobePdf(
+    [{ id: "top-1", name: "Top", imageUrl: "" }],
+    {
+      locale: "en",
+    },
+  );
+
+  expect(await getPdfPageCount(imageOnly)).toBe(1);
+  expect(await getPdfPageCount(reportOnly)).toBe(1);
+  expect(await getPdfPageCount(productOnly)).toBe(1);
+});
+
+test("buildWardrobePdf paginates long outfit reports at the end", async () => {
+  const longReport = buildReport({
+    compatibility: {
+      overallScore: 0.9,
+      styleCoherence: 0.86,
+      formalityCoherence: 0.88,
+      seasonalCoherence: 0.8,
+      colorCoherence: 0.92,
+      mainStrengths: Array.from(
+        { length: 90 },
+        (_, index) =>
+          `Strength ${index + 1}: this line intentionally has enough detail to wrap in the PDF report.`,
+      ),
+      mainRisks: [],
+    },
+  });
+
+  const pdfBuffer = await buildWardrobePdf([], {
+    locale: "en",
+    outfit: { title: "Long report", report: longReport },
+  });
+
+  expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(1);
+});
+
+test("outfit pdf report helpers mirror desktop report labels and percentages", () => {
+  const report = buildReport();
+
+  expect(toPercent("bad")).toBe(null);
+  expect(toPercent(-1)).toBe(0);
+  expect(toPercent(2)).toBe(100);
+  expect(formatReportValue("acceptable_with_notes")).toBe(
+    "Acceptable With Notes",
+  );
+  expect(getReportTemperatureLabel(report, "en")).toBe("10–18°C");
+  expect(
+    getReportTemperatureLabel(
+      { seasonality: { temperatureBandC: { min: 12 } } },
+      "en",
+    ),
+  ).toBe("from 12°C");
+  expect(
+    getReportTemperatureLabel(
+      { seasonality: { temperatureBandC: { max: 20 } } },
+      "en",
+    ),
+  ).toBe("up to 20°C");
+  expect(getReportTemperatureLabel({ seasonality: {} }, "en")).toBe(null);
+  expect(getReportChipValues(report, "en")).toEqual([
+    "10–18°C",
+    "spring",
+    "casual",
+    "minimalistic",
+    "neutral",
+  ]);
+  expect(getReportScoreRows(report, "en")).toEqual([
+    expect.objectContaining({ key: "style", percent: 86 }),
+    expect.objectContaining({ key: "color", percent: 92 }),
+    expect.objectContaining({ key: "season", percent: 80 }),
+    expect.objectContaining({ key: "formality", percent: 88 }),
+    expect.objectContaining({ key: "overall", percent: 90 }),
+  ]);
+  expect(
+    getReportScoreRows(
+      {
+        styleProfile: { styleScore: 0.7 },
+        colorAnalysis: { colorScore: 0.6 },
+        seasonality: { seasonScore: 0.5 },
+      },
+      "en",
+    ),
+  ).toEqual([
+    expect.objectContaining({ key: "style", percent: 70 }),
+    expect.objectContaining({ key: "color", percent: 60 }),
+    expect.objectContaining({ key: "season", percent: 50 }),
+  ]);
+  expect(getReportVerdictLabel({}, "en")).toBe("Good match");
+  expect(
+    getReportVerdictLabel({ verdict: { status: "incomplete" } }, "en"),
+  ).toBe("Incomplete");
+  expect(outfitNeedsUnicodeFallback({ title: "Weekend" }, "en")).toBe(false);
+  expect(outfitNeedsUnicodeFallback({ title: "Выходной" }, "en")).toBe(true);
+  expect(outfitNeedsUnicodeFallback({ title: "Weekend" }, "ru")).toBe(true);
 });

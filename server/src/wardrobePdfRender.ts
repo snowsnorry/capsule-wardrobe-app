@@ -28,6 +28,11 @@ import {
   splitTextIntoLines,
   truncateLines,
 } from "./wardrobePdfDrawing.js";
+import {
+  drawOutfitImageCoverPage,
+  drawOutfitReportPages,
+  outfitNeedsUnicodeFallback,
+} from "./wardrobePdfOutfit.js";
 import { getSafeHttpUrl } from "../../shared/urlSecurity.js";
 import { translateOption } from "../../shared/i18n/helpers.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
@@ -251,7 +256,12 @@ async function drawProductImage(
 
 export async function buildWardrobePdf(
   products,
-  { locale = "en", imageAssetsById = {}, totalStartedAt = null } = {},
+  {
+    locale = "en",
+    imageAssetsById = {},
+    outfit = null,
+    totalStartedAt = null,
+  } = {},
 ) {
   const buildStartedAt = Date.now();
   const imageLoadStats = {
@@ -267,7 +277,8 @@ export async function buildWardrobePdf(
 
   const useFallbackFonts =
     locale === "ru" ||
-    products.some((product) => productNeedsUnicodeFallback(product, locale));
+    products.some((product) => productNeedsUnicodeFallback(product, locale)) ||
+    outfitNeedsUnicodeFallback(outfit, locale);
   const regularFontBytes = readFileSync(
     useFallbackFonts
       ? resolveFontPath(FALLBACK_REGULAR_FONT_CANDIDATES)
@@ -283,6 +294,13 @@ export async function buildWardrobePdf(
   });
   const boldFont = await pdfDoc.embedFont(boldFontBytes, { subset: true });
 
+  await drawOutfitImageCoverPage(pdfDoc, {
+    outfit,
+    locale,
+    fonts: { regularFont, boldFont },
+    imageLoadStats,
+  });
+
   for (const product of products) {
     await drawProductPage(pdfDoc, {
       product,
@@ -292,6 +310,12 @@ export async function buildWardrobePdf(
       imageLoadStats,
     });
   }
+
+  drawOutfitReportPages(pdfDoc, {
+    outfit,
+    locale,
+    fonts: { regularFont, boldFont },
+  });
 
   const buffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
   logPdfEvent("build-completed", {

@@ -1,4 +1,6 @@
 import { logError } from "../logger.js";
+import { hashCapsuleContent } from "../db.js";
+import { getEffectiveOutfitSnapshot } from "../outfitStore.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
 import {
   buildOutfitHydrationContext,
@@ -146,10 +148,14 @@ function registerOutfitPdfRoute(app, context) {
           return res.status(404).json({ error: "not_found" });
         }
 
+        const effectiveSnapshot = getEffectiveOutfitSnapshot(outfit);
         const profile = await context.getProfileImpl(req.user.email);
         const pdfBuffer = await context.buildWardrobePdfInChildImpl(
           items.map(normalizeWardrobeItemForPdf),
           String(profile?.locale || "en"),
+          {
+            outfit: buildOutfitPdfOptions(outfit, effectiveSnapshot),
+          },
         );
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader(
@@ -163,6 +169,31 @@ function registerOutfitPdfRoute(app, context) {
       }
     },
   );
+}
+
+function getReportItemsHash(report) {
+  return report && typeof report === "object" && !Array.isArray(report)
+    ? String(report.itemsHash || "").trim()
+    : "";
+}
+
+function isReportStale(snapshot) {
+  const reportItemsHash = getReportItemsHash(snapshot?.report);
+  return Boolean(
+    reportItemsHash &&
+    reportItemsHash !==
+      hashCapsuleContent(Array.isArray(snapshot?.items) ? snapshot.items : []),
+  );
+}
+
+function buildOutfitPdfOptions(outfit, effectiveSnapshot) {
+  return {
+    title: String(outfit?.name || "").trim(),
+    imageUrl: effectiveSnapshot?.image || null,
+    imageStale: Boolean(effectiveSnapshot?.imageObsolete),
+    report: effectiveSnapshot?.report || null,
+    reportStale: isReportStale(effectiveSnapshot),
+  };
 }
 
 function registerOutfitMediaRoutes(app, context) {

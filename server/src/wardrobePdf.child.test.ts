@@ -45,6 +45,13 @@ test("wardrobePdf child writes built PDF and exits 0 on success", async () => {
     outputFilePath: "/tmp/capsule/out/wardrobe.pdf",
     products: [{ id: "p1" }],
     locale: "ru",
+    outfit: {
+      title: "Weekend",
+      imageUrl: "https://example.com/outfit.jpg",
+      imageStale: true,
+      report: { verdict: { summary: "Ready." } },
+      reportStale: true,
+    },
     totalStartedAt: 123,
   });
 
@@ -57,7 +64,17 @@ test("wardrobePdf child writes built PDF and exits 0 on success", async () => {
   expect(buildCalls).toEqual([
     {
       products: [{ id: "p1" }],
-      options: { locale: "ru", totalStartedAt: 123 },
+      options: {
+        locale: "ru",
+        outfit: {
+          title: "Weekend",
+          imageUrl: "https://example.com/outfit.jpg",
+          imageStale: true,
+          report: { verdict: { summary: "Ready." } },
+          reportStale: true,
+        },
+        totalStartedAt: 123,
+      },
     },
   ]);
   expect(writeCalls).toEqual([
@@ -96,13 +113,14 @@ test("wardrobePdf child defaults locale and totalStartedAt for invalid input", a
     outputFilePath: "/tmp/capsule/defaults.pdf",
     products: "bad-products",
     locale: "",
+    outfit: "bad-outfit",
     totalStartedAt: "bad-start",
   });
 
   expect(buildCalls).toEqual([
     {
       products: [],
-      options: { locale: "en", totalStartedAt: null },
+      options: { locale: "en", outfit: null, totalStartedAt: null },
     },
   ]);
 });

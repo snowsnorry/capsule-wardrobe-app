@@ -10,11 +10,15 @@ test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv
   const handlers = new Map();
   let forkPath = "";
   let forkOptions = null;
+  let sentMessage: ChildSendMessage | null = null;
   type ChildSendMessage = {
     outputFilePath?: string | null;
+    outfit?: unknown;
   };
 
+  const outfit = { title: "Weekend", imageUrl: "https://example.com/look.jpg" };
   const pdfBuffer = await buildWardrobePdfInChild([{ id: "top-1" }], "en", {
+    outfit,
     forkImpl(modulePath, options) {
       forkPath = String(modulePath);
       forkOptions = options;
@@ -28,6 +32,7 @@ test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv
         },
         kill() {},
         send(message: ChildSendMessage, callback) {
+          sentMessage = message;
           void writeFile(
             String(message.outputFilePath),
             Buffer.from("pdf"),
@@ -48,6 +53,7 @@ test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv
   expect(forkOptions?.execArgv).toEqual(
     resolveWardrobePdfChildExecArgv(childEntryUrl),
   );
+  expect(sentMessage?.outfit).toEqual(outfit);
   expect(String(pdfBuffer)).toBe("pdf");
 });
 

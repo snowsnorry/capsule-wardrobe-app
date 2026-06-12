@@ -737,6 +737,15 @@ test("outfit report route delegates to generator and maps report errors", async 
 test("outfit pdf route renders effective outfit items with the profile locale", async (t) => {
   let pdfProducts: unknown = null;
   let pdfLocale = "";
+  let pdfOptions: unknown = null;
+  const report = {
+    itemsHash: "stale-report-hash",
+    verdict: {
+      status: "valid",
+      score: 0.9,
+      summary: "Ready to wear.",
+    },
+  };
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       getOutfitImpl: async (_email, id) =>
@@ -758,7 +767,16 @@ test("outfit pdf route renders effective outfit items with the profile locale", 
                   },
                   saved: null,
                 }
-              : outfit,
+              : {
+                  ...outfit,
+                  draft: {
+                    items: outfitItems,
+                    image: "https://images.example.com/outfit.png",
+                    imageObsolete: true,
+                    report,
+                  },
+                  saved: null,
+                },
       getProductsByUrlsForEmailImpl: async ({ urls }: { urls: string[] }) =>
         urls.includes("https://example.com/shirt")
           ? [
@@ -771,9 +789,10 @@ test("outfit pdf route renders effective outfit items with the profile locale", 
           : [],
       listWardrobeItemsByUrlsImpl: async () => [],
       getProfileImpl: async () => ({ locale: "ru" }),
-      buildWardrobePdfInChildImpl: async (products, locale) => {
+      buildWardrobePdfInChildImpl: async (products, locale, options) => {
         pdfProducts = products;
         pdfLocale = locale;
+        pdfOptions = options;
         return Buffer.from("pdf");
       },
     },
@@ -793,6 +812,15 @@ test("outfit pdf route renders effective outfit items with the profile locale", 
     expect.objectContaining({ url: "https://example.com/shirt" }),
   ]);
   expect(pdfLocale).toBe("ru");
+  expect(pdfOptions).toEqual({
+    outfit: {
+      title: "Weekend",
+      imageUrl: "https://images.example.com/outfit.png",
+      imageStale: true,
+      report,
+      reportStale: true,
+    },
+  });
 
   const empty = await requestJson(
     baseUrl,

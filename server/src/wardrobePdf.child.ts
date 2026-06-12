@@ -18,7 +18,11 @@ function createWardrobePdfChildRuntime({
   ) => Promise<unknown>,
   buildWardrobePdfImpl = buildWardrobePdf as (
     products: unknown[],
-    options?: { locale?: string; totalStartedAt?: number | null },
+    options?: {
+      locale?: string;
+      outfit?: Record<string, unknown> | null;
+      totalStartedAt?: number | null;
+    },
   ) => Promise<Buffer>,
   sendImpl = process.send?.bind(process),
   disconnectImpl = process.disconnect?.bind(process),
@@ -33,7 +37,11 @@ function createWardrobePdfChildRuntime({
   writeFileImpl?: (path: string, buffer: Buffer) => Promise<unknown>;
   buildWardrobePdfImpl?: (
     products: unknown[],
-    options?: { locale?: string; totalStartedAt?: number | null },
+    options?: {
+      locale?: string;
+      outfit?: Record<string, unknown> | null;
+      totalStartedAt?: number | null;
+    },
   ) => Promise<Buffer>;
   sendImpl?: ((message: unknown, callback?: () => void) => unknown) | undefined;
   disconnectImpl?: (() => unknown) | undefined;
@@ -91,10 +99,32 @@ function getWardrobePdfChildPayload(message) {
     products: Array.isArray(message?.products) ? message.products : [],
     options: {
       locale: message?.locale || "en",
+      outfit: normalizeOutfitPdfOptions(message?.outfit),
       totalStartedAt: Number.isFinite(message?.totalStartedAt)
         ? message.totalStartedAt
         : null,
     },
+  };
+}
+
+function normalizeOutfitPdfOptions(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const report =
+    value.report &&
+    typeof value.report === "object" &&
+    !Array.isArray(value.report)
+      ? value.report
+      : null;
+
+  return {
+    title: typeof value.title === "string" ? value.title : null,
+    imageUrl: typeof value.imageUrl === "string" ? value.imageUrl : null,
+    imageStale: Boolean(value.imageStale),
+    report,
+    reportStale: Boolean(value.reportStale),
   };
 }
 
