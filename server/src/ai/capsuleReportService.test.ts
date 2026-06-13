@@ -282,7 +282,7 @@ describe("generateCapsuleReport", () => {
     ).resolves.toMatchObject({
       schemaVersion: 1,
       itemsHash: "capsule-report-hash",
-      verdict: { llmScore: 0.91, score: 0.91, status: "good" },
+      verdict: { llmScore: 0.91, score: 0.78, status: "good" },
     });
     expect(deps.buildPromptDebugImagesForCategoryImpl).toHaveBeenCalledWith({
       category: "Current Capsule",
@@ -351,7 +351,7 @@ describe("generateCapsuleReport", () => {
       expect.objectContaining({
         schemaVersion: 1,
         itemsHash: "capsule-report-hash",
-        verdict: expect.objectContaining({ llmScore: 0.91, score: 0.91 }),
+        verdict: expect.objectContaining({ llmScore: 0.91, score: 0.78 }),
       }),
     );
   });

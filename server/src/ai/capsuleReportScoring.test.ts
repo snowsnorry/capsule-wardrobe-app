@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { applyComputedCapsuleVerdictScore } from "./capsuleReportScoring.js";
+import {
+  applyComputedCapsuleVerdictScore,
+  computeVerdictScore,
+} from "./capsuleReportScoring.js";
 import type { CapsuleReportLlmOutput } from "./capsuleReportTypes.js";
 
 function buildReport(score: number): CapsuleReportLlmOutput {
@@ -147,14 +150,157 @@ function buildReport(score: number): CapsuleReportLlmOutput {
   };
 }
 
+function buildCompleteReport(score = 0.95): CapsuleReportLlmOutput {
+  const report = buildReport(score);
+  report.capsuleSummary.itemCount = 3;
+  report.capsuleSummary.categoryCounts.bottom = 1;
+  report.capsuleSummary.categoryCounts.shoes = 1;
+  report.coverage.coreRoleCoverage.bottoms = "adequate";
+  report.coverage.coreRoleCoverage.shoes = "adequate";
+  return report;
+}
+
 describe("capsule report scoring", () => {
-  test("preserves the LLM score and uses it as the computed score for now", () => {
-    const report = applyComputedCapsuleVerdictScore(buildReport(0.73));
+  test("preserves the LLM score and replaces verdict score", () => {
+    const llmReport = buildCompleteReport(0.9);
+    llmReport.verdict.score = 0.42;
+    const report = applyComputedCapsuleVerdictScore(llmReport);
 
     expect(report.verdict).toMatchObject({
-      llmScore: 0.73,
-      score: 0.73,
+      llmScore: 0.42,
+      score: 0.9,
       status: "good",
     });
+  });
+
+  test("applies issue, low-confidence, and balance penalties", () => {
+    const report = buildCompleteReport(0.9);
+    report.seasonality.overallScore = 0.3;
+    report.confidence.overall = 0.6;
+    report.issues = [
+      {
+        code: "LIMITED_SEASON",
+        severity: "warning",
+        dimension: "seasonality",
+        message: "Seasonality is narrow.",
+        affectedItemIds: [],
+        suggestion: "Add a transitional layer.",
+      },
+      {
+        code: "MINOR_NOTE",
+        severity: "info",
+        dimension: "coverage",
+        message: "Coverage has a minor note.",
+        affectedItemIds: [],
+        suggestion: "Monitor coverage.",
+      },
+    ];
+
+    expect(computeVerdictScore(report)).toBe(0.63);
+  });
+
+  test("caps otherwise high scoring reports with warning and critical issues", () => {
+    const warningReport = buildCompleteReport();
+    warningReport.issues = [
+      {
+        code: "WARNING",
+        severity: "warning",
+        dimension: "coverage",
+        message: "Coverage has a warning.",
+        affectedItemIds: [],
+        suggestion: "Improve coverage.",
+      },
+    ];
+
+    const criticalReport = buildCompleteReport();
+    criticalReport.issues = [
+      {
+        code: "CRITICAL",
+        severity: "critical",
+        dimension: "coverage",
+        message: "Coverage has a critical issue.",
+        affectedItemIds: [],
+        suggestion: "Fix coverage.",
+      },
+    ];
+
+    expect(computeVerdictScore(warningReport)).toBe(0.89);
+    expect(computeVerdictScore(criticalReport)).toBe(0.69);
+  });
+
+  test("caps high scoring reports by verdict status", () => {
+    const incompleteReport = buildCompleteReport();
+    incompleteReport.verdict.status = "incomplete";
+
+    const offTargetReport = buildCompleteReport();
+    offTargetReport.verdict.status = "off_target";
+
+    const usableWithGapsReport = buildCompleteReport();
+    usableWithGapsReport.verdict.status = "usable_with_gaps";
+
+    expect(computeVerdictScore(incompleteReport)).toBe(0.59);
+    expect(computeVerdictScore(offTargetReport)).toBe(0.69);
+    expect(computeVerdictScore(usableWithGapsReport)).toBe(0.79);
+  });
+
+  test("caps reports with missing or thin core roles", () => {
+    const missingShoesReport = buildCompleteReport();
+    missingShoesReport.coverage.coreRoleCoverage.shoes = "missing";
+
+    const missingBottomsReport = buildCompleteReport();
+    missingBottomsReport.coverage.coreRoleCoverage.bottoms = "missing";
+
+    const thinBottomsReport = buildCompleteReport();
+    thinBottomsReport.coverage.coreRoleCoverage.bottoms = "thin";
+
+    const thinShoesReport = buildCompleteReport();
+    thinShoesReport.coverage.coreRoleCoverage.shoes = "thin";
+
+    expect(computeVerdictScore(missingShoesReport)).toBe(0.59);
+    expect(computeVerdictScore(missingBottomsReport)).toBe(0.59);
+    expect(computeVerdictScore(thinBottomsReport)).toBe(0.79);
+    expect(computeVerdictScore(thinShoesReport)).toBe(0.84);
+  });
+
+  test("caps reports when provided generated outfits are incomplete or weak", () => {
+    const incompleteOutfitsReport = buildCompleteReport();
+    incompleteOutfitsReport.generatedOutfitAssessment = {
+      ...incompleteOutfitsReport.generatedOutfitAssessment,
+      providedOutfitCount: 2,
+      overallScore: 0.95,
+      completeOutfitCount: 0,
+      weakOutfitCount: 0,
+    };
+
+    const allWeakOutfitsReport = buildCompleteReport();
+    allWeakOutfitsReport.generatedOutfitAssessment = {
+      ...allWeakOutfitsReport.generatedOutfitAssessment,
+      providedOutfitCount: 2,
+      overallScore: 0.95,
+      completeOutfitCount: 2,
+      weakOutfitCount: 2,
+    };
+
+    expect(computeVerdictScore(incompleteOutfitsReport)).toBe(0.59);
+    expect(computeVerdictScore(allWeakOutfitsReport)).toBe(0.74);
+  });
+
+  test("caps reports with low target, coverage, cohesion, or versatility scores", () => {
+    const lowTargetReport = buildCompleteReport();
+    lowTargetReport.targetAlignment.overallScore = 0.39;
+
+    const weakCoverageReport = buildCompleteReport();
+    weakCoverageReport.coverage.overallScore = 0.54;
+
+    const weakCohesionReport = buildCompleteReport();
+    weakCohesionReport.cohesion.overallScore = 0.44;
+
+    const weakVersatilityReport = buildCompleteReport();
+    weakVersatilityReport.versatility.overallScore = 0.44;
+
+    expect(computeVerdictScore(lowTargetReport)).toBe(0.59);
+    expect(computeVerdictScore(weakCoverageReport)).toBe(0.69);
+    expect(computeVerdictScore(weakCohesionReport)).toBe(0.69);
+    expect(computeVerdictScore(weakVersatilityReport)).toBe(0.74);
   });
 });
