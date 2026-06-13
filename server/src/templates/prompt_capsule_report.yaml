@@ -335,6 +335,10 @@ messages:
 
       If weather protection, warmth level, or material weight is uncertain, lower confidence and state the assumption.
 
+      SUMMER SWIMWEAR RULE
+
+      If the requested seasons include summer, swimwear is expected and valid. Do not treat swimwear as category noise, an orphan item, or a reason for removal solely because it is swimwear. Still count it in capsuleSummary.categoryCounts.swimwear. Mention swimwear as an issue only if it conflicts with explicit user requirements or is incorrectly used in generated outfits outside beach, pool, resort, vacation, or hot-weather contexts.
+
       COLOR ANALYSIS RULES
 
       Assess the capsule palette as a wardrobe system.
