@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+// ignore-check-large-files: single cohesive JSON schema contract.
 import type { JsonSchema, JsonSchemaFormat } from "./types.js";
 
 const CATEGORY_KEYS = [

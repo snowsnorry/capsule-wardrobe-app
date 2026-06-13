@@ -28,8 +28,22 @@ const IGNORED_FILE_PATTERNS = [
   /(?:^|[/\\])shared[/\\]i18n[/\\][a-z]{2}(?:Options)?\.ts$/,
 ];
 
+const LARGE_FILE_IGNORE_DIRECTIVE = "ignore-check-large-files";
+const LARGE_FILE_IGNORE_HEADER_LINES = 5;
+
+function hasLargeFileIgnoreDirective(filePath) {
+  const header = fs
+    .readFileSync(filePath, "utf8")
+    .split(/\r?\n/, LARGE_FILE_IGNORE_HEADER_LINES);
+
+  return header.some((line) => line.includes(LARGE_FILE_IGNORE_DIRECTIVE));
+}
+
 function shouldIgnoreFile(filePath) {
-  return IGNORED_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
+  return (
+    IGNORED_FILE_PATTERNS.some((pattern) => pattern.test(filePath)) ||
+    hasLargeFileIgnoreDirective(filePath)
+  );
 }
 
 function walk(dirPath, files = []) {
