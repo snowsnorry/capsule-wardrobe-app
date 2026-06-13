@@ -1,9 +1,9 @@
 import type { ComponentProps } from "react";
-import AppDialogs from "./AppDialogs";
+import type AppDialogs from "./AppDialogs";
 import AppRootView from "./AppRootView";
 import AppRouteContent from "./AppRouteContent";
 import AppShellContent from "./AppShellContent";
-import AppSnackbars from "./AppSnackbars";
+import type AppSnackbars from "./AppSnackbars";
 
 export type AppPresentationModel = Record<string, unknown>;
 
