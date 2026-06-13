@@ -316,6 +316,7 @@ describe("generateCapsuleReport", () => {
       }),
     );
     const prompt = deps.generateJsonWithLlm.mock.calls[0]?.[0] as string;
+    expect(prompt).toContain("Seasons: spring");
     expect(prompt).toContain("Target Formality: smart_casual");
     expect(prompt).toContain("Important Additional Information");
     expect(prompt).toContain('"id": "catalog-top-1"');

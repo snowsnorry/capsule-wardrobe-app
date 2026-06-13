@@ -151,6 +151,7 @@ function renderCapsuleReportPrompt({
     {
       audience: formatPromptText(filters.audience, "any"),
       occasions: formatPromptList(filters.occasions),
+      season: formatPromptList(filters.season),
       formality_level: formatPromptText(filters.formalityLevel),
       style: formatPromptText(filters.style),
       color: formatPromptText(filters.color, "No accent color provided"),
