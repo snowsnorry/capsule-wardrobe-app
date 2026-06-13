@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 import type { UploadedWardrobeItemUpdatePayload } from "../../api/personalItems";
+import type { CapsuleReport } from "../../app/appTypes";
 
 export type CapsuleMenuAnchor = HTMLElement | null;
 
@@ -13,6 +14,10 @@ export type CapsuleLike = {
   name?: string;
   status?: string;
   draft?: unknown;
+  effective?: {
+    report?: CapsuleReport | null;
+    reportMeta?: { stale?: boolean } | null;
+  } | null;
   saved?: unknown;
   updatedAt?: string;
 };
@@ -86,6 +91,8 @@ export type MainScreenProps = {
     capsuleId?: string,
   ) => Promise<void> | void;
   onDeleteCapsule?: (capsuleId?: string) => Promise<void> | void;
+  onDeleteCapsuleReport?: (capsuleId?: string) => Promise<void> | void;
+  onGenerateCapsuleReport?: (capsuleId?: string) => Promise<void> | void;
   onShareCapsule?: (capsuleId?: string) =>
     | Promise<{
         url?: string;
@@ -108,6 +115,7 @@ export type MainScreenProps = {
   items: MainScreenItem[];
   outfitSets?: OutfitSetLike[];
   isLoadingItems: boolean;
+  isCapsuleReportPending?: boolean;
   isContentBusy?: boolean;
   isDownloadingPdf: boolean;
   showAdditionalItemPlaceholder: boolean;

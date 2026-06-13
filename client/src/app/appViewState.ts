@@ -12,6 +12,7 @@ type ViewStateOptions = {
   currentView: string;
   hasProfile: boolean;
   isContentOperationLoading: boolean;
+  isCapsuleReportPending: boolean;
   isDownloadingWardrobePdf: boolean;
   isLoadingItems: boolean;
   isOutfitImagePending: boolean;
@@ -77,6 +78,7 @@ function isContentBusy(options: ViewStateOptions) {
     options.isWardrobePending ||
     options.isPartialRegenerationLoading ||
     options.isContentOperationLoading ||
+    options.isCapsuleReportPending ||
     options.isDownloadingWardrobePdf ||
     options.isOutfitImagePending ||
     options.isOutfitReportPending ||

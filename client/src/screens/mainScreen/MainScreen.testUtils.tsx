@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import type { ReactNode } from "react";
 import { render } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
@@ -287,6 +288,8 @@ export function createMainScreenProps(
     onRenameCapsule: vi.fn(() => Promise.resolve()),
     onDuplicateCapsule: vi.fn(() => Promise.resolve()),
     onDeleteCapsule: vi.fn(() => Promise.resolve()),
+    onDeleteCapsuleReport: vi.fn(() => Promise.resolve()),
+    onGenerateCapsuleReport: vi.fn(() => Promise.resolve()),
     onShareCapsule: vi.fn(() =>
       Promise.resolve({
         url: "https://client.example/share/share-1",
@@ -297,6 +300,7 @@ export function createMainScreenProps(
     items: [],
     outfitSets: [],
     isLoadingItems: false,
+    isCapsuleReportPending: false,
     isContentBusy: false,
     isDownloadingPdf: false,
     showAdditionalItemPlaceholder: false,

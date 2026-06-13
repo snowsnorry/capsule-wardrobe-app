@@ -324,6 +324,7 @@ function buildViewState(
     currentView: state.currentView,
     hasProfile: state.hasProfile,
     isContentOperationLoading: state.isContentOperationLoading,
+    isCapsuleReportPending: state.isCapsuleReportPending,
     isDownloadingWardrobePdf: state.isDownloadingWardrobePdf,
     isLoadingItems: state.isLoadingItems,
     isOutfitImagePending: state.isOutfitImagePending,

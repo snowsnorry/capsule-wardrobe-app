@@ -34,8 +34,11 @@ type HeaderProps = {
   isOverlay: boolean;
   selectedCount: number;
   summary: string[];
+  hasReport?: boolean;
+  canAnalyze?: boolean;
   regenerateAllDisabled?: boolean;
   onCancelSelection: () => void;
+  onAnalyze?: () => void;
   onOpenFilters: () => void;
   onOpenMenu: (event: MouseEvent<HTMLButtonElement>) => void;
   onRegenerateAll: () => void;
@@ -154,7 +157,11 @@ const inlineTitleSx = {
 
 function HeaderActions({
   disabled,
+  canAnalyze,
+  hasReport,
+  isOverlay,
   selectedCount,
+  onAnalyze,
   onCancelSelection,
   onOpenMenu,
   onRegenerateAll,
@@ -163,7 +170,11 @@ function HeaderActions({
 }: Pick<
   HeaderProps,
   | "disabled"
+  | "canAnalyze"
+  | "hasReport"
+  | "isOverlay"
   | "selectedCount"
+  | "onAnalyze"
   | "onCancelSelection"
   | "onOpenMenu"
   | "onRegenerateAll"
@@ -171,6 +182,7 @@ function HeaderActions({
   | "regenerateAllDisabled"
 >) {
   const { t } = useI18n();
+  const showAnalyze = !isOverlay && !hasReport;
   if (selectedCount > 0) {
     return (
       <Stack
@@ -202,6 +214,15 @@ function HeaderActions({
       spacing={1}
       sx={{ minHeight: 40, alignItems: "center" }}
     >
+      {showAnalyze ? (
+        <Button
+          variant="outlined"
+          onClick={() => onAnalyze?.()}
+          disabled={disabled || !canAnalyze}
+        >
+          {t("capsule.analyzeCapsule")}
+        </Button>
+      ) : null}
       <Button
         variant="outlined"
         onClick={onRegenerateAll}

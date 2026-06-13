@@ -98,6 +98,21 @@ test("t keeps outfit report verdict labels distinct", () => {
   );
 });
 
+test("t keeps capsule report verdict labels distinct", () => {
+  expect(t("capsule.reportVerdict.excellent", undefined, "en")).toBe(
+    "Excellent capsule",
+  );
+  expect(t("capsule.reportVerdict.usable_with_gaps", undefined, "en")).toBe(
+    "Usable with gaps",
+  );
+  expect(t("capsule.reportVerdict.excellent", undefined, "ru")).toBe(
+    "Отличная капсула",
+  );
+  expect(t("capsule.reportVerdict.usable_with_gaps", undefined, "ru")).toBe(
+    "Можно использовать с пробелами",
+  );
+});
+
 test("translateOption humanizes unknown values and translates known ones", () => {
   expect(translateOption("styles", "street_style", "en")).toBe("Street style");
   expect(translateOption("styles", "unknown_style", "en")).toBe(

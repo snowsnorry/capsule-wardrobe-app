@@ -4,8 +4,16 @@ import {
   getEffectiveCapsuleSnapshot,
   normalizeCapsuleSnapshot,
 } from "./capsuleStore.js";
+import { hashCapsuleContent } from "./db.js";
+import {
+  getOutfitReportPromptItemId,
+  toOutfitReportItem,
+} from "./ai/outfitReportItems.js";
 import type { WardrobeUiItemLike } from "./ai/types.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
+
+const NO_GENERATED_OUTFITS_MESSAGE =
+  "No generated outfit sets were provided for this capsule.";
 
 type RejectedUrlsValidationResult =
   | { error: "invalid_payload" | "not_found" }
@@ -162,9 +170,116 @@ export function toCapsuleSummary(capsule) {
 export function toCapsuleResponse(capsule) {
   return {
     ...toCapsuleSummary(capsule),
-    draft: capsule.draft,
-    saved: capsule.saved,
-    effective: getEffectiveCapsuleSnapshot(capsule),
+    draft: toCapsuleSnapshotResponse(capsule.draft),
+    saved: toCapsuleSnapshotResponse(capsule.saved),
+    effective: toCapsuleSnapshotResponse(getEffectiveCapsuleSnapshot(capsule)),
+  };
+}
+
+function getCapsuleReportItemsHash(report) {
+  return report && typeof report === "object" && !Array.isArray(report)
+    ? String(report.itemsHash || "").trim()
+    : "";
+}
+
+function getRawItemId(item) {
+  const id = item?.id;
+  return typeof id === "string" || typeof id === "number"
+    ? String(id).trim()
+    : "";
+}
+
+function buildPromptItemIdMap(items) {
+  const itemIdMap = new Map();
+  for (const item of items) {
+    const rawId = getRawItemId(item);
+    const promptId = getOutfitReportPromptItemId(item);
+    if (rawId && promptId) {
+      itemIdMap.set(rawId, promptId);
+      itemIdMap.set(promptId, promptId);
+    }
+  }
+  return itemIdMap;
+}
+
+function mapGeneratedOutfitItemIds(itemIds, itemIdMap) {
+  if (!Array.isArray(itemIds) || itemIds.length === 0) {
+    return null;
+  }
+
+  const mappedIds = itemIds
+    .map((itemId) => itemIdMap.get(String(itemId || "").trim()))
+    .filter(Boolean);
+  return mappedIds.length === itemIds.length ? mappedIds : null;
+}
+
+function buildGeneratedOutfitsForReportMeta(snapshot, itemIdMap) {
+  const outfitSets = snapshot?.data?.wardrobe?.outfitSets;
+  if (!Array.isArray(outfitSets)) {
+    return [];
+  }
+
+  const generatedOutfits = [];
+  for (const [index, outfitSet] of outfitSets.entries()) {
+    const itemIds = mapGeneratedOutfitItemIds(outfitSet?.itemIds, itemIdMap);
+    if (!itemIds) {
+      return null;
+    }
+    generatedOutfits.push({
+      id: `outfit-set-${index + 1}`,
+      itemIds,
+    });
+  }
+
+  return generatedOutfits;
+}
+
+function buildCapsuleReportMeta(snapshot) {
+  const reportItemsHash = getCapsuleReportItemsHash(snapshot?.report);
+  if (!reportItemsHash) {
+    return null;
+  }
+
+  const items = snapshot?.data?.wardrobe?.items;
+  if (!Array.isArray(items) || items.length === 0) {
+    return { stale: true };
+  }
+
+  const reportItems = items.map(toOutfitReportItem).filter(Boolean);
+  if (reportItems.length !== items.length) {
+    return { stale: true };
+  }
+
+  const itemIdMap = buildPromptItemIdMap(items);
+  const generatedOutfits = buildGeneratedOutfitsForReportMeta(
+    snapshot,
+    itemIdMap,
+  );
+  if (!generatedOutfits) {
+    return { stale: true };
+  }
+  return {
+    stale:
+      reportItemsHash !==
+      hashCapsuleContent({
+        filters: snapshot.filters,
+        generatedOutfits: generatedOutfits.length
+          ? generatedOutfits
+          : NO_GENERATED_OUTFITS_MESSAGE,
+        items: reportItems,
+      }),
+  };
+}
+
+function toCapsuleSnapshotResponse(snapshot) {
+  if (!snapshot) {
+    return null;
+  }
+
+  return {
+    ...snapshot,
+    report: snapshot.report || null,
+    reportMeta: buildCapsuleReportMeta(snapshot),
   };
 }
 

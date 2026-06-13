@@ -6,6 +6,11 @@ import {
   requestJson,
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
+import { hashCapsuleContent } from "../db.js";
+import { toOutfitReportItem } from "../ai/outfitReportItems.js";
+
+const NO_GENERATED_OUTFITS_MESSAGE =
+  "No generated outfit sets were provided for this capsule.";
 
 function authenticatedMutationOptions(body?: unknown) {
   return {
@@ -296,6 +301,72 @@ test("capsule report route delegates to generator and maps report errors", async
     csrfToken: CSRF_TOKEN,
   });
   expect(deleteMissing.response.status).toBe(404);
+});
+
+test("capsule responses report whether capsule reports are stale", async (t) => {
+  const filters = {
+    sourceMode: "catalog_only",
+    formalityLevel: "casual",
+    style: "minimalistic",
+    occasions: ["office"],
+    season: ["spring"],
+    audience: "woman",
+    color: null,
+    pattern: "solid",
+    text: "",
+    anchorItemRefs: [],
+  };
+  const item = {
+    id: "catalog-1",
+    source: "from_catalog",
+    url: "https://example.com/1",
+    name: "Shirt",
+    category: "top",
+  };
+  const reportItem = toOutfitReportItem(item);
+  const currentItemsHash = hashCapsuleContent({
+    filters,
+    generatedOutfits: NO_GENERATED_OUTFITS_MESSAGE,
+    items: [reportItem],
+  });
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getCapsuleImpl: async () => ({
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: {
+          filters,
+          data: {
+            wardrobe: { items: [item], outfitSets: [] },
+            rejectedUrls: [],
+          },
+          report: { schemaVersion: 1, itemsHash: currentItemsHash },
+        },
+        saved: {
+          filters,
+          data: {
+            wardrobe: { items: [item], outfitSets: [{ itemIds: [] }] },
+            rejectedUrls: [],
+          },
+          report: { schemaVersion: 1, itemsHash: currentItemsHash },
+        },
+        status: "modified",
+      }),
+      listLikedItemUrlsImpl: async () => [],
+      listWardrobeItemsImpl: async () => [],
+    },
+  });
+
+  const result = await requestJson(baseUrl, "/capsules/capsule-1", {
+    cookie: AUTH_COOKIE,
+  });
+
+  expect(result.response.status).toBe(200);
+  expect(result.json.capsule).toMatchObject({
+    draft: { reportMeta: { stale: false } },
+    saved: { reportMeta: { stale: true } },
+    effective: { reportMeta: { stale: false } },
+  });
 });
 
 test("capsule pdf route includes uploaded wardrobe items from capsule snapshots", async (t) => {

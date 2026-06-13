@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { MouseEvent } from "react";
 
 export type StatusState = {
@@ -181,6 +182,122 @@ type OutfitReportMeta = {
   stale?: boolean;
 };
 
+type CapsuleReportVerdictStatus =
+  | "excellent"
+  | "good"
+  | "usable_with_gaps"
+  | "off_target"
+  | "incomplete"
+  | "incoherent";
+
+type CapsuleReportVerdict = {
+  llmScore?: number;
+  status?: CapsuleReportVerdictStatus | string;
+  score?: number;
+  summary?: string;
+};
+
+type CapsuleReportTemperatureBandC = {
+  min?: number | null;
+  max?: number | null;
+};
+
+type CapsuleReportCapsuleSummary = {
+  itemCount?: number;
+  categoryCounts?: Record<string, number>;
+  detectedCategoryBalance?: string;
+  capsuleType?: string;
+  summaryTags?: string[];
+};
+
+type CapsuleReportTargetAlignment = {
+  overallScore?: number;
+  formalityFit?: {
+    detectedRange?: string[];
+  };
+  styleFit?: {
+    primaryDetectedStyle?: string;
+  };
+};
+
+type CapsuleReportCoverage = {
+  overallScore?: number;
+  coreRoleCoverage?: Record<string, string>;
+  missingCategories?: string[];
+  weakCategories?: string[];
+  overrepresentedCategories?: string[];
+  notes?: string;
+};
+
+type CapsuleReportVersatility = {
+  overallScore?: number;
+  notes?: string;
+};
+
+type CapsuleReportCohesion = {
+  overallScore?: number;
+  mainStrengths?: string[];
+  mainRisks?: string[];
+  notes?: string;
+};
+
+type CapsuleReportSeasonality = {
+  overallScore?: number;
+  primarySeasons?: string[];
+  secondarySeasons?: string[];
+  temperatureBandC?: CapsuleReportTemperatureBandC;
+  notes?: string;
+};
+
+type CapsuleReportStyleProfile = {
+  formalityLevel?: string;
+  primaryStyle?: string;
+};
+
+type CapsuleReportColorAnalysis = {
+  paletteType?: string;
+  colorScore?: number;
+  notes?: string;
+};
+
+type CapsuleReportGeneratedOutfitAssessment = {
+  providedOutfitCount?: number;
+  completeOutfitCount?: number;
+  weakOutfitCount?: number;
+  notes?: string;
+};
+
+export type CapsuleReportIssue = OutfitReportIssue;
+
+export type CapsuleReportSuggestion = OutfitReportSuggestion & {
+  targetCategory?: string | null;
+  replacementCategory?: string | null;
+};
+
+type CapsuleReportConfidence = OutfitReportConfidence;
+
+export type CapsuleReport = {
+  schemaVersion?: number;
+  itemsHash?: string;
+  verdict?: CapsuleReportVerdict;
+  capsuleSummary?: CapsuleReportCapsuleSummary;
+  targetAlignment?: CapsuleReportTargetAlignment;
+  coverage?: CapsuleReportCoverage;
+  versatility?: CapsuleReportVersatility;
+  cohesion?: CapsuleReportCohesion;
+  seasonality?: CapsuleReportSeasonality;
+  styleProfile?: CapsuleReportStyleProfile;
+  colorAnalysis?: CapsuleReportColorAnalysis;
+  generatedOutfitAssessment?: CapsuleReportGeneratedOutfitAssessment;
+  issues?: CapsuleReportIssue[];
+  suggestions?: CapsuleReportSuggestion[];
+  confidence?: CapsuleReportConfidence;
+};
+
+type CapsuleReportMeta = {
+  stale?: boolean;
+};
+
 type OutfitSnapshot = {
   items: OutfitItemSnapshot[];
   image?: string | null;
@@ -203,6 +320,8 @@ export type CapsuleDraft = {
     wardrobe: CapsuleWardrobeData | null;
     rejectedUrls: string[];
   };
+  report?: CapsuleReport | null;
+  reportMeta?: CapsuleReportMeta | null;
 };
 
 export type CapsuleMeta = {

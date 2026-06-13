@@ -20,6 +20,7 @@ type WardrobeProps = {
   activeImageSrc: string;
   activeSet: ResolvedOutfitSet | null;
   disabled: boolean;
+  highlightedKeys?: string[];
   isImagePending: boolean;
   isLoading: boolean;
   isOverlay: boolean;
@@ -81,6 +82,7 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
   const { t } = useI18n();
   const columns = buildClothingGridTemplateColumns(props.mobileColumns);
   const gap = buildClothingGridGap(props.mobileColumns);
+  const highlightedKeySet = new Set(props.highlightedKeys || []);
 
   return (
     <Box
@@ -98,6 +100,8 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
     >
       {props.visibleItems.map((item) => {
         const itemUrl = String(item?.url || "");
+        const itemKey = getWardrobeItemKey(item);
+        const highlighted = highlightedKeySet.has(itemKey);
         const isAnchor = isAnchorWardrobeItem(
           item,
           props.selectedAnchorItemRefs,
@@ -115,21 +119,28 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
           );
         }
         return (
-          <ClothingCard
-            key={item.url || item.id}
-            item={item}
-            isSelectable={Boolean(itemUrl) && !isAnchor}
-            isSelected={props.selectedUrls.includes(itemUrl)}
-            isSelectionMode={props.selectionMode}
-            isRegenerating={props.disabled}
-            regenerationLockedReason={regenerationLockedReason}
-            onToggleSelected={props.onToggleSelected}
-            onProductClick={props.onProductClick}
-            onProductMenuOpen={props.onProductMenuOpen}
-            allowProductMenuWithoutUrl
-            isMobile={props.isOverlay}
-            mobileColumns={props.mobileColumns}
-          />
+          <Box
+            key={itemKey}
+            data-testid={
+              highlighted ? "capsule-report-item-highlighted" : undefined
+            }
+            sx={getReportHighlightSx(highlighted)}
+          >
+            <ClothingCard
+              item={item}
+              isSelectable={Boolean(itemUrl) && !isAnchor}
+              isSelected={props.selectedUrls.includes(itemUrl)}
+              isSelectionMode={props.selectionMode}
+              isRegenerating={props.disabled}
+              regenerationLockedReason={regenerationLockedReason}
+              onToggleSelected={props.onToggleSelected}
+              onProductClick={props.onProductClick}
+              onProductMenuOpen={props.onProductMenuOpen}
+              allowProductMenuWithoutUrl
+              isMobile={props.isOverlay}
+              mobileColumns={props.mobileColumns}
+            />
+          </Box>
         );
       })}
       {props.showAdditionalItemPlaceholder ? (
@@ -141,6 +152,22 @@ function WardrobeGrid({ props }: { props: WardrobeProps }) {
       ) : null}
     </Box>
   );
+}
+
+function getWardrobeItemKey(item: MainScreenItem) {
+  return String(item?.url || item?.id || "").trim();
+}
+
+function getReportHighlightSx(highlighted: boolean) {
+  return {
+    minWidth: 0,
+    borderRadius: "var(--cw-radius-card)",
+    outline: highlighted
+      ? "2px solid var(--cw-color-primary)"
+      : "2px solid transparent",
+    outlineOffset: 3,
+    transition: "outline-color 140ms ease, background-color 140ms ease",
+  } as const;
 }
 
 function MainScreenWardrobe(props: WardrobeProps) {

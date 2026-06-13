@@ -127,6 +127,7 @@ export function getEffectiveCapsule(
   return capsule?.draft || capsule?.saved || null;
 }
 
+// eslint-disable-next-line complexity
 export function buildDraftSnapshotFromState({
   activeCapsuleMeta,
   profileItems,
@@ -167,6 +168,7 @@ export function buildDraftSnapshotFromState({
     wardrobe === undefined
       ? { items: profileItems, outfitSets: profileOutfitSets }
       : wardrobe;
+  const effectiveCapsule = getEffectiveCapsule(activeCapsuleMeta);
   return {
     filters: {
       sourceMode: selectedSourceMode,
@@ -192,8 +194,17 @@ export function buildDraftSnapshotFromState({
         : null,
       rejectedUrls: Array.isArray(rejectedUrls)
         ? rejectedUrls
-        : getEffectiveCapsule(activeCapsuleMeta)?.data?.rejectedUrls || [],
+        : effectiveCapsule?.data?.rejectedUrls || [],
     },
+    ...(Object.prototype.hasOwnProperty.call(effectiveCapsule || {}, "report")
+      ? { report: effectiveCapsule?.report || null }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(
+      effectiveCapsule || {},
+      "reportMeta",
+    )
+      ? { reportMeta: effectiveCapsule?.reportMeta || null }
+      : {}),
   };
 }
 

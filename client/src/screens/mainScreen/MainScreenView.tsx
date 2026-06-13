@@ -1,4 +1,5 @@
-import type { MouseEvent } from "react";
+/* eslint-disable complexity, max-lines, max-lines-per-function */
+import { useMemo, useState, type MouseEvent } from "react";
 import { Box, Divider, LinearProgress } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 import {
@@ -11,7 +12,9 @@ import MainScreenMenus from "./MainScreenMenus";
 import MainScreenSidebar from "./MainScreenSidebar";
 import MainScreenTabs from "./MainScreenTabs";
 import MainScreenWardrobe from "./MainScreenWardrobe";
+import CapsuleReportPanel from "./CapsuleReportPanel";
 import { MAIN_SCREEN_CONTENT_COLUMN_SX } from "./MainScreenHelpers";
+import type { MainScreenItem } from "./MainScreenTypes";
 import type { MainScreenViewProps } from "./MainScreenViewTypes";
 
 const capsulePanelSx = {
@@ -62,8 +65,107 @@ const capsuleScrollAreaSx = {
   overflow: "visible",
 } as const;
 
+const CAPSULE_REPORT_FLOATING_WIDTH_LG = 380;
+const CAPSULE_REPORT_FLOATING_WIDTH_XL = 420;
+const CAPSULE_REPORT_FLOATING_GAP = 24;
+const CAPSULE_REPORT_FLOATING_INSET_LG = 16;
+const CAPSULE_REPORT_FLOATING_INSET_XL = 24;
+
+const capsuleReportFloatingInspectorSx = {
+  position: "fixed",
+  top: { lg: 16, xl: 20 },
+  right: { lg: 16, xl: 24 },
+  bottom: { lg: 16, xl: 20 },
+  width: {
+    lg: CAPSULE_REPORT_FLOATING_WIDTH_LG,
+    xl: CAPSULE_REPORT_FLOATING_WIDTH_XL,
+  },
+  maxWidth: "calc(100% - 32px)",
+  minHeight: 0,
+  zIndex: 2,
+} as const;
+
+const capsuleWithFloatingReportSx = {
+  pr: {
+    lg: `${CAPSULE_REPORT_FLOATING_WIDTH_LG + CAPSULE_REPORT_FLOATING_GAP + CAPSULE_REPORT_FLOATING_INSET_LG}px`,
+    xl: `${CAPSULE_REPORT_FLOATING_WIDTH_XL + CAPSULE_REPORT_FLOATING_GAP + CAPSULE_REPORT_FLOATING_INSET_XL}px`,
+  },
+} as const;
+
+const capsuleReportCompactSectionSx = {
+  px: { xs: 1, sm: 2, md: 3 },
+  pt: { xs: 1, md: 2 },
+} as const;
+
+function getTrimmedString(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function getWardrobeItemKey(item: MainScreenItem) {
+  return getTrimmedString(item?.url || item?.id);
+}
+
+function isWardrobeReportItem(item: MainScreenItem) {
+  return (
+    getTrimmedString(item?.source) === "uploaded" ||
+    Boolean(
+      getTrimmedString(item?.wardrobeId) ||
+      getTrimmedString(item?.profileEmail) ||
+      getTrimmedString(item?.itemSource) === "wardrobe",
+    )
+  );
+}
+
+function addReportCandidateId(ids: Set<string>, value: unknown) {
+  const id = getTrimmedString(value);
+  if (id) {
+    ids.add(id);
+  }
+  return id;
+}
+
+function getCapsuleReportItemCandidateIds(item: MainScreenItem) {
+  const ids = new Set<string>();
+  const itemId = addReportCandidateId(ids, item?.id);
+  const wardrobeId = addReportCandidateId(ids, item?.wardrobeId);
+  addReportCandidateId(ids, item?.url);
+
+  if (isWardrobeReportItem(item)) {
+    for (const id of [itemId, wardrobeId]) {
+      if (id) {
+        ids.add(id.startsWith("W") ? id : `W${id}`);
+      }
+    }
+  }
+
+  return [...ids];
+}
+
+function getHighlightedCapsuleReportItemKeys(
+  items: MainScreenItem[],
+  reportItemIds: string[],
+) {
+  const targetIds = new Set(
+    reportItemIds.map((value) => getTrimmedString(value)).filter(Boolean),
+  );
+  if (!targetIds.size) return [];
+
+  return items
+    .filter((item) =>
+      getCapsuleReportItemCandidateIds(item).some((candidate) =>
+        targetIds.has(candidate),
+      ),
+    )
+    .map(getWardrobeItemKey)
+    .filter(Boolean);
+}
+
 function CapsuleStickyHeader(model: MainScreenViewProps) {
   const { activeName, resolvedSets, summary } = model.display;
+  const hasReport = Boolean(model.props.activeCapsule?.effective?.report);
+  const canAnalyze = Boolean(
+    model.props.activeCapsule?.id && model.props.items.length > 0,
+  );
 
   return (
     <Box sx={capsuleStickyHeaderSx}>
@@ -74,8 +176,15 @@ function CapsuleStickyHeader(model: MainScreenViewProps) {
           disabled={model.interactionDisabled}
           inlineRename={model.inlineRename}
           isOverlay={model.isOverlaySidebar}
+          hasReport={hasReport}
+          canAnalyze={canAnalyze}
           selectedCount={model.selectedCount}
           summary={summary}
+          onAnalyze={() =>
+            void model.props.onGenerateCapsuleReport?.(
+              model.props.activeCapsule?.id,
+            )
+          }
           onCancelSelection={model.props.onCancelRegenerationSelection}
           onOpenFilters={() => model.setFiltersOpen(true)}
           onOpenMenu={(event: MouseEvent<HTMLElement>) =>
@@ -99,7 +208,15 @@ function CapsuleStickyHeader(model: MainScreenViewProps) {
       </Box>
       <Box sx={capsuleProgressSlotSx}>
         {model.props.isContentBusy || model.share.loading ? (
-          <LinearProgress color="success" sx={capsuleProgressSx} />
+          <LinearProgress
+            color="success"
+            aria-label={
+              model.props.isCapsuleReportPending
+                ? model.t("capsule.reportGenerating")
+                : undefined
+            }
+            sx={capsuleProgressSx}
+          />
         ) : null}
       </Box>
     </Box>
@@ -161,18 +278,70 @@ const mainScreenBodySx = {
   minWidth: 0,
   minHeight: 0,
   overflow: "visible",
+  position: "relative",
 } as const;
 
 function MainScreenCapsulePanel(model: MainScreenViewProps) {
   const { activeImageSrc, activeSet, visibleItems } = model.display;
+  const [highlightedReportItemIds, setHighlightedReportItemIds] = useState<
+    string[]
+  >([]);
+  const report = model.props.activeCapsule?.effective?.report || null;
+  const reportIsStale = Boolean(
+    model.props.activeCapsule?.effective?.reportMeta?.stale,
+  );
+  const showFloatingReportInspector = Boolean(
+    report && !model.isOverlaySidebar,
+  );
+  const showInlineCompactReport = Boolean(
+    report && !showFloatingReportInspector,
+  );
+  const highlightedReportItemKeys = useMemo(
+    () =>
+      getHighlightedCapsuleReportItemKeys(
+        visibleItems,
+        highlightedReportItemIds,
+      ),
+    [highlightedReportItemIds, visibleItems],
+  );
   return (
-    <Box {...primaryScrollTargetAttribute} sx={capsulePanelSx}>
+    <Box
+      {...primaryScrollTargetAttribute}
+      sx={[
+        capsulePanelSx,
+        showFloatingReportInspector && capsuleWithFloatingReportSx,
+      ]}
+    >
       <CapsuleStickyHeader {...model} />
       <Box sx={capsuleScrollAreaSx}>
+        {showInlineCompactReport ? (
+          <Box sx={capsuleReportCompactSectionSx}>
+            <CapsuleReportPanel
+              disabled={model.interactionDisabled}
+              isCompact
+              isPending={model.props.isCapsuleReportPending}
+              isStale={reportIsStale}
+              report={report}
+              t={model.t}
+              onDelete={() =>
+                void model.props.onDeleteCapsuleReport?.(
+                  model.props.activeCapsule?.id,
+                )
+              }
+              onHighlightItemIds={setHighlightedReportItemIds}
+              onRegenerate={() =>
+                void model.props.onGenerateCapsuleReport?.(
+                  model.props.activeCapsule?.id,
+                )
+              }
+            />
+          </Box>
+        ) : null}
         <MainScreenWardrobe
           activeImageSrc={activeImageSrc}
           activeSet={activeSet}
           disabled={model.interactionDisabled}
+          highlightedKeys={highlightedReportItemKeys}
           isImagePending={Boolean(
             activeSet &&
             model.props.pendingImageSetIndexes?.includes(activeSet.index),
@@ -210,6 +379,31 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
           onToggleSelected={model.props.onToggleRegenerationSelection}
         />
       </Box>
+      {showFloatingReportInspector ? (
+        <Box
+          data-testid="capsule-report-floating-inspector"
+          sx={capsuleReportFloatingInspectorSx}
+        >
+          <CapsuleReportPanel
+            disabled={model.interactionDisabled}
+            isPending={model.props.isCapsuleReportPending}
+            isStale={reportIsStale}
+            report={report}
+            t={model.t}
+            onDelete={() =>
+              void model.props.onDeleteCapsuleReport?.(
+                model.props.activeCapsule?.id,
+              )
+            }
+            onHighlightItemIds={setHighlightedReportItemIds}
+            onRegenerate={() =>
+              void model.props.onGenerateCapsuleReport?.(
+                model.props.activeCapsule?.id,
+              )
+            }
+          />
+        </Box>
+      ) : null}
     </Box>
   );
 }

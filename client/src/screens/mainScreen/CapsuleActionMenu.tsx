@@ -8,6 +8,7 @@ import {
   type Theme,
 } from "@mui/material";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
@@ -27,6 +28,9 @@ type CapsuleActionMenuProps = {
   onClose: () => void;
   capsule?: CapsuleLike | null;
   disabled?: boolean;
+  showAnalyze?: boolean;
+  canAnalyze?: boolean;
+  onAnalyze?: () => void;
   showRegenerateAll?: boolean;
   onRegenerateAll?: () => void;
   onDownloadPdf: () => void;
@@ -139,6 +143,39 @@ function RegenerateAllMenuSection({
   );
 }
 
+function AnalyzeMenuSection({
+  canAnalyze,
+  disabled,
+  onAnalyze,
+  onClose,
+  show,
+}: {
+  canAnalyze: boolean;
+  disabled: boolean;
+  onAnalyze?: () => void;
+  onClose: () => void;
+  show: boolean;
+}) {
+  const { t } = useI18n();
+  if (!show) {
+    return null;
+  }
+
+  return (
+    <>
+      <ActionMenuItem
+        disabled={disabled || !canAnalyze}
+        icon={<AutoAwesomeRoundedIcon fontSize="small" />}
+        onAction={() => onAnalyze?.()}
+        onClose={onClose}
+      >
+        {t("capsule.analyzeCapsule")}
+      </ActionMenuItem>
+      <Divider />
+    </>
+  );
+}
+
 function CapsuleEditMenuSection({
   disabled,
   canRevert,
@@ -225,6 +262,9 @@ function CapsuleActionMenu({
   onClose,
   capsule,
   disabled = false,
+  showAnalyze = false,
+  canAnalyze = false,
+  onAnalyze,
   showRegenerateAll = false,
   onRegenerateAll,
   onDownloadPdf,
@@ -253,6 +293,13 @@ function CapsuleActionMenu({
         disabled={disabled}
         onClose={onClose}
         onRegenerateAll={onRegenerateAll}
+      />
+      <AnalyzeMenuSection
+        show={showAnalyze}
+        disabled={disabled}
+        canAnalyze={canAnalyze}
+        onClose={onClose}
+        onAnalyze={onAnalyze}
       />
       <ActionMenuItem
         disabled={disabled}

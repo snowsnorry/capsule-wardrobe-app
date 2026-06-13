@@ -1,23 +1,30 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const requestApi = vi.hoisted(() => ({
+  getCsrfHeader: vi.fn(() => ({ "X-CSRF-Token": "csrf-token" })),
   request: vi.fn(),
   requestJson: vi.fn(),
+}));
+const eventSourceApi = vi.hoisted(() => ({
+  fetchEventSource: vi.fn(),
 }));
 
 vi.mock("./request", () => requestApi);
 vi.mock("./config", () => ({
   API_BASE_URL: "https://api.example.test",
 }));
+vi.mock("@microsoft/fetch-event-source", () => eventSourceApi);
 
 import {
   createCapsule,
   deleteCapsule,
+  deleteCapsuleReport,
   duplicateCapsule,
   fetchCapsule,
   fetchCapsuleBootstrap,
   fetchRecentCapsules,
   fetchSharedCapsule,
+  generateCapsuleReport,
   importSharedCapsule,
   renameCapsule,
   revertCapsule,
@@ -34,6 +41,7 @@ describe("capsules api", () => {
     requestApi.request.mockReset();
     requestApi.requestJson.mockReset();
     requestApi.requestJson.mockResolvedValue({});
+    eventSourceApi.fetchEventSource.mockReset();
     window.history.replaceState({}, "", "/");
   });
 
@@ -288,6 +296,79 @@ describe("capsules api", () => {
         method: "DELETE",
         credentials: "include",
       },
+    );
+  });
+
+  test("generates and deletes capsule reports", async () => {
+    eventSourceApi.fetchEventSource.mockImplementationOnce(
+      async (_url, options) => {
+        await options.onopen({
+          ok: true,
+          status: 200,
+          headers: { get: () => "text/event-stream; charset=utf-8" },
+        });
+        options.onmessage({
+          event: "progress",
+          data: JSON.stringify({ status: "pending" }),
+        });
+        options.onmessage({
+          event: "complete",
+          data: JSON.stringify({
+            ok: true,
+            report: { verdict: { score: 0.9 } },
+          }),
+        });
+        options.onclose();
+      },
+    );
+
+    await expect(generateCapsuleReport("capsule-1")).resolves.toEqual({
+      ok: true,
+      report: { verdict: { score: 0.9 } },
+    });
+    await deleteCapsuleReport("capsule-1");
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/report",
+      { method: "DELETE", credentials: "include" },
+    );
+    expect(eventSourceApi.fetchEventSource).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/report",
+      expect.objectContaining({
+        credentials: "include",
+        headers: { "X-CSRF-Token": "csrf-token" },
+        method: "POST",
+      }),
+    );
+  });
+
+  test("rejects capsule report streams on fatal or premature close", async () => {
+    eventSourceApi.fetchEventSource
+      .mockImplementationOnce(async (_url, options) => {
+        await options.onopen({
+          ok: true,
+          status: 200,
+          headers: { get: () => "text/event-stream" },
+        });
+        options.onmessage({
+          event: "fatal",
+          data: JSON.stringify({ error: "service_unavailable" }),
+        });
+      })
+      .mockImplementationOnce(async (_url, options) => {
+        await options.onopen({
+          ok: true,
+          status: 200,
+          headers: { get: () => "text/event-stream" },
+        });
+        options.onclose();
+      });
+
+    await expect(generateCapsuleReport("capsule-1")).rejects.toThrow(
+      "service_unavailable",
+    );
+    await expect(generateCapsuleReport("capsule-1")).rejects.toThrow(
+      "event_stream_closed",
     );
   });
 

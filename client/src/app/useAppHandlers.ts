@@ -3,7 +3,9 @@ import type { FormEvent, MouseEvent } from "react";
 import {
   applyCapsuleFilters,
   deleteCurrentCapsule,
+  deleteCurrentCapsuleReport,
   duplicateCurrentCapsule,
+  generateCurrentCapsuleReport,
   importSharedCapsuleToApp,
   loadMoreRecentCapsules,
   renameCurrentCapsule,
@@ -208,6 +210,8 @@ export function useAppHandlers({
     handleCreateCapsule,
     handleCreateOutfit,
     handleDeleteCapsule,
+    handleDeleteCapsuleReport: async (capsuleId = activeCapsuleId) =>
+      deleteCurrentCapsuleReport(getAppActionContext(), capsuleId),
     handleDeleteOutfit,
     handleDeleteOutfitImage: async (outfitId = activeOutfitId) =>
       deleteCurrentOutfitImage(getAppActionContext(), outfitId),
@@ -219,6 +223,8 @@ export function useAppHandlers({
     handleImportSharedCapsule,
     handleGenerateOutfitReport: async (outfitId = activeOutfitId) =>
       generateCurrentOutfitReport(getAppActionContext(), outfitId),
+    handleGenerateCapsuleReport: async (capsuleId = activeCapsuleId) =>
+      generateCurrentCapsuleReport(getAppActionContext(), capsuleId),
     handleNavigateApp,
     handleOpenCapsule,
     handleOpenOutfit,
@@ -255,6 +261,7 @@ type BuildAppHandlersOptions = Pick<
   handleCreateCapsule: () => Promise<void>;
   handleCreateOutfit: () => Promise<void>;
   handleDeleteCapsule: (capsuleId?: string) => Promise<void>;
+  handleDeleteCapsuleReport: (capsuleId?: string) => Promise<void>;
   handleDeleteOutfit: (outfitId?: string) => Promise<void>;
   handleDeleteOutfitImage: (outfitId?: string) => Promise<void>;
   handleDeleteOutfitReport: (outfitId?: string) => Promise<void>;
@@ -266,6 +273,7 @@ type BuildAppHandlersOptions = Pick<
     source?: { capsuleId?: string; setIndex?: number | string },
   ) => Promise<{ id?: string; name?: string } | null>;
   handleImportSharedCapsule: () => Promise<void>;
+  handleGenerateCapsuleReport: (capsuleId?: string) => Promise<void>;
   handleGenerateOutfitReport: (outfitId?: string) => Promise<void>;
   handleNavigateApp: (
     nextApp: Exclude<AppRoute, "share">,
@@ -291,6 +299,7 @@ function buildAppHandlers({
   handleCreateCapsule,
   handleCreateOutfit,
   handleDeleteCapsule,
+  handleDeleteCapsuleReport,
   handleDeleteOutfit,
   handleDeleteOutfitImage,
   handleDeleteOutfitReport,
@@ -298,6 +307,7 @@ function buildAppHandlers({
   handleDuplicateOutfit,
   handleCopyOutfitSetToOutfits,
   handleImportSharedCapsule,
+  handleGenerateCapsuleReport,
   handleGenerateOutfitReport,
   handleNavigateApp,
   handleOpenCapsule,
@@ -330,6 +340,7 @@ function buildAppHandlers({
       onComplete?.();
     },
     handleDeleteCapsule,
+    handleDeleteCapsuleReport,
     handleDeleteOutfit,
     handleDeleteOutfitImage,
     handleDeleteOutfitReport,
@@ -350,6 +361,7 @@ function buildAppHandlers({
     ) => generateOutfitSetImage(getAppActionContext(), setIndex),
     handleGenerateOutfitImage: async (outfitId = activeOutfitId) =>
       generateCurrentOutfitImage(getAppActionContext(), outfitId),
+    handleGenerateCapsuleReport,
     handleGenerateOutfitReport,
     handleGoogleCredential: async (idToken: string) =>
       googleCredential(sessionActionContext, idToken),

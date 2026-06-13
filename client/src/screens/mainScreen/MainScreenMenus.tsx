@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import CapsuleActionMenu from "./CapsuleActionMenu";
 import ProductMenu from "./MainScreenProductMenu";
 import type {
@@ -75,6 +76,12 @@ function MainScreenMenus(props: MenusProps) {
   };
   const closeProductMenu = () =>
     props.setProductMenu({ ...props.productMenu, anchor: null });
+  const activeCapsuleHasReport = Boolean(
+    props.props.activeCapsule?.effective?.report,
+  );
+  const canAnalyzeActiveCapsule = Boolean(
+    props.props.activeCapsule?.id && props.props.items.length > 0,
+  );
 
   return (
     <>
@@ -84,6 +91,11 @@ function MainScreenMenus(props: MenusProps) {
         onClose={() => props.setHeaderMenuAnchor(null)}
         capsule={props.props.activeCapsule}
         disabled={props.disabled}
+        showAnalyze={props.isOverlay && !activeCapsuleHasReport}
+        canAnalyze={canAnalyzeActiveCapsule}
+        onAnalyze={() =>
+          props.props.onGenerateCapsuleReport?.(props.props.activeCapsule?.id)
+        }
         showRegenerateAll={false}
         onRegenerateAll={props.onRegenerateAll}
         onDownloadPdf={props.props.onDownloadPdf}

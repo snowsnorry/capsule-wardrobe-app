@@ -1,6 +1,13 @@
 import type { MouseEvent } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "@mui/material/styles";
 import {
@@ -27,6 +34,71 @@ function renderMainScreen(
   return { props, ...view };
 }
 
+function buildCapsuleReport() {
+  return {
+    verdict: {
+      score: 0.86,
+      status: "good",
+      summary: "A compact, coherent capsule.",
+    },
+    capsuleSummary: {
+      itemCount: 12,
+      capsuleType: "compact capsule",
+      detectedCategoryBalance: "balanced category mix",
+    },
+    targetAlignment: {
+      overallScore: 0.82,
+      formalityFit: { detectedRange: ["casual"] },
+      styleFit: { primaryDetectedStyle: "minimalistic" },
+    },
+    coverage: {
+      overallScore: 0.74,
+      coreRoleCoverage: { tops: "strong", layers: "strong", shoes: "weak" },
+      weakCategories: ["shoes"],
+      notes: "Shoes are the main limiting role.",
+    },
+    versatility: { overallScore: 0.7, notes: "Easy to remix." },
+    cohesion: {
+      overallScore: 0.88,
+      mainStrengths: ["Clear palette and silhouette."],
+      mainRisks: ["Shoes may limit dressier looks."],
+    },
+    seasonality: {
+      overallScore: 0.8,
+      primarySeasons: ["spring"],
+      temperatureBandC: { min: 10, max: 18 },
+      notes: "Best in mild weather.",
+    },
+    colorAnalysis: {
+      paletteType: "neutral",
+      colorScore: 0.9,
+      notes: "Balanced neutral palette.",
+    },
+    generatedOutfitAssessment: {
+      providedOutfitCount: 5,
+      completeOutfitCount: 4,
+      weakOutfitCount: 1,
+    },
+    issues: [
+      {
+        code: "weak-shoes",
+        affectedItemIds: ["catalog-1"],
+        message: "Shoes limit the capsule.",
+        suggestion: "Add a cleaner shoe option.",
+      },
+    ],
+    suggestions: [
+      {
+        type: "add",
+        priority: "high",
+        targetItemIds: ["catalog-1"],
+        message: "Add low-profile shoes.",
+      },
+    ],
+    confidence: { overall: 0.78, assumptions: ["Catalog metadata is enough."] },
+  };
+}
+
 describe("MainScreen", () => {
   beforeEach(() => {
     resetMainScreenTestMocks();
@@ -50,6 +122,195 @@ describe("MainScreen", () => {
     expect(
       screen.queryByRole("button", { name: "Collapse sidebar" }),
     ).not.toBeInTheDocument();
+  });
+
+  test("renders desktop analyze action and disables it for an empty capsule", async () => {
+    const user = userEvent.setup();
+    const onGenerateCapsuleReport = vi.fn(() => Promise.resolve());
+
+    const { rerender } = renderMainScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        draft: null,
+        saved: null,
+        status: "new",
+      },
+      items: [],
+      onGenerateCapsuleReport,
+    });
+
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeDisabled();
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <MainScreen
+          {...createMainScreenProps({
+            activeCapsule: {
+              id: "capsule-1",
+              name: "Spring edit",
+              effective: { report: null },
+              status: "saved",
+            },
+            items: [
+              {
+                id: "top-1",
+                url: "https://example.com/top",
+                name: "Top",
+              },
+            ],
+            onGenerateCapsuleReport,
+          })}
+        />
+      </ThemeProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Analyze" }));
+    expect(onGenerateCapsuleReport).toHaveBeenCalledWith("capsule-1");
+  });
+
+  test("moves analyze action into the mobile capsule menu", async () => {
+    const user = userEvent.setup();
+    const onGenerateCapsuleReport = vi.fn(() => Promise.resolve());
+    renderMainScreen(
+      {
+        activeCapsule: {
+          id: "capsule-1",
+          name: "Spring edit",
+          effective: { report: null },
+          status: "saved",
+        },
+        items: [
+          {
+            id: "top-1",
+            url: "https://example.com/top",
+            name: "Top",
+          },
+        ],
+        onGenerateCapsuleReport,
+      },
+      { mobile: true },
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Analyze" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open capsule menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Analyze" }));
+
+    expect(onGenerateCapsuleReport).toHaveBeenCalledWith("capsule-1");
+  });
+
+  test("renders capsule report pending progress", () => {
+    renderMainScreen({
+      isCapsuleReportPending: true,
+      isContentBusy: true,
+    });
+
+    expect(
+      screen.getByRole("progressbar", {
+        name: "Generating capsule report",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  test("renders capsule report panel with stale state and actions", async () => {
+    const user = userEvent.setup();
+    const { props } = renderMainScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        effective: {
+          report: buildCapsuleReport(),
+          reportMeta: { stale: true },
+        },
+        status: "saved",
+      },
+      items: [
+        {
+          id: "top-1",
+          url: "https://example.com/top",
+          name: "Top",
+        },
+      ],
+    });
+
+    expect(screen.queryByRole("button", { name: "Analyze" })).toBeNull();
+    expect(screen.getByText("Capsule report")).toBeInTheDocument();
+    expect(screen.getByText("86")).toBeInTheDocument();
+    expect(screen.getByText("Good capsule")).toBeInTheDocument();
+    expect(screen.getByText("Report may be outdated")).toBeInTheDocument();
+    expect(screen.getByText("Target fit")).toBeInTheDocument();
+    expect(screen.getByText("Capsule overview")).toBeInTheDocument();
+    expect(
+      screen.getByText("12 items · compact capsule · balanced category mix"),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Open report actions" }),
+    );
+    await user.click(
+      screen.getByRole("menuitem", { name: "Regenerate report" }),
+    );
+    expect(props.onGenerateCapsuleReport).toHaveBeenCalledWith("capsule-1");
+
+    await user.click(
+      screen.getByRole("button", { name: "Open report actions" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    expect(props.onDeleteCapsuleReport).toHaveBeenCalledWith("capsule-1");
+  });
+
+  test("renders desktop capsule report as a floating inspector", () => {
+    renderMainScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        effective: {
+          report: buildCapsuleReport(),
+          reportMeta: { stale: false },
+        },
+        status: "saved",
+      },
+    });
+
+    const floatingInspector = screen.getByTestId(
+      "capsule-report-floating-inspector",
+    );
+    expect(floatingInspector).toContainElement(
+      screen.getByTestId("capsule-report"),
+    );
+  });
+
+  test("highlights linked capsule cards from report issue focus", () => {
+    renderMainScreen({
+      activeCapsule: {
+        id: "capsule-1",
+        name: "Spring edit",
+        effective: {
+          report: buildCapsuleReport(),
+          reportMeta: { stale: false },
+        },
+        status: "saved",
+      },
+      items: [
+        {
+          id: "catalog-1",
+          url: "https://example.com/top",
+          name: "Top",
+        },
+      ],
+    });
+
+    const issueRow = screen
+      .getByText("Shoes limit the capsule.")
+      .closest("[tabindex='0']");
+    expect(issueRow).toBeTruthy();
+    fireEvent.focus(issueRow as HTMLElement);
+
+    expect(
+      screen.getByTestId("capsule-report-item-highlighted"),
+    ).toBeInTheDocument();
   });
 
   test("registers capsule sidebar actions and opens search or row menu flows", async () => {

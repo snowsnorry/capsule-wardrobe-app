@@ -117,6 +117,7 @@ export function createActionContext(
     setCurrentView: vi.fn(),
     setHasPendingAdditionalItems: vi.fn(),
     setHasProfile: vi.fn(),
+    setIsCapsuleReportPending: vi.fn(),
     setIsContentOperationLoading: vi.fn(),
     setIsDownloadingWardrobePdf: vi.fn(),
     setIsLoadingItems: vi.fn(),
@@ -147,6 +148,8 @@ export function createActionContext(
             "Failed to regenerate the capsule. Your previous capsule was restored.",
           "errors.regenerateSelectedFailed":
             "Failed to regenerate selected items",
+          "errors.capsuleReportGenerateFailed":
+            "Could not generate capsule report.",
         })[key] || key,
     ),
     user: { email: "person@example.com" },

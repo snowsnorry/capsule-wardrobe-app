@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+/* eslint-disable max-lines, max-lines-per-function */
 import { lazy } from "react";
 import type { Dispatch, FormEvent, MouseEvent, SetStateAction } from "react";
 import type {
@@ -73,6 +73,7 @@ type AppRouteContentProps = SharedFilterProps & {
   hasPendingAdditionalItems: boolean;
   hasProfile: boolean;
   isCheckingSession: boolean;
+  isCapsuleReportPending: boolean;
   isContentBusy: boolean;
   isDownloadingWardrobePdf: boolean;
   isLoadingItems: boolean;
@@ -110,6 +111,7 @@ type AppRouteContentProps = SharedFilterProps & {
     source?: { capsuleId?: string; setIndex?: number | string },
   ) => Promise<OutfitMeta | null>;
   onDeleteCapsule: (capsuleId?: string) => Promise<void>;
+  onDeleteCapsuleReport: (capsuleId?: string) => Promise<void>;
   onDeleteOutfit: (outfitId?: string) => Promise<void>;
   onDeleteOutfitImage: (outfitId?: string) => Promise<void>;
   onDeleteOutfitReport: (outfitId?: string) => Promise<void>;
@@ -120,6 +122,7 @@ type AppRouteContentProps = SharedFilterProps & {
   onDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
   onDuplicateOutfit: (name: string, outfitId?: string) => Promise<void>;
   onGenerateOutfitSetImage: (setIndex: OutfitSetIndex) => Promise<void>;
+  onGenerateCapsuleReport: (capsuleId?: string) => Promise<void>;
   onGenerateOutfitImage: (outfitId?: string) => Promise<void>;
   onGenerateOutfitReport: (outfitId?: string) => Promise<void>;
   onGoogleCredential: (idToken: string) => Promise<void>;
@@ -233,6 +236,7 @@ function MainRoute(props: AppRouteContentProps) {
       onRenameCapsule={props.onRenameCapsule}
       onDuplicateCapsule={props.onDuplicateCapsule}
       onDeleteCapsule={props.onDeleteCapsule}
+      onDeleteCapsuleReport={props.onDeleteCapsuleReport}
       onShareCapsule={props.onShareCapsule}
       onRemoveFromPersonalItems={props.onRemoveFromPersonalItems}
       onSaveToPersonalItems={props.onSaveToPersonalItems}
@@ -244,6 +248,7 @@ function MainRoute(props: AppRouteContentProps) {
       items={props.profileItems || []}
       outfitSets={props.profileOutfitSets}
       isLoadingItems={props.isLoadingItems}
+      isCapsuleReportPending={props.isCapsuleReportPending}
       isContentBusy={props.isContentBusy}
       isDownloadingPdf={props.isDownloadingWardrobePdf}
       showAdditionalItemPlaceholder={props.hasPendingAdditionalItems}
@@ -297,6 +302,7 @@ function MainRoute(props: AppRouteContentProps) {
       onCancelRegenerationSelection={props.onCancelRegenerationSelection}
       onRegenerateSelectedItems={props.onRegenerateSelectedItems}
       onDeleteOutfitSetImage={props.onDeleteOutfitSetImage}
+      onGenerateCapsuleReport={props.onGenerateCapsuleReport}
       onGenerateOutfitSetImage={props.onGenerateOutfitSetImage}
       isPartialRegenerationLoading={props.isPartialRegenerationLoading}
       registerCapsuleSidebarActions={props.registerCapsuleSidebarActions}

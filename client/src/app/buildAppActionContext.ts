@@ -69,6 +69,7 @@ export function buildAppActionContext(input: AppActionContextInput) {
     setHasPendingAdditionalItems: state.setHasPendingAdditionalItems,
     setHasProfile: state.setHasProfile,
     setIsContentOperationLoading: state.setIsContentOperationLoading,
+    setIsCapsuleReportPending: state.setIsCapsuleReportPending,
     setIsDownloadingWardrobePdf: state.setIsDownloadingWardrobePdf,
     setIsOutfitImagePending: state.setIsOutfitImagePending,
     setIsOutfitReportPending: state.setIsOutfitReportPending,

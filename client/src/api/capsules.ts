@@ -1,8 +1,14 @@
+/* eslint-disable max-lines */
 import { API_BASE_URL } from "./config";
-import { request, requestJson } from "./request";
+import { getCsrfHeader, request, requestJson } from "./request";
 import type { JsonObject } from "./request";
+import type { CapsuleReport } from "../app/appTypes";
 
 type CapsuleResponse = JsonObject;
+type CapsuleReportResponse = {
+  ok: true;
+  report: CapsuleReport;
+};
 type CapsuleFilters = Record<string, unknown>;
 type CapsuleListOptions = {
   limit?: number;
@@ -18,6 +24,35 @@ type CapsuleFiltersOptions = {
 type RequestErrorWithStatus = Error & {
   status: number;
 };
+type EventStreamLike = {
+  fetchEventSource: (
+    url: string,
+    options: Record<string, unknown>,
+  ) => Promise<unknown>;
+};
+type CapsuleEventSourceMessage = {
+  data?: string;
+  event?: string;
+};
+type CapsuleReportStreamResponse = Pick<Response, "ok" | "status"> & {
+  headers: Pick<Headers, "get">;
+};
+
+class FatalError extends Error {}
+
+let fetchEventSourcePromise: Promise<
+  EventStreamLike["fetchEventSource"]
+> | null = null;
+
+function loadFetchEventSource(): Promise<EventStreamLike["fetchEventSource"]> {
+  if (!fetchEventSourcePromise) {
+    fetchEventSourcePromise = import("@microsoft/fetch-event-source").then(
+      (module) => module.fetchEventSource,
+    );
+  }
+
+  return fetchEventSourcePromise;
+}
 
 function capsuleUrl(path = ""): string {
   return `${API_BASE_URL}/capsules${path}`;
@@ -29,6 +64,18 @@ function capsuleIdPath(id: string): string {
 
 function sharedCapsuleUrl(path = ""): string {
   return `${API_BASE_URL}/shared-capsules${path}`;
+}
+
+function parseEventPayload(data: string | undefined): JsonObject {
+  if (typeof data !== "string" || data.trim().length === 0) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(data);
+  } catch {
+    throw new FatalError("invalid_event_payload");
+  }
 }
 
 function getDownloadFilenameFromDisposition(
@@ -229,6 +276,72 @@ async function deleteCapsule(id: string): Promise<CapsuleResponse> {
   });
 }
 
+async function generateCapsuleReport(
+  id: string,
+): Promise<CapsuleReportResponse> {
+  const fetchEventSource = await loadFetchEventSource();
+  let completePayload: CapsuleReportResponse | null = null;
+
+  await fetchEventSource(capsuleUrl(`${capsuleIdPath(id)}/report`), {
+    method: "POST",
+    credentials: "include",
+    headers: getCsrfHeader(),
+    openWhenHidden: true,
+    async onopen(response: CapsuleReportStreamResponse) {
+      const contentType = (
+        response.headers.get("content-type") || ""
+      ).toLowerCase();
+      if (response.ok && contentType.includes("text/event-stream")) {
+        return;
+      }
+
+      throw new FatalError(`request_failed_${response.status}`);
+    },
+    onmessage(event: CapsuleEventSourceMessage) {
+      const payload = parseEventPayload(event.data);
+      if (event.event === "progress") {
+        return;
+      }
+
+      if (event.event === "complete") {
+        if (payload.ok !== true || !payload.report) {
+          throw new FatalError("invalid_event_payload");
+        }
+        completePayload = {
+          ok: true,
+          report: payload.report as CapsuleReport,
+        };
+        return;
+      }
+
+      if (event.event === "fatal") {
+        throw new FatalError(String(payload.error || "service_unavailable"));
+      }
+    },
+    onclose() {
+      if (!completePayload) {
+        throw new FatalError("event_stream_closed");
+      }
+    },
+    onerror(error: Error) {
+      throw error;
+    },
+  });
+
+  if (!completePayload) {
+    throw new FatalError("event_stream_closed");
+  }
+
+  return completePayload;
+}
+
+async function deleteCapsuleReport(id: string): Promise<CapsuleResponse> {
+  return requestJson(capsuleUrl(`${capsuleIdPath(id)}/report`), {
+    method: "DELETE",
+    credentials: "include",
+  });
+}
+
 async function downloadCapsulePdf(id: string): Promise<void> {
   const response = await request(capsuleUrl(`${capsuleIdPath(id)}/pdf`), {
     method: "POST",
@@ -265,11 +378,13 @@ async function downloadCapsulePdf(id: string): Promise<void> {
 export {
   createCapsule,
   deleteCapsule,
+  deleteCapsuleReport,
   downloadCapsulePdf,
   duplicateCapsule,
   fetchCapsule,
   fetchCapsuleBootstrap,
   fetchRecentCapsules,
+  generateCapsuleReport,
   renameCapsule,
   revertCapsule,
   saveCapsule,
