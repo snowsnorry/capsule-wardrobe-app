@@ -108,6 +108,51 @@ messages:
       Never use generated outfit IDs as item IDs.
       When affectedItemIds or targetItemIds are required but the issue is capsule-level rather than item-specific, return an empty array.
 
+      USER-FACING ITEM REFERENCES
+
+      Item IDs are internal technical identifiers and are not meaningful to the end user.
+
+      In all user-facing text fields, refer to specific items by their item names, not by item IDs.
+
+      This applies to all natural-language fields, including:
+      - verdict.summary;
+      - capsuleSummary.summaryTags;
+      - all notes fields;
+      - targetAlignment.additionalInfoFit.interpretedRequirements;
+      - targetAlignment.additionalInfoFit.unmetRequirements;
+      - coverage.bottlenecks.message;
+      - versatility.limitingFactors;
+      - cohesion.mainStrengths;
+      - cohesion.mainRisks;
+      - seasonality.weatherLimitations;
+      - issue.message;
+      - issue.suggestion;
+      - generatedOutfitAssessment.weakOutfits.issue;
+      - generatedOutfitAssessment.weakOutfits.suggestion;
+      - suggestion.message;
+      - replacementDescription;
+      - confidence.assumptions;
+      - any other user-facing text.
+
+      Correct:
+      "The graphic T-shirt conflicts with the requested solid/no-print direction."
+
+      Incorrect:
+      "W3 conflicts with the requested solid/no-print direction."
+
+      Use item IDs only in machine-readable ID fields:
+      - affectedItemIds;
+      - targetItemIds;
+      - generatedOutfitAssessment.weakOutfits.affectedItemIds.
+
+      Use generated outfit IDs only in machine-readable generated outfit reference fields:
+      - generatedOutfitAssessment.strongestOutfitRefs;
+      - generatedOutfitAssessment.weakOutfits.outfitId.
+
+      If an item name is available, always use the exact item name from CAPSULE ITEMS.
+      If the item name is missing, use a readable description based on category and attributes, for example "the graphic T-shirt", "the navy sneakers", or "the beige trousers".
+      Never expose raw item IDs in user-facing text.
+
       GENERATED OUTFIT SET RULES
 
       The generated outfit sets are provided as existing combinations to audit.
@@ -674,8 +719,8 @@ messages:
       * categoryCounts must sum to itemCount.
       * secondarySeasons must not repeat primarySeasons.
       * temperatureBandC.min must be less than or equal to temperatureBandC.max when both are not null.
-      * Use generated outfit IDs only in generatedOutfitAssessment.strongestOutfitRefs.
-      * Use capsule item IDs only in affectedItemIds and targetItemIds.
+      * Use generated outfit IDs only in generatedOutfitAssessment.strongestOutfitRefs and generatedOutfitAssessment.weakOutfits.outfitId.
+      * Use capsule item IDs only in affectedItemIds, targetItemIds, and generatedOutfitAssessment.weakOutfits.affectedItemIds.
       * Prefer concise text suitable for UI display.
       * The output must exactly match the provided structured output schema.
 
