@@ -165,7 +165,7 @@ describe("StatisticsLayout", () => {
     expect(screen.getByText("chart content")).toBeInTheDocument();
   });
 
-  test("mobile opens the filters dialog", async () => {
+  test("mobile opens and closes the filters dialog", async () => {
     const user = userEvent.setup();
     renderScreen({}, { layoutMode: "overlay" });
 
@@ -186,7 +186,6 @@ describe("StatisticsLayout", () => {
     searchApi.fetchSearchStats.mockClear();
     searchApi.fetchSearchStats.mockResolvedValueOnce(makeStats({ total: 37 }));
     await user.click(screen.getByRole("button", { name: "UNIQLO" }));
-
     await waitFor(() => {
       expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -199,8 +198,6 @@ describe("StatisticsLayout", () => {
     await waitFor(() => {
       expect(screen.queryByText("Filters")).not.toBeInTheDocument();
     });
-    expect(await screen.findByText("Brand: UNIQLO")).toBeInTheDocument();
-    expect((await screen.findAllByText("37")).length).toBeGreaterThan(0);
   });
 
   test("mobile filters dialog uses capsule-sized surfaces in dark mode", async () => {

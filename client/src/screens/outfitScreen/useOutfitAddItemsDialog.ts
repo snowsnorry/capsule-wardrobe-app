@@ -36,7 +36,7 @@ export type OutfitAddItemsDialogModel = ReturnType<
   typeof useOutfitAddItemsDialog
 >;
 
-function mergeSelectedSnapshots(
+export function mergeSelectedSnapshots(
   current: OutfitItemSnapshot[],
   next: OutfitItemSnapshot[],
 ) {
@@ -48,6 +48,20 @@ function mergeSelectedSnapshots(
     }
   });
   return [...byKey.values()];
+}
+
+export function getCatalogMobileFiltersDraft(
+  catalogDraftState: SearchDraftState,
+) {
+  return catalogDraftState;
+}
+
+export function getAppliedCatalogSearchState(state: SearchDraftState) {
+  return { ...state, page: 1 };
+}
+
+export function getResetCatalogSearchState(catalogOptions: SearchOptions) {
+  return createSearchState(null, catalogOptions.priceRange);
 }
 
 export function useOutfitAddItemsDialog({
@@ -223,7 +237,7 @@ export function useOutfitAddItemsDialog({
   };
 
   const applyCatalogSearch = async (state = catalogDraftState) => {
-    const nextState = { ...state, page: 1 };
+    const nextState = getAppliedCatalogSearchState(state);
     setCatalogDraftState(nextState);
     setCatalogAppliedQuery(nextState.query);
     setCatalogMobileFiltersDraftState(nextState);
@@ -232,7 +246,7 @@ export function useOutfitAddItemsDialog({
   };
 
   const resetCatalogSearch = async () => {
-    const nextState = createSearchState(null, catalogOptions.priceRange);
+    const nextState = getResetCatalogSearchState(catalogOptions);
     setCatalogDraftState(nextState);
     setCatalogAppliedQuery(nextState.query);
     setCatalogMobileFiltersDraftState(nextState);
@@ -266,7 +280,9 @@ export function useOutfitAddItemsDialog({
   };
 
   const openCatalogFilters = () => {
-    setCatalogMobileFiltersDraftState(catalogDraftState);
+    setCatalogMobileFiltersDraftState(
+      getCatalogMobileFiltersDraft(catalogDraftState),
+    );
     setIsCatalogFiltersOpen(true);
   };
 

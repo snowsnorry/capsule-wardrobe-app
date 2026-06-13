@@ -51,6 +51,7 @@ function t(key: string) {
   return (
     {
       "errors.generic": "Something went wrong",
+      "search.filters.brand": "Brand",
       "search.filters.category": "Category",
       "search.filters.likedItemsOnly": "Liked only",
     }[key] || key
@@ -66,6 +67,12 @@ function StatisticsStatsHarness() {
       <div data-testid="chips">
         {statistics.activeChips.map((chip) => chip.label).join("|")}
       </div>
+      <button
+        type="button"
+        onClick={() => statistics.toggleFacetValue("brand", "uniqlo")}
+      >
+        toggle brand
+      </button>
       <button
         type="button"
         onClick={() => statistics.toggleFacetValue("category", "top")}
@@ -321,6 +328,26 @@ describe("useStatisticsStats", () => {
         likedOnly: false,
       }),
     );
+  });
+
+  test("updates brand filters and resolved total from submitted stats", async () => {
+    const user = userEvent.setup();
+    render(<StatisticsStatsHarness />);
+    expect(await screen.findByText("120")).toBeInTheDocument();
+
+    searchApi.fetchSearchStats.mockClear();
+    searchApi.fetchSearchStats.mockResolvedValueOnce(makeStats({ total: 37 }));
+    await user.click(screen.getByRole("button", { name: "toggle brand" }));
+
+    await waitFor(() => {
+      expect(searchApi.fetchSearchStats).toHaveBeenCalledWith(
+        expect.objectContaining({
+          brand: ["uniqlo"],
+        }),
+      );
+    });
+    expect(screen.getByTestId("chips")).toHaveTextContent("Brand: UNIQLO");
+    expect(await screen.findByText("37")).toBeInTheDocument();
   });
 
   test("bootstraps filters from local storage", async () => {

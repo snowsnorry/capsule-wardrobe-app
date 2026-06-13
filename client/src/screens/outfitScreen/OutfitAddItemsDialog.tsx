@@ -92,7 +92,7 @@ export function AddItemsDialog({
   );
 }
 
-function AddItemsDialogSurface({
+export function AddItemsDialogSurface({
   actionLabel,
   allowEmptySelection,
   fullScreen,

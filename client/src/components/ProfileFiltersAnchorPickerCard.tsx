@@ -18,7 +18,7 @@ function AnchorPickerCard({
   selectionFull,
   t,
 }: AnchorPickerCardProps) {
-  const disabled = !selected && selectionFull;
+  const disabled = isAnchorPickerCardDisabled({ selected, selectionFull });
   const label = getAnchorLabel(item, item.id, t);
   const likedLabel = t("wardrobe.likedBadge");
 
@@ -93,4 +93,12 @@ type AnchorPickerCardProps = {
   t: Translate;
 };
 
+function isAnchorPickerCardDisabled({
+  selected,
+  selectionFull,
+}: Pick<AnchorPickerCardProps, "selected" | "selectionFull">) {
+  return !selected && selectionFull;
+}
+
+export { isAnchorPickerCardDisabled };
 export default memo(AnchorPickerCard, areAnchorPickerCardsEqual);

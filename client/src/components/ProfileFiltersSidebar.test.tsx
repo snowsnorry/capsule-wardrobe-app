@@ -713,7 +713,32 @@ describe("ProfileFiltersSidebar", () => {
     expect(getComputedStyle(footer!).justifyContent).toBe("flex-end");
   });
 
-  test("keeps anchor picker cancel local and disables sixth unselected item", async () => {
+  test("keeps anchor picker cancel local", async () => {
+    const user = userEvent.setup();
+    const onSelectAnchorItemRefs = vi.fn();
+    fetchPersonalItemsMock.mockResolvedValue({
+      items: [
+        {
+          id: 1,
+          name: "Item 1",
+          url: "wardrobe://1",
+          category: "top",
+          source: "uploaded",
+        },
+      ],
+    });
+
+    renderSidebar({
+      onSelectAnchorItemRefs,
+    });
+    await user.click(screen.getByRole("button", { name: "Add items" }));
+    await user.click(await screen.findByRole("button", { name: /Item 1/ }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onSelectAnchorItemRefs).not.toHaveBeenCalled();
+  });
+
+  test("disables a sixth unselected anchor picker item", async () => {
     const user = userEvent.setup();
     const onSelectAnchorItemRefs = vi.fn();
     fetchPersonalItemsMock.mockResolvedValue({
@@ -738,7 +763,5 @@ describe("ProfileFiltersSidebar", () => {
     expect(
       await screen.findByRole("button", { name: /Item 6/ }),
     ).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onSelectAnchorItemRefs).not.toHaveBeenCalled();
   });
 });

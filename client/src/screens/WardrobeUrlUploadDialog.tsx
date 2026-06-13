@@ -31,9 +31,9 @@ type WardrobeUrlUploadDialogProps = {
   t: (key: string) => string;
 };
 
-const MAX_URLS = 5;
+export const MAX_URLS = 5;
 
-function isValidProductUrl(value: string) {
+export function isValidProductUrl(value: string) {
   const trimmed = value.trim();
   if (!/^https?:\/\//i.test(trimmed)) {
     return false;
@@ -50,7 +50,11 @@ function isValidProductUrl(value: string) {
   }
 }
 
-function getNextUrlFields(current: string[], index: number, value: string) {
+export function getNextUrlFields(
+  current: string[],
+  index: number,
+  value: string,
+) {
   const next = [...current];
   next[index] = value;
 
@@ -63,6 +67,10 @@ function getNextUrlFields(current: string[], index: number, value: string) {
   }
 
   return next.slice(0, MAX_URLS);
+}
+
+export function getFilledProductUrls(values: string[]) {
+  return values.map((value) => value.trim()).filter(Boolean);
 }
 
 // URL import follows the same upload progress surface as photo import.
@@ -84,10 +92,7 @@ function WardrobeUrlUploadDialog({
     }
   }, [open]);
 
-  const filledUrls = useMemo(
-    () => urls.map((value) => value.trim()).filter(Boolean),
-    [urls],
-  );
+  const filledUrls = useMemo(() => getFilledProductUrls(urls), [urls]);
   const hasInvalidUrl = urls.some(
     (value) => value.trim() && !isValidProductUrl(value),
   );

@@ -268,6 +268,34 @@ function createBootstrapResponse({
   };
 }
 
+function mockFirstLoginAuthFlow() {
+  authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
+  authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
+  authApi.verifyLoginCode.mockResolvedValue({
+    user: { email: "flow@example.com" },
+  });
+  capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
+    hasProfile: false,
+    profile: null,
+    activeCapsule: null,
+    activeSnapshot: null,
+    capsules: [],
+  });
+  authApi.initializeProfile.mockResolvedValue({});
+  mockProfileOptions();
+  window.history.replaceState({}, "", "/capsule");
+}
+
+async function renderSignedInApp(path = "/capsule") {
+  authApi.fetchCurrentUser.mockResolvedValue({
+    user: { email: "flow@example.com" },
+  });
+  mockProfileOptions();
+  window.history.replaceState({}, "", path);
+  renderApp();
+  expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+}
+
 describe("App e2e-style flows", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -343,24 +371,8 @@ describe("App e2e-style flows", () => {
     cleanup();
   });
 
-  test("covers auth happy path through first-login setup, search navigation, and sign-out", async () => {
-    authApi.fetchCurrentUser.mockRejectedValue(new Error("unauthorized"));
-    authApi.requestLoginCode.mockResolvedValue({ expiresInMs: 300000 });
-    authApi.verifyLoginCode.mockResolvedValue({
-      user: { email: "flow@example.com" },
-    });
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
-      hasProfile: false,
-      profile: null,
-      activeCapsule: null,
-      activeSnapshot: null,
-      capsules: [],
-    });
-    authApi.initializeProfile.mockResolvedValue({});
-    authApi.logout.mockResolvedValue({});
-    mockProfileOptions();
-    window.history.replaceState({}, "", "/capsule");
-
+  test("initializes the first-login profile after email-code auth", async () => {
+    mockFirstLoginAuthFlow();
     renderApp();
 
     expect(await screen.findByTestId("sign-in-screen")).toBeInTheDocument();
@@ -387,13 +399,20 @@ describe("App e2e-style flows", () => {
     );
     expect(wardrobeApi.regenerateCapsuleWardrobe).not.toHaveBeenCalled();
     expect(wardrobeApi.subscribeCapsuleEvents).not.toHaveBeenCalled();
+  });
 
+  test("hands off from capsule to search navigation and back", async () => {
+    await renderSignedInApp("/capsule");
     fireEvent.click(screen.getByRole("button", { name: "open-explore" }));
     expect(await screen.findByTestId("search-screen")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "back-to-capsule" }));
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
+  });
 
+  test("cleans auth and profile option caches on sign-out", async () => {
+    authApi.logout.mockResolvedValue({});
+    await renderSignedInApp("/capsule");
     fireEvent.click(screen.getByRole("button", { name: "sign-out" }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(

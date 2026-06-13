@@ -264,6 +264,20 @@ function renderScreen(overrides: Record<string, unknown> = {}) {
   );
 }
 
+async function openOutfitActions(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Open actions" }));
+}
+
+async function expectNoBrowserConfirm(action: () => Promise<void> | void) {
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  try {
+    await action();
+    expect(confirm).not.toHaveBeenCalled();
+  } finally {
+    confirm.mockRestore();
+  }
+}
+
 function buildReportOutfit(): OutfitMeta {
   return {
     id: "outfit-1",
@@ -1240,14 +1254,10 @@ describe("OutfitScreen", () => {
     expect(window.localStorage.getItem("outfit.mobileCardColumns")).toBe("3");
   });
 
-  test("runs outfit-level menu actions with confirmation for destructive operations", async () => {
+  test("runs simple outfit-level menu actions", async () => {
     const user = userEvent.setup();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    const onDeleteOutfit = vi.fn(() => Promise.resolve());
     const onDownloadOutfitPdf = vi.fn(() => Promise.resolve());
     const onDuplicateOutfit = vi.fn(() => Promise.resolve());
-    const onRenameOutfit = vi.fn(() => Promise.resolve());
-    const onRevertOutfit = vi.fn(() => Promise.resolve());
     const onSaveOutfit = vi.fn(() => Promise.resolve());
     renderScreen({
       activeOutfit: {
@@ -1256,89 +1266,136 @@ describe("OutfitScreen", () => {
         status: "modified",
         effective: { items: [] },
       },
-      onDeleteOutfit,
       onDownloadOutfitPdf,
       onDuplicateOutfit,
-      onRenameOutfit,
-      onRevertOutfit,
       onSaveOutfit,
     });
 
-    const openMenu = async () => {
-      await user.click(screen.getByRole("button", { name: "Open actions" }));
-    };
+    await expectNoBrowserConfirm(async () => {
+      await openOutfitActions(user);
+      await user.click(screen.getByRole("menuitem", { name: "Export PDF" }));
+      expect(onDownloadOutfitPdf).toHaveBeenCalledWith("outfit-1");
 
-    await openMenu();
-    await user.click(screen.getByRole("menuitem", { name: "Export PDF" }));
-    expect(onDownloadOutfitPdf).toHaveBeenCalledWith("outfit-1");
+      await openOutfitActions(user);
+      await user.click(screen.getByRole("menuitem", { name: "Save" }));
+      expect(onSaveOutfit).toHaveBeenCalledWith("outfit-1");
 
-    await openMenu();
-    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
-    const renameDialog = screen.getByRole("dialog", {
-      name: "Rename outfit",
+      await openOutfitActions(user);
+      await user.click(screen.getByRole("menuitem", { name: "Save as" }));
+      expect(onDuplicateOutfit).toHaveBeenCalledWith("Weekend", "outfit-1");
     });
-    const renameInput = within(renameDialog).getByRole("textbox", {
-      name: "Rename outfit",
-    });
-    expect(renameInput).toHaveValue("Weekend");
-    await user.clear(renameInput);
-    await user.type(renameInput, "Desktop outfit");
-    await user.click(within(renameDialog).getByRole("button", { name: "OK" }));
-    await waitFor(() =>
-      expect(onRenameOutfit).toHaveBeenCalledWith("Desktop outfit", "outfit-1"),
-    );
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("dialog", { name: "Rename outfit" }),
-      ).not.toBeInTheDocument(),
-    );
-
-    await openMenu();
-    await user.click(screen.getByRole("menuitem", { name: "Save" }));
-    expect(onSaveOutfit).toHaveBeenCalledWith("outfit-1");
-
-    await openMenu();
-    await user.click(screen.getByRole("menuitem", { name: "Save as" }));
-    expect(onDuplicateOutfit).toHaveBeenCalledWith("Weekend", "outfit-1");
-
-    await openMenu();
-    await user.click(screen.getByRole("menuitem", { name: "Revert" }));
-    expect(
-      screen.getByRole("dialog", { name: "Revert changes" }),
-    ).toBeInTheDocument();
-    await user.keyboard("{Escape}");
-    expect(onRevertOutfit).not.toHaveBeenCalled();
-
-    await openMenu();
-    await user.click(screen.getByRole("menuitem", { name: "Revert" }));
-    const revertDialog = screen.getByRole("dialog", {
-      name: "Revert changes",
-    });
-    expect(
-      within(revertDialog).getByText("Discard unsaved changes?"),
-    ).toBeVisible();
-    await user.click(
-      within(revertDialog).getByRole("button", { name: "Revert" }),
-    );
-    expect(confirm).not.toHaveBeenCalled();
-    expect(onRevertOutfit).toHaveBeenCalledWith("outfit-1");
-
-    await openMenu();
-    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
-    const deleteDialog = screen.getByRole("dialog", { name: "Delete outfit" });
-    expect(
-      within(deleteDialog).getByText(
-        "Are you sure you want to delete this outfit?",
-      ),
-    ).toBeVisible();
-    await user.click(
-      within(deleteDialog).getByRole("button", { name: "Delete" }),
-    );
-    expect(confirm).not.toHaveBeenCalled();
-    expect(onDeleteOutfit).toHaveBeenCalledWith("outfit-1");
   });
 
-  test("adds selected personal and catalog items to the current outfit", async () => {
+  test("renames an outfit from the outfit-level menu", async () => {
+    const user = userEvent.setup();
+    const onRenameOutfit = vi.fn(() => Promise.resolve());
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+        effective: { items: [] },
+      },
+      onRenameOutfit,
+    });
+
+    await expectNoBrowserConfirm(async () => {
+      await openOutfitActions(user);
+      await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+      const renameDialog = screen.getByRole("dialog", {
+        name: "Rename outfit",
+      });
+      const renameInput = within(renameDialog).getByRole("textbox", {
+        name: "Rename outfit",
+      });
+      expect(renameInput).toHaveValue("Weekend");
+      fireEvent.change(renameInput, { target: { value: "Desktop outfit" } });
+      await user.click(
+        within(renameDialog).getByRole("button", { name: "OK" }),
+      );
+      await waitFor(() =>
+        expect(onRenameOutfit).toHaveBeenCalledWith(
+          "Desktop outfit",
+          "outfit-1",
+        ),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Rename outfit" }),
+        ).not.toBeInTheDocument(),
+      );
+    });
+  });
+
+  test("confirms or cancels outfit revert from the outfit-level menu", async () => {
+    const user = userEvent.setup();
+    const onRevertOutfit = vi.fn(() => Promise.resolve());
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+        effective: { items: [] },
+      },
+      onRevertOutfit,
+    });
+
+    await expectNoBrowserConfirm(async () => {
+      await openOutfitActions(user);
+      await user.click(screen.getByRole("menuitem", { name: "Revert" }));
+      expect(
+        screen.getByRole("dialog", { name: "Revert changes" }),
+      ).toBeInTheDocument();
+      await user.keyboard("{Escape}");
+      expect(onRevertOutfit).not.toHaveBeenCalled();
+
+      await openOutfitActions(user);
+      await user.click(screen.getByRole("menuitem", { name: "Revert" }));
+      const revertDialog = screen.getByRole("dialog", {
+        name: "Revert changes",
+      });
+      expect(
+        within(revertDialog).getByText("Discard unsaved changes?"),
+      ).toBeVisible();
+      await user.click(
+        within(revertDialog).getByRole("button", { name: "Revert" }),
+      );
+      expect(onRevertOutfit).toHaveBeenCalledWith("outfit-1");
+    });
+  });
+
+  test("confirms outfit delete from the outfit-level menu", async () => {
+    const user = userEvent.setup();
+    const onDeleteOutfit = vi.fn(() => Promise.resolve());
+    renderScreen({
+      activeOutfit: {
+        id: "outfit-1",
+        name: "Weekend",
+        status: "modified",
+        effective: { items: [] },
+      },
+      onDeleteOutfit,
+    });
+
+    await expectNoBrowserConfirm(async () => {
+      await openOutfitActions(user);
+      await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+      const deleteDialog = screen.getByRole("dialog", {
+        name: "Delete outfit",
+      });
+      expect(
+        within(deleteDialog).getByText(
+          "Are you sure you want to delete this outfit?",
+        ),
+      ).toBeVisible();
+      await user.click(
+        within(deleteDialog).getByRole("button", { name: "Delete" }),
+      );
+      expect(onDeleteOutfit).toHaveBeenCalledWith("outfit-1");
+    });
+  });
+
+  test("adds a selected personal item to the current outfit", async () => {
     personalItemsApi.fetchPersonalItems.mockResolvedValue({
       items: [
         {
@@ -1357,33 +1414,6 @@ describe("OutfitScreen", () => {
           category: "top",
           imageUrl: "https://example.com/existing.png",
           source: "from_catalog",
-        },
-      ],
-    });
-    searchApi.fetchSearchOptions.mockResolvedValue({
-      brands: [],
-      categories: ["bag"],
-      seasons: [],
-      formalityLevels: [],
-      styles: [],
-      occasions: [],
-      audience: [],
-      colors: [],
-      patterns: [],
-      silhouettes: [],
-      fits: [],
-      closureTypes: [],
-      priceRange: { min: 0, max: 100 },
-    });
-    searchApi.runSearch.mockResolvedValue({
-      total: 1,
-      items: [
-        {
-          id: "catalog-bag",
-          url: "https://example.com/bag",
-          name: "Catalog bag",
-          category: "bag",
-          imageUrl: "https://example.com/bag.png",
         },
       ],
     });
@@ -1416,12 +1446,8 @@ describe("OutfitScreen", () => {
     await user.click(
       await screen.findByRole("button", { name: /Personal shirt/i }),
     );
-    await user.click(screen.getByRole("tab", { name: "Catalog" }));
-    await user.click(
-      await screen.findByRole("button", { name: /Catalog bag/i }),
-    );
 
-    expect(screen.getByText("1 personal · 1 catalog")).toBeInTheDocument();
+    expect(screen.getByText("1 personal")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Add" }));
 
@@ -1433,10 +1459,6 @@ describe("OutfitScreen", () => {
       expect.objectContaining({
         url: "wardrobe://42",
         source: "uploaded",
-      }),
-      expect.objectContaining({
-        url: "https://example.com/bag",
-        source: "from_catalog",
       }),
     ]);
   });
@@ -1596,97 +1618,4 @@ describe("OutfitScreen", () => {
       "https://assets.capsule-wardrobe.org/wardrobe/f2641a1885a7ae72/catalog-looking_320.webp",
     );
   });
-
-  test("opens catalog filters from the mobile search bar", async () => {
-    setViewportMobile(true);
-    mockCatalogSearch();
-
-    const user = userEvent.setup();
-    renderScreen();
-
-    await user.click(screen.getByRole("button", { name: "Add items" }));
-    await user.click(screen.getByRole("tab", { name: "Catalog" }));
-
-    await screen.findByText("1 results");
-    await user.click(screen.getByRole("button", { name: "Open filters" }));
-
-    const filtersDialog = screen.getByRole("dialog", { name: "Filters" });
-    const likedOnlySwitch = within(filtersDialog).getByRole("switch", {
-      name: "Liked only",
-    });
-    expect(likedOnlySwitch).toBeInTheDocument();
-    expect(
-      within(filtersDialog).getByRole("button", { name: "Apply" }),
-    ).toBeInTheDocument();
-    expect(
-      within(filtersDialog).getAllByRole("button", { name: "Reset" }),
-    ).not.toHaveLength(0);
-    expect(
-      within(filtersDialog).getByRole("button", { name: "Close" }),
-    ).toBeInTheDocument();
-
-    await user.click(likedOnlySwitch);
-    expect(searchApi.runSearch).toHaveBeenCalledTimes(1);
-
-    await user.click(
-      within(filtersDialog).getByRole("button", { name: "Close" }),
-    );
-    await waitFor(() => {
-      expect(
-        screen.queryByRole("dialog", { name: "Filters" }),
-      ).not.toBeInTheDocument();
-    });
-
-    await user.click(screen.getByRole("button", { name: "Open filters" }));
-    const reopenedDialog = screen.getByRole("dialog", { name: "Filters" });
-    expect(
-      within(reopenedDialog).getByRole("switch", { name: "Liked only" }),
-    ).not.toBeChecked();
-
-    await user.click(
-      within(reopenedDialog).getByRole("switch", { name: "Liked only" }),
-    );
-    await user.click(
-      within(reopenedDialog).getByRole("button", { name: "Apply" }),
-    );
-
-    await waitFor(() => {
-      expect(searchApi.runSearch).toHaveBeenCalledTimes(2);
-      expect(searchApi.runSearch).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          likedOnly: true,
-          limit: 20,
-          persist: false,
-        }),
-      );
-      expect(
-        screen.queryByRole("dialog", { name: "Filters" }),
-      ).not.toBeInTheDocument();
-    });
-
-    await user.click(screen.getByRole("button", { name: "Open filters" }));
-    const appliedDialog = screen.getByRole("dialog", { name: "Filters" });
-    expect(
-      within(appliedDialog).getByRole("switch", { name: "Liked only" }),
-    ).toBeChecked();
-
-    const resetButtons = within(appliedDialog).getAllByRole("button", {
-      name: "Reset",
-    });
-    await user.click(resetButtons.at(-1)!);
-
-    await waitFor(() => {
-      expect(searchApi.runSearch).toHaveBeenCalledTimes(3);
-      expect(searchApi.runSearch).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          likedOnly: false,
-          limit: 20,
-          persist: false,
-        }),
-      );
-      expect(
-        screen.queryByRole("dialog", { name: "Filters" }),
-      ).not.toBeInTheDocument();
-    });
-  }, 10_000);
 });

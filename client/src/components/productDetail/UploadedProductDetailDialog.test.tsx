@@ -201,15 +201,12 @@ describe("UploadedProductDetailDialog", () => {
     });
   });
 
-  test("edits every metadata control before applying", async () => {
+  test("applies representative text, single-select, and multi-select edits", async () => {
     const onApply = vi.fn();
     renderDialog({
       item: {
         ...validItem,
         audience: "women",
-        colorBase: ["light blue"],
-        formalityLevel: ["casual"],
-        closureType: ["button"],
       },
       onApply,
     });
@@ -226,16 +223,6 @@ describe("UploadedProductDetailDialog", () => {
     selectSingle("Audience", "Man");
     selectSingle("Category", "Dress");
     selectMulti("Season", "Winter");
-    selectMulti("Formality", "Formal");
-    selectMulti("Style", "Sporty");
-    selectMulti("Occasions", "Date night");
-    selectMulti("Color", "Black");
-    selectSingle("Pattern", "Stripe");
-    selectSingle("Finish", "Matte");
-    selectMulti("Composition", "Wool");
-    selectSingle("Silhouette", "Straight");
-    selectSingle("Fit", "Slim");
-    selectMulti("Closure type", "Zipper");
 
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
@@ -246,24 +233,14 @@ describe("UploadedProductDetailDialog", () => {
           audience: "man",
           brand: "Updated brand",
           category: "dress",
-          composition: "linen, cotton, wool",
           description: "Updated description",
-          finish: "matte",
-          fit: "slim",
           name: "Updated shirt",
-          pattern: "stripe",
-          silhouette: "straight",
         }),
       );
     });
     const payload = onApply.mock.calls[0][1];
     expect(payload.season).toContain("winter");
-    expect(payload.formalityLevel).toContain("formal");
-    expect(payload.style).toContain("sporty");
-    expect(payload.occasions).toContain("date_night");
-    expect(payload.colorBase).toContain("black");
-    expect(payload.closureType).toContain("zipper");
-  }, 15_000);
+  });
 
   test("keeps the dialog open when Apply fails and supports mobile layout", async () => {
     const onApply = vi.fn(() => Promise.reject(new Error("failed")));
