@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { logError } from "../logger.js";
 import { registerCapsulePdfRoute } from "./capsulePdfRoute.js";
 
@@ -157,6 +158,109 @@ async function sendCapsuleMutationResponse(req, res, capsule, context) {
   });
 }
 
+function getCapsuleReportErrorStatus(error) {
+  switch (error?.code) {
+    case "invalid_payload":
+      return 400;
+    case "not_found":
+      return 404;
+    default:
+      return 503;
+  }
+}
+
+function isResponseWritable(res) {
+  return !res.destroyed && !res.writableEnded;
+}
+
+function openCapsuleReportEventStream(res) {
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+}
+
+function writeCapsuleReportEvent(res, event, data) {
+  if (!isResponseWritable(res)) {
+    return false;
+  }
+
+  try {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function endCapsuleReportEventStream(res) {
+  if (isResponseWritable(res)) {
+    res.end();
+  }
+}
+
+function registerCapsuleReportRoutes(app, context) {
+  const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
+
+  app.post(
+    "/capsules/:id/report",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      openCapsuleReportEventStream(res);
+      writeCapsuleReportEvent(res, "progress", { status: "pending" });
+
+      try {
+        const report = await context.generateCapsuleReportImpl(
+          req.user.email,
+          req.params.id,
+        );
+        writeCapsuleReportEvent(res, "complete", { ok: true, report });
+      } catch (error) {
+        const status = getCapsuleReportErrorStatus(error);
+        if (status === 503) {
+          logError("[capsules/report]", error);
+        }
+        writeCapsuleReportEvent(res, "fatal", {
+          error: status === 503 ? "service_unavailable" : error.code,
+        });
+      } finally {
+        endCapsuleReportEventStream(res);
+      }
+      return undefined;
+    },
+  );
+
+  app.delete(
+    "/capsules/:id/report",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        const capsule = await context.updateCapsuleReportImpl(
+          req.user.email,
+          req.params.id,
+          null,
+        );
+        return sendCapsuleMutationResponse(req, res, capsule, context);
+      } catch (error) {
+        logError("[capsules/report/delete]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
+}
+
+function buildCapsuleReportSnapshotPatch(snapshot) {
+  return Object.prototype.hasOwnProperty.call(snapshot || {}, "report")
+    ? { report: snapshot.report || null }
+    : {};
+}
+
 async function updateRejectedUrls(req, res, context) {
   if (getRejectedUrlsPayloadError(req.body, context)) {
     return res.status(400).json({ error: "invalid_payload" });
@@ -193,6 +297,7 @@ async function updateRejectedUrls(req, res, context) {
               ? validationResult.rejectedUrls
               : [],
         },
+        ...buildCapsuleReportSnapshotPatch(effectiveSnapshot),
       },
     );
 
@@ -363,6 +468,7 @@ function registerCapsuleSelectionRoutes(app, context) {
 export function registerCapsuleMutationRoutes(app, context) {
   registerCapsuleCreateRoutes(app, context);
   registerRejectedUrlRoute(app, context);
+  registerCapsuleReportRoutes(app, context);
   registerCapsuleStateRoutes(app, context);
   registerCapsuleMetadataRoutes(app, context);
   registerCapsuleSelectionRoutes(app, context);

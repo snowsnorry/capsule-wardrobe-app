@@ -19,6 +19,7 @@ import {
   revertCapsuleDraftByIdForEmail,
   saveCapsuleByIdForEmail,
   searchCapsulesByEmail,
+  updateCapsuleReportByIdForEmail,
   updateCapsuleSnapshotByIdForEmail,
   upsertSharedCapsule,
 } from "./profileCapsules.js";
@@ -76,6 +77,7 @@ test("capsule record helpers map rows, json payloads, and query values", async (
     [capsule],
     [capsule],
     [capsule],
+    [capsule],
   ]);
 
   expect(
@@ -116,6 +118,13 @@ test("capsule record helpers map rows, json payloads, and query values", async (
     }),
   ).toEqual(capsule);
   expect(
+    await updateCapsuleReportByIdForEmail({
+      email: "person@example.com",
+      capsuleId: "capsule-1",
+      report: { verdict: { score: 0.9 } },
+    }),
+  ).toEqual(capsule);
+  expect(
     await renameCapsuleByIdForEmail({
       email: "person@example.com",
       capsuleId: "capsule-1",
@@ -142,6 +151,8 @@ test("capsule record helpers map rows, json payloads, and query values", async (
   expect(values[2][2]).toBe(2);
   expect(values[4][1]).toBe("%work%");
   expect(values[6][0]).toBe(JSON.stringify({ selected: ["b"] }));
+  expect(values[7][0]).toBe(JSON.stringify({ verdict: { score: 0.9 } }));
+  expect(statements[7]).toContain("jsonb_set(draft, '{report}'");
 });
 
 test("capsule helpers return null or booleans for empty mutation results", async () => {

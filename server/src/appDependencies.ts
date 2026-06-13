@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { OAuth2Client } from "google-auth-library";
 import {
   generateAuthenticationOptions,
@@ -40,6 +41,7 @@ import {
   revertCapsule,
   saveCapsule,
   searchCapsules,
+  updateCapsuleReport,
   updateCapsuleSnapshot,
 } from "./capsuleStore.js";
 import {
@@ -83,6 +85,7 @@ import {
 } from "./ai/outfitSetImages.js";
 import { deleteOutfitImage, generateOutfitImage } from "./ai/outfitImages.js";
 import { generateOutfitReport } from "./ai/outfitReportService.js";
+import { generateCapsuleReport } from "./ai/capsuleReportService.js";
 import { capsuleEventHub } from "./ai/capsuleEvents.js";
 import { outfitEventHub } from "./ai/outfitEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
@@ -217,6 +220,15 @@ function generateOutfitReportWithStoreLookups(email: string, outfitId: string) {
   });
 }
 
+function generateCapsuleReportWithStoreLookups(
+  email: string,
+  capsuleId: string,
+) {
+  return generateCapsuleReport(email, capsuleId, {
+    updateCapsuleReportImpl: updateCapsuleReport,
+  });
+}
+
 // eslint-disable-next-line max-lines-per-function
 export function createAppDependencies(options: Record<string, unknown> = {}) {
   const googleClientId =
@@ -246,6 +258,7 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     duplicateCapsuleImpl: duplicateCapsule,
     duplicateOutfitImpl: duplicateOutfit,
     generateAuthenticationOptionsImpl: generateAuthenticationOptions,
+    generateCapsuleReportImpl: generateCapsuleReportWithStoreLookups,
     generateOutfitImageHandler: generateOutfitImage,
     generateOutfitReportImpl: generateOutfitReportWithStoreLookups,
     generateOutfitSetImageHandler: generateOutfitSetImage,
@@ -322,6 +335,7 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     streamCapsuleEventsImpl: capsuleEventHub.subscribe,
     streamOutfitEventsImpl: outfitEventHub.subscribe,
     updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
+    updateCapsuleReportImpl: updateCapsuleReport,
     updateOutfitReportImpl: updateOutfitReport,
     updateOutfitSnapshotImpl: updateOutfitSnapshot,
     copyImageObjectToR2Impl: copyImageObjectToR2,

@@ -7,6 +7,52 @@ import {
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
 
+function authenticatedMutationOptions(body?: unknown) {
+  return {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    ...(body === undefined ? {} : { body }),
+  };
+}
+
+async function requestEventStream(
+  baseUrl: string,
+  pathname: string,
+  {
+    cookie,
+    csrfToken,
+    origin,
+  }: { cookie?: string; csrfToken?: string; origin?: string } = {},
+) {
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    method: "POST",
+    headers: {
+      ...(cookie ? { cookie } : {}),
+      ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
+      ...(origin ? { origin } : {}),
+    },
+  });
+
+  return {
+    response,
+    text: await response.text(),
+  };
+}
+
+function parseEventStream(text: string) {
+  return text
+    .trim()
+    .split("\n\n")
+    .filter(Boolean)
+    .map((entry) => {
+      const event = entry.match(/^event: (.+)$/m)?.[1] || "message";
+      const data = entry.match(/^data: (.+)$/m)?.[1] || "{}";
+      return { event, data: JSON.parse(data) };
+    });
+}
+
 test("capsule action routes cover wardrobe handlers and pdf download", async (t) => {
   let wardrobeCalled = false;
   let fullRegenerateCalled = false;
@@ -105,6 +151,151 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
   );
   expect(pdfProducts).toHaveLength(1);
   expect(pdfProducts?.[0]).toMatchObject({ url: "https://example.com/1" });
+});
+
+test("capsule report route delegates to generator and maps report errors", async (t) => {
+  const generateCapsuleReportImpl = vi.fn(async (_email, id) => {
+    if (id === "missing") {
+      const error = new Error("not_found") as Error & { code?: string };
+      error.code = "not_found";
+      throw error;
+    }
+    if (id === "empty") {
+      const error = new Error("invalid_payload") as Error & { code?: string };
+      error.code = "invalid_payload";
+      throw error;
+    }
+    if (id === "llm-failed") {
+      throw new Error("llm_failed");
+    }
+    return {
+      schemaVersion: 1,
+      itemsHash: "capsule-report-hash",
+      verdict: {
+        llmScore: 0.9,
+        score: 0.9,
+        status: "good",
+        summary: "Ready.",
+      },
+    };
+  });
+  const updateCapsuleReportImpl = vi.fn(async (_email, id, report) =>
+    id === "missing"
+      ? null
+      : {
+          id,
+          draft: {
+            filters: {},
+            data: { wardrobe: { items: [] }, rejectedUrls: [] },
+            report,
+          },
+          saved: null,
+          status: "new",
+        },
+  );
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      generateCapsuleReportImpl,
+      updateCapsuleReportImpl,
+      listLikedItemUrlsImpl: async () => [],
+      listWardrobeItemsImpl: async () => [],
+    },
+  });
+
+  const generated = await requestEventStream(
+    baseUrl,
+    "/capsules/capsule-1/report",
+    authenticatedMutationOptions(),
+  );
+  expect(generated.response.status).toBe(200);
+  expect(generated.response.headers.get("content-type")).toContain(
+    "text/event-stream",
+  );
+  expect(parseEventStream(generated.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    {
+      event: "complete",
+      data: {
+        ok: true,
+        report: {
+          schemaVersion: 1,
+          itemsHash: "capsule-report-hash",
+          verdict: {
+            llmScore: 0.9,
+            score: 0.9,
+            status: "good",
+            summary: "Ready.",
+          },
+        },
+      },
+    },
+  ]);
+  expect(generateCapsuleReportImpl).toHaveBeenCalledWith(
+    "person@example.com",
+    "capsule-1",
+  );
+
+  const missingCsrf = await requestJson(baseUrl, "/capsules/capsule-1/report", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+  });
+  expect(missingCsrf.response.status).toBe(403);
+
+  const missing = await requestEventStream(
+    baseUrl,
+    "/capsules/missing/report",
+    authenticatedMutationOptions(),
+  );
+  expect(parseEventStream(missing.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    { event: "fatal", data: { error: "not_found" } },
+  ]);
+
+  const empty = await requestEventStream(
+    baseUrl,
+    "/capsules/empty/report",
+    authenticatedMutationOptions(),
+  );
+  expect(parseEventStream(empty.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    { event: "fatal", data: { error: "invalid_payload" } },
+  ]);
+
+  const failed = await requestEventStream(
+    baseUrl,
+    "/capsules/llm-failed/report",
+    authenticatedMutationOptions(),
+  );
+  expect(parseEventStream(failed.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    { event: "fatal", data: { error: "service_unavailable" } },
+  ]);
+
+  const deleted = await requestJson(baseUrl, "/capsules/capsule-1/report", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(deleted.response.status).toBe(200);
+  expect(deleted.json).toMatchObject({
+    ok: true,
+    capsule: { id: "capsule-1", effective: { report: null } },
+  });
+  expect(updateCapsuleReportImpl).toHaveBeenCalledWith(
+    "person@example.com",
+    "capsule-1",
+    null,
+  );
+
+  const deleteMissing = await requestJson(baseUrl, "/capsules/missing/report", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(deleteMissing.response.status).toBe(404);
 });
 
 test("capsule pdf route includes uploaded wardrobe items from capsule snapshots", async (t) => {
@@ -593,8 +784,32 @@ test("filters patch can trigger regenerate via query flag after saving filters",
 
 test("rejected urls patch validates against current capsule wardrobe", async (t) => {
   let receivedDraft = null;
+  const report = { schemaVersion: 1, itemsHash: "capsule-report-hash" };
   const { baseUrl } = await startTestServer(t, {
     overrides: {
+      getCapsuleImpl: async () => ({
+        id: "capsule-1",
+        name: "<New capsule>",
+        draft: {
+          filters: {
+            formalityLevel: "casual",
+            style: "minimalistic",
+            occasions: ["office"],
+            season: ["spring"],
+            audience: "woman",
+            color: null,
+            pattern: "solid",
+            text: "",
+          },
+          data: {
+            wardrobe: { items: [{ url: "https://example.com/1" }] },
+            rejectedUrls: [],
+          },
+          report,
+        },
+        saved: null,
+        status: "new",
+      }),
       updateCapsuleSnapshotImpl: async (_email, _id, draft) => {
         receivedDraft = draft;
         return { id: "capsule-1", draft, saved: null, status: "new" };
@@ -640,6 +855,7 @@ test("rejected urls patch validates against current capsule wardrobe", async (t)
       },
       rejectedUrls: ["https://example.com/1"],
     },
+    report,
   });
 });
 

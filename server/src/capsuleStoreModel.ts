@@ -51,6 +51,7 @@ export type CapsuleSnapshot = {
     rejectedUrls: string[];
     regeneration: CapsuleRegenerationMarker | null;
   };
+  report?: Record<string, unknown> | null;
 };
 
 export type CapsuleRecord = {
@@ -207,6 +208,12 @@ function normalizeWardrobePayload(
   };
 }
 
+function normalizeCapsuleReport(
+  value: unknown,
+): Record<string, unknown> | null {
+  return isPlainRecord(value) ? value : null;
+}
+
 export function normalizeCapsuleFilters(
   filters: Record<string, unknown> | null = null,
 ): CapsuleFilters {
@@ -279,7 +286,7 @@ export function normalizeCapsuleSnapshot(
     : null;
   const snapshotData = isPlainRecord(snapshot.data) ? snapshot.data : null;
 
-  return {
+  const normalized: CapsuleSnapshot = {
     filters: normalizeCapsuleFilters(snapshotFilters),
     data: {
       wardrobe: normalizeWardrobePayload(
@@ -291,6 +298,10 @@ export function normalizeCapsuleSnapshot(
       ),
     },
   };
+  if (Object.prototype.hasOwnProperty.call(snapshot, "report")) {
+    normalized.report = normalizeCapsuleReport(snapshot.report);
+  }
+  return normalized;
 }
 
 export function buildCapsuleSnapshotWithRegeneration(
@@ -308,6 +319,9 @@ export function buildCapsuleSnapshotWithRegeneration(
       rejectedUrls: snapshot.data?.rejectedUrls || [],
       regeneration,
     },
+    ...(Object.prototype.hasOwnProperty.call(snapshot, "report")
+      ? { report: snapshot.report || null }
+      : {}),
   });
 }
 

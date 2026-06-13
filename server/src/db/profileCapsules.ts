@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import {
   getFirstRow,
   getResultRows,
@@ -8,6 +9,7 @@ import {
   type CreateCapsuleInput,
   type RenameCapsuleInput,
   type SharedCapsuleRow,
+  type UpdateCapsuleReportInput,
   type UpdateCapsuleSnapshotInput,
   type UpsertSharedCapsuleInput,
 } from "./core.js";
@@ -169,6 +171,40 @@ export async function updateCapsuleSnapshotByIdForEmail({
     update capsules
     set
       draft = ${draft === null ? null : JSON.stringify(draft)},
+      updated_at = now()
+    where email = ${email} and id = ${capsuleId}
+    returning
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `,
+  );
+  return row || null;
+}
+
+export async function updateCapsuleReportByIdForEmail({
+  email,
+  capsuleId,
+  report,
+}: UpdateCapsuleReportInput): Promise<CapsuleRow | null> {
+  const sql = getSqlClient();
+  const reportJson = JSON.stringify(report);
+  const row = getFirstRow(
+    await sql<CapsuleRow>`
+    update capsules
+    set
+      draft = case
+        when draft is not null then jsonb_set(draft, '{report}', ${reportJson}::jsonb, true)
+        else draft
+      end,
+      saved = case
+        when draft is null and saved is not null then jsonb_set(saved, '{report}', ${reportJson}::jsonb, true)
+        else saved
+      end,
       updated_at = now()
     where email = ${email} and id = ${capsuleId}
     returning

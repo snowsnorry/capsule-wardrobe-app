@@ -314,6 +314,19 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
         status: "new",
       });
     },
+    updateCapsuleReportByIdForEmailImpl: async (payload) => {
+      calls.push({ type: "report", payload });
+      return capsuleRow({
+        id: payload.capsuleId,
+        draft: {
+          filters: {},
+          data: { wardrobe: null, rejectedUrls: [] },
+          report: payload.report,
+        },
+        saved: null,
+        status: "new",
+      });
+    },
     renameCapsuleByIdForEmailImpl: async (payload) => {
       calls.push({ type: "rename", payload });
       return capsuleRow({ id: payload.capsuleId, name: payload.name });
@@ -355,6 +368,17 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
       })
     )?.draft?.data?.rejectedUrls?.length,
   ).toBe(0);
+  expect(
+    (
+      await store.updateCapsuleReport("person@example.com", "capsule-1", {
+        verdict: { score: 0.9 },
+      })
+    )?.draft?.report,
+  ).toEqual({ verdict: { score: 0.9 } });
+  expect(
+    (await store.updateCapsuleReport("person@example.com", "capsule-1", null))
+      ?.draft?.report,
+  ).toBe(null);
   expect(
     (await store.renameCapsule("person@example.com", "capsule-1", "Copy"))
       ?.name,

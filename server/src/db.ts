@@ -84,6 +84,7 @@ export {
   searchCapsulesByEmail,
   listCapsuleNamesByEmail,
   updateCapsuleSnapshotByIdForEmail,
+  updateCapsuleReportByIdForEmail,
   renameCapsuleByIdForEmail,
   saveCapsuleByIdForEmail,
   revertCapsuleDraftByIdForEmail,

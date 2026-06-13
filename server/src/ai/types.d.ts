@@ -11,7 +11,7 @@ type JsonSchema = {
   type?: JsonSchemaPrimitiveType | JsonSchemaPrimitiveType[];
   description?: string;
   title?: string;
-  enum?: string[];
+  enum?: Array<string | null>;
   properties?: Record<string, JsonSchema>;
   required?: string[];
   items?: JsonSchema;

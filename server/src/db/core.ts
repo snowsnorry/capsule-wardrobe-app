@@ -316,6 +316,12 @@ export type UpdateOutfitReportInput = {
   report: JsonObject | null;
 };
 
+export type UpdateCapsuleReportInput = {
+  email: string;
+  capsuleId: string;
+  report: JsonObject | null;
+};
+
 export type RenameCapsuleInput = {
   email: string;
   capsuleId: string;

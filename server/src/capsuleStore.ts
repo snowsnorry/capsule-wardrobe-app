@@ -12,6 +12,7 @@ import {
   revertCapsuleDraftByIdForEmail,
   saveCapsuleByIdForEmail,
   searchCapsulesByEmail,
+  updateCapsuleReportByIdForEmail,
   updateCapsuleSnapshotByIdForEmail,
   upsertSharedCapsule,
 } from "./db.js";
@@ -63,6 +64,7 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     revertCapsuleDraftByIdForEmailImpl = revertCapsuleDraftByIdForEmail,
     saveCapsuleByIdForEmailImpl = saveCapsuleByIdForEmail,
     searchCapsulesByEmailImpl = searchCapsulesByEmail,
+    updateCapsuleReportByIdForEmailImpl = updateCapsuleReportByIdForEmail,
     updateCapsuleSnapshotByIdForEmailImpl = updateCapsuleSnapshotByIdForEmail,
     upsertSharedCapsuleImpl = upsertSharedCapsule,
     nowImpl = Date.now,
@@ -150,6 +152,20 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
         email,
         capsuleId,
         draft: normalizeCapsuleSnapshot(draft),
+      }),
+    );
+  }
+
+  async function updateCapsuleReport(
+    email: string,
+    capsuleId: string,
+    report: Record<string, unknown> | null,
+  ): Promise<NormalizedCapsuleRecord | null> {
+    return normalizeCapsuleRecord(
+      await updateCapsuleReportByIdForEmailImpl({
+        email,
+        capsuleId,
+        report,
       }),
     );
   }
@@ -286,6 +302,7 @@ function createCapsuleStore(deps: CapsuleStoreDeps = {}) {
     revertCapsule,
     saveCapsule,
     searchCapsules,
+    updateCapsuleReport,
     updateCapsuleSnapshot,
     renameCapsule,
   };
@@ -307,6 +324,7 @@ const {
   revertCapsule,
   saveCapsule,
   searchCapsules,
+  updateCapsuleReport,
   updateCapsuleSnapshot,
   renameCapsule,
 } = defaultCapsuleStore;
@@ -334,6 +352,7 @@ export {
   revertCapsule,
   saveCapsule,
   searchCapsules,
+  updateCapsuleReport,
   updateCapsuleSnapshot,
   renameCapsule,
 };
