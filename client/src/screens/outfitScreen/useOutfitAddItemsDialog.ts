@@ -1,5 +1,5 @@
 /* eslint-disable max-lines-per-function */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMediaQuery } from "@mui/material";
 import { fetchPersonalItems } from "../../api/personalItems";
 import { fetchSearchOptions, runSearch } from "../../api/search";
@@ -139,24 +139,30 @@ export function useOutfitAddItemsDialog({
       .finally(() => setPersonalLoading(false));
   }, [initialItems, open]);
 
-  const runCatalogSearch = async (nextState: SearchDraftState) => {
-    setCatalogStatus({ loading: true, error: "" });
-    try {
-      const payload = serializeDraftState(nextState, catalogOptions.priceRange);
-      const result = await runSearch({
-        ...payload,
-        limit: CATALOG_PICKER_PAGE_SIZE,
-        persist: false,
-      });
-      setCatalogItems(Array.isArray(result.items) ? result.items : []);
-      setCatalogTotal(Number(result.total) || 0);
-      setCatalogStatus({ loading: false, error: "" });
-    } catch {
-      setCatalogStatus({ loading: false, error: t("errors.generic") });
-    }
-  };
+  const runCatalogSearch = useCallback(
+    async (nextState: SearchDraftState) => {
+      setCatalogStatus({ loading: true, error: "" });
+      try {
+        const payload = serializeDraftState(
+          nextState,
+          catalogOptions.priceRange,
+        );
+        const result = await runSearch({
+          ...payload,
+          limit: CATALOG_PICKER_PAGE_SIZE,
+          persist: false,
+        });
+        setCatalogItems(Array.isArray(result.items) ? result.items : []);
+        setCatalogTotal(Number(result.total) || 0);
+        setCatalogStatus({ loading: false, error: "" });
+      } catch {
+        setCatalogStatus({ loading: false, error: t("errors.generic") });
+      }
+    },
+    [catalogOptions.priceRange, t],
+  );
 
-  const bootstrapCatalogSearch = async () => {
+  const bootstrapCatalogSearch = useCallback(async () => {
     setCatalogStatus({ loading: true, error: "" });
     try {
       const optionsResponse = await fetchSearchOptions({ force: true });
@@ -177,13 +183,12 @@ export function useOutfitAddItemsDialog({
     } catch {
       setCatalogStatus({ loading: false, error: t("errors.generic") });
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     if (!open || tab !== 1) return;
     void bootstrapCatalogSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, tab]);
+  }, [bootstrapCatalogSearch, open, tab]);
 
   const selectedKeys = new Set(selected.map(getOutfitItemKey));
   const existingKeys = new Set(existingItems.map(getOutfitItemKey));

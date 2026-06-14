@@ -9,10 +9,10 @@
 
 Current suppressed warning count:
 
-- [ ] `max-lines`: 22
-- [ ] `max-lines-per-function`: 39
-- [ ] `complexity`: 24
-- [ ] `react-hooks/exhaustive-deps`: 2
+- [ ] `max-lines`: 17
+- [ ] `max-lines-per-function`: 27
+- [ ] `complexity`: 17
+- [x] `react-hooks/exhaustive-deps`: 0
 - [x] `@typescript-eslint/no-explicit-any`: 0
 
 Most disables are not broad attempts to bypass type or security checks. They mostly suppress size and complexity limits that become blocking under `npm run lint:strict` because strict lint runs ESLint with `--max-warnings=0`.
@@ -37,6 +37,8 @@ These disables are acceptable as documented exceptions for now. Removing them wo
   - Centralized MUI component overrides. Can be split later, but the current form keeps theme behavior in one place.
 - [ ] `client/src/components/ClothingCardLongPress.ts` - `max-lines-per-function`
   - Gesture lifecycle with timers, pointer handling, and click suppression. Splitting carelessly would make behavior harder to reason about.
+- [ ] `client/src/app/appTypes.ts` - `max-lines`
+  - Central app type surface. Splitting it should follow app-state ownership boundaries rather than line-count pressure alone.
 
 ## Remove With Small Refactors
 
@@ -93,8 +95,12 @@ These disables point to real structural debt. They should be planned as focused 
 
 - [ ] `client/src/screens/outfitScreen/OutfitScreen.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
   - Main candidate for decomposition. Split header, grid, report, dialogs, menus, and action wiring.
-- [ ] `client/src/screens/outfitScreen/useOutfitAddItemsDialog.ts` - `max-lines-per-function`, `react-hooks/exhaustive-deps`
-  - Split personal items, catalog search, selection, and mobile filters. Then remove the hooks disable.
+- [ ] `client/src/screens/outfitScreen/useOutfitAddItemsDialog.ts` - `max-lines-per-function`
+  - Split personal items, catalog search, selection, and mobile filters.
+- [ ] `client/src/api/outfits.ts` - `max-lines`
+  - Saved-outfit API calls, event streams, PDF download, and media/report helpers share one API surface.
+- [ ] `client/src/app/capsuleActions.ts` - `max-lines`
+  - Capsule action orchestration still groups generation, sharing, refresh, and mutation flows.
 - [ ] `client/src/screens/WardrobeScreen.tsx` - `max-lines-per-function`
   - Screen state, filters, menus, uploads, and detail dialog are combined.
 - [ ] `client/src/screens/useWardrobeItems.ts` - `max-lines-per-function`
@@ -113,8 +119,14 @@ These disables point to real structural debt. They should be planned as focused 
   - Split image, details, and actions into smaller parts.
 - [ ] `client/src/components/AppSidebarNavigation.tsx` - `max-lines-per-function`, `complexity`
   - Extract section list state and handlers.
+- [ ] `client/src/components/AppSidebarNavigationCapsuleRows.tsx` - `max-lines`
+  - Capsule/outfit row rendering and menu wiring should be split by row type or action surface.
+- [ ] `client/src/components/AppSidebarNavigationSections.tsx` - `max-lines`
+  - Sidebar section composition, sorting, counts, and pagination controls are still grouped.
 - [ ] `client/src/components/ProfileFiltersAnchorSection.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
   - Loading, selection mapping, dialog state, and render flow are combined.
+- [ ] `client/src/screens/mainScreen/MainScreenDialogs.tsx` - `max-lines-per-function`
+  - Main-screen dialog composition combines settings, upload, filter, and destructive-action dialog wiring.
 - [ ] `client/src/screens/mainScreen/MainScreenView.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
   - Report inspector, grid, and selection wiring should be split.
 - [ ] `server/src/capsuleStore.ts` - `max-lines-per-function`, `complexity`
@@ -127,10 +139,10 @@ These disables point to real structural debt. They should be planned as focused 
   - Split create, filters, report, state, metadata, and selection routes.
 - [ ] `server/src/routes/outfitMutationRoutes.ts` - `max-lines-per-function`, `complexity`
   - Create route combines source image copy, validation, and snapshot creation. Extract handler/service flow.
-- [ ] `server/src/ai/aiGeneration.ts` - `max-lines`, `max-lines-per-function`, `complexity`
-  - AI generation pipeline has typed deps; separation of SQL selection, anchors, LLM/no-LLM handling, and final balancing remains.
-- [ ] `server/src/ai/capsuleReportService.ts` - `max-lines`
-  - Split prompt/collage/context/persist modules after typing deps.
+- [x] `server/src/ai/aiGeneration.ts` - `max-lines`, `max-lines-per-function`, `complexity`
+  - Disable removed; broader AI generation decomposition can be tracked separately if needed.
+- [x] `server/src/ai/capsuleReportService.ts` - `max-lines`
+  - Disable removed after typing deps and splitting enough of the report service surface.
 - [ ] `server/src/db/core.ts` - `max-lines`
   - Split core types, SQL client creation, and helpers.
 - [ ] `server/src/db/profileCapsules.ts` - `max-lines`
@@ -140,10 +152,10 @@ These disables point to real structural debt. They should be planned as focused 
 
 ## React Hook Disables
 
-- [ ] `client/src/app/useOutfitRouteSync.ts`
-  - Current disable is temporarily understandable because the effect intentionally depends on selected `options` fields, not the whole object. Preferred fix: destructure or stabilize the option fields so ESLint can verify the dependency list.
-- [ ] `client/src/screens/outfitScreen/useOutfitAddItemsDialog.ts`
-  - The disable is not ideal. `bootstrapCatalogSearch` closes over too much local state. Preferred fix: extract catalog search into a smaller hook or stable `useCallback` with explicit dependencies.
+- [x] `client/src/app/useOutfitRouteSync.ts`
+  - Destructured the option fields so ESLint can verify the exact effect dependency list without depending on the unstable options object.
+- [x] `client/src/screens/outfitScreen/useOutfitAddItemsDialog.ts`
+  - Stabilized catalog search callbacks with explicit dependencies and removed the hooks disable.
 
 ## No Explicit Any
 
@@ -155,6 +167,6 @@ These disables point to real structural debt. They should be planned as focused 
 
 - [x] Phase 1: remove trivial line-count disables and the simple `complexity` case in `server/src/capsuleHttp.ts`.
 - [x] Phase 2: type remaining AI/store dependency bags and remove the corresponding `no-explicit-any` disables.
-- [ ] Phase 3: fix both `react-hooks/exhaustive-deps` disables.
+- [x] Phase 3: fix both `react-hooks/exhaustive-deps` disables.
 - [ ] Phase 4: split large client screens/hooks.
 - [ ] Phase 5: split server stores, mutation routes, and AI generation/report pipelines.

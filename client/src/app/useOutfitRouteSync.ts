@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useRef } from "react";
 import { createNewOutfit, openOutfit } from "./outfitActions";
 import type { AppActionContext } from "./actionContext";
@@ -29,6 +28,22 @@ type OutfitRouteSyncOptions = {
 };
 
 export function useOutfitRouteSync(options: OutfitRouteSyncOptions) {
+  const {
+    activeOutfitId,
+    activeOutfitMeta,
+    appRoute,
+    clearActiveOutfitState,
+    getAppActionContext,
+    hasUsableProfile,
+    isContentOperationLoading,
+    navigateOutfit,
+    outfitRouteId,
+    outfitRouteMode,
+    resolveErrorMessage,
+    sessionInitialized,
+    setStatus,
+    userEmail,
+  } = options;
   const activeSyncKeyRef = useRef("");
   const completedCreateKeyRef = useRef("");
   const failedCreateKeyRef = useRef("");
@@ -36,8 +51,25 @@ export function useOutfitRouteSync(options: OutfitRouteSyncOptions) {
   const latestRouteKeyRef = useRef("");
 
   useEffect(() => {
-    if (!canSyncOutfitRoute(options)) {
-      if (!options.isContentOperationLoading || !activeSyncKeyRef.current) {
+    const syncOptions: OutfitRouteSyncOptions = {
+      activeOutfitId,
+      activeOutfitMeta,
+      appRoute,
+      clearActiveOutfitState,
+      getAppActionContext,
+      hasUsableProfile,
+      isContentOperationLoading,
+      navigateOutfit,
+      outfitRouteId,
+      outfitRouteMode,
+      resolveErrorMessage,
+      sessionInitialized,
+      setStatus,
+      userEmail,
+    };
+
+    if (!canSyncOutfitRoute(syncOptions)) {
+      if (!isContentOperationLoading || !activeSyncKeyRef.current) {
         latestRouteKeyRef.current = "";
       }
       return;
@@ -50,31 +82,31 @@ export function useOutfitRouteSync(options: OutfitRouteSyncOptions) {
       failedOpenKeyRef,
       latestRouteKeyRef,
     };
-    const routeId = options.outfitRouteId.trim();
-    if (options.outfitRouteMode === "open" && routeId) {
-      syncOpenOutfitRoute(options, refs, routeId);
+    const routeId = outfitRouteId.trim();
+    if (outfitRouteMode === "open" && routeId) {
+      syncOpenOutfitRoute(syncOptions, refs, routeId);
       return;
     }
-    if (options.outfitRouteMode === "create") {
-      syncCreateOutfitRoute(options, refs);
+    if (outfitRouteMode === "create") {
+      syncCreateOutfitRoute(syncOptions, refs);
       return;
     }
-    syncEmptyOutfitRoute(options, refs);
+    syncEmptyOutfitRoute(syncOptions, refs);
   }, [
-    options.activeOutfitId,
-    options.activeOutfitMeta,
-    options.appRoute,
-    options.clearActiveOutfitState,
-    options.getAppActionContext,
-    options.hasUsableProfile,
-    options.isContentOperationLoading,
-    options.navigateOutfit,
-    options.outfitRouteId,
-    options.outfitRouteMode,
-    options.resolveErrorMessage,
-    options.sessionInitialized,
-    options.setStatus,
-    options.userEmail,
+    activeOutfitId,
+    activeOutfitMeta,
+    appRoute,
+    clearActiveOutfitState,
+    getAppActionContext,
+    hasUsableProfile,
+    isContentOperationLoading,
+    navigateOutfit,
+    outfitRouteId,
+    outfitRouteMode,
+    resolveErrorMessage,
+    sessionInitialized,
+    setStatus,
+    userEmail,
   ]);
 }
 
