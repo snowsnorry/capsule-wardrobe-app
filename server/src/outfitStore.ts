@@ -22,8 +22,60 @@ import {
 } from "./outfitStoreModel.js";
 import { buildUniqueOutfitNameForStore } from "./outfitStoreNaming.js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type OutfitStoreDeps = Record<string, any>;
+type StoreSnapshot = Record<string, unknown> | null;
+type OutfitStoreRecord = Record<string, unknown> | null;
+
+type OutfitStoreDeps = {
+  countOutfitsByEmailImpl?: (email: string) => Promise<number>;
+  createOutfitRecordImpl?: (payload: {
+    email: string;
+    name: string;
+    draft?: StoreSnapshot;
+    saved?: StoreSnapshot;
+  }) => Promise<OutfitStoreRecord>;
+  deleteOutfitByIdForEmailImpl?: (payload: {
+    email: string;
+    outfitId: string;
+  }) => Promise<boolean>;
+  getOutfitByIdForEmailImpl?: (payload: {
+    email: string;
+    outfitId: string;
+  }) => Promise<OutfitStoreRecord>;
+  listOutfitNamesByEmailImpl?: (email: string) => Promise<string[]>;
+  listRecentOutfitsByEmailImpl?: (payload: {
+    email: string;
+    limit?: number;
+    offset?: number;
+  }) => Promise<OutfitStoreRecord[]>;
+  renameOutfitByIdForEmailImpl?: (payload: {
+    email: string;
+    outfitId: string;
+    name: string;
+  }) => Promise<OutfitStoreRecord>;
+  revertOutfitDraftByIdForEmailImpl?: (payload: {
+    email: string;
+    outfitId: string;
+  }) => Promise<OutfitStoreRecord>;
+  saveOutfitByIdForEmailImpl?: (payload: {
+    email: string;
+    outfitId: string;
+  }) => Promise<OutfitStoreRecord>;
+  searchOutfitsByEmailImpl?: (payload: {
+    email: string;
+    query: string;
+    limit?: number;
+  }) => Promise<OutfitStoreRecord[]>;
+  updateOutfitReportByIdForEmailImpl?: (payload: {
+    email: string;
+    outfitId: string;
+    report: StoreSnapshot;
+  }) => Promise<OutfitStoreRecord>;
+  updateOutfitSnapshotByIdForEmailImpl?: (payload: {
+    email: string;
+    outfitId: string;
+    draft: StoreSnapshot;
+  }) => Promise<OutfitStoreRecord>;
+};
 
 // eslint-disable-next-line max-lines-per-function
 function createOutfitStore(deps: OutfitStoreDeps = {}) {

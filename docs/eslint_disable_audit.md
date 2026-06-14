@@ -13,7 +13,7 @@ Current suppressed warning count:
 - [ ] `max-lines-per-function`: 39
 - [ ] `complexity`: 24
 - [ ] `react-hooks/exhaustive-deps`: 2
-- [ ] `@typescript-eslint/no-explicit-any`: 7
+- [x] `@typescript-eslint/no-explicit-any`: 0
 
 Most disables are not broad attempts to bypass type or security checks. They mostly suppress size and complexity limits that become blocking under `npm run lint:strict` because strict lint runs ESLint with `--max-warnings=0`.
 
@@ -80,6 +80,12 @@ These disables look removable without changing architecture. They should be hand
   - Move default dependency resolution into typed helper(s).
 - [x] `server/src/ai/regenerateSelectedGenerationDeps.ts` - `complexity`, `@typescript-eslint/no-explicit-any`
   - Type the deps bag and split dependency groups.
+- [x] `server/src/capsuleStore.ts` - `@typescript-eslint/no-explicit-any`
+  - Replaced the store dependency bag with explicit callback types. Leave store-surface decomposition for a separate task.
+- [x] `server/src/outfitStore.ts` - `@typescript-eslint/no-explicit-any`
+  - Replaced the store dependency bag with explicit callback types. Leave store-surface decomposition for a separate task.
+- [x] `server/src/ai/aiGeneration.ts` - `@typescript-eslint/no-explicit-any`
+  - Replaced the AI generation dependency bag with explicit typed dependency callbacks.
 
 ## Requires Larger Decomposition
 
@@ -111,18 +117,18 @@ These disables point to real structural debt. They should be planned as focused 
   - Loading, selection mapping, dialog state, and render flow are combined.
 - [ ] `client/src/screens/mainScreen/MainScreenView.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
   - Report inspector, grid, and selection wiring should be split.
-- [ ] `server/src/capsuleStore.ts` - `@typescript-eslint/no-explicit-any`, `max-lines-per-function`, `complexity`
-  - Store factory mixes CRUD, sharing, import, reports, and snapshots. Needs typed deps plus store-surface decomposition.
-- [ ] `server/src/outfitStore.ts` - `@typescript-eslint/no-explicit-any`, `max-lines-per-function`, `complexity`
-  - Similar store-factory debt around lifecycle, reports, and snapshots.
+- [ ] `server/src/capsuleStore.ts` - `max-lines-per-function`, `complexity`
+  - Store factory mixes CRUD, sharing, import, reports, and snapshots. Typed deps are complete; store-surface decomposition remains.
+- [ ] `server/src/outfitStore.ts` - `max-lines-per-function`, `complexity`
+  - Similar store-factory debt around lifecycle, reports, and snapshots. Typed deps are complete; store-surface decomposition remains.
 - [ ] `server/src/searchStore.ts` - `max-lines-per-function`, `complexity`
   - Options loading, saved search, semantic fallback, and lexical fallback should become a clearer pipeline.
 - [ ] `server/src/routes/capsuleMutationRoutes.ts` - `max-lines`, `max-lines-per-function`, `complexity`
   - Split create, filters, report, state, metadata, and selection routes.
 - [ ] `server/src/routes/outfitMutationRoutes.ts` - `max-lines-per-function`, `complexity`
   - Create route combines source image copy, validation, and snapshot creation. Extract handler/service flow.
-- [ ] `server/src/ai/aiGeneration.ts` - `@typescript-eslint/no-explicit-any`, `max-lines`, `max-lines-per-function`, `complexity`
-  - AI generation pipeline needs separation of deps, SQL selection, anchors, LLM/no-LLM handling, and final balancing.
+- [ ] `server/src/ai/aiGeneration.ts` - `max-lines`, `max-lines-per-function`, `complexity`
+  - AI generation pipeline has typed deps; separation of SQL selection, anchors, LLM/no-LLM handling, and final balancing remains.
 - [ ] `server/src/ai/capsuleReportService.ts` - `max-lines`
   - Split prompt/collage/context/persist modules after typing deps.
 - [ ] `server/src/db/core.ts` - `max-lines`
@@ -141,14 +147,14 @@ These disables point to real structural debt. They should be planned as focused 
 
 ## No Explicit Any
 
-- [ ] Replace all remaining `Record<string, any>` dependency bags with explicit types.
+- [x] Replace all remaining `Record<string, any>` dependency bags with explicit types.
 - [x] Prioritize small AI modules first: `swimwear.ts`, `outfitReportService.ts`, `capsuleReportService.ts`.
-- [ ] Handle `capsuleStore.ts`, `outfitStore.ts`, and `aiGeneration.ts` together with decomposition, because the deps shape is large and tied to module structure.
+- [x] Handle `capsuleStore.ts`, `outfitStore.ts`, and `aiGeneration.ts` dependency bags.
 
 ## Recommended Order
 
 - [x] Phase 1: remove trivial line-count disables and the simple `complexity` case in `server/src/capsuleHttp.ts`.
-- [ ] Phase 2: type remaining AI/store dependency bags and remove the corresponding `no-explicit-any` disables.
+- [x] Phase 2: type remaining AI/store dependency bags and remove the corresponding `no-explicit-any` disables.
 - [ ] Phase 3: fix both `react-hooks/exhaustive-deps` disables.
 - [ ] Phase 4: split large client screens/hooks.
 - [ ] Phase 5: split server stores, mutation routes, and AI generation/report pipelines.

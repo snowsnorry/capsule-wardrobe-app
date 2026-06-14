@@ -43,9 +43,7 @@ import {
   buildProfileCapsuleContext,
   buildSnapshotFromProfile,
 } from "./capsuleStoreContext.js";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type CapsuleStoreDeps = Record<string, any>;
+import type { CapsuleStoreDeps } from "./capsuleStoreDeps.js";
 
 // eslint-disable-next-line max-lines-per-function, complexity
 function createCapsuleStore(deps: CapsuleStoreDeps = {}) {

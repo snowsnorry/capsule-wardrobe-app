@@ -21,7 +21,14 @@ import {
   buildCapsuleWardrobeSqlParams,
   queryCapsuleWardrobeItemsForProfile,
 } from "./aiSql.js";
-import type { PromptDebugImageResult } from "./types.js";
+import type {
+  CountByKey,
+  ImageAssetLike,
+  LlmUsageLike,
+  LogContextLike,
+  PromptDebugImageResult,
+  UserProfileLike,
+} from "./types.js";
 import {
   countItemsByKey,
   extractLlmUsage,
@@ -47,8 +54,87 @@ import {
 import { validateCapsuleAnchorItems } from "../capsuleAnchors.js";
 import { logInfo, logWarn } from "../logger.js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createCapsuleGenerationDeps(deps: Record<string, any> = {}) {
+type CapsuleSelectionResponse = {
+  output_text?: string | null;
+  output?: unknown;
+  output_parsed?: unknown;
+  status?: string | null;
+  incomplete_details?: unknown;
+  usage?: LlmUsageLike | null;
+};
+
+type CapsuleSelectionJson = {
+  capsule?: unknown;
+  outfit_formulas?: unknown;
+  system_evaluation?: {
+    short_capsule_name?: unknown;
+  } | null;
+};
+
+type CapsuleGenerateJsonWithLlm = (
+  prompt: string,
+  options: {
+    userProfile?: UserProfileLike | null;
+    images?: ImageAssetLike[];
+    onPayloadBuilt?: (() => void) | null;
+  },
+) => Promise<{
+  response?: CapsuleSelectionResponse | null;
+  json?: CapsuleSelectionJson | null;
+}>;
+
+type LlmProviderResolutionLike = {
+  requestedLlm: string;
+  provider?: string | null;
+  model?: string | null;
+  fallbackReason?: string | null;
+};
+
+type ValidatedCapsuleAnchorsLike = {
+  anchorWardrobeNumericIds: number[];
+  anchorCatalogUrls: string[];
+  anchorItemRefs: NonNullable<UserProfileLike["anchorItemRefs"]>;
+  anchorItems: Array<Record<string, unknown>>;
+};
+
+type CapsuleWardrobeSqlParamsLike = Record<string, unknown>;
+type CapsuleWardrobeSqlResultLike =
+  | Array<Record<string, unknown>>
+  | { count: number };
+
+type CapsuleGenerationDeps = {
+  buildCapsuleWardrobeSqlParamsImpl?: (
+    userProfile: UserProfileLike | null,
+    promptEmbeddings: number[],
+    capsuleCategories: CountByKey,
+  ) => CapsuleWardrobeSqlParamsLike;
+  buildPromptDebugImagesInChildImpl?: typeof buildPromptDebugImagesInChild;
+  getGenerateJsonWithLlmImpl?: (
+    userProfile: UserProfileLike | null,
+  ) => CapsuleGenerateJsonWithLlm | null;
+  getPromptEmbeddingsImpl?: (prompt: string) => Promise<number[]>;
+  getWardrobePromptImpl?: (userProfile: UserProfileLike | null) => string;
+  isNoLlmProfileEnabledImpl?: (userProfile: UserProfileLike | null) => boolean;
+  queryCapsuleWardrobeItemsForProfileImpl?: (
+    sql: unknown,
+    params: CapsuleWardrobeSqlParamsLike,
+  ) => Promise<CapsuleWardrobeSqlResultLike>;
+  resolveLlmProviderImpl?: (
+    userProfile: UserProfileLike | null,
+  ) => LlmProviderResolutionLike;
+  runWithImageWorkSlotImpl?: typeof runWithImageWorkSlot;
+  getSqlClientImpl?: () => unknown;
+  validateCapsuleAnchorItemsImpl?: (
+    email: string,
+    anchorItemRefs: UserProfileLike["anchorItemRefs"],
+  ) => Promise<ValidatedCapsuleAnchorsLike>;
+};
+
+type ResolvedCapsuleGenerationDeps = Required<CapsuleGenerationDeps>;
+
+function createCapsuleGenerationDeps(
+  deps: CapsuleGenerationDeps = {},
+): ResolvedCapsuleGenerationDeps {
   return {
     buildCapsuleWardrobeSqlParamsImpl:
       deps.buildCapsuleWardrobeSqlParamsImpl || buildCapsuleWardrobeSqlParams,
@@ -83,11 +169,11 @@ function createCapsuleGenerationDeps(deps: Record<string, any> = {}) {
 }
 
 async function getNormalizedWardrobeItems(
-  userProfile,
-  promptEmbeddings,
-  capsuleCategories,
-  logContext,
-  deps,
+  userProfile: UserProfileLike | null,
+  promptEmbeddings: number[],
+  capsuleCategories: CountByKey,
+  logContext: LogContextLike | null,
+  deps: ResolvedCapsuleGenerationDeps,
 ) {
   const sqlParams = deps.buildCapsuleWardrobeSqlParamsImpl(
     userProfile,
@@ -119,7 +205,10 @@ async function getNormalizedWardrobeItems(
   return normalizedItems;
 }
 
-async function getValidatedAnchorContext(userProfile, deps) {
+async function getValidatedAnchorContext(
+  userProfile: UserProfileLike | null,
+  deps: ResolvedCapsuleGenerationDeps,
+) {
   const anchorItemRefs = Array.isArray(userProfile?.anchorItemRefs)
     ? userProfile.anchorItemRefs
     : [];
@@ -138,6 +227,13 @@ function buildNoLlmCapsuleResult({
   promptEmbeddings,
   llmResolution,
   logContext,
+}: {
+  normalizedItems: Array<Record<string, unknown>>;
+  capsuleCategories: CountByKey;
+  userProfile: UserProfileLike | null;
+  promptEmbeddings: number[];
+  llmResolution: LlmProviderResolutionLike;
+  logContext: LogContextLike | null;
 }) {
   logWardrobeInfo(
     "capsule-llm-skipped",
@@ -182,9 +278,9 @@ function buildNoLlmCapsuleResult({
 }
 
 async function getPromptDebugImages(
-  normalizedItems,
-  logContext,
-  deps,
+  normalizedItems: Array<Record<string, unknown>>,
+  logContext: LogContextLike | null,
+  deps: ResolvedCapsuleGenerationDeps,
 ): Promise<PromptDebugImageResult> {
   const shouldSavePromptDebugArtifacts = process.env.NODE_ENV === "development";
 
@@ -245,6 +341,16 @@ async function generateSelection({
   llmResolution,
   logContext,
   deps,
+}: {
+  userProfile: UserProfileLike | null;
+  normalizedItems: Array<Record<string, unknown>>;
+  capsuleCategories: CountByKey;
+  anchorItems: Array<Record<string, unknown>>;
+  candidateItems: Array<Record<string, unknown>>;
+  promptDebugImages: PromptDebugImageResult;
+  llmResolution: LlmProviderResolutionLike;
+  logContext: LogContextLike | null;
+  deps: ResolvedCapsuleGenerationDeps;
 }) {
   const selectionPrompt = getWardrobeSelectionPrompt(
     userProfile,
@@ -254,6 +360,9 @@ async function generateSelection({
   saveLastPromptArtifacts(selectionPrompt, userProfile);
   const llmStartedAt = Date.now();
   const generateJsonWithLlm = deps.getGenerateJsonWithLlmImpl(userProfile);
+  if (!generateJsonWithLlm) {
+    throw new Error("llm_generator_unavailable");
+  }
   const stylistImages = promptDebugImages.stitched
     ? [promptDebugImages.stitched]
     : promptDebugImages.categories;
@@ -322,7 +431,10 @@ async function generateSelection({
   };
 }
 
-function logEmptySelectionResponse(parsedSelection, selectionResponse) {
+function logEmptySelectionResponse(
+  parsedSelection: CapsuleSelectionJson | null | undefined,
+  selectionResponse: CapsuleSelectionResponse | null | undefined,
+) {
   if (parsedSelection?.capsule && typeof parsedSelection.capsule === "object") {
     return;
   }
@@ -333,7 +445,9 @@ function logEmptySelectionResponse(parsedSelection, selectionResponse) {
   );
 }
 
-function buildEmptySelectionLogPayload(selectionResponse) {
+function buildEmptySelectionLogPayload(
+  selectionResponse: CapsuleSelectionResponse | null | undefined,
+) {
   return {
     outputText: getRawSelectionText(selectionResponse),
     output: selectionResponse?.output ?? null,
@@ -344,19 +458,23 @@ function buildEmptySelectionLogPayload(selectionResponse) {
   };
 }
 
-function getRawSelectionText(selectionResponse) {
+function getRawSelectionText(
+  selectionResponse: CapsuleSelectionResponse | null | undefined,
+) {
   return typeof selectionResponse?.output_text === "string" &&
     selectionResponse.output_text.trim().length > 0
     ? selectionResponse.output_text.trim()
     : null;
 }
 
-export function createGenerateCapsuleWardrobe(deps = {}) {
+export function createGenerateCapsuleWardrobe(
+  deps: CapsuleGenerationDeps = {},
+) {
   const resolvedDeps = createCapsuleGenerationDeps(deps);
 
   return async function generateCapsuleWardrobe(
-    userProfile = null,
-    logContext = null,
+    userProfile: UserProfileLike | null = null,
+    logContext: LogContextLike | null = null,
   ) {
     const llmResolution = resolvedDeps.resolveLlmProviderImpl(userProfile);
     const prompt = resolvedDeps.getWardrobePromptImpl(userProfile);
