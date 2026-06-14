@@ -150,6 +150,16 @@ These disables point to real structural debt. They should be planned as focused 
 - [ ] `server/src/appDependencies.ts` - `max-lines`, `max-lines-per-function`
   - Composition root can be split into auth, capsule, wardrobe, outfit, search, and MCP dependency builders.
 
+### Remaining Larger Decomposition Analysis
+
+These files remained unchecked after the completed phases because the previous phases were scoped to different ownership surfaces:
+
+- Phases 1-3 removed trivial line-count issues, typed dependency bags, and hook dependency disables.
+- Phase 4 split large client screens and hooks, but did not cover client API modules, app action orchestrators, or reusable component internals.
+- Phase 5 split server stores, mutation routes, and AI/report pipelines, but did not cover DB core modules or the server composition root.
+
+A narrow ESLint run with inline config disabled still reports 19 warnings across the unchecked files: 10 `max-lines`, 6 `max-lines-per-function`, and 3 `complexity` warnings. They should not be handled in one phase because they span separate validation surfaces and refactor risks: client API/action contracts, card UI behavior, sidebar/filter UI behavior, DB helper modules, and app dependency wiring.
+
 ## React Hook Disables
 
 - [x] `client/src/app/useOutfitRouteSync.ts`
@@ -170,3 +180,23 @@ These disables point to real structural debt. They should be planned as focused 
 - [x] Phase 3: fix both `react-hooks/exhaustive-deps` disables.
 - [x] Phase 4: split large client screens/hooks.
 - [x] Phase 5: split server stores, mutation routes, and AI generation/report pipelines.
+- [ ] Phase 6: split client outfit and capsule orchestration surfaces.
+  - Fix `client/src/api/outfits.ts` by moving outfit URL/query helpers, SSE subscription/report streaming helpers, and PDF download helpers into focused API support modules while keeping the exported public API names stable for `client/src/api/outfits.test.ts` and app callers.
+  - Fix `client/src/app/capsuleActions.ts` by moving capsule lifecycle actions, report actions, and profile-filter regeneration actions into focused action modules while preserving the current barrel exports used by `useAppHandlers`, route sync, and tests.
+  - Validate with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
+- [ ] Phase 7: split clothing card behavior and view parts.
+  - Fix `client/src/components/ClothingCard.tsx` by extracting action-state derivation, click/long-press wiring, and product-menu key behavior from the component body without changing selectable, liked, wardrobe-source, or mobile behavior.
+  - Fix `client/src/components/ClothingCardParts.tsx` by splitting image rendering, detail rendering, action rendering, keyboard handling, and style helpers into smaller component/utility modules.
+  - Validate with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
+- [ ] Phase 8: split sidebar navigation and profile filter UI composition.
+  - Fix `client/src/components/AppSidebarNavigation.tsx` by extracting expanded-section state, load-more handlers, and the list composition into focused helpers/components.
+  - Fix `client/src/components/AppSidebarNavigationCapsuleRows.tsx` and `client/src/components/AppSidebarNavigationSections.tsx` by splitting capsule rows, outfit rows, top-level section rows, counts, pagination controls, and action-menu wiring along row-type boundaries.
+  - Fix `client/src/components/ProfileFiltersAnchorSection.tsx` by extracting anchor snapshot normalization, selection state transitions, dialog/render content, and selected-row rendering.
+  - Validate with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
+- [ ] Phase 9: split server DB core and capsule persistence modules.
+  - Fix `server/src/db/core.ts` by moving row/input type groups, SQL client override/creation helpers, result helpers, and serialization/hash helpers into focused DB support modules with stable re-exports for existing imports.
+  - Fix `server/src/db/profileCapsules.ts` by splitting profile-owned capsule CRUD/list/search operations from shared-capsule persistence and pruning operations while preserving SQL statement behavior and public exports.
+  - Validate with `npm run coverage:server`, `npm run typecheck:server`, `npm run format`, and `npm run lint:strict`.
+- [ ] Phase 10: split the server composition root.
+  - Fix `server/src/appDependencies.ts` by extracting auth/session, profile/options, capsule/outfit, wardrobe/media, search/MCP, passkey/OAuth, and account-cleanup dependency builders. Keep `createAppDependencies(options)` as the public entrypoint and preserve option override precedence, especially auth-test mode and injected test dependencies.
+  - Validate with `npm run coverage:server`, `npm run typecheck:server`, `npm run format`, and `npm run lint:strict`.
