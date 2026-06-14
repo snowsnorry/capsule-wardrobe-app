@@ -255,6 +255,45 @@ describe("capsuleActions", () => {
     expect(context.setIsCapsuleReportPending).toHaveBeenLastCalledWith(false);
   });
 
+  test("skips stale capsule report updates and unmounted report errors", async () => {
+    vi.mocked(generateCapsuleReport).mockResolvedValueOnce({
+      ok: true,
+      report: { verdict: { score: 0.9 } },
+    });
+    vi.mocked(fetchCapsule).mockResolvedValueOnce({
+      capsule: createTestCapsule({ id: "capsule-1" }),
+    });
+    vi.mocked(deleteCapsuleReport)
+      .mockResolvedValueOnce({
+        capsule: createTestCapsule({ id: "capsule-1" }),
+      })
+      .mockRejectedValueOnce(new Error("delete failed"));
+    vi.mocked(generateCapsuleReport).mockRejectedValueOnce(
+      new Error("network"),
+    );
+    const context = createActionContext({
+      activeCapsuleId: "capsule-2",
+      isMountedRef: { current: false },
+      setIsCapsuleReportPending: vi.fn(),
+      setStatus: vi.fn(),
+    });
+
+    await generateCurrentCapsuleReport(context, "");
+    await deleteCurrentCapsuleReport(context, "");
+    await generateCurrentCapsuleReport(context, "capsule-1");
+    await deleteCurrentCapsuleReport(context, "capsule-1");
+    await deleteCurrentCapsuleReport(context, "capsule-1");
+    await generateCurrentCapsuleReport(context, "capsule-1");
+
+    expect(generateCapsuleReport).toHaveBeenCalledTimes(2);
+    expect(deleteCapsuleReport).toHaveBeenCalledTimes(2);
+    expect(context.applyCapsuleState).not.toHaveBeenCalled();
+    expect(context.setStatus).not.toHaveBeenCalled();
+    expect(context.setIsCapsuleReportPending).toHaveBeenCalledTimes(4);
+    expect(context.setIsCapsuleReportPending).toHaveBeenCalledWith(true);
+    expect(context.setIsCapsuleReportPending).not.toHaveBeenCalledWith(false);
+  });
+
   test("duplicateCurrentCapsule switches to the duplicate without reverting the source capsule", async () => {
     vi.mocked(duplicateCapsule).mockResolvedValue({
       capsule: createTestCapsule({

@@ -9,7 +9,7 @@
 
 Current suppressed warning count:
 
-- [ ] `max-lines`: 12
+- [ ] `max-lines`: 10
 - [ ] `max-lines-per-function`: 10
 - [ ] `complexity`: 6
 - [x] `react-hooks/exhaustive-deps`: 0
@@ -97,10 +97,10 @@ These disables point to real structural debt. They should be planned as focused 
   - Split the screen into controller, view, scroll/content, report, main content, overlay, preview, confirm, name-dialog, and report-state modules.
 - [x] `client/src/screens/outfitScreen/useOutfitAddItemsDialog.ts` - `max-lines-per-function`
   - Split personal items, catalog search, selection, and mobile filters into focused hooks.
-- [ ] `client/src/api/outfits.ts` - `max-lines`
-  - Saved-outfit API calls, event streams, PDF download, and media/report helpers share one API surface.
-- [ ] `client/src/app/capsuleActions.ts` - `max-lines`
-  - Capsule action orchestration still groups generation, sharing, refresh, and mutation flows.
+- [x] `client/src/api/outfits.ts` - `max-lines`
+  - Split saved-outfit URL/query helpers, item-reference normalization, SSE/report stream helpers, and PDF download behavior into focused API support modules while keeping the public `client/src/api/outfits.ts` exports stable.
+- [x] `client/src/app/capsuleActions.ts` - `max-lines`
+  - Split capsule lifecycle actions, report actions, profile-filter regeneration actions, and capsule search into focused modules while keeping `client/src/app/capsuleActions.ts` as the stable barrel for app callers and tests.
 - [x] `client/src/screens/WardrobeScreen.tsx` - `max-lines-per-function`
   - Split filters, action menu, dialogs, upload success, and product-detail state from the main screen composition.
 - [x] `client/src/screens/useWardrobeItems.ts` - `max-lines-per-function`
@@ -158,7 +158,7 @@ These files remained unchecked after the completed phases because the previous p
 - Phase 4 split large client screens and hooks, but did not cover client API modules, app action orchestrators, or reusable component internals.
 - Phase 5 split server stores, mutation routes, and AI/report pipelines, but did not cover DB core modules or the server composition root.
 
-A narrow ESLint run with inline config disabled still reports 19 warnings across the unchecked files: 10 `max-lines`, 6 `max-lines-per-function`, and 3 `complexity` warnings. They should not be handled in one phase because they span separate validation surfaces and refactor risks: client API/action contracts, card UI behavior, sidebar/filter UI behavior, DB helper modules, and app dependency wiring.
+A narrow ESLint run with inline config disabled still reports 17 warnings across the unchecked files: 8 `max-lines`, 6 `max-lines-per-function`, and 3 `complexity` warnings. They should not be handled in one phase because they span separate validation surfaces and refactor risks: card UI behavior, sidebar/filter UI behavior, DB helper modules, and app dependency wiring.
 
 ## React Hook Disables
 
@@ -180,10 +180,10 @@ A narrow ESLint run with inline config disabled still reports 19 warnings across
 - [x] Phase 3: fix both `react-hooks/exhaustive-deps` disables.
 - [x] Phase 4: split large client screens/hooks.
 - [x] Phase 5: split server stores, mutation routes, and AI generation/report pipelines.
-- [ ] Phase 6: split client outfit and capsule orchestration surfaces.
-  - Fix `client/src/api/outfits.ts` by moving outfit URL/query helpers, SSE subscription/report streaming helpers, and PDF download helpers into focused API support modules while keeping the exported public API names stable for `client/src/api/outfits.test.ts` and app callers.
-  - Fix `client/src/app/capsuleActions.ts` by moving capsule lifecycle actions, report actions, and profile-filter regeneration actions into focused action modules while preserving the current barrel exports used by `useAppHandlers`, route sync, and tests.
-  - Validate with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
+- [x] Phase 6: split client outfit and capsule orchestration surfaces.
+  - Fixed `client/src/api/outfits.ts` by moving outfit URL/query helpers, item-reference normalization, SSE subscription/report streaming helpers, and PDF download helpers into focused API support modules while keeping the exported public API names stable for `client/src/api/outfits.test.ts` and app callers.
+  - Fixed `client/src/app/capsuleActions.ts` by moving capsule lifecycle actions, report actions, profile-filter regeneration actions, and capsule search into focused action modules while preserving the barrel exports used by `useAppHandlers`, route sync, and tests.
+  - Validated with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
 - [ ] Phase 7: split clothing card behavior and view parts.
   - Fix `client/src/components/ClothingCard.tsx` by extracting action-state derivation, click/long-press wiring, and product-menu key behavior from the component body without changing selectable, liked, wardrobe-source, or mobile behavior.
   - Fix `client/src/components/ClothingCardParts.tsx` by splitting image rendering, detail rendering, action rendering, keyboard handling, and style helpers into smaller component/utility modules.
