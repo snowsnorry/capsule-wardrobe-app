@@ -1,9 +1,4 @@
-import type {
-  CountByKey,
-  ImageAssetLike,
-  LlmUsageLike,
-  UserProfileLike,
-} from "./types.js";
+import type { ImageAssetLike, LlmUsageLike, UserProfileLike } from "./types.js";
 
 type CapsuleSelectionResponse = {
   output_text?: string | null;
@@ -53,15 +48,8 @@ type CapsuleWardrobeSqlResultLike =
   | Array<Record<string, unknown>>
   | { count: number };
 
-type CapsuleGenerationInputs = {
-  normalizedItems: Array<Record<string, unknown>>;
-  capsuleCategories: CountByKey;
-  promptEmbeddings: number[];
-};
-
 export type {
   CapsuleGenerateJsonWithLlm,
-  CapsuleGenerationInputs,
   CapsuleSelectionJson,
   CapsuleSelectionResponse,
   CapsuleWardrobeSqlParamsLike,
