@@ -1,8 +1,5 @@
 import type { SearchPayload } from "./searchTypes.js";
 
-export type SearchRow = Partial<SearchPayload> & {
-  embedding?: number[] | null;
-};
 export type SearchRowLike = Partial<Record<keyof SearchPayload, unknown>> & {
   embedding?: number[] | null;
 };

@@ -25,9 +25,4 @@ function isOutfitReportDomainError(error: unknown) {
   );
 }
 
-export {
-  buildOutfitReportError,
-  isOutfitReportDomainError,
-  type OutfitReportError,
-  type OutfitReportErrorCode,
-};
+export { buildOutfitReportError, isOutfitReportDomainError };
