@@ -13,6 +13,7 @@ import {
   saveCapsuleByIdForEmail,
   searchCapsulesByEmail,
   updateCapsuleReportByIdForEmail,
+  updateCapsuleSavedSnapshotByIdForEmail,
   updateCapsuleSnapshotByIdForEmail,
   upsertSharedCapsule,
 } from "./db.js";
@@ -49,6 +50,8 @@ function createDefaultCapsuleStoreDeps(): Required<CapsuleStoreDeps> {
     saveCapsuleByIdForEmailImpl: saveCapsuleByIdForEmail,
     searchCapsulesByEmailImpl: searchCapsulesByEmail,
     updateCapsuleReportByIdForEmailImpl: updateCapsuleReportByIdForEmail,
+    updateCapsuleSavedSnapshotByIdForEmailImpl:
+      updateCapsuleSavedSnapshotByIdForEmail,
     updateCapsuleSnapshotByIdForEmailImpl: updateCapsuleSnapshotByIdForEmail,
     upsertSharedCapsuleImpl: upsertSharedCapsule,
     nowImpl: Date.now,
@@ -87,6 +90,7 @@ const {
   saveCapsule,
   searchCapsules,
   updateCapsuleReport,
+  updateCapsuleSavedSnapshot,
   updateCapsuleSnapshot,
   renameCapsule,
 } = defaultCapsuleStore;
@@ -115,6 +119,7 @@ export {
   saveCapsule,
   searchCapsules,
   updateCapsuleReport,
+  updateCapsuleSavedSnapshot,
   updateCapsuleSnapshot,
   renameCapsule,
 };

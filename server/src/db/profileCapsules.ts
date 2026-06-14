@@ -10,6 +10,7 @@ import {
   type RenameCapsuleInput,
   type SharedCapsuleRow,
   type UpdateCapsuleReportInput,
+  type UpdateCapsuleSavedSnapshotInput,
   type UpdateCapsuleSnapshotInput,
   type UpsertSharedCapsuleInput,
 } from "./core.js";
@@ -166,11 +167,53 @@ export async function updateCapsuleSnapshotByIdForEmail({
   draft,
 }: UpdateCapsuleSnapshotInput): Promise<CapsuleRow | null> {
   const sql = getSqlClient();
+  const draftJson = draft === null ? null : JSON.stringify(draft);
   const row = getFirstRow(
     await sql<CapsuleRow>`
     update capsules
     set
-      draft = ${draft === null ? null : JSON.stringify(draft)},
+      draft = case
+        when ${draftJson}::jsonb is null then null
+        when not (${draftJson}::jsonb ? 'report')
+          and (
+            coalesce(draft ? 'report', false) or
+            coalesce(saved ? 'report', false)
+          )
+          then jsonb_set(
+            ${draftJson}::jsonb,
+            '{report}',
+            coalesce(draft -> 'report', saved -> 'report'),
+            true
+          )
+        else ${draftJson}::jsonb
+      end,
+      updated_at = now()
+    where email = ${email} and id = ${capsuleId}
+    returning
+      id,
+      email,
+      name,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `,
+  );
+  return row || null;
+}
+
+export async function updateCapsuleSavedSnapshotByIdForEmail({
+  email,
+  capsuleId,
+  saved,
+}: UpdateCapsuleSavedSnapshotInput): Promise<CapsuleRow | null> {
+  const sql = getSqlClient();
+  const row = getFirstRow(
+    await sql<CapsuleRow>`
+    update capsules
+    set
+      saved = ${saved === null ? null : JSON.stringify(saved)},
+      draft = null,
       updated_at = now()
     where email = ${email} and id = ${capsuleId}
     returning
@@ -202,7 +245,8 @@ export async function updateCapsuleReportByIdForEmail({
         else draft
       end,
       saved = case
-        when draft is null and saved is not null then jsonb_set(saved, '{report}', ${reportJson}::jsonb, true)
+        when saved is not null and (draft is null or draft = saved)
+          then jsonb_set(saved, '{report}', ${reportJson}::jsonb, true)
         else saved
       end,
       updated_at = now()

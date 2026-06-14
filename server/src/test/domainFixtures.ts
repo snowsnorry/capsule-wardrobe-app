@@ -59,6 +59,7 @@ type CapsuleSnapshotOverrides = {
     rejectedUrls?: string[];
     regeneration?: CapsuleSnapshot["data"]["regeneration"];
   };
+  report?: CapsuleSnapshot["report"];
 };
 
 function buildNormalizedProfileRecord(
@@ -127,7 +128,7 @@ function buildWardrobeGenerationResult(
 function buildCapsuleSnapshot(
   overrides: CapsuleSnapshotOverrides = {},
 ): CapsuleSnapshot {
-  return {
+  const snapshot: CapsuleSnapshot = {
     filters: {
       sourceMode: "catalog_only",
       formalityLevel: "casual",
@@ -147,6 +148,18 @@ function buildCapsuleSnapshot(
       regeneration: overrides.data?.regeneration ?? null,
     },
   };
+  if (Object.prototype.hasOwnProperty.call(overrides, "report")) {
+    snapshot.report = overrides.report ?? null;
+  }
+  return snapshot;
+}
+
+function getCapsuleSnapshotReportOverride(
+  snapshot: CapsuleSnapshot | Record<string, unknown>,
+): Pick<CapsuleSnapshotOverrides, "report"> {
+  return Object.prototype.hasOwnProperty.call(snapshot, "report")
+    ? { report: snapshot.report as CapsuleSnapshot["report"] }
+    : {};
 }
 
 function normalizeFixtureCapsuleSnapshot(
@@ -171,7 +184,11 @@ function normalizeFixtureCapsuleSnapshot(
       ? (snapshot.data as CapsuleSnapshotOverrides["data"])
       : undefined;
 
-  return buildCapsuleSnapshot({ filters, data });
+  return buildCapsuleSnapshot({
+    filters,
+    data,
+    ...getCapsuleSnapshotReportOverride(snapshot),
+  });
 }
 
 function buildNormalizedCapsuleRecord(

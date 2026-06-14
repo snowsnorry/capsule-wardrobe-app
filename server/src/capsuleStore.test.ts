@@ -327,6 +327,15 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
         status: "new",
       });
     },
+    updateCapsuleSavedSnapshotByIdForEmailImpl: async (payload) => {
+      calls.push({ type: "update-saved", payload });
+      return capsuleRow({
+        id: payload.capsuleId,
+        draft: null,
+        saved: payload.saved,
+        status: "saved",
+      });
+    },
     renameCapsuleByIdForEmailImpl: async (payload) => {
       calls.push({ type: "rename", payload });
       return capsuleRow({ id: payload.capsuleId, name: payload.name });
@@ -379,6 +388,19 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
     (await store.updateCapsuleReport("person@example.com", "capsule-1", null))
       ?.draft?.report,
   ).toBe(null);
+  expect(
+    (
+      await store.updateCapsuleSavedSnapshot(
+        "person@example.com",
+        "capsule-1",
+        {
+          filters: {},
+          data: { wardrobe: null, rejectedUrls: [] },
+          report: { verdict: { score: 1 } },
+        },
+      )
+    )?.saved?.report,
+  ).toEqual({ verdict: { score: 1 } });
   expect(
     (await store.renameCapsule("person@example.com", "capsule-1", "Copy"))
       ?.name,

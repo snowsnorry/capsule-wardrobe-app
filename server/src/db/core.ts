@@ -304,6 +304,12 @@ export type UpdateCapsuleSnapshotInput = {
   draft: JsonObject | null;
 };
 
+export type UpdateCapsuleSavedSnapshotInput = {
+  email: string;
+  capsuleId: string;
+  saved: JsonObject | null;
+};
+
 export type UpdateOutfitSnapshotInput = {
   email: string;
   outfitId: string;

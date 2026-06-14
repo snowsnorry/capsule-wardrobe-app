@@ -52,6 +52,11 @@ type CapsuleStoreDeps = {
     capsuleId: string;
     report: StoreSnapshot;
   }) => Promise<CapsuleStoreRecord>;
+  updateCapsuleSavedSnapshotByIdForEmailImpl?: (payload: {
+    email: string;
+    capsuleId: string;
+    saved: StoreSnapshot;
+  }) => Promise<CapsuleStoreRecord>;
   updateCapsuleSnapshotByIdForEmailImpl?: (payload: {
     email: string;
     capsuleId: string;

@@ -112,6 +112,21 @@ async function updateCapsuleSnapshotForStore(
   );
 }
 
+async function updateCapsuleSavedSnapshotForStore(
+  email: string,
+  capsuleId: string,
+  saved: Record<string, unknown> | null,
+  deps: ResolvedCapsuleStoreDeps,
+): Promise<NormalizedCapsuleRecord | null> {
+  return normalizeCapsuleRecord(
+    await deps.updateCapsuleSavedSnapshotByIdForEmailImpl({
+      email,
+      capsuleId,
+      saved: normalizeCapsuleSnapshot(saved),
+    }),
+  );
+}
+
 async function updateCapsuleReportForStore(
   email: string,
   capsuleId: string,
@@ -272,6 +287,11 @@ function createCapsuleStoreOperations(deps: ResolvedCapsuleStoreDeps) {
       capsuleId: string,
       report: Record<string, unknown> | null,
     ) => updateCapsuleReportForStore(email, capsuleId, report, deps),
+    updateCapsuleSavedSnapshot: (
+      email: string,
+      capsuleId: string,
+      saved: Record<string, unknown> | null,
+    ) => updateCapsuleSavedSnapshotForStore(email, capsuleId, saved, deps),
     updateCapsuleSnapshot: (
       email: string,
       capsuleId: string,

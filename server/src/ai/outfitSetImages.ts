@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
+import type { OutfitSetImageServiceOptions } from "./outfitSetImageServiceTypes.js";
 import {
   getCapsule,
   getEffectiveCapsuleSnapshot,
+  updateCapsuleSavedSnapshot,
   updateCapsuleSnapshot,
 } from "../capsuleStore.js";
 import { getProfile } from "../profileStore.js";
@@ -11,6 +13,14 @@ import { resolveImageLlmProvider } from "./imageLlm.js";
 import { logWardrobeInfo } from "./ai.js";
 import { generateImageWithOpenAi } from "./openaiImage.js";
 import { buildOutfitSetDescription } from "./outfitSetImageDescription.js";
+import {
+  areOutfitSetItemIdsEqual,
+  buildOutfitSetSnapshotUpdate,
+  getOutfitSetsFromSnapshot,
+  resolveSnapshotUpdater,
+  resolveTargetSetItems,
+  updateOutfitSetImageSnapshot,
+} from "./outfitSetImageSnapshots.js";
 import {
   buildPromptFromTemplate,
   saveOutfitSetDebugArtifacts,
@@ -30,34 +40,6 @@ import { downloadProductImageAssets } from "./promptImages.js";
 import { uploadImageToR2 } from "../r2Storage.js";
 import { logError } from "../logger.js";
 
-function resolveTargetSetItems(wardrobe, setIndex) {
-  const items = Array.isArray(wardrobe?.items) ? wardrobe.items : [];
-  const targetSet = Array.isArray(wardrobe?.outfitSets)
-    ? wardrobe.outfitSets[setIndex]
-    : null;
-  if (!targetSet) {
-    return null;
-  }
-
-  const itemsById = new Map(
-    items
-      .map((item) => [String(item?.id || "").trim(), item])
-      .filter(([id]) => id),
-  );
-
-  return (Array.isArray(targetSet?.itemIds) ? targetSet.itemIds : [])
-    .map((itemId) => itemsById.get(String(itemId || "").trim()))
-    .filter(Boolean);
-}
-
-function getOutfitSetsFromSnapshot(effectiveSnapshot) {
-  const wardrobe = effectiveSnapshot?.data?.wardrobe;
-  return {
-    outfitSets: Array.isArray(wardrobe?.outfitSets) ? wardrobe.outfitSets : [],
-    wardrobe,
-  };
-}
-
 function publishOutfitSetSnapshot({
   email,
   capsuleId,
@@ -73,19 +55,6 @@ function publishOutfitSetSnapshot({
       outfitSetImageJob: getOutfitSetImageJob(email, capsuleId),
     }),
   );
-}
-
-function buildOutfitSetSnapshotUpdate(effectiveSnapshot, wardrobe, outfitSets) {
-  return {
-    filters: effectiveSnapshot?.filters,
-    data: {
-      wardrobe: {
-        ...wardrobe,
-        outfitSets,
-      },
-      rejectedUrls: effectiveSnapshot?.data?.rejectedUrls || [],
-    },
-  };
 }
 
 function createDeleteOutfitSetImage(deps) {
@@ -207,15 +176,15 @@ async function runOutfitSetImageJob({
   capsuleId,
   setIndex,
   capsule,
-  effectiveSnapshot,
-  wardrobe,
   outfitSets,
   setItems,
   jobKey,
 }) {
   const {
     buildCapsuleEventSnapshotImpl,
+    getCapsuleImpl,
     publishSnapshotImpl,
+    updateCapsuleSavedSnapshotImpl,
     updateCapsuleSnapshotImpl,
   } = deps;
   let currentCapsule = capsule;
@@ -228,16 +197,42 @@ async function runOutfitSetImageJob({
       setIndex,
       setItems,
     });
-    const nextOutfitSets = outfitSets.map((set, index) =>
+    const latestCapsule = await getCapsuleImpl(email, capsuleId);
+    if (!latestCapsule) {
+      currentCapsule = null;
+      return;
+    }
+    const latestEffectiveSnapshot = getEffectiveCapsuleSnapshot(latestCapsule);
+    const { wardrobe: latestWardrobe, outfitSets: latestOutfitSets } =
+      getOutfitSetsFromSnapshot(latestEffectiveSnapshot);
+    if (!latestOutfitSets[setIndex]) {
+      currentCapsule = latestCapsule;
+      return;
+    }
+
+    const nextOutfitSets = latestOutfitSets.map((set, index) =>
       index === setIndex
-        ? { ...set, image: generatedImage?.url || null, imageObsolete: false }
+        ? {
+            ...set,
+            image: generatedImage?.url || null,
+            imageObsolete:
+              Boolean(generatedImage?.url) &&
+              !areOutfitSetItemIdsEqual(outfitSets[setIndex], set),
+          }
         : set,
     );
-    currentCapsule = await updateCapsuleSnapshotImpl(
-      email,
+    currentCapsule = await updateOutfitSetImageSnapshot({
+      capsule: latestCapsule,
       capsuleId,
-      buildOutfitSetSnapshotUpdate(effectiveSnapshot, wardrobe, nextOutfitSets),
-    );
+      email,
+      nextSnapshot: buildOutfitSetSnapshotUpdate(
+        latestEffectiveSnapshot,
+        latestWardrobe,
+        nextOutfitSets,
+      ),
+      updateCapsuleSavedSnapshotImpl,
+      updateCapsuleSnapshotImpl,
+    });
   } catch (error) {
     logError("[outfit-set-image]", {
       message: error?.message || "unknown_error",
@@ -316,8 +311,6 @@ function createGenerateOutfitSetImage(deps) {
       capsuleId,
       setIndex,
       capsule,
-      effectiveSnapshot,
-      wardrobe,
       outfitSets,
       setItems,
       jobKey,
@@ -327,25 +320,29 @@ function createGenerateOutfitSetImage(deps) {
   };
 }
 
-function createOutfitSetImageService({
-  getCapsuleImpl = getCapsule,
-  getProfileImpl = getProfile,
-  updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
-  publishSnapshotImpl = ((email, capsuleId, snapshot) =>
-    capsuleEventHub.publish(email, capsuleId, snapshot)) as (
-    email: string,
-    capsuleId: string,
-    snapshot: unknown,
-  ) => void | boolean,
-  buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot as (
-    payload?: Record<string, unknown>,
-  ) => unknown,
-  downloadProductImageAssetsImpl = downloadProductImageAssets,
-  generateImageWithOpenAiImpl = generateImageWithOpenAi,
-  generateImageWithGeminiImpl = generateImageWithGemini,
-  uploadImageToR2Impl = uploadImageToR2,
-  buildOutfitSetDescriptionImpl = buildOutfitSetDescription,
-} = {}) {
+function createOutfitSetImageService(
+  options: OutfitSetImageServiceOptions = {},
+) {
+  const {
+    getCapsuleImpl = getCapsule,
+    getProfileImpl,
+    updateCapsuleSavedSnapshotImpl = undefined,
+    updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
+    publishSnapshotImpl = ((email, capsuleId, snapshot) =>
+      capsuleEventHub.publish(email, capsuleId, snapshot)) as (
+      email: string,
+      capsuleId: string,
+      snapshot: unknown,
+    ) => void | boolean,
+    buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot as (
+      payload?: Record<string, unknown>,
+    ) => unknown,
+    downloadProductImageAssetsImpl = downloadProductImageAssets,
+    generateImageWithOpenAiImpl = generateImageWithOpenAi,
+    generateImageWithGeminiImpl = generateImageWithGemini,
+    uploadImageToR2Impl = uploadImageToR2,
+    buildOutfitSetDescriptionImpl = buildOutfitSetDescription,
+  } = options;
   const deps = {
     buildCapsuleEventSnapshotImpl,
     buildOutfitSetDescriptionImpl,
@@ -353,8 +350,12 @@ function createOutfitSetImageService({
     generateImageWithGeminiImpl,
     generateImageWithOpenAiImpl,
     getCapsuleImpl,
-    getProfileImpl,
+    getProfileImpl: resolveSnapshotUpdater(getProfileImpl, getProfile),
     publishSnapshotImpl,
+    updateCapsuleSavedSnapshotImpl: resolveSnapshotUpdater(
+      updateCapsuleSavedSnapshotImpl,
+      updateCapsuleSavedSnapshot,
+    ),
     updateCapsuleSnapshotImpl,
     uploadImageToR2Impl,
   };

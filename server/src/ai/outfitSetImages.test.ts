@@ -259,6 +259,294 @@ test("outfitSetImage service starts job and persists generated image", async () 
   expect(uploads[0].setIndex).toBe(0);
 });
 
+test("outfitSetImage service persists generated images into saved capsules without drafts", async () => {
+  const draftUpdates = [];
+  const savedUpdates = [];
+  const savedOnlyCapsule = buildNormalizedCapsuleRecord({
+    id: "capsule-1",
+    draft: null,
+    saved: buildCapsuleSnapshot({
+      filters: { formalityLevel: "casual" },
+      data: {
+        wardrobe: {
+          items: [
+            {
+              id: "top-1",
+              imageUrl: "https://example.com/top.jpg",
+              category: "top",
+            },
+            {
+              id: "bottom-1",
+              imageUrl: "https://example.com/bottom.jpg",
+              category: "bottom",
+            },
+            {
+              id: "bag-1",
+              imageUrl: "https://example.com/bag.jpg",
+              category: "bag",
+            },
+          ],
+          outfitSets: [
+            buildStoredOutfitSet({ itemIds: ["top-1", "bottom-1", "bag-1"] }),
+          ],
+          rawSelectionText: null,
+          swimwearReasoning: null,
+          swimwearRawSelectionText: null,
+        },
+        rejectedUrls: [],
+      },
+      report: { verdict: { score: 0.9 } },
+    }),
+  });
+  const service = createOutfitSetImageService({
+    getCapsuleImpl: async () => savedOnlyCapsule,
+    getProfileImpl: async () =>
+      buildNormalizedProfileRecord({
+        imageLlm: "openai:gpt-image-2",
+      }),
+    buildCapsuleEventSnapshotImpl: (payload) => payload,
+    publishSnapshotImpl: () => {},
+    generateImageWithOpenAiImpl: async () => ({
+      response: null,
+      image: {
+        base64: "generated-base64",
+        mimeType: "image/png",
+      },
+    }),
+    uploadImageToR2Impl: async () => ({
+      key: "outfit-set-images/generated/capsule-1/0/digest.png",
+      url: "https://images.example.com/generated.png",
+      digest: "digest",
+    }),
+    downloadProductImageAssetsImpl: async () => ({
+      "top-1": {
+        buffer: Buffer.from("top"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/top.jpg",
+        originalImageUrl: "https://example.com/top.jpg",
+        width: 100,
+        height: 100,
+      },
+      "bottom-1": {
+        buffer: Buffer.from("bottom"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/bottom.jpg",
+        originalImageUrl: "https://example.com/bottom.jpg",
+        width: 100,
+        height: 100,
+      },
+      "bag-1": {
+        buffer: Buffer.from("bag"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/bag.jpg",
+        originalImageUrl: "https://example.com/bag.jpg",
+        width: 100,
+        height: 100,
+      },
+    }),
+    updateCapsuleSavedSnapshotImpl: async (_email, _capsuleId, saved) => {
+      savedUpdates.push(saved);
+      return buildNormalizedCapsuleRecord({
+        ...savedOnlyCapsule,
+        draft: null,
+        saved,
+      });
+    },
+    updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => {
+      draftUpdates.push(draft);
+      return buildNormalizedCapsuleRecord({
+        ...savedOnlyCapsule,
+        draft,
+      });
+    },
+  });
+  const res = createResponseRecorder();
+
+  await service.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    res,
+  );
+
+  expect(res.statusCode).toBe(202);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(draftUpdates).toEqual([]);
+  expect(savedUpdates.length).toBe(1);
+  expect(savedUpdates[0].data.wardrobe.outfitSets[0].image).toBe(
+    "https://images.example.com/generated.png",
+  );
+  expect(savedUpdates[0].report).toEqual({ verdict: { score: 0.9 } });
+});
+
+test("outfitSetImage service does not discard a draft created while generation is pending", async () => {
+  const draftUpdates = [];
+  const savedUpdates = [];
+  const savedOnlyCapsule = buildNormalizedCapsuleRecord({
+    id: "capsule-1",
+    draft: null,
+    saved: buildCapsuleSnapshot({
+      filters: { formalityLevel: "casual" },
+      data: {
+        wardrobe: {
+          items: [
+            {
+              id: "top-1",
+              imageUrl: "https://example.com/top.jpg",
+              category: "top",
+            },
+            {
+              id: "bottom-1",
+              imageUrl: "https://example.com/bottom.jpg",
+              category: "bottom",
+            },
+            {
+              id: "bag-1",
+              imageUrl: "https://example.com/bag.jpg",
+              category: "bag",
+            },
+          ],
+          outfitSets: [
+            buildStoredOutfitSet({ itemIds: ["top-1", "bottom-1", "bag-1"] }),
+          ],
+          rawSelectionText: null,
+          swimwearReasoning: null,
+          swimwearRawSelectionText: null,
+        },
+        rejectedUrls: [],
+      },
+    }),
+  });
+  const latestDraftCapsule = buildNormalizedCapsuleRecord({
+    ...savedOnlyCapsule,
+    draft: buildCapsuleSnapshot({
+      filters: { formalityLevel: "formal" },
+      data: {
+        wardrobe: {
+          items: [
+            ...savedOnlyCapsule.saved.data.wardrobe.items,
+            {
+              id: "shoe-1",
+              imageUrl: "https://example.com/shoe.jpg",
+              category: "shoes",
+            },
+          ],
+          outfitSets: [
+            buildStoredOutfitSet({ itemIds: ["top-1", "bottom-1", "shoe-1"] }),
+          ],
+          rawSelectionText: "edited draft",
+          swimwearReasoning: null,
+          swimwearRawSelectionText: null,
+        },
+        rejectedUrls: ["https://example.com/rejected"],
+      },
+    }),
+  });
+  let getCapsuleCalls = 0;
+  const service = createOutfitSetImageService({
+    getCapsuleImpl: async () => {
+      getCapsuleCalls += 1;
+      return getCapsuleCalls === 1 ? savedOnlyCapsule : latestDraftCapsule;
+    },
+    getProfileImpl: async () =>
+      buildNormalizedProfileRecord({
+        imageLlm: "openai:gpt-image-2",
+      }),
+    buildCapsuleEventSnapshotImpl: (payload) => payload,
+    publishSnapshotImpl: () => {},
+    generateImageWithOpenAiImpl: async () => ({
+      response: null,
+      image: {
+        base64: "generated-base64",
+        mimeType: "image/png",
+      },
+    }),
+    uploadImageToR2Impl: async () => ({
+      key: "outfit-set-images/generated/capsule-1/0/digest.png",
+      url: "https://images.example.com/generated.png",
+      digest: "digest",
+    }),
+    downloadProductImageAssetsImpl: async () => ({
+      "top-1": {
+        buffer: Buffer.from("top"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/top.jpg",
+        originalImageUrl: "https://example.com/top.jpg",
+        width: 100,
+        height: 100,
+      },
+      "bottom-1": {
+        buffer: Buffer.from("bottom"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/bottom.jpg",
+        originalImageUrl: "https://example.com/bottom.jpg",
+        width: 100,
+        height: 100,
+      },
+      "bag-1": {
+        buffer: Buffer.from("bag"),
+        mimeType: "image/jpeg",
+        source: "download",
+        imageUrl: "https://example.com/bag.jpg",
+        originalImageUrl: "https://example.com/bag.jpg",
+        width: 100,
+        height: 100,
+      },
+    }),
+    updateCapsuleSavedSnapshotImpl: async (_email, _capsuleId, saved) => {
+      savedUpdates.push(saved);
+      return buildNormalizedCapsuleRecord({
+        ...latestDraftCapsule,
+        draft: null,
+        saved,
+      });
+    },
+    updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => {
+      draftUpdates.push(draft);
+      return buildNormalizedCapsuleRecord({
+        ...latestDraftCapsule,
+        draft,
+      });
+    },
+  });
+  const res = createResponseRecorder();
+
+  await service.generateOutfitSetImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "capsule-1", setIndex: "0" },
+    },
+    res,
+  );
+
+  expect(res.statusCode).toBe(202);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(getCapsuleCalls).toBe(2);
+  expect(savedUpdates).toEqual([]);
+  expect(draftUpdates.length).toBe(1);
+  expect(draftUpdates[0].filters.formalityLevel).toBe("formal");
+  expect(draftUpdates[0].data.rejectedUrls).toEqual([
+    "https://example.com/rejected",
+  ]);
+  expect(draftUpdates[0].data.wardrobe.outfitSets[0].itemIds).toEqual([
+    "top-1",
+    "bottom-1",
+    "shoe-1",
+  ]);
+  expect(draftUpdates[0].data.wardrobe.outfitSets[0].image).toBe(
+    "https://images.example.com/generated.png",
+  );
+  expect(draftUpdates[0].data.wardrobe.outfitSets[0].imageObsolete).toBe(true);
+});
+
 test("outfitSetImage service uses gemini image provider from profile setting", async () => {
   const geminiCalls = [];
   const openAiCalls = [];

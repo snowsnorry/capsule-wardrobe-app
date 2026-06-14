@@ -20,6 +20,7 @@ import {
   saveCapsuleByIdForEmail,
   searchCapsulesByEmail,
   updateCapsuleReportByIdForEmail,
+  updateCapsuleSavedSnapshotByIdForEmail,
   updateCapsuleSnapshotByIdForEmail,
   upsertSharedCapsule,
 } from "./profileCapsules.js";
@@ -78,6 +79,7 @@ test("capsule record helpers map rows, json payloads, and query values", async (
     [capsule],
     [capsule],
     [capsule],
+    [capsule],
   ]);
 
   expect(
@@ -118,6 +120,13 @@ test("capsule record helpers map rows, json payloads, and query values", async (
     }),
   ).toEqual(capsule);
   expect(
+    await updateCapsuleSavedSnapshotByIdForEmail({
+      email: "person@example.com",
+      capsuleId: "capsule-1",
+      saved: { selected: ["saved"] },
+    }),
+  ).toEqual(capsule);
+  expect(
     await updateCapsuleReportByIdForEmail({
       email: "person@example.com",
       capsuleId: "capsule-1",
@@ -151,8 +160,11 @@ test("capsule record helpers map rows, json payloads, and query values", async (
   expect(values[2][2]).toBe(2);
   expect(values[4][1]).toBe("%work%");
   expect(values[6][0]).toBe(JSON.stringify({ selected: ["b"] }));
-  expect(values[7][0]).toBe(JSON.stringify({ verdict: { score: 0.9 } }));
-  expect(statements[7]).toContain("jsonb_set(draft, '{report}'");
+  expect(statements[6]).toContain("coalesce(draft ? 'report', false)");
+  expect(values[7][0]).toBe(JSON.stringify({ selected: ["saved"] }));
+  expect(values[8][0]).toBe(JSON.stringify({ verdict: { score: 0.9 } }));
+  expect(statements[8]).toContain("jsonb_set(draft, '{report}'");
+  expect(statements[8]).toContain("draft is null or draft = saved");
 });
 
 test("capsule helpers return null or booleans for empty mutation results", async () => {
