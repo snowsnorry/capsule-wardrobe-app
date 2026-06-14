@@ -1,17 +1,6 @@
-import { hashCapsuleContent } from "../db.js";
-import { getOutfitItems } from "../outfitHttp.js";
-import {
-  getEffectiveOutfitSnapshot,
-  getOutfit,
-  updateOutfitReport,
-} from "../outfitStore.js";
-import { getProfile } from "../profileStore.js";
+import { getEffectiveOutfitSnapshot } from "../outfitStore.js";
 import { logError } from "../logger.js";
 import { extractLlmUsage, logWardrobeInfo } from "./aiCommon.js";
-import { getGenerateJsonWithLlm, resolveLlmProvider } from "./llm.js";
-import { runWithImageWorkSlot } from "./imagePipeline.js";
-import { buildPromptDebugImagesForCategory } from "./promptImages.js";
-import { saveLastPromptArtifacts } from "./regenerateSelectedArtifacts.js";
 import {
   getPromptTemplateContent,
   loadPromptTemplate,
@@ -28,6 +17,11 @@ import type {
   PromptDebugImageCategory,
   PromptImageItemLike,
 } from "./types.js";
+import {
+  createOutfitReportServiceDeps,
+  type OutfitReportServiceDeps,
+  type OutfitReportServiceDepsOverrides,
+} from "./outfitReportServiceDeps.js";
 import type { OutfitReport, OutfitReportItem } from "./outfitReportTypes.js";
 import { parseOutfitReportLlmOutput } from "./outfitReportValidation.js";
 
@@ -62,9 +56,6 @@ type OutfitReportContext = {
   profile: unknown;
   reportItems: OutfitReportItem[];
 };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type OutfitReportServiceDeps = Record<string, any>;
 
 function buildOutfitReportError(
   code: OutfitReportErrorCode,
@@ -127,29 +118,6 @@ async function buildOutfitReportCollage({
     throw buildOutfitReportError("service_unavailable", "missing_collage");
   }
   return collage;
-}
-
-function createOutfitReportServiceDeps(
-  deps: OutfitReportServiceDeps = {},
-): OutfitReportServiceDeps {
-  return {
-    buildPromptDebugImagesForCategoryImpl:
-      deps.buildPromptDebugImagesForCategoryImpl ||
-      buildPromptDebugImagesForCategory,
-    getGenerateJsonWithLlmImpl:
-      deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
-    getOutfitImpl: deps.getOutfitImpl || getOutfit,
-    getOutfitItemsImpl: deps.getOutfitItemsImpl || getOutfitItems,
-    getProfileImpl: deps.getProfileImpl || getProfile,
-    hashItemsImpl: deps.hashItemsImpl || hashCapsuleContent,
-    resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
-    runWithImageWorkSlotImpl:
-      deps.runWithImageWorkSlotImpl || runWithImageWorkSlot,
-    saveLastPromptArtifactsImpl:
-      deps.saveLastPromptArtifactsImpl || saveLastPromptArtifacts,
-    updateOutfitReportImpl: deps.updateOutfitReportImpl || updateOutfitReport,
-    ...deps,
-  };
 }
 
 function normalizeOutfitReportId(outfitId: string) {
@@ -335,7 +303,7 @@ function isOutfitReportDomainError(error: unknown) {
 async function generateOutfitReport(
   email: string,
   outfitId: string,
-  deps: OutfitReportServiceDeps = {},
+  deps: OutfitReportServiceDepsOverrides = {},
 ): Promise<OutfitReport> {
   const resolvedDeps = createOutfitReportServiceDeps(deps);
   const context = await buildOutfitReportContext({

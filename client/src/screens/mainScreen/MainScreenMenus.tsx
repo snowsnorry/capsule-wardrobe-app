@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import CapsuleActionMenu from "./CapsuleActionMenu";
 import ProductMenu from "./MainScreenProductMenu";
 import type {
@@ -69,6 +68,119 @@ function makeNameDialog(
   };
 }
 
+function HeaderCapsuleMenu({ menuProps }: { menuProps: MenusProps }) {
+  const activeCapsuleHasReport = Boolean(
+    menuProps.props.activeCapsule?.effective?.report,
+  );
+  const canAnalyzeActiveCapsule = Boolean(
+    menuProps.props.activeCapsule?.id && menuProps.props.items.length > 0,
+  );
+
+  return (
+    <CapsuleActionMenu
+      anchorEl={menuProps.headerMenuAnchor}
+      open={Boolean(menuProps.headerMenuAnchor)}
+      onClose={() => menuProps.setHeaderMenuAnchor(null)}
+      capsule={menuProps.props.activeCapsule}
+      disabled={menuProps.disabled}
+      showAnalyze={menuProps.isOverlay && !activeCapsuleHasReport}
+      canAnalyze={canAnalyzeActiveCapsule}
+      onAnalyze={() =>
+        menuProps.props.onGenerateCapsuleReport?.(
+          menuProps.props.activeCapsule?.id,
+        )
+      }
+      showRegenerateAll={false}
+      onRegenerateAll={menuProps.onRegenerateAll}
+      onDownloadPdf={menuProps.props.onDownloadPdf}
+      onRename={() =>
+        menuProps.setNameDialog(
+          makeNameDialog(
+            "rename",
+            menuProps.props.activeCapsule,
+            menuProps.activeName,
+          ),
+        )
+      }
+      onRevert={() =>
+        menuProps.setConfirm({
+          action: "revert",
+          capsuleId: "",
+          outfitSetIndex: -1,
+        })
+      }
+      onSave={menuProps.props.onSaveCapsule || (() => {})}
+      onDuplicate={() =>
+        menuProps.setNameDialog(
+          makeNameDialog("save-as", menuProps.props.activeCapsule),
+        )
+      }
+      onShare={() => menuProps.onShareCapsule(menuProps.props.activeCapsule)}
+      showCardLayout={menuProps.isOverlay}
+      mobileCardColumns={menuProps.mobileColumns}
+      onMobileCardColumnsChange={menuProps.onUpdateColumns}
+      onDelete={() =>
+        menuProps.setConfirm({
+          action: "delete",
+          capsuleId: "",
+          outfitSetIndex: -1,
+        })
+      }
+    />
+  );
+}
+
+function RowCapsuleMenu({
+  closeRowMenu,
+  menuProps,
+}: {
+  closeRowMenu: () => void;
+  menuProps: MenusProps;
+}) {
+  return (
+    <CapsuleActionMenu
+      anchorEl={menuProps.rowMenuAnchor}
+      open={Boolean(menuProps.rowMenuAnchor)}
+      onClose={closeRowMenu}
+      capsule={menuProps.rowMenuCapsule}
+      disabled={menuProps.disabled}
+      onDownloadPdf={() =>
+        menuProps.props.onDownloadPdf(menuProps.rowMenuCapsule?.id)
+      }
+      onRename={() =>
+        menuProps.setNameDialog(
+          makeNameDialog("rename", menuProps.rowMenuCapsule),
+        )
+      }
+      onRevert={() =>
+        menuProps.setConfirm({
+          action: "revert-row",
+          capsuleId: menuProps.rowMenuCapsule?.id || "",
+          outfitSetIndex: -1,
+        })
+      }
+      onSave={() =>
+        menuProps.props.onSaveCapsule?.(menuProps.rowMenuCapsule?.id)
+      }
+      onRegenerateAll={() => {}}
+      onDuplicate={() =>
+        menuProps.setNameDialog(
+          makeNameDialog("save-as", menuProps.rowMenuCapsule),
+        )
+      }
+      onShare={() => menuProps.onShareCapsule(menuProps.rowMenuCapsule, true)}
+      allowUnknownShareContent
+      onDelete={() =>
+        menuProps.setConfirm({
+          action: "delete-row",
+          capsuleId: menuProps.rowMenuCapsule?.id || "",
+          outfitSetIndex: -1,
+        })
+      }
+    />
+  );
+}
+
 function MainScreenMenus(props: MenusProps) {
   const closeRowMenu = () => {
     props.setRowMenuAnchor(null);
@@ -76,97 +188,11 @@ function MainScreenMenus(props: MenusProps) {
   };
   const closeProductMenu = () =>
     props.setProductMenu({ ...props.productMenu, anchor: null });
-  const activeCapsuleHasReport = Boolean(
-    props.props.activeCapsule?.effective?.report,
-  );
-  const canAnalyzeActiveCapsule = Boolean(
-    props.props.activeCapsule?.id && props.props.items.length > 0,
-  );
 
   return (
     <>
-      <CapsuleActionMenu
-        anchorEl={props.headerMenuAnchor}
-        open={Boolean(props.headerMenuAnchor)}
-        onClose={() => props.setHeaderMenuAnchor(null)}
-        capsule={props.props.activeCapsule}
-        disabled={props.disabled}
-        showAnalyze={props.isOverlay && !activeCapsuleHasReport}
-        canAnalyze={canAnalyzeActiveCapsule}
-        onAnalyze={() =>
-          props.props.onGenerateCapsuleReport?.(props.props.activeCapsule?.id)
-        }
-        showRegenerateAll={false}
-        onRegenerateAll={props.onRegenerateAll}
-        onDownloadPdf={props.props.onDownloadPdf}
-        onRename={() =>
-          props.setNameDialog(
-            makeNameDialog(
-              "rename",
-              props.props.activeCapsule,
-              props.activeName,
-            ),
-          )
-        }
-        onRevert={() =>
-          props.setConfirm({
-            action: "revert",
-            capsuleId: "",
-            outfitSetIndex: -1,
-          })
-        }
-        onSave={props.props.onSaveCapsule || (() => {})}
-        onDuplicate={() =>
-          props.setNameDialog(
-            makeNameDialog("save-as", props.props.activeCapsule),
-          )
-        }
-        onShare={() => props.onShareCapsule(props.props.activeCapsule)}
-        showCardLayout={props.isOverlay}
-        mobileCardColumns={props.mobileColumns}
-        onMobileCardColumnsChange={props.onUpdateColumns}
-        onDelete={() =>
-          props.setConfirm({
-            action: "delete",
-            capsuleId: "",
-            outfitSetIndex: -1,
-          })
-        }
-      />
-      <CapsuleActionMenu
-        anchorEl={props.rowMenuAnchor}
-        open={Boolean(props.rowMenuAnchor)}
-        onClose={closeRowMenu}
-        capsule={props.rowMenuCapsule}
-        disabled={props.disabled}
-        onDownloadPdf={() =>
-          props.props.onDownloadPdf(props.rowMenuCapsule?.id)
-        }
-        onRename={() =>
-          props.setNameDialog(makeNameDialog("rename", props.rowMenuCapsule))
-        }
-        onRevert={() =>
-          props.setConfirm({
-            action: "revert-row",
-            capsuleId: props.rowMenuCapsule?.id || "",
-            outfitSetIndex: -1,
-          })
-        }
-        onSave={() => props.props.onSaveCapsule?.(props.rowMenuCapsule?.id)}
-        onRegenerateAll={() => {}}
-        onDuplicate={() =>
-          props.setNameDialog(makeNameDialog("save-as", props.rowMenuCapsule))
-        }
-        onShare={() => props.onShareCapsule(props.rowMenuCapsule, true)}
-        allowUnknownShareContent
-        onDelete={() =>
-          props.setConfirm({
-            action: "delete-row",
-            capsuleId: props.rowMenuCapsule?.id || "",
-            outfitSetIndex: -1,
-          })
-        }
-      />
+      <HeaderCapsuleMenu menuProps={props} />
+      <RowCapsuleMenu closeRowMenu={closeRowMenu} menuProps={props} />
       <ProductMenu menuProps={props} onClose={closeProductMenu} t={props.t} />
     </>
   );

@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { fetchCapsule, fetchCapsuleBootstrap } from "../api/capsules";
 import { fetchOutfitBootstrap } from "../api/outfits";
 import { buildDefaultActionContext } from "./buildDefaultActionContext";
@@ -101,14 +100,7 @@ function assignAppControllerOperations({
     );
   };
   operations.clearActiveOutfitState = (options = {}) => {
-    appState.setActiveOutfitId("");
-    appState.setActiveOutfitMeta(null);
-    if (options.outfits) {
-      appState.setOutfitList(options.outfits);
-    }
-    if (options.pagination) {
-      appState.setOutfitPagination(options.pagination);
-    }
+    clearActiveOutfitState(appState, options);
   };
   operations.applyCapsuleState = (
     capsule,
@@ -159,6 +151,20 @@ function assignAppControllerOperations({
     await restoreCapsuleSnapshot(operations, result);
     return { ...normalizedProfile, hasProfile: true, optionsLoaded };
   };
+}
+
+function clearActiveOutfitState(
+  appState: ReturnType<typeof useAppState>,
+  options: Parameters<AppControllerOperations["clearActiveOutfitState"]>[0],
+) {
+  appState.setActiveOutfitId("");
+  appState.setActiveOutfitMeta(null);
+  if (options?.outfits) {
+    appState.setOutfitList(options.outfits);
+  }
+  if (options?.pagination) {
+    appState.setOutfitPagination(options.pagination);
+  }
 }
 
 async function bootstrapOutfitList(appState: ReturnType<typeof useAppState>) {

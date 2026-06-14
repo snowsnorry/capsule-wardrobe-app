@@ -286,44 +286,30 @@ function createGenerateOutfitImage(deps) {
   };
 }
 
-// eslint-disable-next-line complexity
-function createOutfitImageService({
-  getOutfitImpl = getOutfit,
-  getOutfitItemsImpl = getOutfitItems,
-  getProfileImpl = getProfile,
-  updateOutfitSnapshotImpl = updateOutfitSnapshot,
-  publishSnapshotImpl = ((email, outfitId, snapshot) =>
-    outfitEventHub.publish(email, outfitId, snapshot)) as (
-    email: string,
-    outfitId: string,
-    snapshot: unknown,
-  ) => void | boolean,
-  downloadProductImageAssetsImpl = downloadProductImageAssets,
-  generateImageWithOpenAiImpl = generateImageWithOpenAi,
-  generateImageWithGeminiImpl = generateImageWithGemini,
-  uploadImageToR2Impl = uploadImageToR2,
-  buildOutfitSetDescriptionImpl = buildOutfitSetDescription,
-  getProductsByUrlsForEmailImpl = getProductsByUrlsForEmailInOrder,
-  listWardrobeItemsByUrlsImpl = listWardrobeItemsByUrlsForEmail,
-} = {}) {
-  const deps = {
-    buildOutfitSetDescriptionImpl,
-    downloadProductImageAssetsImpl,
-    generateImageWithGeminiImpl,
-    generateImageWithOpenAiImpl,
-    getOutfitImpl,
-    getOutfitItemsImpl,
-    getProductsByUrlsForEmailImpl,
-    getProfileImpl,
-    listWardrobeItemsByUrlsImpl,
-    publishSnapshotImpl,
-    updateOutfitSnapshotImpl,
-    uploadImageToR2Impl,
-  };
+const DEFAULT_OUTFIT_IMAGE_SERVICE_DEPS = {
+  buildOutfitSetDescriptionImpl: buildOutfitSetDescription,
+  downloadProductImageAssetsImpl: downloadProductImageAssets,
+  generateImageWithGeminiImpl: generateImageWithGemini,
+  generateImageWithOpenAiImpl: generateImageWithOpenAi,
+  getOutfitImpl: getOutfit,
+  getOutfitItemsImpl: getOutfitItems,
+  getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
+  getProfileImpl: getProfile,
+  listWardrobeItemsByUrlsImpl: listWardrobeItemsByUrlsForEmail,
+  publishSnapshotImpl: (email, outfitId, snapshot) =>
+    outfitEventHub.publish(email, outfitId, snapshot),
+  updateOutfitSnapshotImpl: updateOutfitSnapshot,
+  uploadImageToR2Impl: uploadImageToR2,
+};
 
+function createOutfitImageService(deps = {}) {
+  const resolvedDeps = {
+    ...DEFAULT_OUTFIT_IMAGE_SERVICE_DEPS,
+    ...deps,
+  };
   return {
-    deleteOutfitImage: createDeleteOutfitImage(deps),
-    generateOutfitImage: createGenerateOutfitImage(deps),
+    deleteOutfitImage: createDeleteOutfitImage(resolvedDeps),
+    generateOutfitImage: createGenerateOutfitImage(resolvedDeps),
   };
 }
 

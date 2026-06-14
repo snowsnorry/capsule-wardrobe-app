@@ -50,8 +50,7 @@ function createUploadedWardrobeCleanupResult() {
   };
 }
 
-// eslint-disable-next-line max-lines-per-function
-function createWardrobeDependencies() {
+function createWardrobeListDependencies() {
   return {
     listWardrobeItemsImpl: async () => [
       {
@@ -84,6 +83,11 @@ function createWardrobeDependencies() {
       source: "from_catalog",
       processingStatus: "ready",
     }),
+  };
+}
+
+function createWardrobeFileUploadDependencies() {
+  return {
     normalizeWardrobeUploadImagesInChildImpl: async (images) =>
       images.map((image, index) => ({
         buffer: image.buffer,
@@ -114,6 +118,11 @@ function createWardrobeDependencies() {
             "https://images.example.com/wardrobe/profile/image.webp",
         },
       })),
+  };
+}
+
+function createWardrobeUrlUploadDependencies() {
+  return {
     processWardrobeUploadUrlsInChildImpl: async (payload) =>
       payload.urls.map((url, inputIndex) => ({
         analysis: {
@@ -133,6 +142,21 @@ function createWardrobeDependencies() {
           sourceImageUrl: null,
         },
       })),
+    downloadWardrobeProductPageImageImpl: async (payload) => ({
+      buffer: Buffer.from("product-page-image"),
+      imageUrl: String(payload?.imageUrl || ""),
+      mimeType: "image/jpeg",
+      originalName: "product-page-image.jpg",
+    }),
+    fetchProductPageHtmlWithImpersImpl: async (payload) => ({
+      html: '<html><head><meta property="og:image" content="https://cdn.example.com/product.jpg"></head></html>',
+      url: String(payload?.url || "https://shop.example.com/product"),
+    }),
+  };
+}
+
+function createWardrobeStorageDependencies() {
+  return {
     uploadWardrobeImageToR2Impl: async (_payload) => ({
       key: "wardrobe/profile/image.webp",
       url: "https://images.example.com/wardrobe/profile/image.webp",
@@ -161,16 +185,6 @@ function createWardrobeDependencies() {
       "wardrobe/profile/product-page-source.webp",
     cleanupUploadedWardrobeItemImageImpl: async () =>
       createUploadedWardrobeCleanupResult(),
-    downloadWardrobeProductPageImageImpl: async (payload) => ({
-      buffer: Buffer.from("product-page-image"),
-      imageUrl: String(payload?.imageUrl || ""),
-      mimeType: "image/jpeg",
-      originalName: "product-page-image.jpg",
-    }),
-    fetchProductPageHtmlWithImpersImpl: async (payload) => ({
-      html: '<html><head><meta property="og:image" content="https://cdn.example.com/product.jpg"></head></html>',
-      url: String(payload?.url || "https://shop.example.com/product"),
-    }),
     uploadWardrobeDerivativeImageToR2Impl: async ({
       buffer,
       key,
@@ -181,6 +195,11 @@ function createWardrobeDependencies() {
       digest: `${mimeType}:${Buffer.from(buffer).length}`,
     }),
     createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
+  };
+}
+
+function createWardrobeMetadataDependencies() {
+  return {
     updateUploadedWardrobeItemMetadataImpl: async (payload) => ({
       id: payload.id,
       embedding: payload.embedding,
@@ -215,6 +234,11 @@ function createWardrobeDependencies() {
       season: ["summer"],
       updatedAt: "2026-05-01T00:00:00.000Z",
     }),
+  };
+}
+
+function createWardrobeDeleteDependencies() {
+  return {
     deleteUploadedWardrobeItemImpl: async () => ({
       id: "wardrobe-upload-1",
       imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
@@ -224,6 +248,17 @@ function createWardrobeDependencies() {
     }),
     deleteR2ObjectsImpl: async () => ({ deleted: 5 }),
     deleteWardrobeItemFromCatalogImpl: async () => true,
+  };
+}
+
+function createWardrobeDependencies() {
+  return {
+    ...createWardrobeListDependencies(),
+    ...createWardrobeFileUploadDependencies(),
+    ...createWardrobeUrlUploadDependencies(),
+    ...createWardrobeStorageDependencies(),
+    ...createWardrobeMetadataDependencies(),
+    ...createWardrobeDeleteDependencies(),
   };
 }
 

@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import type { ReactNode } from "react";
 import { render } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
@@ -226,6 +225,21 @@ export const theme = createTheme();
 export const t = translateForMainScreenTests;
 export { fetchPersonalItemsMock, fetchUploadedWardrobeItemDetailMock };
 
+const DEFAULT_CAPSULE = {
+  id: "capsule-1",
+  name: "Spring edit",
+  draft: null,
+  saved: null,
+  status: "new",
+} as const;
+const DEFAULT_SETTINGS_PROFILE = {
+  fullname: "",
+  email: "person@example.com",
+  locale: "en",
+  theme: "system",
+  llm: "openai:gpt-5.5",
+} as const;
+
 export function resetMainScreenTestMocks() {
   window.localStorage.clear();
   mediaQueryMock.mockReset();
@@ -259,23 +273,11 @@ export function createMainScreenProps(
   overrides: Partial<MainScreenProps> = {},
 ): MainScreenProps {
   return {
-    activeCapsule: {
-      id: "capsule-1",
-      name: "Spring edit",
-      draft: null,
-      saved: null,
-      status: "new",
-    },
+    activeCapsule: DEFAULT_CAPSULE,
     capsuleList: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
     userEmail: "person@example.com",
     userName: "",
-    settingsProfile: {
-      fullname: "",
-      email: "person@example.com",
-      locale: "en",
-      theme: "system",
-      llm: "openai:gpt-5.5",
-    },
+    settingsProfile: DEFAULT_SETTINGS_PROFILE,
     onSignOut: vi.fn(),
     onSaveSettings: vi.fn(() => Promise.resolve()),
     isSigningOut: false,

@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { Box } from "@mui/material";
 import type { RefObject } from "react";
 import AppSidebarNavigation from "../components/AppSidebarNavigation";
@@ -56,6 +55,23 @@ function hasUnsavedCapsuleChanges(capsule: CapsuleMeta | null | undefined) {
   return capsule?.status === "new" || capsule?.status === "modified";
 }
 
+function getOverlayCompletion(
+  isOverlaySidebar: boolean,
+  closeSidebar: () => void,
+) {
+  return isOverlaySidebar ? closeSidebar : undefined;
+}
+
+function SidebarExpandHitbox({ onClick }: { onClick: () => void }) {
+  return (
+    <Box
+      data-testid="collapsed-sidebar-expand-hitbox"
+      onClick={onClick}
+      sx={{ flex: 1, minHeight: 0, cursor: "pointer" }}
+    />
+  );
+}
+
 export default function AppShellSidebarNavigationBody({
   activeCapsuleMeta,
   activeOutfitMeta,
@@ -85,6 +101,11 @@ export default function AppShellSidebarNavigationBody({
   onSearchOutfits,
   personalItemsCount,
 }: AppShellSidebarNavigationBodyProps) {
+  const overlayCompletion = getOverlayCompletion(
+    isOverlaySidebar,
+    closeSidebar,
+  );
+
   return (
     <AppSidebarNavigation
       activeApp={activeSidebarApp}
@@ -105,14 +126,10 @@ export default function AppShellSidebarNavigationBody({
       onLoadMoreCapsules={onLoadMoreCapsules}
       onLoadMoreOutfits={onLoadMoreOutfits}
       onCreateCapsule={async () => {
-        await onCreateCapsuleFromSidebar(
-          isOverlaySidebar ? closeSidebar : undefined,
-        );
+        await onCreateCapsuleFromSidebar(overlayCompletion);
       }}
       onCreateOutfit={async () => {
-        await onCreateOutfitFromSidebar(
-          isOverlaySidebar ? closeSidebar : undefined,
-        );
+        await onCreateOutfitFromSidebar(overlayCompletion);
       }}
       onSearchCapsules={onSearchCapsules}
       onSearchOutfits={onSearchOutfits}
@@ -139,13 +156,9 @@ export default function AppShellSidebarNavigationBody({
       }}
       capsuleHasUnsavedChanges={hasUnsavedCapsuleChanges}
       outfitHasUnsavedChanges={hasUnsavedCapsuleChanges}
-      onExpandedAction={isOverlaySidebar ? closeSidebar : undefined}
+      onExpandedAction={overlayCompletion}
       collapsedExpandHitbox={
-        <Box
-          data-testid="collapsed-sidebar-expand-hitbox"
-          onClick={expandCollapsedSidebar}
-          sx={{ flex: 1, minHeight: 0, cursor: "pointer" }}
-        />
+        <SidebarExpandHitbox onClick={expandCollapsedSidebar} />
       }
     />
   );

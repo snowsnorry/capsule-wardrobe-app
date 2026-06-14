@@ -74,8 +74,35 @@ type CapsuleReportContext = {
   reportItems: CapsuleReportItem[];
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type CapsuleReportServiceDeps = Record<string, any>;
+type CapsuleReportServiceDeps = {
+  buildPromptDebugImagesForCategoryImpl: (
+    payload: Record<string, unknown>,
+  ) => Promise<{ category?: PromptDebugImageCategory | null }>;
+  getCapsuleImpl: (email: string, capsuleId: string) => Promise<unknown>;
+  getGenerateJsonWithLlmImpl: (
+    profile: unknown,
+  ) => (
+    prompt: string,
+    options: Record<string, unknown>,
+  ) => Promise<{ response?: { usage?: unknown }; json: unknown }>;
+  getProfileImpl: (email: string) => Promise<unknown>;
+  hashItemsImpl: (value: unknown) => string;
+  resolveLlmProviderImpl: (profile: unknown) => {
+    model?: unknown;
+    provider?: unknown;
+  };
+  runWithImageWorkSlotImpl: <T>(
+    label: string,
+    task: () => Promise<T>,
+  ) => Promise<T>;
+  saveLastPromptArtifactsImpl: (payload: Record<string, unknown>) => unknown;
+  updateCapsuleReportImpl: (
+    email: string,
+    capsuleId: string,
+    report: unknown,
+  ) => Promise<unknown>;
+};
+type CapsuleReportServiceDepsOverrides = Partial<CapsuleReportServiceDeps>;
 
 function buildCapsuleReportError(
   code: CapsuleReportErrorCode,
@@ -191,7 +218,7 @@ async function buildCapsuleReportCollage({
 }
 
 function createCapsuleReportServiceDeps(
-  deps: CapsuleReportServiceDeps = {},
+  deps: CapsuleReportServiceDepsOverrides = {},
 ): CapsuleReportServiceDeps {
   return {
     buildPromptDebugImagesForCategoryImpl:
@@ -209,7 +236,6 @@ function createCapsuleReportServiceDeps(
       deps.saveLastPromptArtifactsImpl || saveLastPromptArtifacts,
     updateCapsuleReportImpl:
       deps.updateCapsuleReportImpl || updateCapsuleReport,
-    ...deps,
   };
 }
 
@@ -463,7 +489,7 @@ function isCapsuleReportDomainError(error: unknown) {
 async function generateCapsuleReport(
   email: string,
   capsuleId: string,
-  deps: CapsuleReportServiceDeps = {},
+  deps: CapsuleReportServiceDepsOverrides = {},
 ): Promise<CapsuleReport> {
   const resolvedDeps = createCapsuleReportServiceDeps(deps);
   const context = await buildCapsuleReportContext({

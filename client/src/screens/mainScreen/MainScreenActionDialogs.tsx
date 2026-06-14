@@ -27,6 +27,10 @@ function clearConfirm(setConfirm: DialogsProps["setConfirm"]) {
   setConfirm({ action: "", capsuleId: "", outfitSetIndex: -1 });
 }
 
+function clearNameDialog(setState: DialogsProps["setNameDialog"]) {
+  setState({ type: "", capsuleId: "", value: "" });
+}
+
 async function runConfirmAction(
   state: ConfirmState,
   props: MainScreenProps,
@@ -103,7 +107,6 @@ export function useFocusNameDialogInput(
   }, [nameInputRef, stateType]);
 }
 
-// eslint-disable-next-line max-lines-per-function
 export function NameDialog({
   state,
   copyPrefix = "capsule",
@@ -124,7 +127,7 @@ export function NameDialog({
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   useFocusNameDialogInput(state.type, nameInputRef);
   const submit = async () => {
-    setState({ type: "", capsuleId: "", value: "" });
+    clearNameDialog(setState);
     if (isSaveAs)
       await props.onDuplicateCapsule?.(state.value, state.capsuleId);
     else await props.onRenameCapsule?.(state.value, state.capsuleId);
@@ -133,9 +136,7 @@ export function NameDialog({
   return (
     <Dialog
       open={Boolean(state.type)}
-      onClose={() =>
-        !disabled && setState({ type: "", capsuleId: "", value: "" })
-      }
+      onClose={() => !disabled && clearNameDialog(setState)}
       fullScreen={isOverlay}
       fullWidth
       maxWidth="sm"
@@ -179,10 +180,7 @@ export function NameDialog({
       <DialogActions
         sx={isOverlay ? mobileCapsuleDialogActionsSx : { px: 3, pb: 2.5 }}
       >
-        <Button
-          disabled={disabled}
-          onClick={() => setState({ type: "", capsuleId: "", value: "" })}
-        >
+        <Button disabled={disabled} onClick={() => clearNameDialog(setState)}>
           {t("actions.cancel")}
         </Button>
         <Button

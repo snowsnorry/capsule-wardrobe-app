@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactElement } from "react";
+import type { Dispatch, ReactElement, SetStateAction } from "react";
 import {
   Button,
   Dialog,
@@ -73,8 +73,85 @@ export function getFilledProductUrls(values: string[]) {
   return values.map((value) => value.trim()).filter(Boolean);
 }
 
-// URL import follows the same upload progress surface as photo import.
-// eslint-disable-next-line max-lines-per-function
+function WardrobeUrlFields({
+  isMobile,
+  isUploading,
+  setUrls,
+  t,
+  urls,
+}: {
+  isMobile: boolean;
+  isUploading: boolean;
+  setUrls: Dispatch<SetStateAction<string[]>>;
+  t: (key: string) => string;
+  urls: string[];
+}) {
+  return (
+    <>
+      {isMobile ? (
+        <Typography variant="body2" color="text.secondary">
+          {t("wardrobe.urlUploadDialog.body")}
+        </Typography>
+      ) : null}
+      <Stack spacing={1.5} sx={{ pt: 1 }}>
+        {urls.map((value, index) => {
+          const isFilled = Boolean(value.trim());
+          const hasError = isFilled && !isValidProductUrl(value);
+          return (
+            <TextField
+              key={index}
+              value={value}
+              autoComplete="url"
+              disabled={isUploading}
+              error={hasError}
+              fullWidth
+              label={t("wardrobe.urlUploadDialog.fieldLabel").replace(
+                "{index}",
+                String(index + 1),
+              )}
+              placeholder={t("wardrobe.urlUploadDialog.placeholder")}
+              helperText={
+                hasError
+                  ? t("wardrobe.urlUploadDialog.invalidUrl")
+                  : t("wardrobe.urlUploadDialog.helperText")
+              }
+              onChange={(event) =>
+                setUrls((current) =>
+                  getNextUrlFields(current, index, event.target.value),
+                )
+              }
+              slotProps={{ htmlInput: { inputMode: "url" } }}
+            />
+          );
+        })}
+      </Stack>
+    </>
+  );
+}
+
+function WardrobeUrlUploadActions({
+  canUpload,
+  isMobile,
+  onClose,
+  onUpload,
+  t,
+}: {
+  canUpload: boolean;
+  isMobile: boolean;
+  onClose: () => void;
+  onUpload: () => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <DialogActions sx={getDialogActionsSx(isMobile)}>
+      <Button onClick={onClose}>{t("actions.cancel")}</Button>
+      <Button variant="contained" disabled={!canUpload} onClick={onUpload}>
+        {t("wardrobe.urlUploadDialog.upload")}
+      </Button>
+    </DialogActions>
+  );
+}
+
 function WardrobeUrlUploadDialog({
   isMobile,
   isUploading,
@@ -144,58 +221,23 @@ function WardrobeUrlUploadDialog({
         {isUploading ? (
           <UploadProgressContent progress={progress} t={t} />
         ) : (
-          <>
-            {isMobile ? (
-              <Typography variant="body2" color="text.secondary">
-                {t("wardrobe.urlUploadDialog.body")}
-              </Typography>
-            ) : null}
-            <Stack spacing={1.5} sx={{ pt: 1 }}>
-              {urls.map((value, index) => {
-                const isFilled = Boolean(value.trim());
-                const hasError = isFilled && !isValidProductUrl(value);
-                return (
-                  <TextField
-                    key={index}
-                    value={value}
-                    autoComplete="url"
-                    disabled={isUploading}
-                    error={hasError}
-                    fullWidth
-                    label={t("wardrobe.urlUploadDialog.fieldLabel").replace(
-                      "{index}",
-                      String(index + 1),
-                    )}
-                    placeholder={t("wardrobe.urlUploadDialog.placeholder")}
-                    helperText={
-                      hasError
-                        ? t("wardrobe.urlUploadDialog.invalidUrl")
-                        : t("wardrobe.urlUploadDialog.helperText")
-                    }
-                    onChange={(event) =>
-                      setUrls((current) =>
-                        getNextUrlFields(current, index, event.target.value),
-                      )
-                    }
-                    slotProps={{ htmlInput: { inputMode: "url" } }}
-                  />
-                );
-              })}
-            </Stack>
-          </>
+          <WardrobeUrlFields
+            isMobile={isMobile}
+            isUploading={isUploading}
+            setUrls={setUrls}
+            t={t}
+            urls={urls}
+          />
         )}
       </DialogContent>
       {!isUploading ? (
-        <DialogActions sx={getDialogActionsSx(isMobile)}>
-          <Button onClick={onClose}>{t("actions.cancel")}</Button>
-          <Button
-            variant="contained"
-            disabled={!canUpload}
-            onClick={handleUpload}
-          >
-            {t("wardrobe.urlUploadDialog.upload")}
-          </Button>
-        </DialogActions>
+        <WardrobeUrlUploadActions
+          canUpload={canUpload}
+          isMobile={isMobile}
+          onClose={onClose}
+          onUpload={handleUpload}
+          t={t}
+        />
       ) : null}
     </Dialog>
   );

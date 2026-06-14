@@ -1,4 +1,3 @@
-/* eslint-disable complexity */
 import {
   buildSnapshotFromProfile,
   getEffectiveCapsuleSnapshot,
@@ -14,6 +13,22 @@ import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 
 const NO_GENERATED_OUTFITS_MESSAGE =
   "No generated outfit sets were provided for this capsule.";
+const API_PATH_PREFIXES = [
+  "/auth",
+  "/capsules",
+  "/outfits",
+  "/shared-capsules",
+  "/profile",
+  "/wardrobe",
+  "/liked-items",
+  "/health",
+];
+const API_EXACT_PATHS = new Set([
+  "/search/options",
+  "/search/me",
+  "/search/run",
+  "/search/stats",
+]);
 
 type RejectedUrlsValidationResult =
   | { error: "invalid_payload" | "not_found" }
@@ -39,18 +54,8 @@ export function buildPdfDownloadFilename(capsuleName) {
 
 export function isApiPath(pathname = "") {
   return (
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/capsules") ||
-    pathname.startsWith("/outfits") ||
-    pathname.startsWith("/shared-capsules") ||
-    pathname.startsWith("/profile") ||
-    pathname.startsWith("/wardrobe") ||
-    pathname.startsWith("/liked-items") ||
-    pathname.startsWith("/health") ||
-    pathname === "/search/options" ||
-    pathname === "/search/me" ||
-    pathname === "/search/run" ||
-    pathname === "/search/stats"
+    API_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+    API_EXACT_PATHS.has(pathname)
   );
 }
 

@@ -1,11 +1,4 @@
-import { getSqlClient } from "../db.js";
-import {
-  buildCustomJsonObjectFormat,
-  buildSwimwearSchema,
-  getGenerateJsonWithLlm,
-  isNoLlmProfileEnabled,
-  resolveLlmProvider,
-} from "./llm.js";
+import { buildCustomJsonObjectFormat, buildSwimwearSchema } from "./llm.js";
 import {
   countItemsByKey,
   extractLlmUsage,
@@ -32,6 +25,8 @@ import {
   normalizeSwimwearType,
   shouldCompleteSelectedSwimwear,
 } from "./swimwearState.js";
+import { createSwimwearDeps } from "./swimwearDeps.js";
+import type { SwimwearDepsOverrides } from "./swimwearDeps.js";
 
 function getSingleViableFemaleSwimwearOption(
   candidates: SwimwearCandidate[],
@@ -196,18 +191,6 @@ async function generateFemaleSwimwearWithLlm({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createSwimwearDeps(deps: Record<string, any> = {}) {
-  return {
-    getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
-    getGenerateJsonWithLlmImpl:
-      deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
-    isNoLlmProfileEnabledImpl:
-      deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
-    resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
-  };
-}
-
 async function generateFemaleSwimwear({
   userProfile,
   selectedCapsuleItems,
@@ -319,7 +302,7 @@ async function generateMaleSwimwear({
   };
 }
 
-function createGenerateSwimwearAddition(deps = {}) {
+function createGenerateSwimwearAddition(deps: SwimwearDepsOverrides = {}) {
   const resolvedDeps = createSwimwearDeps(deps);
 
   return async function generateSwimwearAddition({

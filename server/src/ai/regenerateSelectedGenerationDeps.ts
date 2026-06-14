@@ -17,34 +17,39 @@ import { getPromptEmbeddings, getWardrobePrompt } from "./voyageai.js";
 import { queryRegenerationCandidateItems } from "./regenerateSelectedSql.js";
 import { generateSwimwearAddition } from "./swimwear.js";
 
-// eslint-disable-next-line complexity, @typescript-eslint/no-explicit-any
-export function createRegenerationDeps(deps: Record<string, any> = {}) {
+const DEFAULT_REGENERATION_DEPS = {
+  buildPromptDebugImagesForCategoryImpl: buildPromptDebugImagesForCategory,
+  buildPromptDebugImagesInChildImpl: buildPromptDebugImagesInChild,
+  generateSwimwearAdditionImpl: generateSwimwearAddition,
+  getGenerateJsonWithLlmImpl: getGenerateJsonWithLlm,
+  getProductsByUrlsInOrderImpl: getProductsByUrlsInOrder,
+  getProductsWithEmbeddingsByUrlsInOrderImpl:
+    getProductsWithEmbeddingsByUrlsInOrder,
+  getPromptEmbeddingsImpl: getPromptEmbeddings,
+  getSqlClientImpl: getSqlClient,
+  getWardrobePromptImpl: getWardrobePrompt,
+  isNoLlmProfileEnabledImpl: isNoLlmProfileEnabled,
+  queryRegenerationCandidateItemsImpl: queryRegenerationCandidateItems,
+  resolveLlmProviderImpl: resolveLlmProvider,
+  runWithImageWorkSlotImpl: runWithImageWorkSlot,
+};
+
+type RegenerationDeps = typeof DEFAULT_REGENERATION_DEPS;
+type RegenerationDepsOverrides = {
+  [Key in keyof RegenerationDeps]?: unknown;
+};
+
+function getDefinedRegenerationOverrides(deps: RegenerationDepsOverrides) {
+  return Object.fromEntries(
+    Object.entries(deps).filter(([, value]) => value !== undefined),
+  ) as RegenerationDepsOverrides;
+}
+
+export function createRegenerationDeps(
+  deps: RegenerationDepsOverrides = {},
+): RegenerationDeps {
   return {
-    buildPromptDebugImagesForCategoryImpl:
-      deps.buildPromptDebugImagesForCategoryImpl ||
-      buildPromptDebugImagesForCategory,
-    buildPromptDebugImagesInChildImpl:
-      deps.buildPromptDebugImagesInChildImpl || buildPromptDebugImagesInChild,
-    getGenerateJsonWithLlmImpl:
-      deps.getGenerateJsonWithLlmImpl || getGenerateJsonWithLlm,
-    generateSwimwearAdditionImpl:
-      deps.generateSwimwearAdditionImpl || generateSwimwearAddition,
-    getProductsByUrlsInOrderImpl:
-      deps.getProductsByUrlsInOrderImpl || getProductsByUrlsInOrder,
-    getProductsWithEmbeddingsByUrlsInOrderImpl:
-      deps.getProductsWithEmbeddingsByUrlsInOrderImpl ||
-      getProductsWithEmbeddingsByUrlsInOrder,
-    getPromptEmbeddingsImpl:
-      deps.getPromptEmbeddingsImpl || getPromptEmbeddings,
-    getSqlClientImpl: deps.getSqlClientImpl || getSqlClient,
-    getWardrobePromptImpl: deps.getWardrobePromptImpl || getWardrobePrompt,
-    isNoLlmProfileEnabledImpl:
-      deps.isNoLlmProfileEnabledImpl || isNoLlmProfileEnabled,
-    queryRegenerationCandidateItemsImpl:
-      deps.queryRegenerationCandidateItemsImpl ||
-      queryRegenerationCandidateItems,
-    resolveLlmProviderImpl: deps.resolveLlmProviderImpl || resolveLlmProvider,
-    runWithImageWorkSlotImpl:
-      deps.runWithImageWorkSlotImpl || runWithImageWorkSlot,
-  };
+    ...DEFAULT_REGENERATION_DEPS,
+    ...getDefinedRegenerationOverrides(deps),
+  } as RegenerationDeps;
 }

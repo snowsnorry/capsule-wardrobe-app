@@ -148,54 +148,108 @@ function configureProductionApp({
   });
 }
 
+async function configureClientApp({
+  appInstance,
+  clientDistPath,
+  clientOrigin,
+  clientRoot,
+  createViteServerImpl,
+  existsSyncImpl,
+  expressStaticImpl,
+  getSharedCapsuleOgMetadataImpl,
+  injectSharedCapsuleMetaTagsImpl,
+  isApiPathImpl,
+  nodeEnv,
+  readFileImpl,
+}) {
+  if (nodeEnv === "development") {
+    await configureDevelopmentApp({
+      appInstance,
+      clientOrigin,
+      clientRoot,
+      createViteServerImpl,
+      getSharedCapsuleOgMetadataImpl,
+      injectSharedCapsuleMetaTagsImpl,
+      isApiPathImpl,
+      readFileImpl,
+    });
+    return;
+  }
+
+  if (existsSyncImpl(clientDistPath)) {
+    configureProductionApp({
+      appInstance,
+      clientDistPath,
+      clientOrigin,
+      expressStaticImpl,
+      getSharedCapsuleOgMetadataImpl,
+      injectSharedCapsuleMetaTagsImpl,
+      isApiPathImpl,
+      readFileImpl,
+    });
+  }
+}
+
+function resolveStartServerOptions(app, options = {}) {
+  return {
+    appInstance: app,
+    nodeEnv: NODE_ENV,
+    ensureTablesImpl: ensureTables,
+    port: PORT,
+    clientOrigin: CLIENT_ORIGIN,
+    clientDistPath: CLIENT_DIST_PATH,
+    clientRoot: CLIENT_ROOT,
+    getSharedCapsuleOgMetadataImpl: getSharedCapsuleOgMetadata,
+    createViteServerImpl: null,
+    existsSyncImpl: fs.existsSync,
+    readFileImpl: fs.promises.readFile,
+    expressStaticImpl: express.static,
+    injectSharedCapsuleMetaTagsImpl: injectSharedCapsuleMetaTags,
+    isApiPathImpl: isApiPath,
+    logInfoImpl: logInfo,
+    ...options,
+  };
+}
+
 export function createStartServer(app) {
-  /* eslint-disable complexity */
-  return async ({
-    appInstance = app,
-    nodeEnv = NODE_ENV,
-    ensureTablesImpl = ensureTables,
-    port = PORT,
-    clientOrigin = CLIENT_ORIGIN,
-    clientDistPath = CLIENT_DIST_PATH,
-    clientRoot = CLIENT_ROOT,
-    getSharedCapsuleOgMetadataImpl = getSharedCapsuleOgMetadata,
-    createViteServerImpl = null,
-    existsSyncImpl = fs.existsSync,
-    readFileImpl = fs.promises.readFile,
-    expressStaticImpl = express.static,
-    injectSharedCapsuleMetaTagsImpl = injectSharedCapsuleMetaTags,
-    isApiPathImpl = isApiPath,
-    logInfoImpl = logInfo,
-  } = {}) => {
+  return async (options = {}) => {
+    const {
+      appInstance,
+      nodeEnv,
+      ensureTablesImpl,
+      port,
+      clientOrigin,
+      clientDistPath,
+      clientRoot,
+      getSharedCapsuleOgMetadataImpl,
+      createViteServerImpl,
+      existsSyncImpl,
+      readFileImpl,
+      expressStaticImpl,
+      injectSharedCapsuleMetaTagsImpl,
+      isApiPathImpl,
+      logInfoImpl,
+    } = resolveStartServerOptions(app, options);
+
     await ensureTablesImpl();
 
-    if (nodeEnv === "development") {
-      await configureDevelopmentApp({
-        appInstance,
-        clientOrigin,
-        clientRoot,
-        createViteServerImpl,
-        getSharedCapsuleOgMetadataImpl,
-        injectSharedCapsuleMetaTagsImpl,
-        isApiPathImpl,
-        readFileImpl,
-      });
-    } else if (existsSyncImpl(clientDistPath)) {
-      configureProductionApp({
-        appInstance,
-        clientDistPath,
-        clientOrigin,
-        expressStaticImpl,
-        getSharedCapsuleOgMetadataImpl,
-        injectSharedCapsuleMetaTagsImpl,
-        isApiPathImpl,
-        readFileImpl,
-      });
-    }
+    await configureClientApp({
+      appInstance,
+      clientDistPath,
+      clientOrigin,
+      clientRoot,
+      createViteServerImpl,
+      existsSyncImpl,
+      expressStaticImpl,
+      getSharedCapsuleOgMetadataImpl,
+      injectSharedCapsuleMetaTagsImpl,
+      isApiPathImpl,
+      nodeEnv,
+      readFileImpl,
+    });
 
     return appInstance.listen(port, () => {
       logInfoImpl(`Server listening on http://localhost:${port}`);
     });
   };
-  /* eslint-enable complexity */
 }

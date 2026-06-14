@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import { createOutfitImageService } from "./outfitImages.js";
 import { normalizeOutfitRecord } from "../outfitStoreModel.js";
 import { buildNormalizedProfileRecord } from "../test/domainFixtures.js";
@@ -183,4 +183,125 @@ test("outfit image service treats existing images as ready and deletes images", 
   expect(generateRes.body).toEqual({ ok: true, status: "ready" });
   expect(deleteRes.body).toEqual({ ok: true, status: "ready" });
   expect(updates[0]).toMatchObject({ image: null, imageObsolete: false });
+});
+
+test("outfit image service rejects invalid and missing image requests", async () => {
+  const service = createOutfitImageService({
+    getOutfitImpl: async () => null,
+  });
+  const invalidRes = createResponseRecorder();
+  const missingRes = createResponseRecorder();
+
+  await service.generateOutfitImage(
+    { user: { email: "person@example.com" }, params: { id: "" } },
+    invalidRes,
+  );
+  await service.deleteOutfitImage(
+    { user: { email: "person@example.com" }, params: { id: "missing" } },
+    missingRes,
+  );
+
+  expect(invalidRes.statusCode).toBe(400);
+  expect(invalidRes.body).toEqual({ error: "invalid_payload" });
+  expect(missingRes.statusCode).toBe(404);
+  expect(missingRes.body).toEqual({ error: "not_found" });
+});
+
+test("outfit image service rejects outfits with too few hydrated items", async () => {
+  const service = createOutfitImageService({
+    getOutfitImpl: async () => createOutfit(),
+    getOutfitItemsImpl: async () => outfitItems.slice(0, 2),
+  });
+  const res = createResponseRecorder();
+
+  await service.generateOutfitImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "outfit-too-small" },
+    },
+    res,
+  );
+
+  expect(res.statusCode).toBe(400);
+  expect(res.body).toEqual({ error: "invalid_payload" });
+});
+
+test("outfit image service returns pending when a job is already running", async () => {
+  let resolveImage: (() => void) | null = null;
+  const imageStarted = new Promise<void>((resolve) => {
+    resolveImage = resolve;
+  });
+  const service = createOutfitImageService({
+    getOutfitImpl: async () =>
+      createOutfit(null, [
+        { url: "https://example.com/top-pending", source: "from_catalog" },
+        { url: "https://example.com/bottom-pending", source: "from_catalog" },
+        { url: "https://example.com/bag-pending", source: "from_catalog" },
+      ]),
+    getOutfitItemsImpl: async () => outfitItems,
+    getProfileImpl: async () =>
+      buildNormalizedProfileRecord({ imageLlm: "openai:gpt-image-2" }),
+    downloadProductImageAssetsImpl: async () => ({}),
+    generateImageWithOpenAiImpl: async () => {
+      await imageStarted;
+      return { response: {} as never, image: null };
+    },
+    publishSnapshotImpl: () => undefined,
+  });
+  const firstRes = createResponseRecorder();
+  const secondRes = createResponseRecorder();
+
+  await service.generateOutfitImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "outfit-pending" },
+    },
+    firstRes,
+  );
+  await service.generateOutfitImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "outfit-pending" },
+    },
+    secondRes,
+  );
+  resolveImage?.();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(firstRes.statusCode).toBe(202);
+  expect(secondRes.statusCode).toBe(202);
+  expect(secondRes.body).toEqual({ ok: true, status: "pending" });
+});
+
+test("outfit image service can generate with gemini image provider", async () => {
+  const generateImageWithGeminiImpl = vi.fn(async () => ({
+    response: {} as never,
+    image: null,
+  }));
+  const service = createOutfitImageService({
+    getOutfitImpl: async () => createOutfit(),
+    getOutfitItemsImpl: async () => outfitItems,
+    getProfileImpl: async () =>
+      buildNormalizedProfileRecord({
+        imageLlm: "gemini:gemini-3-pro-image-preview",
+      }),
+    downloadProductImageAssetsImpl: async () => ({}),
+    generateImageWithGeminiImpl,
+    publishSnapshotImpl: () => undefined,
+    updateOutfitSnapshotImpl: async (_email, _outfitId, draft) =>
+      normalizeOutfitRecord({ ...createOutfit(), draft })!,
+  });
+  const res = createResponseRecorder();
+
+  await service.generateOutfitImage(
+    {
+      user: { email: "person@example.com" },
+      params: { id: "outfit-gemini" },
+    },
+    res,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(res.statusCode).toBe(202);
+  expect(generateImageWithGeminiImpl).toHaveBeenCalledOnce();
 });

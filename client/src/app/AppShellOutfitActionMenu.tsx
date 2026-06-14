@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent, RefObject } from "react";
 import CapsuleActionMenu from "../screens/mainScreen/CapsuleActionMenu";
@@ -132,6 +131,99 @@ function useRegisterOutfitActionMenuController({
   }, [activeOutfitMeta, menuOutfitRef, onRegisterController, setMenu]);
 }
 
+function OutfitActionDialogs({
+  clearMenu,
+  confirm,
+  dialogProps,
+  disabled,
+  isOverlay,
+  nameDialog,
+  setConfirm,
+  setNameDialog,
+}: {
+  clearMenu: () => void;
+  confirm: ConfirmState;
+  dialogProps: MainScreenProps;
+  disabled: boolean;
+  isOverlay: boolean;
+  nameDialog: NameDialogState;
+  setConfirm: (state: ConfirmState) => void;
+  setNameDialog: (state: NameDialogState) => void;
+}) {
+  return (
+    <>
+      <NameDialog
+        state={nameDialog}
+        copyPrefix="outfit"
+        disabled={disabled}
+        isOverlay={isOverlay}
+        props={dialogProps}
+        setState={setNameDialog}
+      />
+      <ConfirmDialog
+        state={confirm}
+        copyPrefix="outfit"
+        disabled={disabled}
+        isOverlay={isOverlay}
+        props={dialogProps}
+        setState={setConfirm}
+        onCloseRowMenu={clearMenu}
+      />
+    </>
+  );
+}
+
+function OutfitActionMenuList({
+  disabled,
+  menu,
+  menuOutfitRef,
+  onClose,
+  onDownloadOutfitPdf,
+  onSaveOutfit,
+  setConfirm,
+  setNameDialog,
+}: {
+  disabled: boolean;
+  menu: SidebarOutfitMenuState;
+  menuOutfitRef: RefObject<CapsuleLike | null>;
+  onClose: () => void;
+  onDownloadOutfitPdf: AppShellOutfitActionMenuProps["onDownloadOutfitPdf"];
+  onSaveOutfit: AppShellOutfitActionMenuProps["onSaveOutfit"];
+  setConfirm: (state: ConfirmState) => void;
+  setNameDialog: (state: NameDialogState) => void;
+}) {
+  return (
+    <CapsuleActionMenu
+      anchorEl={menu.anchor}
+      open={Boolean(menu.anchor)}
+      onClose={onClose}
+      capsule={menu.outfit}
+      disabled={disabled}
+      allowUnknownShareContent
+      showShare={false}
+      onDownloadPdf={() => void onDownloadOutfitPdf(menuOutfitRef.current?.id)}
+      onRename={() => setNameDialog(makeNameDialog("rename", menu.outfit))}
+      onRevert={() =>
+        setConfirm({
+          action: "revert-row",
+          capsuleId: menuOutfitRef.current?.id || "",
+          outfitSetIndex: -1,
+        })
+      }
+      onSave={() => void onSaveOutfit(menuOutfitRef.current?.id)}
+      onDuplicate={() => setNameDialog(makeNameDialog("save-as", menu.outfit))}
+      onShare={() => {}}
+      onDelete={() =>
+        setConfirm({
+          action: "delete-row",
+          capsuleId: menuOutfitRef.current?.id || "",
+          outfitSetIndex: -1,
+        })
+      }
+    />
+  );
+}
+
 export default function AppShellOutfitActionMenu({
   activeOutfitMeta,
   disabled,
@@ -182,54 +274,25 @@ export default function AppShellOutfitActionMenu({
 
   return (
     <>
-      <CapsuleActionMenu
-        anchorEl={menu.anchor}
-        open={Boolean(menu.anchor)}
+      <OutfitActionMenuList
+        disabled={disabled}
+        menu={menu}
+        menuOutfitRef={menuOutfitRef}
         onClose={closeMenu}
-        capsule={menu.outfit}
-        disabled={disabled}
-        allowUnknownShareContent
-        showShare={false}
-        onDownloadPdf={() =>
-          void onDownloadOutfitPdf(menuOutfitRef.current?.id)
-        }
-        onRename={() => setNameDialog(makeNameDialog("rename", menu.outfit))}
-        onRevert={() =>
-          setConfirm({
-            action: "revert-row",
-            capsuleId: menuOutfitRef.current?.id || "",
-            outfitSetIndex: -1,
-          })
-        }
-        onSave={() => void onSaveOutfit(menuOutfitRef.current?.id)}
-        onDuplicate={() =>
-          setNameDialog(makeNameDialog("save-as", menu.outfit))
-        }
-        onShare={() => {}}
-        onDelete={() =>
-          setConfirm({
-            action: "delete-row",
-            capsuleId: menuOutfitRef.current?.id || "",
-            outfitSetIndex: -1,
-          })
-        }
+        onDownloadOutfitPdf={onDownloadOutfitPdf}
+        onSaveOutfit={onSaveOutfit}
+        setConfirm={setConfirm}
+        setNameDialog={setNameDialog}
       />
-      <NameDialog
-        state={nameDialog}
-        copyPrefix="outfit"
+      <OutfitActionDialogs
+        clearMenu={clearMenu}
+        confirm={confirm}
+        dialogProps={dialogProps}
         disabled={disabled}
         isOverlay={isOverlay}
-        props={dialogProps}
-        setState={setNameDialog}
-      />
-      <ConfirmDialog
-        state={confirm}
-        copyPrefix="outfit"
-        disabled={disabled}
-        isOverlay={isOverlay}
-        props={dialogProps}
-        setState={setConfirm}
-        onCloseRowMenu={clearMenu}
+        nameDialog={nameDialog}
+        setConfirm={setConfirm}
+        setNameDialog={setNameDialog}
       />
     </>
   );

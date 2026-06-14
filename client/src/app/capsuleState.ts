@@ -127,7 +127,48 @@ export function getEffectiveCapsule(
   return capsule?.draft || capsule?.saved || null;
 }
 
-// eslint-disable-next-line complexity
+function buildSelectedWardrobe(
+  wardrobe:
+    | CapsuleWardrobeData
+    | { items: WardrobeItem[] | null; outfitSets: OutfitSetSnapshot[] }
+    | null
+    | undefined,
+  profileItems: WardrobeItem[] | null,
+  profileOutfitSets: OutfitSetSnapshot[],
+) {
+  return wardrobe === undefined
+    ? { items: profileItems, outfitSets: profileOutfitSets }
+    : wardrobe;
+}
+
+function buildDraftWardrobeData(
+  selectedWardrobe: ReturnType<typeof buildSelectedWardrobe>,
+) {
+  if (!selectedWardrobe) {
+    return null;
+  }
+
+  return {
+    items: Array.isArray(selectedWardrobe.items) ? selectedWardrobe.items : [],
+    outfitSets: normalizeOutfitSets(selectedWardrobe.outfitSets),
+    ...getWardrobeMetadata(selectedWardrobe as CapsuleWardrobeData),
+  };
+}
+
+function buildDraftReportFields(effectiveCapsule: CapsuleDraft | null) {
+  return {
+    ...(Object.prototype.hasOwnProperty.call(effectiveCapsule || {}, "report")
+      ? { report: effectiveCapsule?.report || null }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(
+      effectiveCapsule || {},
+      "reportMeta",
+    )
+      ? { reportMeta: effectiveCapsule?.reportMeta || null }
+      : {}),
+  };
+}
+
 export function buildDraftSnapshotFromState({
   activeCapsuleMeta,
   profileItems,
@@ -164,10 +205,11 @@ export function buildDraftSnapshotFromState({
     | { items: WardrobeItem[] | null; outfitSets: OutfitSetSnapshot[] }
     | null;
 }): CapsuleDraft {
-  const selectedWardrobe =
-    wardrobe === undefined
-      ? { items: profileItems, outfitSets: profileOutfitSets }
-      : wardrobe;
+  const selectedWardrobe = buildSelectedWardrobe(
+    wardrobe,
+    profileItems,
+    profileOutfitSets,
+  );
   const effectiveCapsule = getEffectiveCapsule(activeCapsuleMeta);
   return {
     filters: {
@@ -183,53 +225,44 @@ export function buildDraftSnapshotFromState({
       anchorItemRefs: normalizeAnchorItemRefs(selectedAnchorItemRefs),
     },
     data: {
-      wardrobe: selectedWardrobe
-        ? {
-            items: Array.isArray(selectedWardrobe.items)
-              ? selectedWardrobe.items
-              : [],
-            outfitSets: normalizeOutfitSets(selectedWardrobe.outfitSets),
-            ...getWardrobeMetadata(selectedWardrobe as CapsuleWardrobeData),
-          }
-        : null,
+      wardrobe: buildDraftWardrobeData(selectedWardrobe),
       rejectedUrls: Array.isArray(rejectedUrls)
         ? rejectedUrls
         : effectiveCapsule?.data?.rejectedUrls || [],
     },
-    ...(Object.prototype.hasOwnProperty.call(effectiveCapsule || {}, "report")
-      ? { report: effectiveCapsule?.report || null }
-      : {}),
-    ...(Object.prototype.hasOwnProperty.call(
-      effectiveCapsule || {},
-      "reportMeta",
-    )
-      ? { reportMeta: effectiveCapsule?.reportMeta || null }
-      : {}),
+    ...buildDraftReportFields(effectiveCapsule),
   };
 }
 
-// eslint-disable-next-line complexity
+function normalizeComparableSourceMode(value: unknown) {
+  return value === "wardrobe_preferred" || value === "wardrobe_only"
+    ? value
+    : "catalog_only";
+}
+
+function normalizeComparableText(value: unknown, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
+function normalizeComparableList(value: unknown) {
+  return Array.isArray(value) ? [...value].sort() : [];
+}
+
+function normalizeComparablePattern(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value : "solid";
+}
+
 function normalizeComparableFilters(filters: Partial<CapsuleFilters> = {}) {
   return {
-    sourceMode:
-      filters.sourceMode === "wardrobe_preferred" ||
-      filters.sourceMode === "wardrobe_only"
-        ? filters.sourceMode
-        : "catalog_only",
-    formalityLevel:
-      typeof filters.formalityLevel === "string" ? filters.formalityLevel : "",
+    sourceMode: normalizeComparableSourceMode(filters.sourceMode),
+    formalityLevel: normalizeComparableText(filters.formalityLevel),
     style: filters.style ?? null,
-    occasions: Array.isArray(filters.occasions)
-      ? [...filters.occasions].sort()
-      : [],
-    season: Array.isArray(filters.season) ? [...filters.season].sort() : [],
-    audience: typeof filters.audience === "string" ? filters.audience : "",
+    occasions: normalizeComparableList(filters.occasions),
+    season: normalizeComparableList(filters.season),
+    audience: normalizeComparableText(filters.audience),
     color: filters.color ?? null,
-    pattern:
-      typeof filters.pattern === "string" && filters.pattern.trim().length > 0
-        ? filters.pattern
-        : "solid",
-    text: typeof filters.text === "string" ? filters.text.trim() : "",
+    pattern: normalizeComparablePattern(filters.pattern),
+    text: normalizeComparableText(filters.text).trim(),
     anchorItemRefs: normalizeAnchorItemRefs(filters.anchorItemRefs).sort(
       (left, right) =>
         `${left.source}\u0000${left.url}`.localeCompare(

@@ -1,7 +1,10 @@
-/* eslint-disable max-lines */
 import { API_BASE_URL } from "./config";
-import { getCsrfHeader, request, requestJson } from "./request";
-import type { JsonObject } from "./request";
+import {
+  getCsrfHeader,
+  request,
+  requestJson,
+  type JsonObject,
+} from "./request";
 import type { CapsuleReport } from "../app/appTypes";
 
 type CapsuleResponse = JsonObject;
@@ -100,7 +103,7 @@ function getDownloadFilenameFromDisposition(
   );
 }
 
-async function fetchCapsuleBootstrap(): Promise<CapsuleResponse> {
+export async function fetchCapsuleBootstrap(): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl("/bootstrap"), {
     credentials: "include",
   });
@@ -118,7 +121,7 @@ function buildCapsuleListQuery({ limit, offset }: CapsuleListOptions = {}) {
   return query ? `?${query}` : "";
 }
 
-async function fetchRecentCapsules(
+export async function fetchRecentCapsules(
   options: CapsuleListOptions = {},
 ): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(`/recent${buildCapsuleListQuery(options)}`), {
@@ -126,7 +129,7 @@ async function fetchRecentCapsules(
   });
 }
 
-async function searchCapsules(query: string): Promise<CapsuleResponse> {
+export async function searchCapsules(query: string): Promise<CapsuleResponse> {
   const encodedQuery = encodeURIComponent(String(query || "").trim());
   const url = encodedQuery
     ? `${capsuleUrl("/search")}?q=${encodedQuery}`
@@ -136,13 +139,13 @@ async function searchCapsules(query: string): Promise<CapsuleResponse> {
   });
 }
 
-async function fetchCapsule(id: string): Promise<CapsuleResponse> {
+export async function fetchCapsule(id: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(capsuleIdPath(id)), {
     credentials: "include",
   });
 }
 
-async function createCapsule(
+export async function createCapsule(
   payload: CapsuleCreatePayload = {},
 ): Promise<CapsuleResponse> {
   const body: CapsuleCreatePayload = {};
@@ -269,7 +272,7 @@ async function selectCapsule(id: string): Promise<CapsuleResponse> {
   });
 }
 
-async function deleteCapsule(id: string): Promise<CapsuleResponse> {
+export async function deleteCapsule(id: string): Promise<CapsuleResponse> {
   return requestJson(capsuleUrl(capsuleIdPath(id)), {
     method: "DELETE",
     credentials: "include",
@@ -376,19 +379,13 @@ async function downloadCapsulePdf(id: string): Promise<void> {
 }
 
 export {
-  createCapsule,
-  deleteCapsule,
   deleteCapsuleReport,
   downloadCapsulePdf,
   duplicateCapsule,
-  fetchCapsule,
-  fetchCapsuleBootstrap,
-  fetchRecentCapsules,
   generateCapsuleReport,
   renameCapsule,
   revertCapsule,
   saveCapsule,
-  searchCapsules,
   fetchSharedCapsule,
   importSharedCapsule,
   selectCapsule,
