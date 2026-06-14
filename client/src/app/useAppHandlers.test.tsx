@@ -8,7 +8,9 @@ const capsuleActions = vi.hoisted(() => ({
   applyCapsuleFilters: vi.fn(),
   createNewCapsule: vi.fn(),
   deleteCurrentCapsule: vi.fn(),
+  deleteCurrentCapsuleReport: vi.fn(),
   duplicateCurrentCapsule: vi.fn(),
+  generateCurrentCapsuleReport: vi.fn(),
   importSharedCapsuleToApp: vi.fn(),
   loadMoreRecentCapsules: vi.fn(),
   openCapsule: vi.fn(),
@@ -37,8 +39,12 @@ const wardrobeActions = vi.hoisted(() => ({
 const outfitActions = vi.hoisted(() => ({
   copyOutfitSetToOutfits: vi.fn(),
   deleteCurrentOutfit: vi.fn(),
+  deleteCurrentOutfitImage: vi.fn(),
+  deleteCurrentOutfitReport: vi.fn(),
   downloadCurrentOutfitPdf: vi.fn(),
   duplicateCurrentOutfit: vi.fn(),
+  generateCurrentOutfitImage: vi.fn(),
+  generateCurrentOutfitReport: vi.fn(),
   loadMoreRecentOutfits: vi.fn(),
   replaceCurrentOutfitItems: vi.fn(),
   renameCurrentOutfit: vi.fn(),
@@ -154,6 +160,8 @@ describe("useAppHandlers", () => {
     result.current.handleBackToMain();
     result.current.handleCancelRegenerationSelection();
     await result.current.handleApplyCapsuleFilters();
+    await result.current.handleCreateCapsule();
+    await result.current.handleCreateOutfit();
     await result.current.handleCreateCapsuleFromSidebar();
     await result.current.handleCreateOutfitFromSidebar();
     await result.current.handleOpenCapsuleFromSidebar("capsule-2");
@@ -166,6 +174,12 @@ describe("useAppHandlers", () => {
     await result.current.handleRenameOutfit("Outfit renamed");
     await result.current.handleDuplicateCapsule("Copy");
     await result.current.handleDuplicateOutfit("Outfit copy");
+    await result.current.handleDeleteCapsuleReport();
+    await result.current.handleDeleteOutfitReport();
+    await result.current.handleDeleteOutfitImage();
+    await result.current.handleGenerateCapsuleReport();
+    await result.current.handleGenerateOutfitReport();
+    await result.current.handleGenerateOutfitImage();
     await result.current.handleCopyOutfitSetToOutfits(
       "Capsule: Outfit 1",
       [{ url: "https://example.com/top", source: "from_catalog" }],
@@ -256,6 +270,18 @@ describe("useAppHandlers", () => {
     expect(setSelectedRegenerationUrls).toHaveBeenCalledWith([]);
     expect(navigateNewCapsule).toHaveBeenCalled();
     expect(navigateNewOutfit).toHaveBeenCalled();
+    expect(capsuleActions.deleteCurrentCapsuleReport).toHaveBeenCalledWith(
+      actionContext,
+      "capsule-1",
+    );
+    expect(outfitActions.deleteCurrentOutfitReport).toHaveBeenCalledWith(
+      actionContext,
+      "outfit-1",
+    );
+    expect(outfitActions.generateCurrentOutfitImage).toHaveBeenCalledWith(
+      actionContext,
+      "outfit-1",
+    );
     expect(capsulesApi.selectCapsule).toHaveBeenCalledWith("capsule-2");
     expect(navigateCapsule).toHaveBeenCalledWith("capsule-2");
     expect(outfitActions.selectUserOutfit).toHaveBeenCalledWith("outfit-2");

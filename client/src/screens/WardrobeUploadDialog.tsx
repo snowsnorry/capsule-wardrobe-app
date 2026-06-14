@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, DragEvent, ReactElement } from "react";
+import { useRef } from "react";
+import type { ChangeEvent, DragEvent, ReactElement, RefObject } from "react";
 import {
   Button,
   Dialog,
@@ -22,9 +22,9 @@ import {
   SelectedFilesList,
   UploadDropzone,
   UploadProgressContent,
-  formatFileSize,
   type SelectedUploadFile,
 } from "./WardrobeUploadDialogParts";
+import { useWardrobeUploadSelection } from "./WardrobeUploadSelection";
 
 type WardrobeUploadDialogProps = {
   isMobile: boolean;
@@ -36,27 +36,6 @@ type WardrobeUploadDialogProps = {
   t: (key: string) => string;
 };
 
-const MAX_FILES = 5;
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-function createUploadFile(file: File): SelectedUploadFile {
-  const randomId =
-    typeof globalThis.crypto?.randomUUID === "function"
-      ? globalThis.crypto.randomUUID()
-      : Math.random().toString(36).slice(2);
-  return {
-    id: `${file.name}-${file.size}-${file.lastModified}-${randomId}`,
-    file,
-    previewUrl:
-      typeof URL.createObjectURL === "function"
-        ? URL.createObjectURL(file)
-        : "",
-  };
-}
-
-// The dialog keeps selection, drag, validation, and preview cleanup together.
-// eslint-disable-next-line max-lines-per-function
 function WardrobeUploadDialog({
   isMobile,
   isUploading,
@@ -67,63 +46,16 @@ function WardrobeUploadDialog({
   t,
 }: WardrobeUploadDialogProps): ReactElement {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [files, setFiles] = useState<SelectedUploadFile[]>([]);
-  const [error, setError] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
-  const totalSizeLabel = useMemo(
-    () =>
-      formatFileSize(files.reduce((sum, entry) => sum + entry.file.size, 0)),
-    [files],
-  );
-
-  useEffect(() => {
-    if (open) {
-      return undefined;
-    }
-
-    files.forEach((entry) => {
-      if (entry.previewUrl) {
-        URL.revokeObjectURL(entry.previewUrl);
-      }
-    });
-    if (files.length > 0) {
-      setFiles([]);
-    }
-    if (error) {
-      setError("");
-    }
-    if (isDragging) {
-      setIsDragging(false);
-    }
-  }, [error, files, isDragging, open]);
-
-  const addFiles = (nextFiles: File[]) => {
-    if (nextFiles.length === 0) {
-      return;
-    }
-
-    if (files.length + nextFiles.length > MAX_FILES) {
-      setError(t("wardrobe.uploadDialog.tooManyFiles"));
-      return;
-    }
-
-    const invalidType = nextFiles.find(
-      (file) => !ALLOWED_IMAGE_TYPES.has(file.type),
-    );
-    if (invalidType) {
-      setError(t("wardrobe.uploadDialog.invalidType"));
-      return;
-    }
-
-    const oversized = nextFiles.find((file) => file.size > MAX_FILE_SIZE_BYTES);
-    if (oversized) {
-      setError(t("wardrobe.uploadDialog.fileTooLarge"));
-      return;
-    }
-
-    setError("");
-    setFiles((current) => [...current, ...nextFiles.map(createUploadFile)]);
-  };
+  const {
+    addFiles,
+    error,
+    files,
+    isDragging,
+    removeFile,
+    resetDragging,
+    setIsDragging,
+    totalSizeLabel,
+  } = useWardrobeUploadSelection({ open, t });
 
   const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     addFiles(Array.from(event.currentTarget.files || []));
@@ -132,19 +64,8 @@ function WardrobeUploadDialog({
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    setIsDragging(false);
+    resetDragging();
     addFiles(Array.from(event.dataTransfer.files || []));
-  };
-
-  const removeFile = (id: string) => {
-    setFiles((current) => {
-      const target = current.find((entry) => entry.id === id);
-      if (target?.previewUrl) {
-        URL.revokeObjectURL(target.previewUrl);
-      }
-      return current.filter((entry) => entry.id !== id);
-    });
-    setError("");
   };
 
   const handleUpload = () => {
@@ -166,71 +87,170 @@ function WardrobeUploadDialog({
         paper: isMobile ? { sx: mobileCapsuleDialogPaperSx } : undefined,
       }}
     >
-      <DialogTitle sx={getDialogTitleSx(isMobile)}>
-        <Stack spacing={0.75}>
-          <Typography variant="h5">
-            {t("wardrobe.uploadDialog.title")}
+      <WardrobeUploadDialogTitle
+        isMobile={isMobile}
+        isUploading={isUploading}
+        t={t}
+        onClose={onClose}
+      />
+      <WardrobeUploadDialogContent
+        error={error}
+        files={files}
+        inputRef={inputRef}
+        isDragging={isDragging}
+        isMobile={isMobile}
+        isUploading={isUploading}
+        progress={progress}
+        t={t}
+        totalSizeLabel={totalSizeLabel}
+        onDragStateChange={setIsDragging}
+        onDrop={handleDrop}
+        onFileInputChange={handleFileInputChange}
+        onRemoveFile={removeFile}
+      />
+      <WardrobeUploadDialogActions
+        error={error}
+        fileCount={files.length}
+        isMobile={isMobile}
+        isUploading={isUploading}
+        t={t}
+        onClose={onClose}
+        onUpload={handleUpload}
+      />
+    </Dialog>
+  );
+}
+
+function WardrobeUploadDialogTitle({
+  isMobile,
+  isUploading,
+  onClose,
+  t,
+}: {
+  isMobile: boolean;
+  isUploading: boolean;
+  onClose: () => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <DialogTitle sx={getDialogTitleSx(isMobile)}>
+      <Stack spacing={0.75}>
+        <Typography variant="h5">{t("wardrobe.uploadDialog.title")}</Typography>
+        {!isMobile ? (
+          <Typography variant="body2" color="text.secondary">
+            {t("wardrobe.uploadDialog.body")}
           </Typography>
-          {!isMobile ? (
+        ) : null}
+      </Stack>
+      <IconButton
+        aria-label={t("actions.close")}
+        disabled={isUploading}
+        onClick={onClose}
+      >
+        <CloseRoundedIcon />
+      </IconButton>
+    </DialogTitle>
+  );
+}
+
+function WardrobeUploadDialogContent({
+  error,
+  files,
+  inputRef,
+  isDragging,
+  isMobile,
+  isUploading,
+  onDragStateChange,
+  onDrop,
+  onFileInputChange,
+  onRemoveFile,
+  progress,
+  t,
+  totalSizeLabel,
+}: {
+  error: string;
+  files: SelectedUploadFile[];
+  inputRef: RefObject<HTMLInputElement | null>;
+  isDragging: boolean;
+  isMobile: boolean;
+  isUploading: boolean;
+  onDragStateChange: (value: boolean) => void;
+  onDrop: (event: DragEvent<HTMLDivElement>) => void;
+  onFileInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemoveFile: (id: string) => void;
+  progress: UploadWardrobeProgress;
+  t: (key: string) => string;
+  totalSizeLabel: string;
+}) {
+  return (
+    <DialogContent sx={getDialogContentSx(isMobile)}>
+      {isUploading ? (
+        <UploadProgressContent progress={progress} t={t} />
+      ) : (
+        <>
+          {isMobile ? (
             <Typography variant="body2" color="text.secondary">
               {t("wardrobe.uploadDialog.body")}
             </Typography>
           ) : null}
-        </Stack>
-        <IconButton
-          aria-label={t("actions.close")}
-          disabled={isUploading}
-          onClick={onClose}
-        >
-          <CloseRoundedIcon />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent sx={getDialogContentSx(isMobile)}>
-        {isUploading ? (
-          <UploadProgressContent progress={progress} t={t} />
-        ) : (
-          <>
-            {isMobile ? (
-              <Typography variant="body2" color="text.secondary">
-                {t("wardrobe.uploadDialog.body")}
-              </Typography>
-            ) : null}
-            <UploadDropzone
-              inputRef={inputRef}
-              isDragging={isDragging}
-              t={t}
-              variant={isMobile ? "mobile" : "desktop"}
-              onDragStateChange={setIsDragging}
-              onDrop={handleDrop}
-              onFileInputChange={handleFileInputChange}
-            />
-            {error ? (
-              <Typography role="alert" variant="body2" color="error">
-                {error}
-              </Typography>
-            ) : null}
-            <SelectedFilesList
-              files={files}
-              t={t}
-              totalSizeLabel={totalSizeLabel}
-              onRemoveFile={removeFile}
-            />
-          </>
-        )}
-      </DialogContent>
-      {!isUploading ? (
-        <DialogActions sx={getDialogActionsSx(isMobile)}>
-          <Button onClick={onClose}>{t("actions.cancel")}</Button>
-          <Button
-            variant="contained"
-            disabled={files.length === 0 || Boolean(error)}
-            onClick={handleUpload}
-          >
-            {t("wardrobe.uploadDialog.upload")}
-          </Button>
-        </DialogActions>
-      ) : null}
-    </Dialog>
+          <UploadDropzone
+            inputRef={inputRef}
+            isDragging={isDragging}
+            t={t}
+            variant={isMobile ? "mobile" : "desktop"}
+            onDragStateChange={onDragStateChange}
+            onDrop={onDrop}
+            onFileInputChange={onFileInputChange}
+          />
+          {error ? (
+            <Typography role="alert" variant="body2" color="error">
+              {error}
+            </Typography>
+          ) : null}
+          <SelectedFilesList
+            files={files}
+            t={t}
+            totalSizeLabel={totalSizeLabel}
+            onRemoveFile={onRemoveFile}
+          />
+        </>
+      )}
+    </DialogContent>
+  );
+}
+
+function WardrobeUploadDialogActions({
+  error,
+  fileCount,
+  isMobile,
+  isUploading,
+  onClose,
+  onUpload,
+  t,
+}: {
+  error: string;
+  fileCount: number;
+  isMobile: boolean;
+  isUploading: boolean;
+  onClose: () => void;
+  onUpload: () => void;
+  t: (key: string) => string;
+}) {
+  if (isUploading) {
+    return null;
+  }
+
+  return (
+    <DialogActions sx={getDialogActionsSx(isMobile)}>
+      <Button onClick={onClose}>{t("actions.cancel")}</Button>
+      <Button
+        variant="contained"
+        disabled={fileCount === 0 || Boolean(error)}
+        onClick={onUpload}
+      >
+        {t("wardrobe.uploadDialog.upload")}
+      </Button>
+    </DialogActions>
   );
 }
 

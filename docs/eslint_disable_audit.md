@@ -9,9 +9,9 @@
 
 Current suppressed warning count:
 
-- [ ] `max-lines`: 17
-- [ ] `max-lines-per-function`: 27
-- [ ] `complexity`: 17
+- [ ] `max-lines`: 13
+- [ ] `max-lines-per-function`: 16
+- [ ] `complexity`: 14
 - [x] `react-hooks/exhaustive-deps`: 0
 - [x] `@typescript-eslint/no-explicit-any`: 0
 
@@ -93,26 +93,26 @@ These disables look removable without changing architecture. They should be hand
 
 These disables point to real structural debt. They should be planned as focused refactors with tests, not removed mechanically.
 
-- [ ] `client/src/screens/outfitScreen/OutfitScreen.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
-  - Main candidate for decomposition. Split header, grid, report, dialogs, menus, and action wiring.
-- [ ] `client/src/screens/outfitScreen/useOutfitAddItemsDialog.ts` - `max-lines-per-function`
-  - Split personal items, catalog search, selection, and mobile filters.
+- [x] `client/src/screens/outfitScreen/OutfitScreen.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
+  - Split the screen into controller, view, scroll/content, report, main content, overlay, preview, confirm, name-dialog, and report-state modules.
+- [x] `client/src/screens/outfitScreen/useOutfitAddItemsDialog.ts` - `max-lines-per-function`
+  - Split personal items, catalog search, selection, and mobile filters into focused hooks.
 - [ ] `client/src/api/outfits.ts` - `max-lines`
   - Saved-outfit API calls, event streams, PDF download, and media/report helpers share one API surface.
 - [ ] `client/src/app/capsuleActions.ts` - `max-lines`
   - Capsule action orchestration still groups generation, sharing, refresh, and mutation flows.
-- [ ] `client/src/screens/WardrobeScreen.tsx` - `max-lines-per-function`
-  - Screen state, filters, menus, uploads, and detail dialog are combined.
-- [ ] `client/src/screens/useWardrobeItems.ts` - `max-lines-per-function`
-  - Query, upload, PDF, like/delete, and menu state should be separated.
-- [ ] `client/src/screens/WardrobeUploadDialog.tsx` - `max-lines-per-function`
-  - Extract selection, validation, drag/drop, cleanup, and render sections.
-- [ ] `client/src/app/useAppHandlers.ts` - `max-lines`, `max-lines-per-function`
-  - Capsule, outfit, sharing, profile, and session handlers are grouped in one broad module.
-- [ ] `client/src/app/useAppNavigation.ts` - `max-lines-per-function`
-  - History, popstate, share routing, capsule/outfit routing, and search routing are combined.
-- [ ] `client/src/app/AppShellContent.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
-  - Shell layout, sidebar search, action menus, and dialogs are mixed.
+- [x] `client/src/screens/WardrobeScreen.tsx` - `max-lines-per-function`
+  - Split filters, action menu, dialogs, upload success, and product-detail state from the main screen composition.
+- [x] `client/src/screens/useWardrobeItems.ts` - `max-lines-per-function`
+  - Split query, upload, PDF, like/delete, update, and menu state into focused action hooks.
+- [x] `client/src/screens/WardrobeUploadDialog.tsx` - `max-lines-per-function`
+  - Extracted upload selection, validation, drag/drop, cleanup, content, title, and actions.
+- [x] `client/src/app/useAppHandlers.ts` - `max-lines`, `max-lines-per-function`
+  - Split capsule, outfit, wardrobe, profile/session, sidebar registration, and shared-import handler wiring.
+- [x] `client/src/app/useAppNavigation.ts` - `max-lines-per-function`
+  - Split route state, app navigation, path navigation, and capsule/outfit navigation callbacks.
+- [x] `client/src/app/AppShellContent.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
+  - Split sidebar panel state, body, action menus, search dialogs, and shell/card layout.
 - [ ] `client/src/components/ClothingCard.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
   - Extract action wiring, long-press/click behavior, and render sections.
 - [ ] `client/src/components/ClothingCardParts.tsx` - `max-lines`, `max-lines-per-function`
@@ -125,10 +125,10 @@ These disables point to real structural debt. They should be planned as focused 
   - Sidebar section composition, sorting, counts, and pagination controls are still grouped.
 - [ ] `client/src/components/ProfileFiltersAnchorSection.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
   - Loading, selection mapping, dialog state, and render flow are combined.
-- [ ] `client/src/screens/mainScreen/MainScreenDialogs.tsx` - `max-lines-per-function`
-  - Main-screen dialog composition combines settings, upload, filter, and destructive-action dialog wiring.
-- [ ] `client/src/screens/mainScreen/MainScreenView.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
-  - Report inspector, grid, and selection wiring should be split.
+- [x] `client/src/screens/mainScreen/MainScreenDialogs.tsx` - `max-lines-per-function`
+  - Extracted product-detail dialog state and handlers from the main dialog composition.
+- [x] `client/src/screens/mainScreen/MainScreenView.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
+  - Split report highlighting, report slots, wardrobe panel, and capsule panel layout.
 - [ ] `server/src/capsuleStore.ts` - `max-lines-per-function`, `complexity`
   - Store factory mixes CRUD, sharing, import, reports, and snapshots. Typed deps are complete; store-surface decomposition remains.
 - [ ] `server/src/outfitStore.ts` - `max-lines-per-function`, `complexity`
@@ -168,5 +168,5 @@ These disables point to real structural debt. They should be planned as focused 
 - [x] Phase 1: remove trivial line-count disables and the simple `complexity` case in `server/src/capsuleHttp.ts`.
 - [x] Phase 2: type remaining AI/store dependency bags and remove the corresponding `no-explicit-any` disables.
 - [x] Phase 3: fix both `react-hooks/exhaustive-deps` disables.
-- [ ] Phase 4: split large client screens/hooks.
+- [x] Phase 4: split large client screens/hooks.
 - [ ] Phase 5: split server stores, mutation routes, and AI generation/report pipelines.

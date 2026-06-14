@@ -16,66 +16,8 @@ import CapsuleProductDetailDialog from "./CapsuleProductDetailDialog";
 
 type ProductDetailMode = "read" | "edit";
 
-// eslint-disable-next-line max-lines-per-function
 function MainScreenDialogs(props: DialogsProps) {
-  const { t, locale } = useI18n();
-  const [productDetailMode, setProductDetailMode] =
-    useState<ProductDetailMode>("read");
-  const productDetailKeyRef = useRef("");
-  const productDetailKey = getProductDetailKey(props.productDetailItem);
-
-  useEffect(() => {
-    if (!productDetailKey) {
-      productDetailKeyRef.current = "";
-      setProductDetailMode("read");
-      return;
-    }
-
-    if (productDetailKeyRef.current !== productDetailKey) {
-      productDetailKeyRef.current = productDetailKey;
-      setProductDetailMode(
-        isUploadedWardrobeItemNeedsReview(props.productDetailItem)
-          ? "edit"
-          : "read",
-      );
-    }
-  }, [productDetailKey, props.productDetailItem]);
-
-  const closeProductDetail = () => {
-    props.setProductDetailItem(null);
-    setProductDetailMode("read");
-  };
-  const applyUploadedProductDetail = async (
-    item: NonNullable<DialogsProps["productDetailItem"]>,
-    payload: UploadedWardrobeItemUpdatePayload,
-  ) => {
-    const updated = await props.props.onUpdateUploadedWardrobeItem?.(
-      item,
-      payload,
-    );
-    props.setProductDetailItem(updated || { ...item, ...payload });
-    setProductDetailMode("read");
-  };
-  const setProductDetailItemLike = async (
-    item: NonNullable<DialogsProps["productDetailItem"]>,
-    isLiked: boolean,
-  ) => {
-    const itemUrl = getCanonicalItemUrl(item);
-    if (!itemUrl) {
-      return;
-    }
-
-    const previousItem = props.productDetailItem;
-    props.setProductDetailItem(
-      patchLikedStateByUrl(props.productDetailItem, itemUrl, isLiked),
-    );
-    try {
-      await props.props.onSetItemLike?.(item, isLiked);
-    } catch (error) {
-      props.setProductDetailItem(previousItem);
-      throw error;
-    }
-  };
+  const productDetailDialog = useMainScreenProductDetailDialog(props);
 
   return (
     <>
@@ -132,23 +74,94 @@ function MainScreenDialogs(props: DialogsProps) {
       />
       <ProductDetailDialogSwitch
         item={props.productDetailItem}
-        mode={productDetailMode}
+        mode={productDetailDialog.mode}
         isMobile={props.isOverlay}
-        locale={locale}
-        t={t}
-        onApply={applyUploadedProductDetail}
-        onClose={closeProductDetail}
-        onEdit={(item) => {
-          props.setProductDetailItem(item);
-          setProductDetailMode("edit");
-        }}
-        onReadMode={() => setProductDetailMode("read")}
+        locale={productDetailDialog.locale}
+        t={productDetailDialog.t}
+        onApply={productDetailDialog.onApply}
+        onClose={productDetailDialog.onClose}
+        onEdit={productDetailDialog.onEdit}
+        onReadMode={productDetailDialog.onReadMode}
         onRemoveFromPersonalItems={props.props.onRemoveFromPersonalItems}
         onSaveToPersonalItems={props.props.onSaveToPersonalItems}
-        onSetItemLike={setProductDetailItemLike}
+        onSetItemLike={productDetailDialog.onSetItemLike}
       />
     </>
   );
+}
+
+function useMainScreenProductDetailDialog(props: DialogsProps) {
+  const { t, locale } = useI18n();
+  const [mode, setMode] = useState<ProductDetailMode>("read");
+  const productDetailKeyRef = useRef("");
+  const productDetailKey = getProductDetailKey(props.productDetailItem);
+
+  useEffect(() => {
+    if (!productDetailKey) {
+      productDetailKeyRef.current = "";
+      setMode("read");
+      return;
+    }
+
+    if (productDetailKeyRef.current !== productDetailKey) {
+      productDetailKeyRef.current = productDetailKey;
+      setMode(
+        isUploadedWardrobeItemNeedsReview(props.productDetailItem)
+          ? "edit"
+          : "read",
+      );
+    }
+  }, [productDetailKey, props.productDetailItem]);
+
+  const onClose = () => {
+    props.setProductDetailItem(null);
+    setMode("read");
+  };
+  const onApply = async (
+    item: NonNullable<DialogsProps["productDetailItem"]>,
+    payload: UploadedWardrobeItemUpdatePayload,
+  ) => {
+    const updated = await props.props.onUpdateUploadedWardrobeItem?.(
+      item,
+      payload,
+    );
+    props.setProductDetailItem(updated || { ...item, ...payload });
+    setMode("read");
+  };
+  const onSetItemLike = async (
+    item: NonNullable<DialogsProps["productDetailItem"]>,
+    isLiked: boolean,
+  ) => {
+    const itemUrl = getCanonicalItemUrl(item);
+    if (!itemUrl) {
+      return;
+    }
+
+    const previousItem = props.productDetailItem;
+    props.setProductDetailItem(
+      patchLikedStateByUrl(props.productDetailItem, itemUrl, isLiked),
+    );
+    try {
+      await props.props.onSetItemLike?.(item, isLiked);
+    } catch (error) {
+      props.setProductDetailItem(previousItem);
+      throw error;
+    }
+  };
+
+  return {
+    locale,
+    mode,
+    onApply,
+    onClose,
+    onEdit: (item: NonNullable<DialogsProps["productDetailItem"]>) => {
+      props.setProductDetailItem(item);
+      setMode("edit");
+    },
+    onReadMode: () => setMode("read"),
+    onSetItemLike,
+    t,
+  };
 }
 
 function getProductDetailKey(item: DialogsProps["productDetailItem"]) {

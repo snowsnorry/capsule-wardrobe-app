@@ -1,5 +1,3 @@
-/* eslint-disable max-lines, max-lines-per-function */
-import type { FormEvent, MouseEvent } from "react";
 import {
   applyCapsuleFilters,
   deleteCurrentCapsule,
@@ -7,65 +5,30 @@ import {
   duplicateCurrentCapsule,
   generateCurrentCapsuleReport,
   importSharedCapsuleToApp,
-  loadMoreRecentCapsules,
   renameCurrentCapsule,
-  resetProfileFilters,
   revertCurrentCapsule,
   saveCurrentCapsule,
-  searchUserCapsules,
-  shareCurrentCapsule,
 } from "./capsuleActions";
 import {
-  copyOutfitSetToOutfits,
   deleteCurrentOutfitReport,
-  deleteCurrentOutfitImage,
   deleteCurrentOutfit,
-  downloadCurrentOutfitPdf,
   duplicateCurrentOutfit,
-  generateCurrentOutfitImage,
   generateCurrentOutfitReport,
-  loadMoreRecentOutfits,
-  replaceCurrentOutfitItems,
   renameCurrentOutfit,
   revertCurrentOutfit,
   saveCurrentOutfit,
-  searchUserOutfits,
   selectUserOutfit,
 } from "./outfitActions";
 import { selectCapsule } from "../api/capsules";
-import { deleteUserProfile, saveSettings } from "./profileActions";
-import {
-  deleteGeneratedOutfitSetImage,
-  downloadWardrobePdf,
-  generateOutfitSetImage,
-  removeItemFromPersonalItems,
-  refreshWardrobe,
-  regenerateSelectedItems,
-  saveItemToPersonalItems,
-  toggleRegenerationSelection,
-  updateUploadedItemInPersonalItems,
-} from "./wardrobeActions";
-import {
-  googleCredential,
-  passkeySignIn,
-  requestCode,
-  resetToEmail,
-  signOut,
-  type SessionActionContext,
-  verifyCode,
-} from "./sessionActions";
+import { type SessionActionContext } from "./sessionActions";
 import type { AppActionContext } from "./actionContext";
 import type {
   AppNavigationOptions,
   AppRoute,
   CapsuleSidebarActions,
   OutfitSidebarActions,
-  OutfitItemSnapshot,
-  WardrobeItem,
 } from "./appTypes";
-import type { SettingsSavePayload } from "../components/SettingsDialog";
-import type { UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
-import { setItemLike } from "./likedItemActions";
+import { buildAppHandlers } from "./appHandlerBuilder";
 
 type UseAppHandlersOptions = {
   activeCapsuleId: string;
@@ -107,30 +70,69 @@ export function useAppHandlers({
   shareMetadata,
   sessionActionContext,
 }: UseAppHandlersOptions) {
-  const handleNavigateApp = (
-    nextApp: Exclude<AppRoute, "share">,
-    options: AppNavigationOptions = {},
-  ) => {
-    navigateApp(nextApp, options);
-  };
+  const capsuleHandlers = buildCapsuleHandlerInputs({
+    activeCapsuleId,
+    getAppActionContext,
+    navigateApp,
+    navigateCapsule,
+    navigateNewCapsule,
+  });
+  const outfitHandlers = buildOutfitHandlerInputs({
+    activeOutfitId,
+    getAppActionContext,
+    navigateApp,
+    navigateOutfit,
+    navigateNewOutfit,
+  });
+  const sharedHandlers = buildSharedHandlerInputs({
+    getAppActionContext,
+    navigateCapsule,
+    pendingShareId,
+    shareMetadata,
+  });
+
+  return buildAppHandlers({
+    activeCapsuleId,
+    activeOutfitId,
+    capsuleSidebarActionsRef,
+    outfitSidebarActionsRef,
+    getAppActionContext,
+    handleNavigateApp: (nextApp, options = {}) => navigateApp(nextApp, options),
+    sessionActionContext,
+    setCurrentView,
+    setIsSignOutConfirmOpen,
+    setSelectedRegenerationUrls,
+    navigateNewCapsule,
+    navigateNewOutfit,
+    ...capsuleHandlers,
+    ...outfitHandlers,
+    ...sharedHandlers,
+  });
+}
+
+function buildCapsuleHandlerInputs({
+  activeCapsuleId,
+  getAppActionContext,
+  navigateApp,
+  navigateCapsule,
+  navigateNewCapsule,
+}: Pick<
+  UseAppHandlersOptions,
+  | "activeCapsuleId"
+  | "getAppActionContext"
+  | "navigateApp"
+  | "navigateCapsule"
+  | "navigateNewCapsule"
+>) {
   const handleApplyCapsuleFilters = async () =>
     applyCapsuleFilters(getAppActionContext());
   const handleCreateCapsule = async () => {
     navigateNewCapsule();
   };
-  const handleCreateOutfit = async () => {
-    navigateNewOutfit();
-  };
   const handleOpenCapsule = async (capsuleId: string) => {
     navigateCapsule(capsuleId);
     void Promise.resolve()
       .then(() => selectCapsule(capsuleId))
-      .catch(() => undefined);
-  };
-  const handleOpenOutfit = async (outfitId: string) => {
-    navigateOutfit(outfitId);
-    void Promise.resolve()
-      .then(() => selectUserOutfit(outfitId))
       .catch(() => undefined);
   };
   const handleSaveCapsule = async (capsuleId = activeCapsuleId) =>
@@ -160,6 +162,46 @@ export function useAppHandlers({
       navigateApp("capsule");
     }
   };
+
+  return {
+    handleApplyCapsuleFilters,
+    handleCreateCapsule,
+    handleDeleteCapsule,
+    handleDeleteCapsuleReport: async (capsuleId = activeCapsuleId) =>
+      deleteCurrentCapsuleReport(getAppActionContext(), capsuleId),
+    handleDuplicateCapsule,
+    handleGenerateCapsuleReport: async (capsuleId = activeCapsuleId) =>
+      generateCurrentCapsuleReport(getAppActionContext(), capsuleId),
+    handleOpenCapsule,
+    handleRenameCapsule,
+    handleRevertCapsule,
+    handleSaveCapsule,
+  };
+}
+
+function buildOutfitHandlerInputs({
+  activeOutfitId,
+  getAppActionContext,
+  navigateApp,
+  navigateOutfit,
+  navigateNewOutfit,
+}: Pick<
+  UseAppHandlersOptions,
+  | "activeOutfitId"
+  | "getAppActionContext"
+  | "navigateApp"
+  | "navigateOutfit"
+  | "navigateNewOutfit"
+>) {
+  const handleCreateOutfit = async () => {
+    navigateNewOutfit();
+  };
+  const handleOpenOutfit = async (outfitId: string) => {
+    navigateOutfit(outfitId);
+    void Promise.resolve()
+      .then(() => selectUserOutfit(outfitId))
+      .catch(() => undefined);
+  };
   const handleSaveOutfit = async (outfitId = activeOutfitId) =>
     saveCurrentOutfit(getAppActionContext(), outfitId);
   const handleRevertOutfit = async (outfitId = activeOutfitId) =>
@@ -185,11 +227,31 @@ export function useAppHandlers({
       navigateApp("capsule");
     }
   };
-  const handleCopyOutfitSetToOutfits = async (
-    name: string,
-    items: Record<string, unknown>[],
-    source?: { capsuleId?: string; setIndex?: number | string },
-  ) => copyOutfitSetToOutfits(getAppActionContext(), name, items, source);
+
+  return {
+    handleCreateOutfit,
+    handleDeleteOutfit,
+    handleDeleteOutfitReport: async (outfitId = activeOutfitId) =>
+      deleteCurrentOutfitReport(getAppActionContext(), outfitId),
+    handleDuplicateOutfit,
+    handleGenerateOutfitReport: async (outfitId = activeOutfitId) =>
+      generateCurrentOutfitReport(getAppActionContext(), outfitId),
+    handleOpenOutfit,
+    handleRenameOutfit,
+    handleRevertOutfit,
+    handleSaveOutfit,
+  };
+}
+
+function buildSharedHandlerInputs({
+  getAppActionContext,
+  navigateCapsule,
+  pendingShareId,
+  shareMetadata,
+}: Pick<
+  UseAppHandlersOptions,
+  "getAppActionContext" | "navigateCapsule" | "pendingShareId" | "shareMetadata"
+>) {
   const handleImportSharedCapsule = async () => {
     const capsule = await importSharedCapsuleToApp(
       getAppActionContext(),
@@ -200,242 +262,5 @@ export function useAppHandlers({
     }
   };
 
-  return buildAppHandlers({
-    activeCapsuleId,
-    activeOutfitId,
-    capsuleSidebarActionsRef,
-    outfitSidebarActionsRef,
-    getAppActionContext,
-    handleApplyCapsuleFilters,
-    handleCreateCapsule,
-    handleCreateOutfit,
-    handleDeleteCapsule,
-    handleDeleteCapsuleReport: async (capsuleId = activeCapsuleId) =>
-      deleteCurrentCapsuleReport(getAppActionContext(), capsuleId),
-    handleDeleteOutfit,
-    handleDeleteOutfitImage: async (outfitId = activeOutfitId) =>
-      deleteCurrentOutfitImage(getAppActionContext(), outfitId),
-    handleDeleteOutfitReport: async (outfitId = activeOutfitId) =>
-      deleteCurrentOutfitReport(getAppActionContext(), outfitId),
-    handleDuplicateCapsule,
-    handleDuplicateOutfit,
-    handleCopyOutfitSetToOutfits,
-    handleImportSharedCapsule,
-    handleGenerateOutfitReport: async (outfitId = activeOutfitId) =>
-      generateCurrentOutfitReport(getAppActionContext(), outfitId),
-    handleGenerateCapsuleReport: async (capsuleId = activeCapsuleId) =>
-      generateCurrentCapsuleReport(getAppActionContext(), capsuleId),
-    handleNavigateApp,
-    handleOpenCapsule,
-    handleOpenOutfit,
-    handleRenameCapsule,
-    handleRenameOutfit,
-    handleRevertCapsule,
-    handleRevertOutfit,
-    handleSaveCapsule,
-    handleSaveOutfit,
-    sessionActionContext,
-    setCurrentView,
-    setIsSignOutConfirmOpen,
-    setSelectedRegenerationUrls,
-    navigateNewCapsule,
-    navigateNewOutfit,
-  });
-}
-
-type BuildAppHandlersOptions = Pick<
-  UseAppHandlersOptions,
-  | "activeCapsuleId"
-  | "activeOutfitId"
-  | "capsuleSidebarActionsRef"
-  | "outfitSidebarActionsRef"
-  | "getAppActionContext"
-  | "sessionActionContext"
-  | "setCurrentView"
-  | "setIsSignOutConfirmOpen"
-  | "setSelectedRegenerationUrls"
-  | "navigateNewCapsule"
-  | "navigateNewOutfit"
-> & {
-  handleApplyCapsuleFilters: () => Promise<void>;
-  handleCreateCapsule: () => Promise<void>;
-  handleCreateOutfit: () => Promise<void>;
-  handleDeleteCapsule: (capsuleId?: string) => Promise<void>;
-  handleDeleteCapsuleReport: (capsuleId?: string) => Promise<void>;
-  handleDeleteOutfit: (outfitId?: string) => Promise<void>;
-  handleDeleteOutfitImage: (outfitId?: string) => Promise<void>;
-  handleDeleteOutfitReport: (outfitId?: string) => Promise<void>;
-  handleDuplicateCapsule: (name: string, capsuleId?: string) => Promise<void>;
-  handleDuplicateOutfit: (name: string, outfitId?: string) => Promise<void>;
-  handleCopyOutfitSetToOutfits: (
-    name: string,
-    items: Record<string, unknown>[],
-    source?: { capsuleId?: string; setIndex?: number | string },
-  ) => Promise<{ id?: string; name?: string } | null>;
-  handleImportSharedCapsule: () => Promise<void>;
-  handleGenerateCapsuleReport: (capsuleId?: string) => Promise<void>;
-  handleGenerateOutfitReport: (outfitId?: string) => Promise<void>;
-  handleNavigateApp: (
-    nextApp: Exclude<AppRoute, "share">,
-    options?: AppNavigationOptions,
-  ) => void;
-  handleOpenCapsule: (capsuleId: string) => Promise<void>;
-  handleOpenOutfit: (outfitId: string) => Promise<void>;
-  handleRenameCapsule: (name: string, capsuleId?: string) => Promise<void>;
-  handleRenameOutfit: (name: string, outfitId?: string) => Promise<void>;
-  handleRevertCapsule: (capsuleId?: string) => Promise<void>;
-  handleRevertOutfit: (outfitId?: string) => Promise<void>;
-  handleSaveCapsule: (capsuleId?: string) => Promise<void>;
-  handleSaveOutfit: (outfitId?: string) => Promise<void>;
-};
-
-function buildAppHandlers({
-  activeCapsuleId,
-  activeOutfitId,
-  capsuleSidebarActionsRef,
-  outfitSidebarActionsRef,
-  getAppActionContext,
-  handleApplyCapsuleFilters,
-  handleCreateCapsule,
-  handleCreateOutfit,
-  handleDeleteCapsule,
-  handleDeleteCapsuleReport,
-  handleDeleteOutfit,
-  handleDeleteOutfitImage,
-  handleDeleteOutfitReport,
-  handleDuplicateCapsule,
-  handleDuplicateOutfit,
-  handleCopyOutfitSetToOutfits,
-  handleImportSharedCapsule,
-  handleGenerateCapsuleReport,
-  handleGenerateOutfitReport,
-  handleNavigateApp,
-  handleOpenCapsule,
-  handleOpenOutfit,
-  navigateNewCapsule,
-  navigateNewOutfit,
-  handleRenameCapsule,
-  handleRenameOutfit,
-  handleRevertCapsule,
-  handleRevertOutfit,
-  handleSaveCapsule,
-  handleSaveOutfit,
-  sessionActionContext,
-  setCurrentView,
-  setIsSignOutConfirmOpen,
-  setSelectedRegenerationUrls,
-}: BuildAppHandlersOptions) {
-  return {
-    handleApplyCapsuleFilters,
-    handleBackToMain: () => setCurrentView("main"),
-    handleCancelRegenerationSelection: () => setSelectedRegenerationUrls([]),
-    handleCreateCapsule,
-    handleCreateCapsuleFromSidebar: async (onComplete?: () => void) => {
-      navigateNewCapsule();
-      onComplete?.();
-    },
-    handleCreateOutfit,
-    handleCreateOutfitFromSidebar: async (onComplete?: () => void) => {
-      navigateNewOutfit();
-      onComplete?.();
-    },
-    handleDeleteCapsule,
-    handleDeleteCapsuleReport,
-    handleDeleteOutfit,
-    handleDeleteOutfitImage,
-    handleDeleteOutfitReport,
-    handleCopyOutfitSetToOutfits,
-    handleDeleteOutfitSetImage: async (
-      setIndex: number | string | null | undefined,
-    ) => deleteGeneratedOutfitSetImage(getAppActionContext(), setIndex),
-    handleDeleteProfile: async () =>
-      deleteUserProfile(getAppActionContext(), sessionActionContext),
-    handleDownloadWardrobePdf: async (capsuleId = activeCapsuleId) =>
-      downloadWardrobePdf(getAppActionContext(), capsuleId),
-    handleDownloadOutfitPdf: async (outfitId = activeOutfitId) =>
-      downloadCurrentOutfitPdf(getAppActionContext(), outfitId),
-    handleDuplicateCapsule,
-    handleDuplicateOutfit,
-    handleGenerateOutfitSetImage: async (
-      setIndex: number | string | null | undefined,
-    ) => generateOutfitSetImage(getAppActionContext(), setIndex),
-    handleGenerateOutfitImage: async (outfitId = activeOutfitId) =>
-      generateCurrentOutfitImage(getAppActionContext(), outfitId),
-    handleGenerateCapsuleReport,
-    handleGenerateOutfitReport,
-    handleGoogleCredential: async (idToken: string) =>
-      googleCredential(sessionActionContext, idToken),
-    handleImportSharedCapsule,
-    handleNavigateApp,
-    handleOpenCapsule,
-    handleLoadMoreCapsules: async () =>
-      loadMoreRecentCapsules(getAppActionContext()),
-    handleLoadMoreOutfits: async () =>
-      loadMoreRecentOutfits(getAppActionContext()),
-    handleOpenOutfit,
-    handleOpenCapsuleFromSidebar: async (
-      capsuleId: string,
-      onComplete?: () => void,
-    ) => {
-      void handleOpenCapsule(capsuleId).catch(() => undefined);
-      onComplete?.();
-    },
-    handleOpenOutfitFromSidebar: async (
-      outfitId: string,
-      onComplete?: () => void,
-    ) => {
-      void handleOpenOutfit(outfitId).catch(() => undefined);
-      onComplete?.();
-    },
-    handlePasskeySignIn: async () => passkeySignIn(sessionActionContext),
-    handleRefreshWardrobe: async () => refreshWardrobe(getAppActionContext()),
-    handleReplaceOutfitItems: async (
-      outfitId: string,
-      items: OutfitItemSnapshot[],
-    ) => replaceCurrentOutfitItems(getAppActionContext(), outfitId, items),
-    handleRegenerateSelectedItems: async () =>
-      regenerateSelectedItems(getAppActionContext()),
-    handleRenameCapsule,
-    handleRenameOutfit,
-    handleRequestCode: async (
-      event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>,
-    ) => requestCode(sessionActionContext, event),
-    handleRequestSignOut: () => setIsSignOutConfirmOpen(true),
-    handleResetProfileFilters: async () =>
-      resetProfileFilters(getAppActionContext()),
-    handleRevertCapsule,
-    handleRevertOutfit,
-    handleSaveCapsule,
-    handleSaveOutfit,
-    handleRemoveFromPersonalItems: async (item: WardrobeItem) =>
-      removeItemFromPersonalItems(getAppActionContext(), item),
-    handleSaveToPersonalItems: async (item: WardrobeItem) =>
-      saveItemToPersonalItems(getAppActionContext(), item),
-    handleSetItemLike: async (item: WardrobeItem, isLiked: boolean) =>
-      setItemLike(getAppActionContext(), item, isLiked),
-    handleUpdateUploadedWardrobeItem: async (
-      item: WardrobeItem,
-      payload: UploadedWardrobeItemUpdatePayload,
-    ) =>
-      updateUploadedItemInPersonalItems(getAppActionContext(), item, payload),
-    handleSaveProfile: async () => handleApplyCapsuleFilters(),
-    handleSaveSettings: async (nextSettings: SettingsSavePayload) =>
-      saveSettings(getAppActionContext(), nextSettings),
-    handleSearchCapsules: async (query: string) => searchUserCapsules(query),
-    handleSearchOutfits: async (query: string) => searchUserOutfits(query),
-    handleShareCapsule: async (capsuleId = activeCapsuleId) =>
-      shareCurrentCapsule(getAppActionContext(), capsuleId),
-    handleToggleRegenerationSelection: (item: WardrobeItem) =>
-      toggleRegenerationSelection(getAppActionContext(), item),
-    handleVerifyCode: async (event: FormEvent<HTMLFormElement>) =>
-      verifyCode(sessionActionContext, event),
-    registerCapsuleSidebarActions: (actions: CapsuleSidebarActions | null) => {
-      capsuleSidebarActionsRef.current = actions;
-    },
-    registerOutfitSidebarActions: (actions: OutfitSidebarActions | null) => {
-      outfitSidebarActionsRef.current = actions;
-    },
-    resetToEmail: () => resetToEmail(sessionActionContext),
-    signOut: async () => signOut(sessionActionContext),
-  };
+  return { handleImportSharedCapsule };
 }

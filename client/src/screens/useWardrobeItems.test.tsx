@@ -41,6 +41,23 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("useWardrobeItems", () => {
+  test("ignores a late item load after unmount", async () => {
+    let resolveItems: (response: { items: never[] }) => void = () => {};
+    api.fetchPersonalItems.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveItems = resolve;
+      }),
+    );
+    const { unmount } = renderHook(() => useWardrobeItems("all", 0, t));
+
+    unmount();
+
+    await act(async () => {
+      resolveItems({ items: [] });
+    });
+    expect(api.fetchPersonalItems).toHaveBeenCalledWith({ force: false });
+  });
+
   test("loads items and handles successful catalog and uploaded mutations", async () => {
     api.fetchPersonalItems.mockResolvedValueOnce({
       items: [
@@ -69,6 +86,16 @@ describe("useWardrobeItems", () => {
     expect(api.downloadPersonalItemsPdf).toHaveBeenCalledWith({
       source: "uploaded",
     });
+
+    await act(async () => {
+      expect(
+        await result.current.handleUploadUrls(["https://shop.test/a"]),
+      ).toBe(true);
+    });
+    expect(api.uploadWardrobeUrls).toHaveBeenCalledWith(
+      ["https://shop.test/a"],
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    );
 
     act(() => {
       result.current.handleProductMenuOpen(
@@ -105,6 +132,7 @@ describe("useWardrobeItems", () => {
     const uploadedItem = result.current.items.find(
       (item) => item.id === "uploaded-1",
     );
+    personalItems.notifyPersonalItemsChanged.mockClear();
     await act(async () => {
       await result.current.handleConfirmRemove(uploadedItem!);
     });
@@ -119,7 +147,7 @@ describe("useWardrobeItems", () => {
     expect(api.removeCatalogItemFromPersonalItems).toHaveBeenCalledWith(
       "https://example.com/catalog",
     );
-    expect(personalItems.notifyPersonalItemsChanged).toHaveBeenCalled();
+    expect(personalItems.notifyPersonalItemsChanged).toHaveBeenCalledTimes(2);
   });
 
   test("handles empty and failing operations", async () => {
@@ -149,6 +177,33 @@ describe("useWardrobeItems", () => {
       ).toBe(false);
     });
     expect(result.current.error).toBe("wardrobe.uploadFailed");
+
+    api.uploadWardrobeUrls.mockRejectedValueOnce(
+      new Error("url upload failed"),
+    );
+    await act(async () => {
+      expect(
+        await result.current.handleUploadUrls(["https://shop.test/b"]),
+      ).toBe(false);
+    });
+    expect(result.current.error).toBe("wardrobe.urlUploadFailed");
+
+    api.downloadPersonalItemsPdf.mockRejectedValueOnce(
+      new Error("download failed"),
+    );
+    await act(async () => {
+      await result.current.handleDownloadPdf();
+    });
+    expect(result.current.error).toBe("wardrobe.downloadFailed");
+
+    likedApi.likeItem.mockRejectedValueOnce(new Error("like failed"));
+    await act(async () => {
+      await result.current.handleSetItemLike(
+        { url: "https://example.com/liked", isLiked: false },
+        true,
+      );
+    });
+    expect(result.current.error).toBe("wardrobe.likeFailed");
 
     api.updateUploadedWardrobeItem.mockRejectedValueOnce(
       new Error("update failed"),
@@ -185,5 +240,33 @@ describe("useWardrobeItems", () => {
     await waitFor(() =>
       expect(result.current.error).toBe("wardrobe.updateFailed"),
     );
+
+    api.updateUploadedWardrobeItem.mockResolvedValueOnce({
+      item: { id: "uploaded-1", name: "Updated from API" },
+    });
+    await act(async () => {
+      await result.current.handleUpdateUploadedItem(
+        { id: "uploaded-1", source: "uploaded" },
+        {
+          name: "Updated",
+          description: null,
+          brand: null,
+          audience: "all",
+          category: "top",
+          season: [],
+          formalityLevel: [],
+          style: [],
+          occasions: [],
+          colorBase: [],
+          pattern: null,
+          finish: null,
+          composition: null,
+          silhouette: null,
+          fit: null,
+          closureType: [],
+        },
+      );
+    });
+    expect(result.current.error).toBe("");
   });
 });

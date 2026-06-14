@@ -1,6 +1,14 @@
 import React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { OutfitItemSnapshot } from "../../app/appTypes";
 import {
   createSearchState,
@@ -14,6 +22,14 @@ import {
   mergeSelectedSnapshots,
   useOutfitAddItemsDialog,
 } from "./useOutfitAddItemsDialog";
+import { useOutfitCatalogPicker } from "./useOutfitCatalogPicker";
+
+const searchApi = vi.hoisted(() => ({
+  fetchSearchOptions: vi.fn(),
+  runSearch: vi.fn(),
+}));
+
+vi.mock("../../api/search", () => searchApi);
 
 function makeCatalogOptions() {
   return {
@@ -72,6 +88,15 @@ function HookHarness() {
 
 afterEach(() => {
   cleanup();
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  searchApi.fetchSearchOptions.mockResolvedValue(makeCatalogOptions());
+  searchApi.runSearch.mockResolvedValue({
+    items: [{ url: "https://example.com/catalog", name: "Catalog top" }],
+    total: 1,
+  });
 });
 
 describe("mergeSelectedSnapshots", () => {
@@ -181,5 +206,70 @@ describe("useOutfitAddItemsDialog", () => {
     );
 
     expect(screen.getByTestId("mobile-liked")).toHaveTextContent("true");
+  });
+});
+
+describe("useOutfitCatalogPicker", () => {
+  test("bootstraps catalog search and applies catalog actions", async () => {
+    const { result } = renderHook(() =>
+      useOutfitCatalogPicker({
+        locale: "en",
+        open: true,
+        tab: 1,
+        t,
+      }),
+    );
+
+    await waitFor(() =>
+      expect(searchApi.fetchSearchOptions).toHaveBeenCalled(),
+    );
+    expect(searchApi.runSearch).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 20, persist: false }),
+    );
+    await waitFor(() => expect(result.current.catalogTotal).toBe(1));
+    expect(result.current.visibleCatalogItems).toHaveLength(1);
+
+    await act(async () => {
+      await result.current.changeCatalogDraft(
+        (current) => ({ ...current, query: "linen" }),
+        { submit: true },
+      );
+    });
+    expect(searchApi.runSearch).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "linen", page: 1 }),
+    );
+
+    act(() => {
+      result.current.openCatalogFilters();
+      result.current.changeCatalogMobileFiltersDraft((current) => ({
+        ...current,
+        likedOnly: true,
+      }));
+    });
+    expect(result.current.isCatalogFiltersOpen).toBe(true);
+    expect(result.current.catalogMobileFiltersDraftState.likedOnly).toBe(true);
+
+    await act(async () => {
+      await result.current.applyCatalogSearch({
+        ...result.current.catalogMobileFiltersDraftState,
+        page: 4,
+      });
+    });
+    expect(searchApi.runSearch).toHaveBeenLastCalledWith(
+      expect.objectContaining({ likedOnly: true, page: 1 }),
+    );
+
+    await act(async () => {
+      await result.current.changeCatalogPage(null, 2);
+    });
+    expect(searchApi.runSearch).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2 }),
+    );
+
+    await act(async () => {
+      await result.current.clearCatalogQuery();
+      await result.current.resetCatalogSearch();
+    });
+    expect(result.current.isCatalogFiltersOpen).toBe(false);
   });
 });

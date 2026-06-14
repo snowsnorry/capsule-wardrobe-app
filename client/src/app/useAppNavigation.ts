@@ -41,8 +41,35 @@ function redirectEmptyPath() {
   return DEFAULT_APP_PATH;
 }
 
-// eslint-disable-next-line max-lines-per-function
 export function useAppNavigation() {
+  const navigationState = useNavigationRouteState();
+  const pathNavigation = usePathNavigation(navigationState);
+  const appNavigation = useAppRouteNavigation(navigationState);
+  const entityNavigation = useEntityNavigation(pathNavigation.navigateToPath);
+
+  return {
+    appRoute: navigationState.routeState.appRoute,
+    capsuleRouteId: navigationState.routeState.capsuleRouteId,
+    capsuleRouteMode: navigationState.routeState.capsuleRouteMode,
+    outfitRouteId: navigationState.routeState.outfitRouteId,
+    outfitRouteMode: navigationState.routeState.outfitRouteMode,
+    searchInitialQuery: navigationState.searchInitialQuery,
+    searchAutoOpenProductDetail: navigationState.searchAutoOpenProductDetail,
+    pendingShareId: navigationState.pendingShareId,
+    setPendingShareId: navigationState.setPendingShareId,
+    setAppRoute: (appRoute: AppRoute) =>
+      navigationState.setRouteState((current) => ({ ...current, appRoute })),
+    clearShareRoute: pathNavigation.clearShareRoute,
+    navigateCapsule: entityNavigation.navigateCapsule,
+    navigateOutfit: entityNavigation.navigateOutfit,
+    navigateApp: appNavigation.navigateApp,
+    navigateNewCapsule: entityNavigation.navigateNewCapsule,
+    navigateNewOutfit: entityNavigation.navigateNewOutfit,
+    resetNavigation: pathNavigation.resetNavigation,
+  };
+}
+
+function useNavigationRouteState() {
   const [routeState, setRouteState] = useState(() =>
     typeof window === "undefined"
       ? getAppRouteState("/")
@@ -89,6 +116,26 @@ export function useAppNavigation() {
     };
   }, []);
 
+  return {
+    pendingShareId,
+    routeState,
+    searchAutoOpenProductDetail,
+    searchInitialQuery,
+    setPendingShareId,
+    setRouteState,
+    setSearchAutoOpenProductDetail,
+    setSearchInitialQuery,
+  };
+}
+
+type NavigationRouteState = ReturnType<typeof useNavigationRouteState>;
+
+function useAppRouteNavigation(navigationState: NavigationRouteState) {
+  const {
+    setRouteState,
+    setSearchAutoOpenProductDetail,
+    setSearchInitialQuery,
+  } = navigationState;
   const navigateApp = useCallback(
     (
       nextApp: Exclude<AppRoute, "share">,
@@ -109,26 +156,74 @@ export function useAppNavigation() {
       );
       setRouteState(getAppRouteState(nextPath));
     },
-    [],
+    [setRouteState, setSearchAutoOpenProductDetail, setSearchInitialQuery],
   );
 
-  const navigateToPath = useCallback((path: string, replace = false) => {
-    if (typeof window === "undefined") {
-      return;
-    }
+  return { navigateApp };
+}
 
-    if (window.location.pathname !== path) {
-      if (replace) {
-        window.history.replaceState({}, "", path);
-      } else {
-        window.history.pushState({}, "", path);
+function usePathNavigation(navigationState: NavigationRouteState) {
+  const {
+    setPendingShareId,
+    setRouteState,
+    setSearchAutoOpenProductDetail,
+    setSearchInitialQuery,
+  } = navigationState;
+  const navigateToPath = useCallback(
+    (path: string, replace = false) => {
+      if (typeof window === "undefined") {
+        return;
       }
+
+      if (window.location.pathname !== path) {
+        if (replace) {
+          window.history.replaceState({}, "", path);
+        } else {
+          window.history.pushState({}, "", path);
+        }
+      }
+      setSearchInitialQuery("");
+      setSearchAutoOpenProductDetail(false);
+      setRouteState(getAppRouteState(path));
+    },
+    [setRouteState, setSearchAutoOpenProductDetail, setSearchInitialQuery],
+  );
+
+  const clearShareRoute = useCallback(() => {
+    setPendingShareId("");
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/share/")
+    ) {
+      window.history.replaceState({}, "", DEFAULT_APP_PATH);
     }
+    setRouteState(getAppRouteState(DEFAULT_APP_PATH));
+  }, [setPendingShareId, setRouteState]);
+
+  const resetNavigation = useCallback(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname !== DEFAULT_APP_PATH
+    ) {
+      window.history.replaceState({}, "", DEFAULT_APP_PATH);
+    }
+    setRouteState(getAppRouteState(DEFAULT_APP_PATH));
     setSearchInitialQuery("");
     setSearchAutoOpenProductDetail(false);
-    setRouteState(getAppRouteState(path));
-  }, []);
+    setPendingShareId("");
+  }, [
+    setPendingShareId,
+    setRouteState,
+    setSearchAutoOpenProductDetail,
+    setSearchInitialQuery,
+  ]);
 
+  return { clearShareRoute, navigateToPath, resetNavigation };
+}
+
+function useEntityNavigation(
+  navigateToPath: (path: string, replace?: boolean) => void,
+) {
   const navigateCapsule = useCallback(
     (capsuleId: string, options: CapsuleNavigationOptions = {}) => {
       const normalizedId = String(capsuleId || "").trim();
@@ -139,13 +234,6 @@ export function useAppNavigation() {
         `/capsule/${encodeURIComponent(normalizedId)}`,
         options.replace,
       );
-    },
-    [navigateToPath],
-  );
-
-  const navigateNewCapsule = useCallback(
-    (options: CapsuleNavigationOptions = {}) => {
-      navigateToPath("/capsule", options.replace);
     },
     [navigateToPath],
   );
@@ -164,6 +252,13 @@ export function useAppNavigation() {
     [navigateToPath],
   );
 
+  const navigateNewCapsule = useCallback(
+    (options: CapsuleNavigationOptions = {}) => {
+      navigateToPath("/capsule", options.replace);
+    },
+    [navigateToPath],
+  );
+
   const navigateNewOutfit = useCallback(
     (options: CapsuleNavigationOptions = {}) => {
       navigateToPath("/outfit", options.replace);
@@ -171,48 +266,10 @@ export function useAppNavigation() {
     [navigateToPath],
   );
 
-  const clearShareRoute = useCallback(() => {
-    setPendingShareId("");
-    if (
-      typeof window !== "undefined" &&
-      window.location.pathname.startsWith("/share/")
-    ) {
-      window.history.replaceState({}, "", DEFAULT_APP_PATH);
-    }
-    setRouteState(getAppRouteState(DEFAULT_APP_PATH));
-  }, []);
-
-  const resetNavigation = useCallback(() => {
-    if (
-      typeof window !== "undefined" &&
-      window.location.pathname !== DEFAULT_APP_PATH
-    ) {
-      window.history.replaceState({}, "", DEFAULT_APP_PATH);
-    }
-    setRouteState(getAppRouteState(DEFAULT_APP_PATH));
-    setSearchInitialQuery("");
-    setSearchAutoOpenProductDetail(false);
-    setPendingShareId("");
-  }, []);
-
   return {
-    appRoute: routeState.appRoute,
-    capsuleRouteId: routeState.capsuleRouteId,
-    capsuleRouteMode: routeState.capsuleRouteMode,
-    outfitRouteId: routeState.outfitRouteId,
-    outfitRouteMode: routeState.outfitRouteMode,
-    searchInitialQuery,
-    searchAutoOpenProductDetail,
-    pendingShareId,
-    setPendingShareId,
-    setAppRoute: (appRoute: AppRoute) =>
-      setRouteState((current) => ({ ...current, appRoute })),
-    clearShareRoute,
     navigateCapsule,
     navigateOutfit,
-    navigateApp,
     navigateNewCapsule,
     navigateNewOutfit,
-    resetNavigation,
   };
 }
