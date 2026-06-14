@@ -15,7 +15,7 @@ import { usePersonalItemsCount } from "./personalItemsCount";
 import { useSidebarCapsuleSearch } from "./useSidebarCapsuleSearch";
 import type { AppShellCapsuleActionMenuController } from "./AppShellCapsuleActionMenu";
 import type { AppShellOutfitActionMenuController } from "./AppShellOutfitActionMenu";
-import type { AppShellContentProps } from "./AppShellContent";
+import type { AppShellContentProps } from "./AppShellContentTypes";
 
 const EMPTY_OUTFIT_LIST: NonNullable<AppShellContentProps["outfitList"]> = [];
 const EMPTY_OUTFIT_PAGINATION = {
