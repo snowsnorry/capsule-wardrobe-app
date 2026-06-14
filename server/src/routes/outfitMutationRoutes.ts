@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function, complexity */
 import { randomUUID } from "node:crypto";
 import { getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
 import type { CapsuleRecord } from "../capsuleStoreModel.js";
@@ -18,6 +17,9 @@ type CopiedImageResult =
   | { error: string }
   | { image: string | null; imageObsolete: boolean };
 type CopyImageResult = { url?: string | null } | null | undefined;
+type SourceOutfitSetResult =
+  | { error: string }
+  | { effectiveSnapshot: unknown; outfitSet: Record<string, unknown> };
 type CopySourceOutfitImageContext = {
   copyImageObjectToR2Impl: (
     input: Record<string, unknown>,
@@ -114,6 +116,43 @@ function getSourceOutfitSetItemRefs(effectiveSnapshot, outfitSet) {
     .filter(Boolean);
 }
 
+async function resolveSourceOutfitSet({
+  context,
+  email,
+  source,
+}: {
+  context: CopySourceOutfitImageContext;
+  email: string;
+  source: { sourceCapsuleId: string; sourceSetIndex: number };
+}): Promise<SourceOutfitSetResult> {
+  const capsule = await context.getCapsuleImpl(email, source.sourceCapsuleId);
+  if (!capsule) {
+    return { error: "not_found" };
+  }
+
+  const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+  const outfitSet =
+    effectiveSnapshot?.data?.wardrobe?.outfitSets?.[source.sourceSetIndex];
+  return outfitSet ? { effectiveSnapshot, outfitSet } : { error: "not_found" };
+}
+
+async function copySourceImageToStorage({
+  context,
+  image,
+  source,
+}: {
+  context: CopySourceOutfitImageContext;
+  image: string;
+  source: { sourceCapsuleId: string; sourceSetIndex: number };
+}): Promise<CopyImageResult> {
+  return context.copyImageObjectToR2Impl({
+    sourceUrl: image,
+    capsuleId: `${source.sourceCapsuleId}-${randomUUID()}`,
+    setIndex: source.sourceSetIndex,
+    namespace: "copied",
+  });
+}
+
 async function copySourceOutfitImage({
   email,
   itemRefs,
@@ -125,18 +164,16 @@ async function copySourceOutfitImage({
   source: { sourceCapsuleId: string; sourceSetIndex: number };
   context: CopySourceOutfitImageContext;
 }): Promise<CopiedImageResult> {
-  const capsule = await context.getCapsuleImpl(email, source.sourceCapsuleId);
-  if (!capsule) {
-    return { error: "not_found" };
+  const resolvedSource = await resolveSourceOutfitSet({
+    context,
+    email,
+    source,
+  });
+  if ("error" in resolvedSource) {
+    return resolvedSource;
   }
 
-  const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
-  const outfitSet =
-    effectiveSnapshot?.data?.wardrobe?.outfitSets?.[source.sourceSetIndex];
-  if (!outfitSet) {
-    return { error: "not_found" };
-  }
-
+  const { effectiveSnapshot, outfitSet } = resolvedSource;
   const image = getTrimmedImage(outfitSet?.image);
   if (!image) {
     return { image: null, imageObsolete: false };
@@ -146,18 +183,120 @@ async function copySourceOutfitImage({
     outfitSet,
   );
   const sourceItemsMatch = areOutfitItemRefKeysEqual(sourceItemRefs, itemRefs);
-
-  const uploaded = await context.copyImageObjectToR2Impl({
-    sourceUrl: image,
-    capsuleId: `${source.sourceCapsuleId}-${randomUUID()}`,
-    setIndex: source.sourceSetIndex,
-    namespace: "copied",
-  });
+  const uploaded = await copySourceImageToStorage({ context, image, source });
 
   return {
     image: uploaded?.url || null,
     imageObsolete: Boolean(outfitSet?.imageObsolete) || !sourceItemsMatch,
   };
+}
+
+function isInvalidOutfitCreatePayload(body, context) {
+  return (
+    !isObjectPayload(body) || context.hasUnexpectedOutfitCreateFields(body)
+  );
+}
+
+function isInvalidOutfitItemsPayload(body, context) {
+  return (
+    !isObjectPayload(body) ||
+    context.hasUnexpectedOutfitItemsFields(body) ||
+    !Object.prototype.hasOwnProperty.call(body, "items")
+  );
+}
+
+function getValidOutfitImageSourceRequest(
+  body,
+): Exclude<OutfitImageSourceRequest, { error: string }> {
+  const sourceRequest = normalizeOutfitImageSourceRequest(body);
+  return sourceRequest && !("error" in sourceRequest) ? sourceRequest : null;
+}
+
+async function getCopiedImageState(req, res, context) {
+  const sourceRequest = normalizeOutfitImageSourceRequest(req.body);
+  if (sourceRequest && "error" in sourceRequest) {
+    return res.status(400).json({ error: sourceRequest.error });
+  }
+
+  const source = getValidOutfitImageSourceRequest(req.body);
+  if (!source) {
+    return null;
+  }
+
+  const copiedImage = await copySourceOutfitImage({
+    email: req.user.email,
+    itemRefs: req.body?.items || [],
+    source,
+    context,
+  });
+  if ("error" in copiedImage) {
+    return res
+      .status(copiedImage.error === "not_found" ? 404 : 400)
+      .json({ error: copiedImage.error });
+  }
+  return copiedImage;
+}
+
+function buildOutfitCreateDraft(body, copiedImageState) {
+  return {
+    items: body?.items || [],
+    ...(copiedImageState
+      ? {
+          image: copiedImageState.image || null,
+          imageObsolete: Boolean(copiedImageState.imageObsolete),
+        }
+      : {}),
+  };
+}
+
+async function handleOutfitCreate(req, res, context) {
+  if (isInvalidOutfitCreatePayload(req.body, context)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  try {
+    const copiedImageState = await getCopiedImageState(req, res, context);
+    if (res.writableEnded) {
+      return undefined;
+    }
+    const outfit = await context.createOutfitImpl(req.user.email, {
+      name: String(req.body?.name || "").trim() || undefined,
+      draft: buildOutfitCreateDraft(req.body, copiedImageState),
+      saved: null,
+    });
+    return res.status(201).json({
+      ok: true,
+      outfit: await buildAnnotatedOutfitResponse(outfit, req, context),
+    });
+  } catch (error) {
+    logError("[outfits/create]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+}
+
+async function handleOutfitItemsUpdate(req, res, context) {
+  if (isInvalidOutfitItemsPayload(req.body, context)) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  try {
+    const currentOutfit = await context.getOutfitImpl(
+      req.user.email,
+      req.params.id,
+    );
+    if (!currentOutfit) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    const outfit = await context.updateOutfitSnapshotImpl(
+      req.user.email,
+      req.params.id,
+      buildUpdatedOutfitItemsSnapshot(currentOutfit, req.body?.items || []),
+    );
+    return sendOutfitMutationResponse(req, res, outfit, context);
+  } catch (error) {
+    logError("[outfits/items]", error);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
 }
 
 function contextlessEffectiveOutfitSnapshot(outfit) {
@@ -191,60 +330,7 @@ function registerOutfitMutationRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
-    async (req, res) => {
-      if (
-        !isObjectPayload(req.body) ||
-        context.hasUnexpectedOutfitCreateFields(req.body)
-      ) {
-        return res.status(400).json({ error: "invalid_payload" });
-      }
-
-      try {
-        const sourceRequest = normalizeOutfitImageSourceRequest(req.body);
-        if (sourceRequest && "error" in sourceRequest) {
-          return res.status(400).json({ error: sourceRequest.error });
-        }
-        const source =
-          sourceRequest && !("error" in sourceRequest) ? sourceRequest : null;
-        const copiedImage = source
-          ? await copySourceOutfitImage({
-              email: req.user.email,
-              itemRefs: req.body?.items || [],
-              source,
-              context,
-            })
-          : null;
-        if (copiedImage && "error" in copiedImage) {
-          return res
-            .status(copiedImage.error === "not_found" ? 404 : 400)
-            .json({
-              error: copiedImage.error,
-            });
-        }
-        const copiedImageState =
-          copiedImage && !("error" in copiedImage) ? copiedImage : null;
-        const outfit = await context.createOutfitImpl(req.user.email, {
-          name: String(req.body?.name || "").trim() || undefined,
-          draft: {
-            items: req.body?.items || [],
-            ...(copiedImageState
-              ? {
-                  image: copiedImageState.image || null,
-                  imageObsolete: Boolean(copiedImageState.imageObsolete),
-                }
-              : {}),
-          },
-          saved: null,
-        });
-        return res.status(201).json({
-          ok: true,
-          outfit: await buildAnnotatedOutfitResponse(outfit, req, context),
-        });
-      } catch (error) {
-        logError("[outfits/create]", error);
-        return res.status(503).json({ error: "service_unavailable" });
-      }
-    },
+    (req, res) => handleOutfitCreate(req, res, context),
   );
 
   app.patch(
@@ -252,34 +338,7 @@ function registerOutfitMutationRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
-    async (req, res) => {
-      if (
-        !isObjectPayload(req.body) ||
-        context.hasUnexpectedOutfitItemsFields(req.body) ||
-        !Object.prototype.hasOwnProperty.call(req.body, "items")
-      ) {
-        return res.status(400).json({ error: "invalid_payload" });
-      }
-
-      try {
-        const currentOutfit = await context.getOutfitImpl(
-          req.user.email,
-          req.params.id,
-        );
-        if (!currentOutfit) {
-          return res.status(404).json({ error: "not_found" });
-        }
-        const outfit = await context.updateOutfitSnapshotImpl(
-          req.user.email,
-          req.params.id,
-          buildUpdatedOutfitItemsSnapshot(currentOutfit, req.body?.items || []),
-        );
-        return sendOutfitMutationResponse(req, res, outfit, context);
-      } catch (error) {
-        logError("[outfits/items]", error);
-        return res.status(503).json({ error: "service_unavailable" });
-      }
-    },
+    (req, res) => handleOutfitItemsUpdate(req, res, context),
   );
 
   registerOutfitLifecycleRoutes(app, context);

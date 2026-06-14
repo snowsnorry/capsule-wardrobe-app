@@ -2,21 +2,17 @@ import { getEffectiveOutfitSnapshot } from "../outfitStore.js";
 import { logError } from "../logger.js";
 import { extractLlmUsage, logWardrobeInfo } from "./aiCommon.js";
 import {
-  getPromptTemplateContent,
-  loadPromptTemplate,
-  renderPromptTemplateContent,
-} from "./promptTemplates.js";
-import { buildOutfitReportFormat } from "./outfitReportSchema.js";
+  buildOutfitReportError,
+  isOutfitReportDomainError,
+} from "./outfitReportErrors.js";
 import {
-  toOutfitReportItem,
-  toOutfitReportPromptImageItem,
-} from "./outfitReportItems.js";
+  OUTFIT_REPORT_SYSTEM_PROMPT,
+  buildOutfitReportCollage,
+  renderOutfitReportPrompt,
+} from "./outfitReportPrompt.js";
+import { buildOutfitReportFormat } from "./outfitReportSchema.js";
+import { toOutfitReportItem } from "./outfitReportItems.js";
 import { applyComputedVerdictScore } from "./outfitReportScoring.js";
-import type {
-  ImageAssetLike,
-  PromptDebugImageCategory,
-  PromptImageItemLike,
-} from "./types.js";
 import {
   createOutfitReportServiceDeps,
   type OutfitReportServiceDeps,
@@ -26,25 +22,7 @@ import type { OutfitReport, OutfitReportItem } from "./outfitReportTypes.js";
 import { parseOutfitReportLlmOutput } from "./outfitReportValidation.js";
 
 const OUTFIT_REPORT_SCHEMA_VERSION = 1;
-const OUTFIT_REPORT_PROMPT_TEMPLATE = loadPromptTemplate(
-  new URL("../templates/prompt_outfit_report.yaml", import.meta.url),
-);
-const OUTFIT_REPORT_SYSTEM_PROMPT = getPromptTemplateContent(
-  OUTFIT_REPORT_PROMPT_TEMPLATE,
-  "system",
-);
-const OUTFIT_REPORT_USER_PROMPT = getPromptTemplateContent(
-  OUTFIT_REPORT_PROMPT_TEMPLATE,
-  "user",
-);
 
-type OutfitReportErrorCode =
-  | "invalid_payload"
-  | "not_found"
-  | "service_unavailable";
-type OutfitReportError = Error & {
-  code?: OutfitReportErrorCode;
-};
 type OutfitReportContext = {
   generateJsonWithLlm: (
     prompt: string,
@@ -56,69 +34,6 @@ type OutfitReportContext = {
   profile: unknown;
   reportItems: OutfitReportItem[];
 };
-
-function buildOutfitReportError(
-  code: OutfitReportErrorCode,
-  message: string = code,
-): OutfitReportError {
-  const error = new Error(message) as OutfitReportError;
-  error.code = code;
-  return error;
-}
-
-function getCurrentOutfitCollageImage(
-  currentOutfitCollage: PromptDebugImageCategory | null | undefined,
-): ImageAssetLike | null {
-  const buffer = Buffer.isBuffer(currentOutfitCollage?.buffer)
-    ? currentOutfitCollage.buffer
-    : currentOutfitCollage?.buffer instanceof Uint8Array
-      ? Buffer.from(currentOutfitCollage.buffer)
-      : null;
-
-  if (!buffer) return null;
-  return {
-    buffer,
-    mimeType: currentOutfitCollage?.mimeType || "image/jpeg",
-    filename: "current-outfit.jpg",
-    category: "Current Outfit",
-  };
-}
-
-function renderOutfitReportPrompt(items: OutfitReportItem[]) {
-  return renderPromptTemplateContent(
-    OUTFIT_REPORT_USER_PROMPT,
-    {
-      items: JSON.stringify(items, null, 2),
-    },
-    "outfit report prompt",
-  );
-}
-
-async function buildOutfitReportCollage({
-  items,
-  deps,
-}: {
-  items: Record<string, unknown>[];
-  deps: OutfitReportServiceDeps;
-}): Promise<ImageAssetLike> {
-  const promptItems = items
-    .map(toOutfitReportPromptImageItem)
-    .filter((item): item is PromptImageItemLike => Boolean(item));
-  const promptDebugImages = await deps.runWithImageWorkSlotImpl(
-    "outfit-report-images",
-    () =>
-      deps.buildPromptDebugImagesForCategoryImpl({
-        category: "Current Outfit",
-        compactRows: true,
-        items: promptItems,
-      }),
-  );
-  const collage = getCurrentOutfitCollageImage(promptDebugImages?.category);
-  if (!collage) {
-    throw buildOutfitReportError("service_unavailable", "missing_collage");
-  }
-  return collage;
-}
 
 function normalizeOutfitReportId(outfitId: string) {
   const normalizedOutfitId = String(outfitId || "").trim();
@@ -292,12 +207,6 @@ async function generateAndPersistReport({
     ...extractLlmUsage(response?.usage),
   });
   return report;
-}
-
-function isOutfitReportDomainError(error: unknown) {
-  return ["service_unavailable", "invalid_payload", "not_found"].includes(
-    String((error as OutfitReportError).code),
-  );
 }
 
 async function generateOutfitReport(

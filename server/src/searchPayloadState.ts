@@ -3,6 +3,9 @@ import type { SearchPayload } from "./searchTypes.js";
 export type SearchRow = Partial<SearchPayload> & {
   embedding?: number[] | null;
 };
+export type SearchRowLike = Partial<Record<keyof SearchPayload, unknown>> & {
+  embedding?: number[] | null;
+};
 
 const INVALID_SEARCH_ARRAY_VALUE = "\u0000invalid-search-array-value";
 
@@ -107,7 +110,7 @@ export function normalizeSearchPayload(
 }
 
 export function serializeSearchRow(
-  row: SearchRow | null = null,
+  row: SearchRowLike | null = null,
 ): SearchPayload {
   if (!row) {
     return { ...DEFAULT_SEARCH_STATE };

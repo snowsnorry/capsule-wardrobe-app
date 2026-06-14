@@ -151,6 +151,8 @@ function createDeps({
       category: {
         category: "Current Outfit",
         buffer: Buffer.from("current-outfit"),
+        cachedCount: 0,
+        downloadedCount: 1,
         mimeType: "image/jpeg",
         filename: "category-current-outfit.jpg",
       },

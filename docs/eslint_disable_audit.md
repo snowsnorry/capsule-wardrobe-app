@@ -9,9 +9,9 @@
 
 Current suppressed warning count:
 
-- [ ] `max-lines`: 13
-- [ ] `max-lines-per-function`: 16
-- [ ] `complexity`: 14
+- [ ] `max-lines`: 12
+- [ ] `max-lines-per-function`: 10
+- [ ] `complexity`: 6
 - [x] `react-hooks/exhaustive-deps`: 0
 - [x] `@typescript-eslint/no-explicit-any`: 0
 
@@ -129,16 +129,16 @@ These disables point to real structural debt. They should be planned as focused 
   - Extracted product-detail dialog state and handlers from the main dialog composition.
 - [x] `client/src/screens/mainScreen/MainScreenView.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
   - Split report highlighting, report slots, wardrobe panel, and capsule panel layout.
-- [ ] `server/src/capsuleStore.ts` - `max-lines-per-function`, `complexity`
-  - Store factory mixes CRUD, sharing, import, reports, and snapshots. Typed deps are complete; store-surface decomposition remains.
-- [ ] `server/src/outfitStore.ts` - `max-lines-per-function`, `complexity`
-  - Similar store-factory debt around lifecycle, reports, and snapshots. Typed deps are complete; store-surface decomposition remains.
-- [ ] `server/src/searchStore.ts` - `max-lines-per-function`, `complexity`
-  - Options loading, saved search, semantic fallback, and lexical fallback should become a clearer pipeline.
-- [ ] `server/src/routes/capsuleMutationRoutes.ts` - `max-lines`, `max-lines-per-function`, `complexity`
-  - Split create, filters, report, state, metadata, and selection routes.
-- [ ] `server/src/routes/outfitMutationRoutes.ts` - `max-lines-per-function`, `complexity`
-  - Create route combines source image copy, validation, and snapshot creation. Extract handler/service flow.
+- [x] `server/src/capsuleStore.ts` - `max-lines-per-function`, `complexity`
+  - Split the store factory into focused capsule store operations while preserving the public singleton exports and dependency injection behavior.
+- [x] `server/src/outfitStore.ts` - `max-lines-per-function`, `complexity`
+  - Split typed outfit dependencies and store operations from the singleton export surface.
+- [x] `server/src/searchStore.ts` - `max-lines-per-function`, `complexity`
+  - Split dependency resolution and the saved-search execution pipeline, including lexical and relaxed semantic fallback steps.
+- [x] `server/src/routes/capsuleMutationRoutes.ts` - `max-lines`, `max-lines-per-function`, `complexity`
+  - Split lifecycle response helpers and create/filter handlers while preserving middleware order and response shapes.
+- [x] `server/src/routes/outfitMutationRoutes.ts` - `max-lines-per-function`, `complexity`
+  - Extracted source image copy resolution, create draft construction, and item-update handlers from route registration.
 - [x] `server/src/ai/aiGeneration.ts` - `max-lines`, `max-lines-per-function`, `complexity`
   - Disable removed; broader AI generation decomposition can be tracked separately if needed.
 - [x] `server/src/ai/capsuleReportService.ts` - `max-lines`
@@ -169,4 +169,4 @@ These disables point to real structural debt. They should be planned as focused 
 - [x] Phase 2: type remaining AI/store dependency bags and remove the corresponding `no-explicit-any` disables.
 - [x] Phase 3: fix both `react-hooks/exhaustive-deps` disables.
 - [x] Phase 4: split large client screens/hooks.
-- [ ] Phase 5: split server stores, mutation routes, and AI generation/report pipelines.
+- [x] Phase 5: split server stores, mutation routes, and AI generation/report pipelines.
