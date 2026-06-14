@@ -128,6 +128,9 @@ test("t resolves dictionary keys that contain dots", () => {
     "Claude Opus 4.7",
   );
   expect(
+    t("settings.imageLlmOptions.gemini:gemini-3-pro-image", undefined, "en"),
+  ).toBe("Nano Banana Pro");
+  expect(
     resolveTranslationValue(
       {
         settings: {

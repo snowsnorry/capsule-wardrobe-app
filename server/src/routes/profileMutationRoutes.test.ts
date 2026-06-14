@@ -191,7 +191,7 @@ test("profile mutation routes cover update, locale update, and delete branches",
         locale: "ru",
         theme: "dark",
         llm: "claude:claude-opus-4-7",
-        imageLlm: "gemini:gemini-3-pro-image-preview",
+        imageLlm: "gemini:gemini-3-pro-image",
         fullname: "  Ada Lovelace  ",
       },
     },
@@ -201,9 +201,7 @@ test("profile mutation routes cover update, locale update, and delete branches",
   expect(updateSuccess.json.profile.locale).toBe("ru");
   expect(updateSuccess.json.profile.theme).toBe("dark");
   expect(updateSuccess.json.profile.llm).toBe("claude:claude-opus-4-7");
-  expect(updateSuccess.json.profile.imageLlm).toBe(
-    "gemini:gemini-3-pro-image-preview",
-  );
+  expect(updateSuccess.json.profile.imageLlm).toBe("gemini:gemini-3-pro-image");
   expect(updateSuccess.json.profile.fullname).toBe("Ada Lovelace");
 
   const localeSuccess = await requestJson(

@@ -202,7 +202,7 @@ test("normalizeProfileRecord keeps a supported claude llm selection", () => {
     fullname: "Ada",
     theme: "dark",
     llm: "claude:claude-opus-4-7",
-    imageLlm: "gemini:gemini-3-pro-image-preview",
+    imageLlm: "gemini:gemini-3-pro-image",
   };
 
   expect(normalizeProfileRecord(input)).toEqual(input);

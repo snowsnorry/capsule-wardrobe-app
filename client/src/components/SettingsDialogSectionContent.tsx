@@ -91,6 +91,8 @@ function AiSettingsSection({
   ) => void;
   t: Translate;
 }) {
+  const hasHiddenCurrentLlm = !PROFILE_LLM_OPTIONS.includes(draft.llm);
+
   return (
     <Stack spacing={2.5}>
       <SettingsSelectField
@@ -102,6 +104,11 @@ function AiSettingsSection({
           onDraftChange("llm", normalizeLlmValue(event.target.value))
         }
       >
+        {hasHiddenCurrentLlm ? (
+          <MenuItem value={draft.llm} sx={{ display: "none" }}>
+            {t(`settings.llmOptions.${draft.llm}`)}
+          </MenuItem>
+        ) : null}
         {PROFILE_LLM_OPTIONS.map((value) => (
           <MenuItem key={value} value={value}>
             {t(`settings.llmOptions.${value}`)}

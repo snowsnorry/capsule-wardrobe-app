@@ -21,7 +21,7 @@ describe("profileActions", () => {
         locale: "ru",
         theme: "dark",
         llm: "openai:gpt-5.5",
-        imageLlm: "gemini:gemini-3-pro-image-preview",
+        imageLlm: "gemini:gemini-3-pro-image",
         fullname: "Ada Lovelace",
       },
     });
@@ -38,7 +38,7 @@ describe("profileActions", () => {
       locale: "ru",
       theme: "dark",
       llm: "openai:gpt-5.5",
-      imageLlm: "gemini:gemini-3-pro-image-preview",
+      imageLlm: "gemini:gemini-3-pro-image",
     });
 
     expect(updateProfile).toHaveBeenCalledWith({
@@ -46,7 +46,7 @@ describe("profileActions", () => {
       locale: "ru",
       theme: "dark",
       llm: "openai:gpt-5.5",
-      imageLlm: "gemini:gemini-3-pro-image-preview",
+      imageLlm: "gemini:gemini-3-pro-image",
     });
     expect(context.setSettingsProfile).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -54,7 +54,7 @@ describe("profileActions", () => {
         locale: "ru",
         theme: "dark",
         llm: "openai:gpt-5.5",
-        imageLlm: "gemini:gemini-3-pro-image-preview",
+        imageLlm: "gemini:gemini-3-pro-image",
       }),
     );
     expect(context.setLocale).toHaveBeenCalledWith("ru");

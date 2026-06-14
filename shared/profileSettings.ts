@@ -9,7 +9,7 @@ const PROFILE_LLM_VALUES = [
 ] as const;
 const PROFILE_IMAGE_LLM_VALUES = [
   "openai:gpt-image-2",
-  "gemini:gemini-3-pro-image-preview",
+  "gemini:gemini-3-pro-image",
 ] as const;
 
 const DEFAULT_PROFILE_THEME = "system";

@@ -7,7 +7,9 @@ import {
 export const SETTINGS_SECTIONS = ["general", "ai", "account"] as const;
 export const LANGUAGE_OPTIONS = ["en", "ru"] as const;
 export const PROFILE_THEME_OPTIONS = [...PROFILE_THEME_VALUES];
-export const PROFILE_LLM_OPTIONS = [...PROFILE_LLM_VALUES];
+export const PROFILE_LLM_OPTIONS = PROFILE_LLM_VALUES.filter(
+  (value) => !value.startsWith("deepinfra:"),
+);
 export const PROFILE_IMAGE_LLM_OPTIONS = [...PROFILE_IMAGE_LLM_VALUES];
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
@@ -78,7 +80,7 @@ export function normalizeThemeValue(value: string): SettingsTheme {
 }
 
 export function normalizeLlmValue(value: string): SettingsLlm {
-  return isOneOf(PROFILE_LLM_OPTIONS, value) ? value : "openai:gpt-5.5";
+  return isOneOf(PROFILE_LLM_VALUES, value) ? value : "openai:gpt-5.5";
 }
 
 export function normalizeImageLlmValue(value: string): SettingsImageLlm {

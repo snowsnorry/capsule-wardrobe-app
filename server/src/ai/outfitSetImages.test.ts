@@ -266,7 +266,7 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
     getCapsuleImpl: async () => createCapsule(),
     getProfileImpl: async () =>
       buildNormalizedProfileRecord({
-        imageLlm: "gemini:gemini-3-pro-image-preview",
+        imageLlm: "gemini:gemini-3-pro-image",
       }),
     buildCapsuleEventSnapshotImpl: (payload) => payload,
     publishSnapshotImpl: () => {},
@@ -339,7 +339,7 @@ test("outfitSetImage service uses gemini image provider from profile setting", a
 
   expect(openAiCalls.length).toBe(0);
   expect(geminiCalls.length).toBe(1);
-  expect(geminiCalls[0].model).toBe("gemini-3-pro-image-preview");
+  expect(geminiCalls[0].model).toBe("gemini-3-pro-image");
   expect(geminiCalls[0].images.length).toBe(3);
 });
 

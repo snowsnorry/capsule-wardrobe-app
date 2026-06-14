@@ -283,7 +283,7 @@ test("outfit image service can generate with gemini image provider", async () =>
     getOutfitItemsImpl: async () => outfitItems,
     getProfileImpl: async () =>
       buildNormalizedProfileRecord({
-        imageLlm: "gemini:gemini-3-pro-image-preview",
+        imageLlm: "gemini:gemini-3-pro-image",
       }),
     downloadProductImageAssetsImpl: async () => ({}),
     generateImageWithGeminiImpl,

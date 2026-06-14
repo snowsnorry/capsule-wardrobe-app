@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  PROFILE_LLM_OPTIONS,
   formatPasskeyCreatedAt,
   normalizeImageLlmValue,
   normalizeLlmValue,
@@ -15,11 +16,24 @@ describe("settingsDialogModel", () => {
     expect(normalizeThemeValue("dark")).toBe("dark");
     expect(normalizeThemeValue("unknown")).toBe("system");
     expect(normalizeLlmValue("none")).toBe("none");
+    expect(
+      normalizeLlmValue("deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct"),
+    ).toBe("deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct");
     expect(normalizeLlmValue("unknown")).toBe("openai:gpt-5.5");
-    expect(normalizeImageLlmValue("gemini:gemini-3-pro-image-preview")).toBe(
-      "gemini:gemini-3-pro-image-preview",
+    expect(normalizeImageLlmValue("gemini:gemini-3-pro-image")).toBe(
+      "gemini:gemini-3-pro-image",
     );
     expect(normalizeImageLlmValue("unknown")).toBe("openai:gpt-image-2");
+  });
+
+  test("excludes deepinfra llms from visible settings options", () => {
+    expect(PROFILE_LLM_OPTIONS).not.toContain(
+      "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct",
+    );
+    expect(PROFILE_LLM_OPTIONS).not.toContain(
+      "deepinfra:google/gemma-4-31B-it",
+    );
+    expect(PROFILE_LLM_OPTIONS).toContain("openai:gpt-5.5");
   });
 
   test("builds a settings draft from partial profile values", () => {
@@ -31,7 +45,7 @@ describe("settingsDialogModel", () => {
           locale: "ru",
           theme: "light",
           llm: "none",
-          imageLlm: "gemini:gemini-3-pro-image-preview",
+          imageLlm: "gemini:gemini-3-pro-image",
         },
         "fallback@example.com",
       ),
@@ -41,7 +55,7 @@ describe("settingsDialogModel", () => {
       locale: "ru",
       theme: "light",
       llm: "none",
-      imageLlm: "gemini:gemini-3-pro-image-preview",
+      imageLlm: "gemini:gemini-3-pro-image",
     });
 
     expect(normalizeSettingsDraft({}, " fallback@example.com ").email).toBe(

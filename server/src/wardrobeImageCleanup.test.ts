@@ -64,7 +64,7 @@ test("wardrobe image cleanup uses selected provider, uploads clean image, and wr
       llm: "openai:gpt-5.5",
       locale: "en",
       theme: "system",
-      imageLlm: "gemini:gemini-3-pro-image-preview",
+      imageLlm: "gemini:gemini-3-pro-image",
     }),
     generateImageWithGeminiImpl,
     generateImageWithOpenAiImpl,
@@ -74,7 +74,7 @@ test("wardrobe image cleanup uses selected provider, uploads clean image, and wr
   expect(generateImageWithGeminiImpl).toHaveBeenCalledWith(
     expect.stringContaining("EXACTLY ONE ITEM"),
     expect.objectContaining({
-      model: "gemini-3-pro-image-preview",
+      model: "gemini-3-pro-image",
       images: [
         expect.objectContaining({
           filename: "item.webp",
@@ -146,7 +146,7 @@ test("wardrobe image cleanup portrait opt-in pads non-3:4 generated images befor
       llm: "openai:gpt-5.5",
       locale: "en",
       theme: "system",
-      imageLlm: "gemini:gemini-3-pro-image-preview",
+      imageLlm: "gemini:gemini-3-pro-image",
     }),
     generateImageWithGeminiImpl,
     generateImageWithOpenAiImpl: vi.fn(),
@@ -208,7 +208,7 @@ test("wardrobe image cleanup portrait opt-in leaves 3:4 generated images unchang
       llm: "openai:gpt-5.5",
       locale: "en",
       theme: "system",
-      imageLlm: "gemini:gemini-3-pro-image-preview",
+      imageLlm: "gemini:gemini-3-pro-image",
     }),
     generateImageWithGeminiImpl: vi.fn(async () => ({
       response: {},

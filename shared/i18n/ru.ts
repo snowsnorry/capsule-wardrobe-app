@@ -142,7 +142,7 @@ const ru = {
     },
     imageLlmOptions: {
       "openai:gpt-image-2": "OpenAI GPT Image 2",
-      "gemini:gemini-3-pro-image-preview": "Gemini 3 Pro Image Preview",
+      "gemini:gemini-3-pro-image": "Nano Banana Pro",
     },
     removeAccount: {
       title: "Удаление аккаунта",

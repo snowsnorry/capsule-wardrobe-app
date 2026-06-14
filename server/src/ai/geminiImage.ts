@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image-preview";
+const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image";
 const DEFAULT_API_VERSION = "v1beta";
 
 type GeminiImagePromptPart =

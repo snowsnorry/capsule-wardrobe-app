@@ -1362,7 +1362,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
         fullname: "Ada Lovelace",
         theme: "dark",
         llm: "claude:claude-opus-4-7",
-        imageLlm: "gemini:gemini-3-pro-image-preview",
+        imageLlm: "gemini:gemini-3-pro-image",
       },
     ] satisfies ProfileRow[],
     [],
@@ -1393,7 +1393,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
     fullname: "Ada Lovelace",
     theme: "dark",
     llm: "claude:claude-opus-4-7",
-    imageLlm: "gemini:gemini-3-pro-image-preview",
+    imageLlm: "gemini:gemini-3-pro-image",
   });
   const deleted = await deleteProfileByEmail("user@example.com");
 
@@ -1409,7 +1409,7 @@ test("db integration shapes reduced profile persistence queries", async () => {
     "Ada Lovelace",
     "dark",
     "claude:claude-opus-4-7",
-    "gemini:gemini-3-pro-image-preview",
+    "gemini:gemini-3-pro-image",
     "user@example.com",
   ]);
   expect(calls[3].text).toMatch(/delete from user_sessions/i);

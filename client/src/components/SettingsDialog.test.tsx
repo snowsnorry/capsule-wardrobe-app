@@ -78,8 +78,7 @@ function renderDialog(
         "settings.llmOptions.deepinfra:google/gemma-4-31B-it": "Google Gemma 4",
         "settings.llmOptions.none": "None",
         "settings.imageLlmOptions.openai:gpt-image-2": "OpenAI GPT Image 2",
-        "settings.imageLlmOptions.gemini:gemini-3-pro-image-preview":
-          "Gemini 3 Pro Image Preview",
+        "settings.imageLlmOptions.gemini:gemini-3-pro-image": "Nano Banana Pro",
         "settings.removeAccount.title": "Remove account",
         "settings.removeAccount.description":
           "Permanently delete this account and its saved personal data.",
@@ -180,13 +179,11 @@ describe("SettingsDialog", () => {
 
     await user.click(screen.getByRole("button", { name: "AI" }));
     await user.click(screen.getByRole("combobox", { name: "Stylist Model" }));
-    await user.click(screen.getByRole("option", { name: "Qwen 3" }));
+    await user.click(screen.getByRole("option", { name: "Claude Opus 4.7" }));
     await user.click(
       screen.getByRole("combobox", { name: "Image Generation Model" }),
     );
-    await user.click(
-      screen.getByRole("option", { name: "Gemini 3 Pro Image Preview" }),
-    );
+    await user.click(screen.getByRole("option", { name: "Nano Banana Pro" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
@@ -195,6 +192,44 @@ describe("SettingsDialog", () => {
 
     deferred.resolve();
     await deferred.promise;
+  });
+
+  test("hides deepinfra llm options while preserving a saved deepinfra value", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(() => Promise.resolve());
+
+    renderDialog({
+      onSave,
+      settings: {
+        fullname: "Ada Lovelace",
+        email: "ada@example.com",
+        locale: "en",
+        theme: "system",
+        llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct",
+        imageLlm: "openai:gpt-image-2",
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "AI" }));
+    expect(screen.getByText("Qwen 3")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("combobox", { name: "Stylist Model" }));
+    expect(screen.queryByRole("option", { name: "Qwen 3" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Google Gemma 4" })).toBeNull();
+    await user.keyboard("{Escape}");
+
+    await user.click(
+      screen.getByRole("combobox", { name: "Image Generation Model" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Nano Banana Pro" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        llm: "deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct",
+        imageLlm: "gemini:gemini-3-pro-image",
+      }),
+    );
   });
 
   test("keeps field labels attached without dangling label for attributes", async () => {
