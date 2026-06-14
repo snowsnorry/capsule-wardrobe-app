@@ -388,6 +388,55 @@ describe("generateCapsuleReport", () => {
     );
   });
 
+  test("renders prompt fallbacks and normalizes Uint8Array collage images", async () => {
+    const deps = createDeps({
+      capsuleValue: {
+        ...capsule,
+        draft: {
+          ...capsule.draft,
+          filters: {
+            ...capsule.draft.filters,
+            audience: "",
+            color: "",
+            formalityLevel: "",
+            occasions: [],
+            pattern: "solid",
+            season: [],
+            style: "",
+            text: "   ",
+          },
+          data: {
+            ...capsule.draft.data,
+            wardrobe: { items: capsuleItems, outfitSets: [] },
+          },
+        },
+      },
+      llmJson: buildLlmReport({
+        generatedOutfitAssessment: {
+          ...buildLlmReport().generatedOutfitAssessment,
+          providedOutfitCount: 0,
+          completeOutfitCount: 0,
+          strongestOutfitRefs: [],
+          weakOutfits: [],
+        },
+      }),
+    });
+    deps.buildPromptDebugImagesForCategoryImpl.mockResolvedValueOnce({
+      category: { buffer: new Uint8Array(Buffer.from("uint8-capsule")) },
+    } as never);
+    await generateCapsuleReport("person@example.com", "capsule-1", deps);
+    const prompt = deps.generateJsonWithLlm.mock.calls[0]?.[0] as string;
+    expect(prompt).toContain("Audience: any");
+    expect(prompt).toContain("Accent Color: No accent color provided");
+    expect(prompt).toContain("Pattern: solid (no print)");
+    expect(prompt).not.toContain("Important Additional Information:");
+    expect(deps.generateJsonWithLlm.mock.calls[0]?.[1]).toMatchObject({
+      images: [
+        { buffer: Buffer.from("uint8-capsule"), mimeType: "image/jpeg" },
+      ],
+    });
+  });
+
   test("reports missing, empty, unresolved, and failed reports as domain errors", async () => {
     await expect(
       generateCapsuleReport("person@example.com", "missing", {
