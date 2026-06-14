@@ -22,9 +22,4 @@ function isCapsuleReportDomainError(error: unknown) {
   );
 }
 
-export {
-  buildCapsuleReportError,
-  isCapsuleReportDomainError,
-  type CapsuleReportError,
-  type CapsuleReportErrorCode,
-};
+export { buildCapsuleReportError, isCapsuleReportDomainError };

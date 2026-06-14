@@ -138,7 +138,6 @@ async function buildCapsuleReportCollage({
 
 export {
   buildCapsuleReportCollage,
-  CAPSULE_REPORT_COLLAGE_CATEGORY,
   CAPSULE_REPORT_SYSTEM_PROMPT,
   NO_GENERATED_OUTFITS_MESSAGE,
   renderCapsuleReportPrompt,
