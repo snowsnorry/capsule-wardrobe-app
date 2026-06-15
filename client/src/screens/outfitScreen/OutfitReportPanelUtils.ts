@@ -3,6 +3,10 @@ import type {
   OutfitReportIssue,
   OutfitReportSuggestion,
 } from "../../app/appTypes";
+import {
+  getOutfitReportVerdictStatusForScore,
+  getOutfitReportVerdictToneForScore,
+} from "../../../../shared/outfitReportVerdict.js";
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
 
@@ -84,10 +88,21 @@ export function getReportScoreRows(report: OutfitReport, t: Translate) {
 }
 
 export function getReportVerdictLabel(report: OutfitReport, t: Translate) {
-  const status = String(report.verdict?.status || "").trim();
+  const status =
+    getOutfitReportVerdictStatusForScore(
+      report.verdict?.score,
+      report.verdict?.llmStatus ?? report.verdict?.status,
+    ) || String(report.verdict?.status || "").trim();
   return status
     ? t(`outfit.reportVerdict.${status}`)
     : t("outfit.reportVerdict.valid");
+}
+
+export function getReportScoreTone(report: OutfitReport) {
+  return getOutfitReportVerdictToneForScore(
+    report.verdict?.score,
+    report.verdict?.llmStatus ?? report.verdict?.status,
+  );
 }
 
 export function getReportIssueIds(issue: OutfitReportIssue) {

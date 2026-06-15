@@ -1,5 +1,9 @@
 import { t } from "../../shared/i18n/helpers.js";
 import {
+  getOutfitReportVerdictStatusForScore,
+  getOutfitReportVerdictToneForScore,
+} from "../../shared/outfitReportVerdict.js";
+import {
   ERROR_COLOR,
   ERROR_WASH_COLOR,
   NEUTRAL_WASH_COLOR,
@@ -34,9 +38,7 @@ export function getReportScore(report) {
 
 export function getScoreTone(score) {
   if (score === null) return "neutral";
-  if (score >= 80) return "success";
-  if (score >= 60) return "warning";
-  return "error";
+  return getOutfitReportVerdictToneForScore(score / 100);
 }
 
 export function getToneColors(tone) {
@@ -129,8 +131,18 @@ export function getReportScoreRows(report, locale) {
     .filter((row) => row.percent !== null);
 }
 
+function getReportVerdictStatus(report) {
+  const verdict = report?.verdict;
+  return (
+    getOutfitReportVerdictStatusForScore(
+      verdict?.score,
+      verdict?.llmStatus ?? verdict?.status,
+    ) || String(verdict?.status || "").trim()
+  );
+}
+
 export function getReportVerdictLabel(report, locale) {
-  const status = String(report?.verdict?.status || "").trim();
+  const status = getReportVerdictStatus(report);
   return status
     ? t(`outfit.reportVerdict.${status}`, undefined, locale)
     : t("outfit.reportVerdict.valid", undefined, locale);

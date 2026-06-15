@@ -14,6 +14,7 @@ import {
   outfitNeedsUnicodeFallback,
   toPercent,
 } from "./wardrobePdfOutfit.js";
+import { getScoreTone } from "./wardrobePdfOutfitReport.js";
 
 async function withCachedImage(testContext, imageUrl, buffer) {
   const cachePath = buildLocalImageCachePath(imageUrl);
@@ -387,6 +388,22 @@ test("outfit pdf report helpers mirror desktop report labels and percentages", (
   expect(
     getReportVerdictLabel({ verdict: { status: "incomplete" } }, "en"),
   ).toBe("Incomplete");
+  expect(
+    getReportVerdictLabel(
+      { verdict: { llmStatus: "valid", score: 0.5, status: "valid" } },
+      "en",
+    ),
+  ).toBe("Incomplete");
+  expect(
+    getReportVerdictLabel(
+      { verdict: { llmStatus: "incoherent", score: 0.5, status: "valid" } },
+      "en",
+    ),
+  ).toBe("Needs work");
+  expect(getScoreTone(null)).toBe("neutral");
+  expect(getScoreTone(75)).toBe("success");
+  expect(getScoreTone(60)).toBe("warning");
+  expect(getScoreTone(59)).toBe("error");
   expect(outfitNeedsUnicodeFallback({ title: "Weekend" }, "en")).toBe(false);
   expect(outfitNeedsUnicodeFallback({ title: "Выходной" }, "en")).toBe(true);
   expect(outfitNeedsUnicodeFallback({ title: "Weekend" }, "ru")).toBe(true);

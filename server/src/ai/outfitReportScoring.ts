@@ -2,6 +2,7 @@ import type {
   OutfitReport,
   OutfitReportLlmOutput,
 } from "./outfitReportTypes.js";
+import { getOutfitReportVerdictStatusForScore } from "../../../shared/outfitReportVerdict.js";
 
 type IssueSeverity = "info" | "warning" | "critical";
 type ScorableOutfitReport = OutfitReportLlmOutput | OutfitReport;
@@ -119,12 +120,17 @@ function applyComputedVerdictScore(
   report: OutfitReportLlmOutput,
 ): Omit<OutfitReport, "schemaVersion" | "itemsHash"> {
   const llmScore = report.verdict.score;
+  const llmStatus = report.verdict.status;
+  const score = computeVerdictScore(report);
   return {
     ...report,
     verdict: {
       ...report.verdict,
       llmScore,
-      score: computeVerdictScore(report),
+      llmStatus,
+      score,
+      status:
+        getOutfitReportVerdictStatusForScore(score, llmStatus) || llmStatus,
     },
   };
 }

@@ -37,6 +37,8 @@ const labels: Record<string, string> = {
   "outfit.reportTemperatureRange": "{min}–{max}°C",
   "outfit.reportTemperatureUpTo": "up to {max}°C",
   "outfit.reportVerdict.acceptable_with_notes": "Has notes",
+  "outfit.reportVerdict.incoherent": "Needs work",
+  "outfit.reportVerdict.incomplete": "Incomplete",
   "outfit.reportVerdict.valid": "Good match",
 };
 
@@ -131,7 +133,7 @@ describe("OutfitReportPanel", () => {
         itemsHash: "hash",
         verdict: {
           status: "acceptable_with_notes",
-          score: 0.5,
+          score: 0.65,
           summary: "Usable with small adjustments.",
         },
         seasonality: {
@@ -139,7 +141,7 @@ describe("OutfitReportPanel", () => {
           temperatureBandC: { min: 5, max: 12 },
         },
         styleProfile: { formalityLevel: "smart_casual" },
-        compatibility: { overallScore: 0.5 },
+        compatibility: { overallScore: 0.65 },
         colorAnalysis: { paletteType: "neutral" },
         issues: [],
         suggestions: [],
@@ -365,5 +367,85 @@ describe("OutfitReportPanel", () => {
       "data-score-tone",
       "success",
     );
+  });
+
+  test("derives verdict label and tone from score bands", () => {
+    renderPanel({
+      schemaVersion: 1,
+      itemsHash: "hash",
+      verdict: {
+        llmStatus: "incomplete",
+        status: "incomplete",
+        score: 0.76,
+        summary: "The original status disagrees with the score.",
+      },
+      seasonality: {},
+      styleProfile: {},
+      compatibility: {},
+      colorAnalysis: {},
+      issues: [],
+      suggestions: [],
+      confidence: {},
+    });
+
+    expect(screen.getByText("Good match")).toBeInTheDocument();
+    expect(screen.getByTestId("outfit-report-score")).toHaveAttribute(
+      "data-score-tone",
+      "success",
+    );
+    expect(screen.getByTestId("outfit-report-verdict")).toHaveAttribute(
+      "data-score-tone",
+      "success",
+    );
+  });
+
+  test("uses low-score LLM incomplete or incoherent status for the verdict label", () => {
+    const baseReport = {
+      schemaVersion: 1,
+      itemsHash: "hash",
+      seasonality: {},
+      styleProfile: {},
+      compatibility: {},
+      colorAnalysis: {},
+      issues: [],
+      suggestions: [],
+      confidence: {},
+    };
+
+    const { rerender } = renderPanel({
+      ...baseReport,
+      verdict: {
+        llmStatus: "incoherent",
+        status: "valid",
+        score: 0.5,
+        summary: "The outfit conflicts.",
+      },
+    });
+
+    expect(screen.getByText("Needs work")).toBeInTheDocument();
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <OutfitReportPanel
+          onDelete={vi.fn()}
+          onHighlightItemIds={vi.fn()}
+          onRegenerate={vi.fn()}
+          report={
+            {
+              ...baseReport,
+              verdict: {
+                llmStatus: "valid",
+                status: "valid",
+                score: 0.5,
+                summary: "The outfit is too weak.",
+              },
+            } as OutfitReport
+          }
+          t={t}
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText("Incomplete")).toBeInTheDocument();
   });
 });

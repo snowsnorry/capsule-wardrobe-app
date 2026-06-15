@@ -83,6 +83,8 @@ type OutfitReportVerdictStatus =
   | "incoherent";
 
 type OutfitReportVerdict = {
+  llmScore?: number;
+  llmStatus?: OutfitReportVerdictStatus | string;
   status?: OutfitReportVerdictStatus | string;
   score?: number;
   summary?: string;

@@ -1,5 +1,6 @@
 import { getEffectiveOutfitSnapshot } from "./outfitStore.js";
 import { hashCapsuleContent } from "./db.js";
+import { normalizeOutfitReportForDisplay } from "../../shared/outfitReportVerdict.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 
 type OutfitItemRef = {
@@ -204,7 +205,7 @@ function hydrateSnapshot(
     })),
     image: snapshot.image || null,
     imageObsolete: Boolean(snapshot.imageObsolete),
-    report: snapshot.report || null,
+    report: normalizeOutfitReportForDisplay(snapshot.report),
     reportMeta: buildReportMeta(snapshot),
   };
 }

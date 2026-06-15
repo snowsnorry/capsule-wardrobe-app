@@ -107,14 +107,86 @@ function buildReport(overrides: ReportOverrides = {}): OutfitReportLlmOutput {
 }
 
 describe("outfit report scoring", () => {
-  test("preserves the LLM score and replaces verdict score", () => {
+  test("preserves the LLM verdict and replaces verdict score and status", () => {
     expect(applyComputedVerdictScore(buildReport())).toMatchObject({
       verdict: {
         llmScore: 0.42,
+        llmStatus: "valid",
         score: 0.91,
         status: "valid",
       },
     });
+  });
+
+  test("uses the LLM incomplete or incoherent status only for low scores", () => {
+    expect(
+      applyComputedVerdictScore(
+        buildReport({
+          verdict: { status: "incomplete" },
+          compatibility: {
+            overallScore: 0.5,
+            styleCoherence: 0.5,
+            formalityCoherence: 0.5,
+            seasonalCoherence: 0.5,
+            colorCoherence: 0.5,
+          },
+          colorAnalysis: { colorScore: 0.5 },
+          seasonality: { seasonScore: 0.5 },
+          styleProfile: { styleScore: 0.5 },
+        }),
+      ).verdict,
+    ).toEqual(
+      expect.objectContaining({
+        llmStatus: "incomplete",
+        status: "incomplete",
+      }),
+    );
+
+    expect(
+      applyComputedVerdictScore(
+        buildReport({
+          verdict: { status: "incoherent" },
+          compatibility: {
+            overallScore: 0.5,
+            styleCoherence: 0.5,
+            formalityCoherence: 0.5,
+            seasonalCoherence: 0.5,
+            colorCoherence: 0.5,
+          },
+          colorAnalysis: { colorScore: 0.5 },
+          seasonality: { seasonScore: 0.5 },
+          styleProfile: { styleScore: 0.5 },
+        }),
+      ).verdict,
+    ).toEqual(
+      expect.objectContaining({
+        llmStatus: "incoherent",
+        status: "incoherent",
+      }),
+    );
+
+    expect(
+      applyComputedVerdictScore(
+        buildReport({
+          verdict: { status: "valid" },
+          compatibility: {
+            overallScore: 0.5,
+            styleCoherence: 0.5,
+            formalityCoherence: 0.5,
+            seasonalCoherence: 0.5,
+            colorCoherence: 0.5,
+          },
+          colorAnalysis: { colorScore: 0.5 },
+          seasonality: { seasonScore: 0.5 },
+          styleProfile: { styleScore: 0.5 },
+        }),
+      ).verdict,
+    ).toEqual(
+      expect.objectContaining({
+        llmStatus: "valid",
+        status: "incomplete",
+      }),
+    );
   });
 
   test("penalizes missing core roles, partial reports, critical issues, and low confidence", () => {

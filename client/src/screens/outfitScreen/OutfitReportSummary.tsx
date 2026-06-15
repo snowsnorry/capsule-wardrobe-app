@@ -5,12 +5,12 @@ import {
   formatReportValue,
   getReportChipValues,
   getReportScore,
+  getReportScoreTone,
   getReportTemperatureLabel,
   getReportVerdictLabel,
   type OutfitReportTranslate,
 } from "./OutfitReportPanelUtils";
 import {
-  getScoreTone,
   reportToneSx,
   type ReportTone,
 } from "./OutfitReportPanelSectionPrimitives";
@@ -66,7 +66,7 @@ function ReportScoreBadge({
   report,
 }: Pick<ReportSummaryProps, "isCompact" | "report">) {
   const score = getReportScore(report);
-  const scoreTone = getScoreTone(score);
+  const scoreTone = getReportScoreTone(report);
   const scoreValue = score ?? 0;
   const badgeSize = isCompact ? { xs: 66, sm: 72, md: 78 } : 96;
   const ringRadius = 16;
@@ -155,7 +155,7 @@ function ReportSummaryCopy({
 }: Pick<ReportSummaryProps, "isCompact" | "isExpanded" | "report" | "t">) {
   const clampSummary = Boolean(isCompact && !isExpanded);
   const bodySx = buildSummaryBodySx(Boolean(isCompact), clampSummary);
-  const scoreTone = getScoreTone(getReportScore(report));
+  const scoreTone = getReportScoreTone(report);
   const titleSx = buildSummaryTitleSx(Boolean(isCompact), scoreTone);
 
   return (

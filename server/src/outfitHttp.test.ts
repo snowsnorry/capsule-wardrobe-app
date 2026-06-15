@@ -168,6 +168,45 @@ describe("outfitHttp", () => {
     });
   });
 
+  test("normalizes legacy outfit report verdicts for display without mutating snapshots", async () => {
+    const report = {
+      schemaVersion: 1,
+      itemsHash: "hash",
+      verdict: {
+        score: 0.5,
+        status: "valid",
+        summary: "The outfit looks ready.",
+      },
+    };
+    const outfit = {
+      id: "outfit-1",
+      name: "Weekend",
+      draft: {
+        ...savedSnapshot,
+        report,
+      },
+      saved: null,
+    };
+
+    await expect(toOutfitResponse(outfit)).resolves.toMatchObject({
+      draft: {
+        report: {
+          verdict: {
+            llmStatus: "valid",
+            score: 0.5,
+            status: "incomplete",
+            summary: "The outfit looks ready.",
+          },
+        },
+      },
+    });
+    expect(report.verdict).toEqual({
+      score: 0.5,
+      status: "valid",
+      summary: "The outfit looks ready.",
+    });
+  });
+
   test("hydrates missing catalog products from wardrobe rows by url", async () => {
     const outfit = {
       id: "outfit-1",

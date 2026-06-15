@@ -191,7 +191,12 @@ describe("generateOutfitReport", () => {
     ).resolves.toMatchObject({
       schemaVersion: 1,
       itemsHash: "items-hash",
-      verdict: { llmScore: 0.99, score: 0.58, status: "incomplete" },
+      verdict: {
+        llmScore: 0.99,
+        llmStatus: "incomplete",
+        score: 0.58,
+        status: "incomplete",
+      },
     });
     expect(deps.buildPromptDebugImagesForCategoryImpl).toHaveBeenCalledWith({
       category: "Current Outfit",
@@ -251,7 +256,9 @@ describe("generateOutfitReport", () => {
         itemsHash: "items-hash",
         verdict: expect.objectContaining({
           llmScore: 0.99,
+          llmStatus: "incomplete",
           score: 0.58,
+          status: "incomplete",
         }),
       }),
     );

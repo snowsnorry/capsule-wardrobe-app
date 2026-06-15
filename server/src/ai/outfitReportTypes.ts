@@ -110,6 +110,7 @@ type OutfitReportLlmOutput = {
 type OutfitReport = Omit<OutfitReportLlmOutput, "verdict"> & {
   verdict: {
     llmScore: number;
+    llmStatus: OutfitReportVerdict["status"];
     score: number;
     status: OutfitReportVerdict["status"];
     summary: string;

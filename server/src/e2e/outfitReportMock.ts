@@ -5,6 +5,7 @@ function buildE2eOutfitReport(outfitId: string) {
     verdict: {
       status: "valid",
       llmScore: 0.9,
+      llmStatus: "valid",
       score: 0.83,
       summary: "This outfit is ready to wear.",
     },
