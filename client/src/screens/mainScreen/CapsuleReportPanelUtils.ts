@@ -15,6 +15,13 @@ import {
 
 type Translate = OutfitReportTranslate;
 
+export type CapsuleReportWeakOutfitOverviewRow = {
+  key: string;
+  outfitLabel: string;
+  issue: string;
+  suggestion: string;
+};
+
 export function getCapsuleReportScore(report: CapsuleReport) {
   return toPercent(report.verdict?.score);
 }
@@ -158,7 +165,10 @@ function buildCoverageOverview(report: CapsuleReport, t: Translate) {
   });
 }
 
-function buildGeneratedOutfitsOverview(report: CapsuleReport, t: Translate) {
+export function getCapsuleGeneratedOutfitsOverview(
+  report: CapsuleReport,
+  t: Translate,
+) {
   const assessment = report.generatedOutfitAssessment;
   if (!assessment) {
     return "";
@@ -176,6 +186,36 @@ function buildGeneratedOutfitsOverview(report: CapsuleReport, t: Translate) {
   });
 }
 
+function getOutfitSetNumber(outfitId: string | undefined, index: number) {
+  const match = String(outfitId || "")
+    .trim()
+    .match(/^outfit-set-(\d+)$/);
+  return match ? Number(match[1]) : index + 1;
+}
+
+export function getCapsuleWeakOutfitOverviewRows(
+  report: CapsuleReport,
+  t: Translate,
+): CapsuleReportWeakOutfitOverviewRow[] {
+  const weakOutfits = report.generatedOutfitAssessment?.weakOutfits || [];
+  return weakOutfits
+    .map((outfit, index) => {
+      const issue = String(outfit.issue || "").trim();
+      const suggestion = String(outfit.suggestion || "").trim();
+      if (!issue && !suggestion) {
+        return null;
+      }
+      const number = getOutfitSetNumber(outfit.outfitId, index);
+      return {
+        key: `${outfit.outfitId || "weak-outfit"}-${index}`,
+        outfitLabel: t("capsule.outfitSet", { number }),
+        issue,
+        suggestion,
+      };
+    })
+    .filter((row): row is CapsuleReportWeakOutfitOverviewRow => Boolean(row));
+}
+
 export function getCapsuleOverviewLines(report: CapsuleReport, t: Translate) {
   return [
     joinOverviewValues([
@@ -188,7 +228,7 @@ export function getCapsuleOverviewLines(report: CapsuleReport, t: Translate) {
       report.capsuleSummary?.detectedCategoryBalance,
     ]),
     buildCoverageOverview(report, t),
-    buildGeneratedOutfitsOverview(report, t),
+    getCapsuleGeneratedOutfitsOverview(report, t),
   ].filter(Boolean);
 }
 

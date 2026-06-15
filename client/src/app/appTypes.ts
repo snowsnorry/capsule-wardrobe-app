@@ -267,6 +267,13 @@ type CapsuleReportGeneratedOutfitAssessment = {
   providedOutfitCount?: number;
   completeOutfitCount?: number;
   weakOutfitCount?: number;
+  weakOutfits?: Array<{
+    outfitId?: string;
+    severity?: "info" | "warning" | "critical" | string;
+    issue?: string;
+    affectedItemIds?: string[];
+    suggestion?: string;
+  }>;
   notes?: string;
 };
 

@@ -54,6 +54,7 @@ const labels: Record<string, string> = {
   "capsule.reportVerdict.incomplete": "Incomplete",
   "capsule.reportVerdict.off_target": "Off target",
   "capsule.reportVerdict.usable_with_gaps": "Usable with gaps",
+  "capsule.outfitSet": "Outfit {number}",
 };
 
 function t(key: string, params?: Record<string, unknown>) {
@@ -274,6 +275,20 @@ describe("CapsuleReportPanel", () => {
           colorScore: 0.85,
           notes: "Balanced neutral palette.",
         },
+        generatedOutfitAssessment: {
+          providedOutfitCount: 5,
+          completeOutfitCount: 4,
+          weakOutfitCount: 1,
+          weakOutfits: [
+            {
+              outfitId: "outfit-set-1",
+              severity: "info",
+              issue: "Layer works only as optional coverage.",
+              affectedItemIds: ["catalog-1"],
+              suggestion: "Use it for cooler mornings.",
+            },
+          ],
+        },
         issues: [
           {
             code: "weak-shoes",
@@ -304,6 +319,14 @@ describe("CapsuleReportPanel", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Capsule overview")).toBeInTheDocument();
     expect(screen.getByText("8 items")).toBeInTheDocument();
+    expect(
+      screen.getByText("5 generated outfits provided, 4 complete, 1 weak."),
+    ).toBeInTheDocument();
+    const weakOutfitItem = screen.getByText("Outfit 1:").closest("li");
+    expect(weakOutfitItem).toBeTruthy();
+    expect(weakOutfitItem).toHaveTextContent(
+      "Outfit 1: Layer works only as optional coverage.Suggestion: Use it for cooler mornings.",
+    );
     expect(screen.getByText("Clear silhouette.")).toBeInTheDocument();
     expect(screen.getByText("Easy to remix.")).toBeInTheDocument();
     expect(screen.getByText("Shoes limit the capsule.")).toBeInTheDocument();
@@ -331,6 +354,51 @@ describe("CapsuleReportPanel", () => {
     fireEvent.blur(issueItem as HTMLElement);
     expect(onHighlightItemIds).toHaveBeenCalledWith(["catalog-1"]);
     expect(onHighlightItemIds).toHaveBeenCalledWith([]);
+  });
+
+  test("does not render weak outfit bullets when none are provided", () => {
+    renderPanel({
+      verdict: {
+        status: "good",
+        score: 0.82,
+        summary: "Balanced capsule.",
+      },
+      generatedOutfitAssessment: {
+        providedOutfitCount: 3,
+        completeOutfitCount: 3,
+        weakOutfitCount: 0,
+        weakOutfits: [],
+      },
+    });
+
+    expect(
+      screen.getByText("3 generated outfits provided, 3 complete, 0 weak."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("capsule-report-weak-outfits"),
+    ).not.toBeInTheDocument();
+
+    cleanup();
+
+    renderPanel({
+      verdict: {
+        status: "good",
+        score: 0.82,
+        summary: "Balanced capsule.",
+      },
+      generatedOutfitAssessment: {
+        providedOutfitCount: 2,
+        completeOutfitCount: 2,
+        weakOutfitCount: 0,
+      },
+    });
+
+    expect(
+      screen.getByText("2 generated outfits provided, 2 complete, 0 weak."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("capsule-report-weak-outfits"),
+    ).not.toBeInTheDocument();
   });
 
   test("derives verdict label and tone from score bands", () => {

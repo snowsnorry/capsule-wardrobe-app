@@ -7,7 +7,6 @@ import {
   Typography,
 } from "@mui/material";
 import CheckCircleOutlineRoundedIcon from "@mui/icons-material/CheckCircleOutlineRounded";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
@@ -24,13 +23,13 @@ import {
   TextList,
 } from "../outfitScreen/OutfitReportPanelSectionPrimitives";
 import {
-  getCapsuleOverviewLines,
   getCapsuleReportIssueIds,
   getCapsuleReportScoreRows,
   getCapsuleReportStrengths,
   getCapsuleReportSuggestionIds,
   type CapsuleReportTranslate,
 } from "./CapsuleReportPanelUtils";
+import OverviewSection from "./CapsuleReportPanelOverviewSection";
 
 type ReportContentProps = {
   onHighlightItemIds: (ids: string[]) => void;
@@ -98,23 +97,6 @@ function ScoresSection({
           );
         })}
       </Box>
-    </ReportSection>
-  );
-}
-
-function OverviewSection({
-  report,
-  t,
-}: Pick<ReportContentProps, "report" | "t">) {
-  const lines = getCapsuleOverviewLines(report, t);
-  if (!lines.length) return null;
-
-  return (
-    <ReportSection
-      title={t("capsule.reportOverview")}
-      icon={<InfoOutlinedIcon color="primary" fontSize="small" />}
-    >
-      <TextList items={lines} tone="neutral" />
     </ReportSection>
   );
 }
