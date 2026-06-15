@@ -4,6 +4,10 @@ import type {
   CapsuleReportSuggestion,
 } from "../../app/appTypes";
 import {
+  getCapsuleReportVerdictStatusForScore,
+  getCapsuleReportVerdictToneForScore,
+} from "../../../../shared/capsuleReportVerdict.js";
+import {
   formatReportValue,
   toPercent,
   type OutfitReportTranslate,
@@ -95,10 +99,21 @@ export function getCapsuleReportVerdictLabel(
   report: CapsuleReport,
   t: Translate,
 ) {
-  const status = String(report.verdict?.status || "").trim();
+  const status =
+    getCapsuleReportVerdictStatusForScore(
+      report.verdict?.score,
+      report.verdict?.llmStatus ?? report.verdict?.status,
+    ) || String(report.verdict?.status || "").trim();
   return status
     ? t(`capsule.reportVerdict.${status}`)
     : t("capsule.reportVerdict.good");
+}
+
+export function getCapsuleReportScoreTone(report: CapsuleReport) {
+  return getCapsuleReportVerdictToneForScore(
+    report.verdict?.score,
+    report.verdict?.llmStatus ?? report.verdict?.status,
+  );
 }
 
 function joinOverviewValues(values: unknown[]) {

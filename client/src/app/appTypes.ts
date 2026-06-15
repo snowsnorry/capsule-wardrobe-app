@@ -192,6 +192,7 @@ type CapsuleReportVerdictStatus =
 
 type CapsuleReportVerdict = {
   llmScore?: number;
+  llmStatus?: CapsuleReportVerdictStatus | string;
   status?: CapsuleReportVerdictStatus | string;
   score?: number;
   summary?: string;

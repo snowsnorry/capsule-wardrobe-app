@@ -2,6 +2,7 @@ import type {
   CapsuleReport,
   CapsuleReportLlmOutput,
 } from "./capsuleReportTypes.js";
+import { getCapsuleReportVerdictStatusForScore } from "../../../shared/capsuleReportVerdict.js";
 
 type IssueSeverity = "info" | "warning" | "critical";
 type ScorableCapsuleReport = CapsuleReportLlmOutput | CapsuleReport;
@@ -232,13 +233,18 @@ function applyComputedCapsuleVerdictScore(
   report: CapsuleReportLlmOutput,
 ): Omit<CapsuleReport, "schemaVersion" | "itemsHash"> {
   const llmScore = report.verdict.score;
+  const llmStatus = report.verdict.status;
+  const score = computeVerdictScore(report);
 
   return {
     ...report,
     verdict: {
       ...report.verdict,
       llmScore,
-      score: computeVerdictScore(report),
+      llmStatus,
+      score,
+      status:
+        getCapsuleReportVerdictStatusForScore(score, llmStatus) || llmStatus,
     },
   };
 }

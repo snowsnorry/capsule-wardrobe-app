@@ -3,13 +3,13 @@ import { FaTemperatureHalf } from "react-icons/fa6";
 import type { CapsuleReport } from "../../app/appTypes";
 import { formatReportValue } from "../outfitScreen/OutfitReportPanelUtils";
 import {
-  getScoreTone,
   reportToneSx,
   type ReportTone,
 } from "../outfitScreen/OutfitReportPanelSectionPrimitives";
 import {
   getCapsuleReportChipValues,
   getCapsuleReportScore,
+  getCapsuleReportScoreTone,
   getCapsuleReportTemperatureLabel,
   getCapsuleReportVerdictLabel,
   type CapsuleReportTranslate,
@@ -66,7 +66,7 @@ function CapsuleReportScoreBadge({
   report,
 }: Pick<CapsuleReportSummaryProps, "isCompact" | "report">) {
   const score = getCapsuleReportScore(report);
-  const scoreTone = getScoreTone(score);
+  const scoreTone = getCapsuleReportScoreTone(report);
   const scoreValue = score ?? 0;
   const badgeSize = isCompact ? { xs: 66, sm: 72, md: 78 } : 96;
   const ringRadius = 16;
@@ -158,7 +158,7 @@ function CapsuleReportSummaryCopy({
 >) {
   const clampSummary = Boolean(isCompact && !isExpanded);
   const bodySx = buildSummaryBodySx(Boolean(isCompact), clampSummary);
-  const scoreTone = getScoreTone(getCapsuleReportScore(report));
+  const scoreTone = getCapsuleReportScoreTone(report);
   const titleSx = buildSummaryTitleSx(Boolean(isCompact), scoreTone);
 
   return (

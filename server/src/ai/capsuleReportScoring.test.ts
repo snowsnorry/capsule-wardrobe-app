@@ -161,16 +161,48 @@ function buildCompleteReport(score = 0.95): CapsuleReportLlmOutput {
 }
 
 describe("capsule report scoring", () => {
-  test("preserves the LLM score and replaces verdict score", () => {
+  test("preserves the LLM verdict and replaces verdict score and status", () => {
     const llmReport = buildCompleteReport(0.9);
     llmReport.verdict.score = 0.42;
+    llmReport.verdict.status = "good";
     const report = applyComputedCapsuleVerdictScore(llmReport);
 
     expect(report.verdict).toMatchObject({
       llmScore: 0.42,
+      llmStatus: "good",
       score: 0.9,
-      status: "good",
+      status: "excellent",
     });
+  });
+
+  test("uses the LLM incomplete or incoherent status only for very low scores", () => {
+    const incompleteReport = buildCompleteReport(0.25);
+    incompleteReport.verdict.status = "incomplete";
+
+    const incoherentReport = buildCompleteReport(0.25);
+    incoherentReport.verdict.status = "incoherent";
+
+    const offTargetReport = buildCompleteReport(0.25);
+    offTargetReport.verdict.status = "off_target";
+
+    expect(applyComputedCapsuleVerdictScore(incompleteReport).verdict).toEqual(
+      expect.objectContaining({
+        llmStatus: "incomplete",
+        status: "incomplete",
+      }),
+    );
+    expect(applyComputedCapsuleVerdictScore(incoherentReport).verdict).toEqual(
+      expect.objectContaining({
+        llmStatus: "incoherent",
+        status: "incoherent",
+      }),
+    );
+    expect(applyComputedCapsuleVerdictScore(offTargetReport).verdict).toEqual(
+      expect.objectContaining({
+        llmStatus: "off_target",
+        status: "incomplete",
+      }),
+    );
   });
 
   test("applies issue, low-confidence, and balance penalties", () => {

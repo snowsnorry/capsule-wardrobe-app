@@ -9,6 +9,7 @@ import {
   toOutfitReportItem,
 } from "./ai/outfitReportItems.js";
 import type { WardrobeUiItemLike } from "./ai/types.js";
+import { normalizeCapsuleReportForDisplay } from "../../shared/capsuleReportVerdict.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 
 const NO_GENERATED_OUTFITS_MESSAGE =
@@ -283,7 +284,7 @@ function toCapsuleSnapshotResponse(snapshot) {
 
   return {
     ...snapshot,
-    report: snapshot.report || null,
+    report: normalizeCapsuleReportForDisplay(snapshot.report),
     reportMeta: buildCapsuleReportMeta(snapshot),
   };
 }

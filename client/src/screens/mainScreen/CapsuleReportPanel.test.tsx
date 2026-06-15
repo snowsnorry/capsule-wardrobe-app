@@ -48,7 +48,11 @@ const labels: Record<string, string> = {
   "capsule.reportTemperatureRange": "{min}–{max}°C",
   "capsule.reportTemperatureUpTo": "up to {max}°C",
   "capsule.reportTitle": "Capsule report",
+  "capsule.reportVerdict.excellent": "Excellent capsule",
   "capsule.reportVerdict.good": "Good capsule",
+  "capsule.reportVerdict.incoherent": "Needs work",
+  "capsule.reportVerdict.incomplete": "Incomplete",
+  "capsule.reportVerdict.off_target": "Off target",
   "capsule.reportVerdict.usable_with_gaps": "Usable with gaps",
 };
 
@@ -200,7 +204,7 @@ describe("CapsuleReportPanel", () => {
       },
     );
 
-    expect(screen.getByText("Usable with gaps")).toBeInTheDocument();
+    expect(screen.getByText("Off target")).toBeInTheDocument();
     expect(screen.getByText("5–12°C")).toBeInTheDocument();
     expect(screen.getByText("Winter")).toBeInTheDocument();
     expect(screen.getByText("Smart Casual")).toBeInTheDocument();
@@ -327,5 +331,81 @@ describe("CapsuleReportPanel", () => {
     fireEvent.blur(issueItem as HTMLElement);
     expect(onHighlightItemIds).toHaveBeenCalledWith(["catalog-1"]);
     expect(onHighlightItemIds).toHaveBeenCalledWith([]);
+  });
+
+  test("derives verdict label and tone from score bands", () => {
+    renderPanel({
+      verdict: {
+        llmStatus: "off_target",
+        status: "off_target",
+        score: 0.76,
+        summary: "The original status disagrees with the score.",
+      },
+      seasonality: {},
+      coverage: {},
+      cohesion: {},
+      colorAnalysis: {},
+      issues: [],
+      suggestions: [],
+      confidence: {},
+    });
+
+    expect(screen.getByText("Good capsule")).toBeInTheDocument();
+    expect(screen.getByTestId("capsule-report-score")).toHaveAttribute(
+      "data-score-tone",
+      "success",
+    );
+    expect(screen.getByTestId("capsule-report-verdict")).toHaveAttribute(
+      "data-score-tone",
+      "success",
+    );
+  });
+
+  test("uses low-score LLM incomplete or incoherent status for the verdict label", () => {
+    const baseReport = {
+      seasonality: {},
+      coverage: {},
+      cohesion: {},
+      colorAnalysis: {},
+      issues: [],
+      suggestions: [],
+      confidence: {},
+    };
+
+    const { rerender } = renderPanel({
+      ...baseReport,
+      verdict: {
+        llmStatus: "incoherent",
+        status: "good",
+        score: 0.25,
+        summary: "The capsule conflicts.",
+      },
+    });
+
+    expect(screen.getByText("Needs work")).toBeInTheDocument();
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <CapsuleReportPanel
+          onDelete={vi.fn()}
+          onHighlightItemIds={vi.fn()}
+          onRegenerate={vi.fn()}
+          report={
+            {
+              ...baseReport,
+              verdict: {
+                llmStatus: "good",
+                status: "good",
+                score: 0.25,
+                summary: "The capsule is too weak.",
+              },
+            } as CapsuleReport
+          }
+          t={t}
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText("Incomplete")).toBeInTheDocument();
   });
 });

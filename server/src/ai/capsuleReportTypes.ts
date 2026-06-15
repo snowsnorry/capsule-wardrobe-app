@@ -187,6 +187,7 @@ type CapsuleReportLlmOutput = {
 type CapsuleReport = Omit<CapsuleReportLlmOutput, "verdict"> & {
   verdict: {
     llmScore: number;
+    llmStatus: CapsuleReportVerdictStatus;
     score: number;
     status: CapsuleReportVerdictStatus;
     summary: string;
