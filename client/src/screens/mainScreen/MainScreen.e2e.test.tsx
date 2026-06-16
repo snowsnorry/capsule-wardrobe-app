@@ -66,6 +66,24 @@ vi.mock("../../components/ClothingGridPlaceholder", () => ({
     xs: mobileColumns === 1 ? 1.25 : 0,
     sm: 2.5,
   }),
+  buildResponsiveClothingGridSx: (mobileColumns = 2) => ({
+    display: "grid",
+    gridTemplateColumns: {
+      xs: `repeat(${mobileColumns}, minmax(0, 1fr))`,
+      sm: "repeat(2, minmax(0, 1fr))",
+      lg: "repeat(2, minmax(0, 1fr))",
+    },
+    gap: {
+      xs: mobileColumns === 1 ? 1.25 : 0,
+      sm: 2.5,
+    },
+    "@container (min-width: 760px)": {
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    },
+    "@container (min-width: 1160px)": {
+      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    },
+  }),
   clothingGridTemplateColumns: {
     xs: "repeat(2, minmax(0, 1fr))",
     sm: "repeat(2, minmax(0, 1fr))",

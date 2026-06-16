@@ -14,6 +14,9 @@ type ClothingGridPlaceholderProps = {
 
 type MobileCardColumns = 1 | 2 | 3;
 
+const CLOTHING_GRID_THREE_COLUMN_MIN_WIDTH = 760;
+const CLOTHING_GRID_FOUR_COLUMN_MIN_WIDTH = 1160;
+
 function buildClothingGridTemplateColumns(
   mobileColumns: MobileCardColumns = 2,
 ) {
@@ -36,6 +39,28 @@ function buildClothingGridGap(mobileColumns: MobileCardColumns = 2) {
   return {
     xs: mobileColumns === 1 ? clothingGridGap.xs : clothingGridGap.xs2,
     sm: clothingGridGap.sm,
+  } as const;
+}
+
+function buildResponsiveClothingGridSx(mobileColumns: MobileCardColumns = 2) {
+  return {
+    display: "grid",
+    gridTemplateColumns: buildClothingGridTemplateColumns(mobileColumns),
+    gap: buildClothingGridGap(mobileColumns),
+    [`@container (min-width: ${CLOTHING_GRID_THREE_COLUMN_MIN_WIDTH}px)`]: {
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    },
+    [`@container (min-width: ${CLOTHING_GRID_FOUR_COLUMN_MIN_WIDTH}px)`]: {
+      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    },
+    "@supports not (container-type: inline-size)": {
+      "@media (min-width: 1400px)": {
+        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+      },
+      "@media (min-width: 1760px)": {
+        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+      },
+    },
   } as const;
 }
 
@@ -165,7 +190,10 @@ function ClothingGridPlaceholder({
 
 export { ClothingPlaceholderCard };
 export {
+  CLOTHING_GRID_FOUR_COLUMN_MIN_WIDTH,
+  CLOTHING_GRID_THREE_COLUMN_MIN_WIDTH,
   buildClothingGridGap,
+  buildResponsiveClothingGridSx,
   buildClothingGridTemplateColumns,
   clothingGridGap,
   clothingGridTemplateColumns,

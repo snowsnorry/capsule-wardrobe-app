@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import type { MainScreenViewProps } from "./MainScreenViewTypes";
@@ -74,8 +74,10 @@ describe("MainScreenCapsuleReportSlots", () => {
     expect(props.onGenerateCapsuleReport).toHaveBeenCalledWith("capsule-1");
   });
 
-  test("renders floating report only when requested", () => {
+  test("renders floating report only when requested", async () => {
+    const user = userEvent.setup();
     const props = createProps();
+    const onHighlightItemIds = vi.fn();
     const { rerender } = render(
       <MainScreenFloatingCapsuleReportSlot
         interactionDisabled={false}
@@ -84,7 +86,7 @@ describe("MainScreenCapsuleReportSlots", () => {
         showFloatingReportInspector={false}
         showInlineCompactReport={false}
         t={(key) => key}
-        onHighlightItemIds={vi.fn()}
+        onHighlightItemIds={onHighlightItemIds}
       />,
     );
 
@@ -100,7 +102,7 @@ describe("MainScreenCapsuleReportSlots", () => {
         showFloatingReportInspector
         showInlineCompactReport={false}
         t={(key) => key}
-        onHighlightItemIds={vi.fn()}
+        onHighlightItemIds={onHighlightItemIds}
       />,
     );
 
@@ -110,5 +112,16 @@ describe("MainScreenCapsuleReportSlots", () => {
     expect(floatingInspector).toBeInTheDocument();
     expect(floatingInspector.parentElement).toBe(document.body);
     expect(capsuleWithFloatingReportSx.pr.lg).toContain("420px");
+    const floatingReport = within(floatingInspector);
+
+    await user.click(floatingReport.getByRole("button", { name: "delete" }));
+    await user.click(floatingReport.getByRole("button", { name: "highlight" }));
+    await user.click(
+      floatingReport.getByRole("button", { name: "regenerate" }),
+    );
+
+    expect(props.onDeleteCapsuleReport).toHaveBeenCalledWith("capsule-1");
+    expect(onHighlightItemIds).toHaveBeenCalledWith(["item-1"]);
+    expect(props.onGenerateCapsuleReport).toHaveBeenCalledWith("capsule-1");
   });
 });

@@ -236,10 +236,16 @@ describe("MainScreen", () => {
     });
 
     expect(screen.queryByRole("button", { name: "Analyze" })).toBeNull();
+    expect(
+      screen.queryByTestId("capsule-report-floating-inspector"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Capsule report")).toBeInTheDocument();
     expect(screen.getByText("86")).toBeInTheDocument();
     expect(screen.getByText("Good capsule")).toBeInTheDocument();
     expect(screen.getByText("Report may be outdated")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Show details" }));
+
     expect(screen.getByText("Target fit")).toBeInTheDocument();
     expect(screen.getByText("Capsule overview")).toBeInTheDocument();
     expect(
@@ -262,17 +268,20 @@ describe("MainScreen", () => {
   });
 
   test("renders desktop capsule report as a floating inspector", () => {
-    renderMainScreen({
-      activeCapsule: {
-        id: "capsule-1",
-        name: "Spring edit",
-        effective: {
-          report: buildCapsuleReport(),
-          reportMeta: { stale: false },
+    renderMainScreen(
+      {
+        activeCapsule: {
+          id: "capsule-1",
+          name: "Spring edit",
+          effective: {
+            report: buildCapsuleReport(),
+            reportMeta: { stale: false },
+          },
+          status: "saved",
         },
-        status: "saved",
       },
-    });
+      { layoutMode: "large" },
+    );
 
     const floatingInspector = screen.getByTestId(
       "capsule-report-floating-inspector",
@@ -282,7 +291,8 @@ describe("MainScreen", () => {
     );
   });
 
-  test("highlights linked capsule cards from report issue focus", () => {
+  test("highlights linked capsule cards from report issue focus", async () => {
+    const user = userEvent.setup();
     renderMainScreen({
       activeCapsule: {
         id: "capsule-1",
@@ -302,6 +312,7 @@ describe("MainScreen", () => {
       ],
     });
 
+    await user.click(screen.getByRole("button", { name: "Show details" }));
     const issueRow = screen
       .getByText("Shoes limit the capsule.")
       .closest("[tabindex='0']");

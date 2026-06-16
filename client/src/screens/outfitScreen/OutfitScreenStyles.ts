@@ -31,15 +31,31 @@ export const outfitContentSx = {
 
 export const outfitCardsContentSpacing = { xs: 1, md: 3 } as const;
 
+const OUTFIT_REPORT_FLOATING_WIDTH_LG = 380;
+const OUTFIT_REPORT_FLOATING_WIDTH_XL = 420;
+const OUTFIT_REPORT_FLOATING_GAP = 24;
+const OUTFIT_REPORT_FLOATING_INSET_LG = 16;
+const OUTFIT_REPORT_FLOATING_INSET_XL = 24;
+
 export const outfitReportFloatingInspectorSx = {
   position: "fixed",
   top: { lg: 16, xl: 20 },
   right: { lg: 16, xl: 24 },
   bottom: { lg: 16, xl: 20 },
-  width: { lg: 380, xl: 420 },
+  width: {
+    lg: OUTFIT_REPORT_FLOATING_WIDTH_LG,
+    xl: OUTFIT_REPORT_FLOATING_WIDTH_XL,
+  },
   maxWidth: "calc(100% - 32px)",
   minHeight: 0,
   zIndex: 3,
+} as const;
+
+export const outfitWithFloatingReportSx = {
+  pr: {
+    lg: `${OUTFIT_REPORT_FLOATING_WIDTH_LG + OUTFIT_REPORT_FLOATING_GAP + OUTFIT_REPORT_FLOATING_INSET_LG}px`,
+    xl: `${OUTFIT_REPORT_FLOATING_WIDTH_XL + OUTFIT_REPORT_FLOATING_GAP + OUTFIT_REPORT_FLOATING_INSET_XL}px`,
+  },
 } as const;
 
 export const outfitReportCompactSectionSx = {
@@ -58,6 +74,7 @@ export function buildOutfitGridSectionSx(
   isAfterCompactReport = false,
 ) {
   return {
+    containerType: "inline-size",
     px:
       mobileCardColumns === 1
         ? { xs: 1.25, sm: 2, md: 3 }

@@ -2,8 +2,7 @@ import { Box, Divider, Stack } from "@mui/material";
 import ClothingCard from "../../components/ClothingCard";
 import ClothingGridPlaceholder, {
   ClothingPlaceholderCard,
-  buildClothingGridGap,
-  buildClothingGridTemplateColumns,
+  buildResponsiveClothingGridSx,
 } from "../../components/ClothingGridPlaceholder";
 import OutfitGeneratedImageBlock from "../../components/OutfitGeneratedImageBlock";
 import { useI18n } from "../../i18n/useI18n";
@@ -80,24 +79,10 @@ function OutfitImageBlock({ props }: { props: WardrobeProps }) {
 
 function WardrobeGrid({ props }: { props: WardrobeProps }) {
   const { t } = useI18n();
-  const columns = buildClothingGridTemplateColumns(props.mobileColumns);
-  const gap = buildClothingGridGap(props.mobileColumns);
   const highlightedKeySet = new Set(props.highlightedKeys || []);
 
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: columns,
-        gap,
-        "@media (min-width: 1400px)": {
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-        },
-        "@media (min-width: 1760px)": {
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-        },
-      }}
-    >
+    <Box sx={buildResponsiveClothingGridSx(props.mobileColumns)}>
       {props.visibleItems.map((item) => {
         const itemUrl = String(item?.url || "");
         const itemKey = getWardrobeItemKey(item);
@@ -182,6 +167,7 @@ function MainScreenWardrobe(props: WardrobeProps) {
         ...MAIN_SCREEN_CONTENT_COLUMN_SX,
         minHeight: 0,
         overflow: "visible",
+        containerType: "inline-size",
         px: paddingX,
         pt: { xs: 1.25, md: 2 },
         pb: 2,

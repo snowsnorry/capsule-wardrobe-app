@@ -25,6 +25,7 @@ export const MAIN_SCREEN_CONTENT_COLUMN_SX = {
     maxWidth: "1440px",
   },
 } as const;
+export const REPORT_INSPECTOR_LAYOUT_MEDIA = "(min-width: 1800px)";
 export const OUTFIT_SET_IMAGE_ASPECT_RATIO = `${OUTFIT_SET_IMAGE_WIDTH} / ${OUTFIT_SET_IMAGE_HEIGHT}`;
 export const OUTFIT_SET_IMAGE_PREVIEW_MAX_WIDTH = OUTFIT_SET_IMAGE_WIDTH / 2;
 

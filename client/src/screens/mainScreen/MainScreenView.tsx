@@ -199,7 +199,7 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
     model.props.activeCapsule?.effective?.reportMeta?.stale,
   );
   const showFloatingReportInspector = Boolean(
-    report && !model.isOverlaySidebar,
+    report && !model.isOverlaySidebar && model.isReportInspectorLayout,
   );
   const showInlineCompactReport = Boolean(
     report && !showFloatingReportInspector,

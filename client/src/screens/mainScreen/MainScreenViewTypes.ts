@@ -57,6 +57,7 @@ export type MainScreenViewProps = {
   inlineRename: InlineRenameState;
   interactionDisabled: boolean;
   isOverlaySidebar: boolean;
+  isReportInspectorLayout: boolean;
   locale: string;
   mobileColumns: MobileCardColumns;
   nameDialog: NameDialogState;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useI18n } from "../../i18n/useI18n";
 import MainScreenView from "./MainScreenView";
+import { REPORT_INSPECTOR_LAYOUT_MEDIA } from "./MainScreenHelpers";
 import {
   useCapsuleDisplay,
   useCapsuleSearch,
@@ -15,9 +16,16 @@ import type { MainScreenProps } from "./MainScreenTypes";
 
 type CopiedOutfit = { id?: string; name?: string };
 
+function useMainScreenLayoutFlags() {
+  return {
+    isOverlaySidebar: useMediaQuery("(max-width: 1279.95px)"),
+    isReportInspectorLayout: useMediaQuery(REPORT_INSPECTOR_LAYOUT_MEDIA),
+  };
+}
+
 function MainScreen(props: MainScreenProps) {
   const { t, locale } = useI18n();
-  const isOverlaySidebar = useMediaQuery("(max-width: 1279.95px)");
+  const layout = useMainScreenLayoutFlags();
   const [copiedOutfit, setCopiedOutfit] = useState<CopiedOutfit | null>(null);
   const ui = useMainScreenUiState();
   const display = useCapsuleDisplay(props, ui.activeTab, locale, t);
@@ -32,7 +40,7 @@ function MainScreen(props: MainScreenProps) {
   const inlineRename = useInlineRename({
     activeCapsule: props.activeCapsule,
     disabled,
-    isOverlay: isOverlaySidebar,
+    isOverlay: layout.isOverlaySidebar,
     onRenameCapsule: props.onRenameCapsule,
   });
   const interactionDisabled = disabled || inlineRename.submitting;
@@ -70,7 +78,8 @@ function MainScreen(props: MainScreenProps) {
       imageDialogOpen={ui.imageDialogOpen}
       inlineRename={inlineRename}
       interactionDisabled={interactionDisabled}
-      isOverlaySidebar={isOverlaySidebar}
+      isOverlaySidebar={layout.isOverlaySidebar}
+      isReportInspectorLayout={layout.isReportInspectorLayout}
       locale={locale}
       mobileColumns={ui.mobileColumns}
       nameDialog={ui.nameDialog}

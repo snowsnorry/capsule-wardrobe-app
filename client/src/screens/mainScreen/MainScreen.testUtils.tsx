@@ -126,6 +126,24 @@ vi.mock("../../components/ClothingGridPlaceholder", () => ({
     xs: mobileColumns === 1 ? 1.25 : 0,
     sm: 2.5,
   }),
+  buildResponsiveClothingGridSx: (mobileColumns: MobileCardColumns = 2) => ({
+    display: "grid",
+    gridTemplateColumns: {
+      xs: `repeat(${mobileColumns}, minmax(0, 1fr))`,
+      sm: "repeat(2, minmax(0, 1fr))",
+      lg: "repeat(2, minmax(0, 1fr))",
+    },
+    gap: {
+      xs: mobileColumns === 1 ? 1.25 : 0,
+      sm: 2.5,
+    },
+    "@container (min-width: 760px)": {
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    },
+    "@container (min-width: 1160px)": {
+      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    },
+  }),
   clothingGridTemplateColumns: {
     xs: "repeat(2, minmax(0, 1fr))",
     sm: "repeat(2, minmax(0, 1fr))",
@@ -258,7 +276,7 @@ export function setMainScreenLayout(
     if (String(query).includes("max-width: 1279.95px")) {
       return layoutMode === "overlay";
     }
-    if (String(query).includes("min-width: 1680px")) {
+    if (String(query).includes("min-width: 1800px")) {
       return layoutMode === "large";
     }
     return false;

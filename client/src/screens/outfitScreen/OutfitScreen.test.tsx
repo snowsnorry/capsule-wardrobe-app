@@ -188,14 +188,15 @@ vi.mock("../../i18n/useI18n", () => ({
 
 const theme = createTheme();
 const originalMatchMedia = window.matchMedia;
+type TestViewport = "mobile" | "desktop" | "large";
 
-function setViewportMobile(isMobile: boolean) {
+function setViewport(viewport: TestViewport) {
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
       matches:
-        (isMobile && query.includes("max-width:899px")) ||
-        (!isMobile && query.includes("min-width:1200px")),
+        (viewport === "mobile" && query.includes("max-width:899px")) ||
+        (viewport === "large" && query.includes("min-width: 1800px")),
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -205,6 +206,10 @@ function setViewportMobile(isMobile: boolean) {
       dispatchEvent: vi.fn(),
     })),
   });
+}
+
+function setViewportMobile(isMobile: boolean) {
+  setViewport(isMobile ? "mobile" : "large");
 }
 
 function mockCatalogSearch() {
@@ -734,8 +739,22 @@ describe("OutfitScreen", () => {
     expect(onDeleteOutfitReport).toHaveBeenCalledWith("outfit-1");
   });
 
+  test("keeps the report inline on medium desktop widths", () => {
+    setViewport("desktop");
+    renderScreen({ activeOutfit: buildReportOutfit() });
+
+    const cardsScroll = screen.getByTestId("outfit-cards-scroll");
+
+    expect(
+      screen.queryByTestId("outfit-report-floating-inspector"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(cardsScroll).getByTestId("outfit-report"),
+    ).toBeInTheDocument();
+  });
+
   test("renders desktop report as a floating inspector outside the cards scroll", () => {
-    setViewportMobile(false);
+    setViewport("large");
     renderScreen({ activeOutfit: buildReportOutfit() });
 
     const cardsScroll = screen.getByTestId("outfit-cards-scroll");

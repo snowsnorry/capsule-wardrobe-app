@@ -2,8 +2,11 @@ import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
 import ClothingGridPlaceholder, {
+  CLOTHING_GRID_FOUR_COLUMN_MIN_WIDTH,
+  CLOTHING_GRID_THREE_COLUMN_MIN_WIDTH,
   ClothingPlaceholderCard,
   buildClothingGridGap,
+  buildResponsiveClothingGridSx,
   buildClothingGridTemplateColumns,
   clothingGridGap,
   clothingGridTemplateColumns,
@@ -39,6 +42,28 @@ describe("ClothingGridPlaceholder", () => {
     expect(buildClothingGridGap(2).xs).toBe(0);
     expect(buildClothingGridGap(3).xs).toBe(0);
     expect(buildClothingGridGap(3).sm).toBe(2.5);
+  });
+
+  test("builds container-based desktop grid columns with viewport fallback", () => {
+    const sx = buildResponsiveClothingGridSx(2);
+
+    expect(
+      sx[`@container (min-width: ${CLOTHING_GRID_THREE_COLUMN_MIN_WIDTH}px)`],
+    ).toEqual({
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    });
+    expect(
+      sx[`@container (min-width: ${CLOTHING_GRID_FOUR_COLUMN_MIN_WIDTH}px)`],
+    ).toEqual({
+      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    });
+    expect(
+      sx["@supports not (container-type: inline-size)"][
+        "@media (min-width: 1760px)"
+      ],
+    ).toEqual({
+      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    });
   });
 
   test("renders inline placeholders without the outer grid wrapper", () => {

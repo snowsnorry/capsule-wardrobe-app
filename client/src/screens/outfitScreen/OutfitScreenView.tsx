@@ -10,6 +10,7 @@ import {
   outfitContentSx,
   outfitHeaderSectionSx,
   outfitScreenSx,
+  outfitWithFloatingReportSx,
 } from "./OutfitScreenStyles";
 
 export type OutfitScreenViewProps = {
@@ -25,8 +26,17 @@ export function OutfitScreenView({
   overlayProps,
   scrollContentProps,
 }: OutfitScreenViewProps) {
+  const showFloatingReportInspector =
+    floatingReportProps.showFloatingReportInspector;
+
   return (
-    <Box data-testid="outfit-screen" sx={outfitScreenSx}>
+    <Box
+      data-testid="outfit-screen"
+      sx={[
+        outfitScreenSx,
+        showFloatingReportInspector ? outfitWithFloatingReportSx : false,
+      ]}
+    >
       <Box data-testid="outfit-content" sx={outfitContentSx}>
         <Box sx={outfitHeaderSectionSx}>
           <OutfitHeader {...headerProps} />

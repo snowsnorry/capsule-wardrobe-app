@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { useMediaQuery } from "@mui/material";
-import { resolveOutfitSetImageSrc } from "../mainScreen/MainScreenHelpers";
+import {
+  REPORT_INSPECTOR_LAYOUT_MEDIA,
+  resolveOutfitSetImageSrc,
+} from "../mainScreen/MainScreenHelpers";
 import type { OutfitItemSnapshot } from "../../app/appTypes";
 import type { MobileCardColumns } from "../mainScreen/MainScreenTypes";
 import type { NameDialogState } from "../mainScreen/MainScreenDialogsTypes";
@@ -107,7 +110,7 @@ function useOutfitScreenState({
 }: OutfitScreenProps) {
   const { locale, t } = useI18n();
   const isMobile = useMediaQuery("(max-width:899px)");
-  const isReportInspectorLayout = useMediaQuery("(min-width:1200px)");
+  const isReportInspectorLayout = useMediaQuery(REPORT_INSPECTOR_LAYOUT_MEDIA);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [itemMenu, setItemMenu] = useState<ItemMenuState>({
