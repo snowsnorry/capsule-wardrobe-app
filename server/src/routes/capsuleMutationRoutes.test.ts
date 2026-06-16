@@ -8,6 +8,7 @@ import {
 } from "../test/serverRouteTestUtils.js";
 import { hashCapsuleContent } from "../db.js";
 import { toOutfitReportItem } from "../ai/outfitReportItems.js";
+import { normalizeCapsuleFilters } from "../capsuleStore.js";
 
 const NO_GENERATED_OUTFITS_MESSAGE =
   "No generated outfit sets were provided for this capsule.";
@@ -63,6 +64,7 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
   let fullRegenerateCalled = false;
   let regenerateCalled = false;
   let pdfLocale = null;
+  let pdfOptions = null;
   let pdfProducts = null;
 
   const { baseUrl } = await startTestServer(t, {
@@ -79,9 +81,10 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
         regenerateCalled = true;
         res.json({ ok: true, items: [{ id: "2" }] });
       },
-      buildWardrobePdfInChildImpl: async (products, locale) => {
+      buildWardrobePdfInChildImpl: async (products, locale, options) => {
         pdfProducts = products;
         pdfLocale = locale;
+        pdfOptions = options;
         return Buffer.from("pdf");
       },
     },
@@ -154,6 +157,7 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
   expect(pdf.response.headers.get("content-disposition")).toBe(
     `attachment; filename="New-capsule.pdf"; filename*=UTF-8''${encodeURIComponent("New capsule.pdf")}`,
   );
+  expect(pdfOptions).toBeUndefined();
   expect(pdfProducts).toHaveLength(1);
   expect(pdfProducts?.[0]).toMatchObject({ url: "https://example.com/1" });
 });
@@ -452,6 +456,87 @@ test("capsule pdf route includes uploaded wardrobe items from capsule snapshots"
     colorBase: null,
     isNeutral: null,
     closureType: null,
+  });
+});
+
+test("capsule pdf route passes existing capsule report options to the builder", async (t) => {
+  let pdfLocale = null;
+  let pdfOptions = null;
+  let pdfProducts = null;
+  const filters = {};
+  const item = {
+    id: "catalog-1",
+    url: "https://example.com/1",
+    name: "Linen shirt",
+    category: "top",
+    style: ["minimal"],
+  };
+  const reportItem = toOutfitReportItem(item);
+  const report = {
+    schemaVersion: 1,
+    itemsHash: hashCapsuleContent({
+      filters: normalizeCapsuleFilters(filters),
+      generatedOutfits: NO_GENERATED_OUTFITS_MESSAGE,
+      items: [reportItem],
+    }),
+    verdict: {
+      llmScore: 0.9,
+      llmStatus: "excellent",
+      score: 0.9,
+      status: "excellent",
+      summary: "Balanced capsule.",
+    },
+  };
+
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getCapsuleImpl: async () => ({
+        id: "capsule-1",
+        name: "Summer edit",
+        draft: {
+          filters,
+          data: {
+            wardrobe: {
+              items: [item],
+              outfitSets: [],
+            },
+            rejectedUrls: [],
+          },
+          report,
+        },
+        saved: null,
+        status: "new",
+      }),
+      getProductsByUrlsInOrderImpl: async (urls) =>
+        urls.map((url) => ({ name: "Linen shirt", url })),
+      getProfileImpl: async () => ({ locale: "ru" }),
+      buildWardrobePdfInChildImpl: async (products, locale, options) => {
+        pdfProducts = products;
+        pdfLocale = locale;
+        pdfOptions = options;
+        return Buffer.from("pdf");
+      },
+    },
+  });
+
+  const pdf = await requestJson(baseUrl, "/capsules/capsule-1/pdf", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+
+  expect(pdf.response.status).toBe(200);
+  expect(pdfLocale).toBe("ru");
+  expect(pdfProducts).toEqual([
+    expect.objectContaining({ url: "https://example.com/1" }),
+  ]);
+  expect(pdfOptions).toEqual({
+    capsule: {
+      title: "Summer edit",
+      report,
+      reportStale: false,
+    },
   });
 });
 

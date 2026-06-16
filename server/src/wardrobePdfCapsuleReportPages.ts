@@ -11,22 +11,15 @@ import {
   ensureReportSpace,
   measureWrappedText,
 } from "./wardrobePdfOutfitDrawing.js";
+import { getToneColors, isRecord } from "./wardrobePdfOutfitReport.js";
 import {
-  drawConfidenceSection,
-  drawIssuesSection,
-  drawScoresSection,
-  drawSuggestionsSection,
-  drawTextListSection,
-} from "./wardrobePdfOutfitReportSections.js";
-import {
-  getReportChipValues,
-  getReportScore,
-  getReportTemperatureLabel,
-  getReportVerdictLabel,
-  getScoreTone,
-  getToneColors,
-  isRecord,
-} from "./wardrobePdfOutfitReport.js";
+  getCapsuleReportChipValues,
+  getCapsuleReportScore,
+  getCapsuleReportScoreTone,
+  getCapsuleReportTemperatureLabel,
+  getCapsuleReportVerdictLabel,
+} from "./wardrobePdfCapsuleReport.js";
+import { drawCapsuleReportDetailSections } from "./wardrobePdfCapsuleReportSections.js";
 import {
   drawReportChipRow,
   drawScoreGaugeBadge,
@@ -40,15 +33,15 @@ function drawReportIntro(pdfDoc, state, { fonts, locale, reportStale }) {
       y: state.cursorY,
       width: REPORT_CONTENT_WIDTH,
       font: fonts.regularFont,
-      label: t("outfit.reportOutdated", undefined, locale),
+      label: t("capsule.reportOutdated", undefined, locale),
     });
   }
   return state;
 }
 
 function drawScoreBadge(page, { fonts, report, x, y }) {
-  const score = getReportScore(report);
-  const tone = getScoreTone(score);
+  const score = getCapsuleReportScore(report);
+  const tone = getCapsuleReportScoreTone(report);
   const toneColors = getToneColors(tone);
   const badge = drawScoreGaugeBadge(page, { fonts, score, toneColors, x, y });
   return { ...badge, tone };
@@ -74,7 +67,7 @@ function drawReportSummary(pdfDoc, state, { fonts, locale, report }) {
     y: state.cursorY,
   });
   const toneColors = getToneColors(badge.tone);
-  state.page.drawText(getReportVerdictLabel(report, locale), {
+  state.page.drawText(getCapsuleReportVerdictLabel(report, locale), {
     x: textX,
     y: state.cursorY - 4,
     font: fonts.boldFont,
@@ -95,16 +88,16 @@ function drawReportSummary(pdfDoc, state, { fonts, locale, report }) {
 }
 
 function drawReportChips(pdfDoc, state, { fonts, locale, report }) {
-  const temperature = getReportTemperatureLabel(report, locale);
-  const chips = getReportChipValues(report, locale).map((label, index) => ({
-    label,
-    type: index === 0 && temperature ? "temperature" : undefined,
-  }));
+  const temperature = getCapsuleReportTemperatureLabel(report, locale);
+  const chips = [
+    temperature ? { label: temperature, type: "temperature" } : null,
+    ...getCapsuleReportChipValues(report).map((label) => ({ label })),
+  ].filter(Boolean);
   return drawReportChipRow(pdfDoc, state, { chips, fonts });
 }
 
-export function drawOutfitReportPages(pdfDoc, { fonts, locale, outfit }) {
-  const report = isRecord(outfit?.report) ? outfit.report : null;
+export function drawCapsuleReportPages(pdfDoc, { capsule, fonts, locale }) {
+  const report = isRecord(capsule?.report) ? capsule.report : null;
   if (!report) {
     return;
   }
@@ -113,18 +106,9 @@ export function drawOutfitReportPages(pdfDoc, { fonts, locale, outfit }) {
   state = drawReportIntro(pdfDoc, state, {
     fonts,
     locale,
-    reportStale: Boolean(outfit?.reportStale),
+    reportStale: Boolean(capsule?.reportStale),
   });
   state = drawReportSummary(pdfDoc, state, { fonts, locale, report });
   state = drawReportChips(pdfDoc, state, { fonts, locale, report });
-  state = drawScoresSection(pdfDoc, state, { fonts, locale, report });
-  state = drawTextListSection(pdfDoc, state, {
-    fonts,
-    locale,
-    titleKey: "outfit.reportStrengths",
-    items: report?.compatibility?.mainStrengths,
-  });
-  state = drawIssuesSection(pdfDoc, state, { fonts, locale, report });
-  state = drawSuggestionsSection(pdfDoc, state, { fonts, locale, report });
-  drawConfidenceSection(pdfDoc, state, { fonts, locale, report });
+  drawCapsuleReportDetailSections(pdfDoc, state, { fonts, locale, report });
 }

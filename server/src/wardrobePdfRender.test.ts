@@ -15,6 +15,16 @@ import {
   toPercent,
 } from "./wardrobePdfOutfit.js";
 import { getScoreTone } from "./wardrobePdfOutfitReport.js";
+import {
+  capsuleReportNeedsUnicodeFallback,
+  getCapsuleGeneratedOutfitsOverview,
+  getCapsuleOverviewLines,
+  getCapsuleReportChipValues,
+  getCapsuleReportScoreRows,
+  getCapsuleReportTemperatureLabel,
+  getCapsuleReportVerdictLabel,
+  getCapsuleWeakOutfitOverviewRows,
+} from "./wardrobePdfCapsuleReport.js";
 
 async function withCachedImage(testContext, imageUrl, buffer) {
   const cachePath = buildLocalImageCachePath(imageUrl);
@@ -76,6 +86,93 @@ function buildReport(overrides = {}) {
     confidence: {
       overall: 0.8,
       assumptions: ["Based on available item metadata."],
+    },
+    ...overrides,
+  };
+}
+
+function buildCapsuleReport(overrides = {}) {
+  return {
+    verdict: {
+      llmStatus: "excellent",
+      status: "excellent",
+      score: 0.9,
+      summary: "This capsule is balanced and ready to use.",
+    },
+    capsuleSummary: {
+      itemCount: 12,
+      categoryCounts: { dress: 0 },
+      detectedCategoryBalance: "balanced",
+      capsuleType: "travel",
+      summaryTags: ["minimal"],
+    },
+    targetAlignment: {
+      overallScore: 0.86,
+      formalityFit: { detectedRange: ["casual"] },
+      styleFit: { primaryDetectedStyle: "minimalistic" },
+    },
+    coverage: {
+      overallScore: 0.8,
+      coreRoleCoverage: {
+        tops: "covered",
+        bottoms: "covered",
+        shoes: "covered",
+        layers: "thin",
+        accessories: "weak",
+      },
+      weakCategories: ["layers"],
+      notes: "Good foundation with light layering gaps.",
+    },
+    versatility: {
+      overallScore: 0.78,
+      notes: "Works across repeated travel days.",
+    },
+    cohesion: {
+      overallScore: 0.84,
+      mainStrengths: ["Clear color direction."],
+      mainRisks: ["Limited warm layer options."],
+    },
+    seasonality: {
+      overallScore: 0.75,
+      primarySeasons: ["spring"],
+      temperatureBandC: { min: 12, max: 22 },
+      notes: "Best for mild weather.",
+    },
+    colorAnalysis: {
+      paletteType: "neutral",
+      colorScore: 0.88,
+      notes: "Base palette is coherent.",
+    },
+    generatedOutfitAssessment: {
+      providedOutfitCount: 2,
+      completeOutfitCount: 1,
+      weakOutfitCount: 1,
+      weakOutfits: [
+        {
+          outfitId: "outfit-set-2",
+          issue: "Needs stronger layering.",
+          suggestion: "Add a compact jacket.",
+        },
+      ],
+    },
+    issues: [
+      {
+        code: "layering_gap",
+        severity: "warning",
+        message: "Layering is thin.",
+        suggestion: "Add a warmer layer.",
+      },
+    ],
+    suggestions: [
+      {
+        type: "add",
+        priority: "high",
+        message: "Add one compact outerwear option.",
+      },
+    ],
+    confidence: {
+      overall: 0.82,
+      assumptions: ["Based on item metadata."],
     },
     ...overrides,
   };
@@ -236,6 +333,29 @@ test("buildWardrobePdf prepends outfit image cover and appends stale report page
   expect(await getPdfPageCount(pdfBuffer)).toBe(3);
 });
 
+test("buildWardrobePdf appends capsule report pages after capsule products", async () => {
+  const pdfBuffer = await buildWardrobePdf(
+    [
+      {
+        id: "top-1",
+        name: "Top",
+        category: "top",
+        imageUrl: "",
+      },
+    ],
+    {
+      locale: "en",
+      capsule: {
+        title: "Travel capsule",
+        report: buildCapsuleReport(),
+        reportStale: true,
+      },
+    },
+  );
+
+  expect(await getPdfPageCount(pdfBuffer)).toBe(3);
+});
+
 test("buildWardrobePdf supports image-only report-only and plain product PDFs", async (t) => {
   const imageUrl = "https://images.example.com/outfit-only.jpg";
   const imageBuffer = await sharp({
@@ -258,6 +378,13 @@ test("buildWardrobePdf supports image-only report-only and plain product PDFs", 
     locale: "en",
     outfit: { title: "Report only", report: buildReport() },
   });
+  const capsuleReportOnly = await buildWardrobePdf([], {
+    locale: "en",
+    capsule: {
+      title: "Capsule report only",
+      report: buildCapsuleReport(),
+    },
+  });
   const productOnly = await buildWardrobePdf(
     [{ id: "top-1", name: "Top", imageUrl: "" }],
     {
@@ -267,6 +394,7 @@ test("buildWardrobePdf supports image-only report-only and plain product PDFs", 
 
   expect(await getPdfPageCount(imageOnly)).toBe(1);
   expect(await getPdfPageCount(reportOnly)).toBe(1);
+  expect(await getPdfPageCount(capsuleReportOnly)).toBeGreaterThan(0);
   expect(await getPdfPageCount(productOnly)).toBe(1);
 });
 
@@ -331,6 +459,92 @@ test("buildWardrobePdf wraps long report chips and issue suggestions", async () 
 
   expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
   expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(0);
+});
+
+test("buildWardrobePdf paginates long capsule reports at the end", async () => {
+  const longReport = buildCapsuleReport({
+    cohesion: {
+      overallScore: 0.84,
+      mainStrengths: Array.from(
+        { length: 90 },
+        (_, index) =>
+          `Strength ${index + 1}: this capsule line intentionally has enough detail to wrap in the PDF report.`,
+      ),
+      mainRisks: [],
+    },
+  });
+
+  const pdfBuffer = await buildWardrobePdf([], {
+    locale: "en",
+    capsule: { title: "Long capsule report", report: longReport },
+  });
+
+  expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(1);
+});
+
+test("buildWardrobePdf wraps long capsule report chips", async () => {
+  const wrappedReport = buildCapsuleReport({
+    seasonality: {
+      overallScore: 0.75,
+      primarySeasons: [
+        "very_long_transitional_weather_label_that_forces_capsule_chip_wrapping",
+        "another_long_weather_context_for_the_next_capsule_chip_row",
+      ],
+      temperatureBandC: { min: 5, max: 21 },
+      notes: "Best for shifting weather.",
+    },
+    targetAlignment: {
+      overallScore: 0.86,
+      formalityFit: {
+        detectedRange: ["very_detailed_smart_casual_capsule_context"],
+      },
+      styleFit: {
+        primaryDetectedStyle:
+          "minimalist_layered_city_utility_with_extra_capsule_detail",
+      },
+    },
+    colorAnalysis: {
+      paletteType: "muted_neutral_with_extended_accent_context",
+      colorScore: 0.88,
+      notes: "Base palette is coherent.",
+    },
+  });
+
+  const pdfBuffer = await buildWardrobePdf([], {
+    locale: "en",
+    capsule: { title: "Wrapped capsule report", report: wrappedReport },
+  });
+
+  expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
+  expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(0);
+});
+
+test("buildWardrobePdf handles sparse capsule reports without optional sections", async () => {
+  const sparseReport = {
+    verdict: {},
+    capsuleSummary: {},
+    coverage: {},
+    cohesion: {
+      mainStrengths: [],
+      mainRisks: ["Risk without a matching issue."],
+    },
+    issues: [
+      { message: "", suggestion: "" },
+      { message: "Issue without suggestion.", suggestion: "" },
+    ],
+    suggestions: [{ message: "" }],
+    confidence: {
+      assumptions: ["Assumption without confidence score."],
+    },
+  };
+
+  const pdfBuffer = await buildWardrobePdf([], {
+    locale: "en",
+    capsule: { title: "Sparse capsule report", report: sparseReport },
+  });
+
+  expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
+  expect(await getPdfPageCount(pdfBuffer)).toBe(1);
 });
 
 test("outfit pdf report helpers mirror desktop report labels and percentages", () => {
@@ -407,4 +621,114 @@ test("outfit pdf report helpers mirror desktop report labels and percentages", (
   expect(outfitNeedsUnicodeFallback({ title: "Weekend" }, "en")).toBe(false);
   expect(outfitNeedsUnicodeFallback({ title: "Выходной" }, "en")).toBe(true);
   expect(outfitNeedsUnicodeFallback({ title: "Weekend" }, "ru")).toBe(true);
+});
+
+test("capsule pdf report helpers mirror desktop report labels and percentages", () => {
+  const report = buildCapsuleReport();
+
+  expect(getCapsuleReportTemperatureLabel(report, "en")).toBe("12–22°C");
+  expect(
+    getCapsuleReportTemperatureLabel(
+      { seasonality: { temperatureBandC: { min: 12 } } },
+      "en",
+    ),
+  ).toBe("from 12°C");
+  expect(
+    getCapsuleReportTemperatureLabel(
+      { seasonality: { temperatureBandC: { max: 20 } } },
+      "en",
+    ),
+  ).toBe("up to 20°C");
+  expect(getCapsuleReportChipValues(report)).toEqual([
+    "spring",
+    "casual",
+    "minimalistic",
+    "neutral",
+  ]);
+  expect(getCapsuleReportScoreRows(report, "en")).toEqual([
+    expect.objectContaining({ key: "target", percent: 86 }),
+    expect.objectContaining({ key: "coverage", percent: 80 }),
+    expect.objectContaining({ key: "versatility", percent: 78 }),
+    expect.objectContaining({ key: "cohesion", percent: 84 }),
+    expect.objectContaining({ key: "season", percent: 75 }),
+    expect.objectContaining({ key: "color", percent: 88 }),
+  ]);
+  expect(getCapsuleOverviewLines(report, "en")).toEqual([
+    "12 items · travel · balanced",
+    "Strong coverage for Tops, Bottoms, Shoes, Layers; Layers are the main limiting role.",
+    "2 generated outfits provided, 1 complete, 1 weak.",
+  ]);
+  expect(getCapsuleWeakOutfitOverviewRows(report, "en")).toEqual([
+    {
+      key: "outfit-set-2-0",
+      outfitLabel: "Outfit 2",
+      issue: "Needs stronger layering.",
+      suggestion: "Add a compact jacket.",
+    },
+  ]);
+  expect(getCapsuleReportVerdictLabel(report, "en")).toBe("Excellent capsule");
+  expect(
+    getCapsuleReportVerdictLabel(
+      { verdict: { llmStatus: "incoherent", score: 0.5 } },
+      "en",
+    ),
+  ).toBe("Off target");
+  expect(
+    capsuleReportNeedsUnicodeFallback({ title: "Travel capsule" }, "en"),
+  ).toBe(false);
+  expect(capsuleReportNeedsUnicodeFallback({ title: "Капсула" }, "en")).toBe(
+    true,
+  );
+  expect(
+    capsuleReportNeedsUnicodeFallback({ title: "Travel capsule" }, "ru"),
+  ).toBe(true);
+});
+
+test("capsule pdf report helpers handle sparse reports", () => {
+  expect(getCapsuleReportTemperatureLabel({}, "en")).toBe(null);
+  expect(getCapsuleReportChipValues({})).toEqual([]);
+  expect(getCapsuleReportScoreRows({}, "en")).toEqual([]);
+  expect(getCapsuleGeneratedOutfitsOverview({}, "en")).toBe("");
+  expect(
+    getCapsuleGeneratedOutfitsOverview(
+      {
+        generatedOutfitAssessment: {
+          providedOutfitCount: 0,
+          completeOutfitCount: 0,
+          weakOutfitCount: 0,
+        },
+      },
+      "en",
+    ),
+  ).toBe("");
+  expect(
+    getCapsuleWeakOutfitOverviewRows(
+      {
+        generatedOutfitAssessment: {
+          weakOutfits: [
+            { outfitId: "custom-outfit", issue: "", suggestion: "" },
+            { outfitId: "custom-outfit", issue: "Issue only", suggestion: "" },
+          ],
+        },
+      },
+      "en",
+    ),
+  ).toEqual([
+    {
+      key: "custom-outfit-1",
+      outfitLabel: "Outfit 2",
+      issue: "Issue only",
+      suggestion: "",
+    },
+  ]);
+  expect(
+    getCapsuleOverviewLines(
+      {
+        capsuleSummary: { capsuleType: "daily" },
+        coverage: { weakCategories: ["shoes"] },
+      },
+      "en",
+    ),
+  ).toEqual(["daily", "Shoes are the main limiting role."]);
+  expect(getCapsuleReportVerdictLabel({}, "en")).toBe("Good capsule");
 });

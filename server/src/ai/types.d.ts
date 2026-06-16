@@ -222,6 +222,11 @@ type WardrobePdfJobState = {
 
 type WardrobePdfBuildChildOptions = {
   totalStartedAt?: number | null;
+  capsule?: {
+    title?: string | null;
+    report?: Record<string, unknown> | null;
+    reportStale?: boolean;
+  } | null;
   outfit?: {
     title?: string | null;
     imageUrl?: string | null;

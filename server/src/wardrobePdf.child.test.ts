@@ -45,6 +45,11 @@ test("wardrobePdf child writes built PDF and exits 0 on success", async () => {
     outputFilePath: "/tmp/capsule/out/wardrobe.pdf",
     products: [{ id: "p1" }],
     locale: "ru",
+    capsule: {
+      title: "Travel capsule",
+      report: { verdict: { summary: "Balanced capsule." } },
+      reportStale: true,
+    },
     outfit: {
       title: "Weekend",
       imageUrl: "https://example.com/outfit.jpg",
@@ -66,6 +71,11 @@ test("wardrobePdf child writes built PDF and exits 0 on success", async () => {
       products: [{ id: "p1" }],
       options: {
         locale: "ru",
+        capsule: {
+          title: "Travel capsule",
+          report: { verdict: { summary: "Balanced capsule." } },
+          reportStale: true,
+        },
         outfit: {
           title: "Weekend",
           imageUrl: "https://example.com/outfit.jpg",
@@ -113,6 +123,7 @@ test("wardrobePdf child defaults locale and totalStartedAt for invalid input", a
     outputFilePath: "/tmp/capsule/defaults.pdf",
     products: "bad-products",
     locale: "",
+    capsule: "bad-capsule",
     outfit: "bad-outfit",
     totalStartedAt: "bad-start",
   });
@@ -120,7 +131,12 @@ test("wardrobePdf child defaults locale and totalStartedAt for invalid input", a
   expect(buildCalls).toEqual([
     {
       products: [],
-      options: { locale: "en", outfit: null, totalStartedAt: null },
+      options: {
+        locale: "en",
+        capsule: null,
+        outfit: null,
+        totalStartedAt: null,
+      },
     },
   ]);
 });

@@ -241,7 +241,7 @@ function buildGeneratedOutfitsForReportMeta(snapshot, itemIdMap) {
   return generatedOutfits;
 }
 
-function buildCapsuleReportMeta(snapshot) {
+export function buildCapsuleReportMeta(snapshot) {
   const reportItemsHash = getCapsuleReportItemsHash(snapshot?.report);
   if (!reportItemsHash) {
     return null;

@@ -20,6 +20,7 @@ function createWardrobePdfChildRuntime({
     products: unknown[],
     options?: {
       locale?: string;
+      capsule?: Record<string, unknown> | null;
       outfit?: Record<string, unknown> | null;
       totalStartedAt?: number | null;
     },
@@ -39,6 +40,7 @@ function createWardrobePdfChildRuntime({
     products: unknown[],
     options?: {
       locale?: string;
+      capsule?: Record<string, unknown> | null;
       outfit?: Record<string, unknown> | null;
       totalStartedAt?: number | null;
     },
@@ -99,11 +101,31 @@ function getWardrobePdfChildPayload(message) {
     products: Array.isArray(message?.products) ? message.products : [],
     options: {
       locale: message?.locale || "en",
+      capsule: normalizeCapsulePdfOptions(message?.capsule),
       outfit: normalizeOutfitPdfOptions(message?.outfit),
       totalStartedAt: Number.isFinite(message?.totalStartedAt)
         ? message.totalStartedAt
         : null,
     },
+  };
+}
+
+function normalizeCapsulePdfOptions(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const report =
+    value.report &&
+    typeof value.report === "object" &&
+    !Array.isArray(value.report)
+      ? value.report
+      : null;
+
+  return {
+    title: typeof value.title === "string" ? value.title : null,
+    report,
+    reportStale: Boolean(value.reportStale),
   };
 }
 

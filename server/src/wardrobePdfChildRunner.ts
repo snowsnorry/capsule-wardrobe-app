@@ -18,6 +18,7 @@ export async function buildWardrobePdfInChild(
   locale = "en",
   {
     forkImpl = nodeFork,
+    capsule = null,
     outfit = null,
     totalStartedAt = null,
   }: WardrobePdfBuildChildOptions & { forkImpl?: WardrobePdfForkLike } = {},
@@ -36,6 +37,7 @@ export async function buildWardrobePdfInChild(
       childExecArgv,
       products,
       locale,
+      capsule,
       outfit,
       totalStartedAt,
       outputFilePath,
@@ -51,6 +53,7 @@ function runWardrobePdfChildProcess({
   childExecArgv,
   products,
   locale,
+  capsule,
   outfit,
   totalStartedAt,
   outputFilePath,
@@ -87,7 +90,7 @@ function runWardrobePdfChildProcess({
     child.on("error", onError);
     child.on("exit", onExit);
     child.send(
-      { products, locale, outfit, totalStartedAt, outputFilePath },
+      { products, locale, capsule, outfit, totalStartedAt, outputFilePath },
       (error) => {
         if (error && !state.childExited) {
           rejectOnce(error);

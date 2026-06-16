@@ -33,6 +33,8 @@ import {
   drawOutfitReportPages,
   outfitNeedsUnicodeFallback,
 } from "./wardrobePdfOutfit.js";
+import { capsuleReportNeedsUnicodeFallback } from "./wardrobePdfCapsuleReport.js";
+import { drawCapsuleReportPages } from "./wardrobePdfCapsuleReportPages.js";
 import { getSafeHttpUrl } from "../../shared/urlSecurity.js";
 import { translateOption } from "../../shared/i18n/helpers.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
@@ -254,10 +256,20 @@ async function drawProductImage(
   });
 }
 
+function shouldUseFallbackFonts({ capsule, locale, outfit, products }) {
+  return (
+    locale === "ru" ||
+    products.some((product) => productNeedsUnicodeFallback(product, locale)) ||
+    outfitNeedsUnicodeFallback(outfit, locale) ||
+    capsuleReportNeedsUnicodeFallback(capsule, locale)
+  );
+}
+
 export async function buildWardrobePdf(
   products,
   {
     locale = "en",
+    capsule = null,
     imageAssetsById = {},
     outfit = null,
     totalStartedAt = null,
@@ -275,10 +287,12 @@ export async function buildWardrobePdf(
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
-  const useFallbackFonts =
-    locale === "ru" ||
-    products.some((product) => productNeedsUnicodeFallback(product, locale)) ||
-    outfitNeedsUnicodeFallback(outfit, locale);
+  const useFallbackFonts = shouldUseFallbackFonts({
+    capsule,
+    locale,
+    outfit,
+    products,
+  });
   const regularFontBytes = readFileSync(
     useFallbackFonts
       ? resolveFontPath(FALLBACK_REGULAR_FONT_CANDIDATES)
@@ -313,6 +327,11 @@ export async function buildWardrobePdf(
 
   drawOutfitReportPages(pdfDoc, {
     outfit,
+    locale,
+    fonts: { regularFont, boldFont },
+  });
+  drawCapsuleReportPages(pdfDoc, {
+    capsule,
     locale,
     fonts: { regularFont, boldFont },
   });

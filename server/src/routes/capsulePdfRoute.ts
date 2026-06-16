@@ -1,4 +1,5 @@
 import { logError } from "../logger.js";
+import { buildCapsuleReportMeta } from "../capsuleHttp.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
 
 function getTrimmedString(value) {
@@ -53,6 +54,24 @@ function keyBy(items, getKey) {
   return map;
 }
 
+function isPlainObject(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function buildCapsulePdfOptions(capsule, effectiveSnapshot) {
+  if (!isPlainObject(effectiveSnapshot?.report)) {
+    return undefined;
+  }
+
+  return {
+    capsule: {
+      title: String(capsule?.name || "").trim(),
+      report: effectiveSnapshot.report,
+      reportStale: Boolean(buildCapsuleReportMeta(effectiveSnapshot)?.stale),
+    },
+  };
+}
+
 async function getCapsulePdfItems(email, items, context) {
   const productUrls = [
     ...new Set(items.map((item) => getHttpUrl(item?.url)).filter(Boolean)),
@@ -102,6 +121,7 @@ export function registerCapsulePdfRoute(app, context) {
           return res.status(404).json({ error: "not_found" });
         }
         const profile = await context.getProfileImpl(req.user.email);
+        const effectiveSnapshot = context.getEffectiveCapsuleSnapshot(capsule);
         const items = context.getCapsuleItems(capsule);
         if (items.length === 0) {
           return res.status(404).json({ error: "not_found" });
@@ -117,6 +137,7 @@ export function registerCapsulePdfRoute(app, context) {
         const pdfBuffer = await context.buildWardrobePdfInChildImpl(
           pdfItems,
           String(profile?.locale || "en"),
+          buildCapsulePdfOptions(capsule, effectiveSnapshot),
         );
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader(
