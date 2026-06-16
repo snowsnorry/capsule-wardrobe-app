@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
@@ -81,6 +87,16 @@ function renderNavigation(
       />
     </ThemeProvider>,
   );
+}
+
+function setElementSize(
+  element: Element,
+  size: { clientWidth: number; scrollWidth: number },
+) {
+  Object.defineProperties(element, {
+    clientWidth: { configurable: true, value: size.clientWidth },
+    scrollWidth: { configurable: true, value: size.scrollWidth },
+  });
 }
 
 describe("AppSidebarNavigation", () => {
@@ -237,6 +253,39 @@ describe("AppSidebarNavigation", () => {
 
     expect(onSetCapsulePin).toHaveBeenLastCalledWith("capsule-1", false);
     expect(onOpenCapsule).not.toHaveBeenCalled();
+  });
+
+  test("shows capsule name tooltip only from the label, not the pin control", async () => {
+    renderNavigation({ onSetCapsulePin: vi.fn() });
+
+    fireEvent.mouseOver(
+      screen.getAllByRole("button", { name: "Pin capsule" })[0],
+    );
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Pin capsule");
+    expect(screen.getAllByText("Capsule 1")).toHaveLength(1);
+  });
+
+  test("shows capsule name tooltip only when the label is truncated", async () => {
+    renderNavigation();
+
+    const label = screen.getByText("Capsule 1");
+
+    setElementSize(label, { clientWidth: 120, scrollWidth: 120 });
+    fireEvent.mouseEnter(label);
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    setElementSize(label, { clientWidth: 64, scrollWidth: 160 });
+    fireEvent.mouseEnter(label);
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Capsule 1");
+
+    fireEvent.mouseLeave(label);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    });
   });
 
   test("keeps capsule unsaved dot and hover menu mutually exclusive", () => {

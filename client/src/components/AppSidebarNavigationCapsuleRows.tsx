@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { useState } from "react";
 import {
   Box,
   Divider,
@@ -243,6 +244,10 @@ function CapsuleActionsButton({
   );
 }
 
+function isElementOverflowing(element: HTMLElement) {
+  return element.scrollWidth > element.clientWidth;
+}
+
 function CapsuleRowText({
   capsuleName,
   isActive,
@@ -250,17 +255,52 @@ function CapsuleRowText({
   capsuleName: string;
   isActive: boolean;
 }) {
+  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+  const showTooltipIfOverflowing = (element: HTMLElement) => {
+    setIsTooltipOpen(isElementOverflowing(element));
+  };
+  const hideTooltip = () => setIsTooltipOpen(false);
+
   return (
     <ListItemText
       className="capsule-row-text"
-      primary={capsuleName}
+      primary={
+        <Tooltip
+          title={capsuleName}
+          placement="right"
+          open={isTooltipOpen}
+          disableInteractive
+          onClose={hideTooltip}
+        >
+          <Box
+            component="span"
+            className="capsule-row-label"
+            onFocus={(event) => showTooltipIfOverflowing(event.currentTarget)}
+            onBlur={hideTooltip}
+            onMouseEnter={(event) =>
+              showTooltipIfOverflowing(event.currentTarget)
+            }
+            onMouseLeave={hideTooltip}
+            sx={{
+              display: "inline-block",
+              maxWidth: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              verticalAlign: "bottom",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {capsuleName}
+          </Box>
+        </Tooltip>
+      }
       slotProps={{
         primary: {
-          noWrap: true,
           sx: {
             fontSize: "14px",
             fontWeight: isActive ? 700 : 500,
             color: isActive ? "primary.main" : "text.secondary",
+            minWidth: 0,
           },
         },
       }}
@@ -298,35 +338,33 @@ function CapsuleRow({
   const pinLabel = t(`${pinCopyPrefix}.${isPinned ? "unpin" : "pin"}`);
 
   return (
-    <Tooltip title={capsuleName} placement="right">
-      <ListItemButton
-        aria-label={capsuleName}
-        selected={isActive}
-        disabled={isInteractionDisabled}
-        onClick={() => (capsuleId ? onOpenCapsule?.(capsuleId) : undefined)}
-        sx={capsuleRowSx(isOverlaySidebar)}
-      >
-        <CapsulePinButton
-          capsuleId={capsuleId}
-          isInteractionDisabled={isInteractionDisabled}
-          isPinned={isPinned}
-          label={pinLabel}
-          onSetPin={onSetCapsulePin}
-        />
-        <CapsuleRowText capsuleName={capsuleName} isActive={isActive} />
-        <CapsuleUnsavedDot
-          isVisible={capsuleHasUnsavedChanges(capsule)}
-          label={t("capsule.notSaved")}
-        />
-        <CapsuleActionsButton
-          capsule={capsule}
-          capsuleName={capsuleName}
-          isInteractionDisabled={isInteractionDisabled}
-          onOpenCapsuleActions={onOpenCapsuleActions}
-          t={t}
-        />
-      </ListItemButton>
-    </Tooltip>
+    <ListItemButton
+      aria-label={capsuleName}
+      selected={isActive}
+      disabled={isInteractionDisabled}
+      onClick={() => (capsuleId ? onOpenCapsule?.(capsuleId) : undefined)}
+      sx={capsuleRowSx(isOverlaySidebar)}
+    >
+      <CapsulePinButton
+        capsuleId={capsuleId}
+        isInteractionDisabled={isInteractionDisabled}
+        isPinned={isPinned}
+        label={pinLabel}
+        onSetPin={onSetCapsulePin}
+      />
+      <CapsuleRowText capsuleName={capsuleName} isActive={isActive} />
+      <CapsuleUnsavedDot
+        isVisible={capsuleHasUnsavedChanges(capsule)}
+        label={t("capsule.notSaved")}
+      />
+      <CapsuleActionsButton
+        capsule={capsule}
+        capsuleName={capsuleName}
+        isInteractionDisabled={isInteractionDisabled}
+        onOpenCapsuleActions={onOpenCapsuleActions}
+        t={t}
+      />
+    </ListItemButton>
   );
 }
 
