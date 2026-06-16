@@ -75,9 +75,11 @@ describe("OutfitScreenReportSlots", () => {
       <OutfitScreenReportSlots {...props} showFloatingReportInspector />,
     );
 
-    expect(
-      screen.getByTestId("outfit-report-floating-inspector"),
-    ).toBeInTheDocument();
+    const floatingInspector = screen.getByTestId(
+      "outfit-report-floating-inspector",
+    );
+    expect(floatingInspector).toBeInTheDocument();
+    expect(floatingInspector.parentElement).toBe(document.body);
     const floatingReport = within(screen.getByTestId("full-report"));
 
     await user.click(floatingReport.getByRole("button", { name: "delete" }));

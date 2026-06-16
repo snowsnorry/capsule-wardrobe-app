@@ -32,7 +32,7 @@ export const outfitContentSx = {
 export const outfitCardsContentSpacing = { xs: 1, md: 3 } as const;
 
 export const outfitReportFloatingInspectorSx = {
-  position: "absolute",
+  position: "fixed",
   top: { lg: 16, xl: 20 },
   right: { lg: 16, xl: 24 },
   bottom: { lg: 16, xl: 20 },

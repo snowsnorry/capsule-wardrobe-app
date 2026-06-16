@@ -1,4 +1,5 @@
 import { Box } from "@mui/material";
+import AppShellFloatingPortal from "../../components/AppShellFloatingPortal";
 import CapsuleReportPanel from "./CapsuleReportPanel";
 import type { MainScreenViewProps } from "./MainScreenViewTypes";
 
@@ -92,25 +93,27 @@ function MainScreenFloatingCapsuleReportSlot({
   }
 
   return (
-    <Box
-      data-testid="capsule-report-floating-inspector"
-      sx={capsuleReportFloatingInspectorSx}
-    >
-      <CapsuleReportPanel
-        disabled={interactionDisabled}
-        isPending={props.isCapsuleReportPending}
-        isStale={reportIsStale}
-        report={report}
-        t={t}
-        onDelete={() =>
-          void props.onDeleteCapsuleReport?.(props.activeCapsule?.id)
-        }
-        onHighlightItemIds={onHighlightItemIds}
-        onRegenerate={() =>
-          void props.onGenerateCapsuleReport?.(props.activeCapsule?.id)
-        }
-      />
-    </Box>
+    <AppShellFloatingPortal>
+      <Box
+        data-testid="capsule-report-floating-inspector"
+        sx={capsuleReportFloatingInspectorSx}
+      >
+        <CapsuleReportPanel
+          disabled={interactionDisabled}
+          isPending={props.isCapsuleReportPending}
+          isStale={reportIsStale}
+          report={report}
+          t={t}
+          onDelete={() =>
+            void props.onDeleteCapsuleReport?.(props.activeCapsule?.id)
+          }
+          onHighlightItemIds={onHighlightItemIds}
+          onRegenerate={() =>
+            void props.onGenerateCapsuleReport?.(props.activeCapsule?.id)
+          }
+        />
+      </Box>
+    </AppShellFloatingPortal>
   );
 }
 

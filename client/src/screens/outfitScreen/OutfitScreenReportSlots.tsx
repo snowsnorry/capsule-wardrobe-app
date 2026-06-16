@@ -1,4 +1,5 @@
 import { Box } from "@mui/material";
+import AppShellFloatingPortal from "../../components/AppShellFloatingPortal";
 import type { OutfitScreenProps } from "./OutfitScreenTypes";
 import OutfitReportPanel from "./OutfitReportPanel";
 import {
@@ -58,21 +59,25 @@ export function OutfitScreenReportSlots({
         </Box>
       ) : null}
       {showFloatingReportInspector ? (
-        <Box
-          data-testid="outfit-report-floating-inspector"
-          sx={outfitReportFloatingInspectorSx}
-        >
-          <OutfitReportPanel
-            disabled={isContentBusy}
-            isPending={isReportPending}
-            isStale={reportIsStale}
-            report={report!}
-            t={t}
-            onDelete={() => void onDeleteOutfitReport?.(activeOutfit?.id)}
-            onHighlightItemIds={onHighlightItemIds}
-            onRegenerate={() => void onGenerateOutfitReport?.(activeOutfit?.id)}
-          />
-        </Box>
+        <AppShellFloatingPortal>
+          <Box
+            data-testid="outfit-report-floating-inspector"
+            sx={outfitReportFloatingInspectorSx}
+          >
+            <OutfitReportPanel
+              disabled={isContentBusy}
+              isPending={isReportPending}
+              isStale={reportIsStale}
+              report={report!}
+              t={t}
+              onDelete={() => void onDeleteOutfitReport?.(activeOutfit?.id)}
+              onHighlightItemIds={onHighlightItemIds}
+              onRegenerate={() =>
+                void onGenerateOutfitReport?.(activeOutfit?.id)
+              }
+            />
+          </Box>
+        </AppShellFloatingPortal>
       ) : null}
     </>
   );

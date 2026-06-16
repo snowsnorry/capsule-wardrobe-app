@@ -104,9 +104,11 @@ describe("MainScreenCapsuleReportSlots", () => {
       />,
     );
 
-    expect(
-      screen.getByTestId("capsule-report-floating-inspector"),
-    ).toBeInTheDocument();
+    const floatingInspector = screen.getByTestId(
+      "capsule-report-floating-inspector",
+    );
+    expect(floatingInspector).toBeInTheDocument();
+    expect(floatingInspector.parentElement).toBe(document.body);
     expect(capsuleWithFloatingReportSx.pr.lg).toContain("420px");
   });
 });
