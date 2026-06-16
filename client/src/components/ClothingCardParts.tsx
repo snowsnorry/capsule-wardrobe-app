@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { Box, Typography } from "@mui/material";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import type { CSSProperties } from "react";

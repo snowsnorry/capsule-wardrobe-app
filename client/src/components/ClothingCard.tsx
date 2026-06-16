@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import type { MouseEvent, ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n";
 import { formatProductLabel } from "../utils/productLabel";

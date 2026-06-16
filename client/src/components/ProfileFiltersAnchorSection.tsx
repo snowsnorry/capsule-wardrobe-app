@@ -1,4 +1,4 @@
-/* eslint-disable complexity, max-lines, max-lines-per-function */
+/* eslint-disable complexity, max-lines-per-function */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Button, IconButton, Stack, Typography } from "@mui/material";

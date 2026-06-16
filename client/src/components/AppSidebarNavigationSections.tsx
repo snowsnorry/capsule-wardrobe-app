@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { useMemo } from "react";
 import CheckroomOutlinedIcon from "@mui/icons-material/CheckroomOutlined";
 import ManageSearchRoundedIcon from "@mui/icons-material/ManageSearchRounded";

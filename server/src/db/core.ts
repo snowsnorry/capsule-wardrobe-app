@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import crypto from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 

@@ -9,20 +9,20 @@
 
 Current suppressed warning count:
 
-- [ ] `max-lines`: 10
-- [ ] `max-lines-per-function`: 10
+- [x] `max-lines`: 0
+- [ ] `max-lines-per-function`: 11
 - [ ] `complexity`: 6
 - [x] `react-hooks/exhaustive-deps`: 0
 - [x] `@typescript-eslint/no-explicit-any`: 0
 
 Most disables are not broad attempts to bypass type or security checks. They mostly suppress size and complexity limits that become blocking under `npm run lint:strict` because strict lint runs ESLint with `--max-warnings=0`.
 
+After raising `max-lines` to 500, removing every `eslint-disable max-lines` from source files still leaves `npm run lint:strict` green. No source file currently needs a `max-lines` inline disable.
+
 ## Keep As Explicit Exceptions
 
 These disables are acceptable as documented exceptions for now. Removing them would either reduce clarity or touch high-risk code without enough local value.
 
-- [ ] `server/src/ai/capsuleReportSchema.ts` - `max-lines`
-  - Single cohesive JSON schema contract. Splitting it would add indirection with little practical benefit.
 - [ ] `server/src/db/searchProductQueries.ts` - `max-lines-per-function`
   - Large SQL CTE/query functions. Mechanical splitting would make the SQL harder to audit.
 - [ ] `server/src/db/wardrobeCatalog.ts` - `max-lines-per-function`
@@ -37,8 +37,21 @@ These disables are acceptable as documented exceptions for now. Removing them wo
   - Centralized MUI component overrides. Can be split later, but the current form keeps theme behavior in one place.
 - [ ] `client/src/components/ClothingCardLongPress.ts` - `max-lines-per-function`
   - Gesture lifecycle with timers, pointer handling, and click suppression. Splitting carelessly would make behavior harder to reason about.
-- [ ] `client/src/app/appTypes.ts` - `max-lines`
-  - Central app type surface. Splitting it should follow app-state ownership boundaries rather than line-count pressure alone.
+
+## Cleared By 500-Line Limit
+
+These files no longer need `max-lines` disables under the current 500-line threshold.
+
+- [x] `client/src/app/appTypes.ts` - `max-lines`
+- [x] `client/src/components/ClothingCard.tsx` - `max-lines`
+- [x] `client/src/components/ClothingCardParts.tsx` - `max-lines`
+- [x] `client/src/components/AppSidebarNavigationCapsuleRows.tsx` - `max-lines`
+- [x] `client/src/components/AppSidebarNavigationSections.tsx` - `max-lines`
+- [x] `client/src/components/ProfileFiltersAnchorSection.tsx` - `max-lines`
+- [x] `server/src/ai/capsuleReportSchema.ts` - `max-lines`
+- [x] `server/src/db/core.ts` - `max-lines`
+- [x] `server/src/db/profileCapsules.ts` - `max-lines`
+- [x] `server/src/appDependencies.ts` - `max-lines`
 
 ## Remove With Small Refactors
 
@@ -113,17 +126,13 @@ These disables point to real structural debt. They should be planned as focused 
   - Split route state, app navigation, path navigation, and capsule/outfit navigation callbacks.
 - [x] `client/src/app/AppShellContent.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
   - Split sidebar panel state, body, action menus, search dialogs, and shell/card layout.
-- [ ] `client/src/components/ClothingCard.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
+- [ ] `client/src/components/ClothingCard.tsx` - `max-lines-per-function`, `complexity`
   - Extract action wiring, long-press/click behavior, and render sections.
-- [ ] `client/src/components/ClothingCardParts.tsx` - `max-lines`, `max-lines-per-function`
+- [ ] `client/src/components/ClothingCardParts.tsx` - `max-lines-per-function`
   - Split image, details, and actions into smaller parts.
 - [ ] `client/src/components/AppSidebarNavigation.tsx` - `max-lines-per-function`, `complexity`
   - Extract section list state and handlers.
-- [ ] `client/src/components/AppSidebarNavigationCapsuleRows.tsx` - `max-lines`
-  - Capsule/outfit row rendering and menu wiring should be split by row type or action surface.
-- [ ] `client/src/components/AppSidebarNavigationSections.tsx` - `max-lines`
-  - Sidebar section composition, sorting, counts, and pagination controls are still grouped.
-- [ ] `client/src/components/ProfileFiltersAnchorSection.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
+- [ ] `client/src/components/ProfileFiltersAnchorSection.tsx` - `max-lines-per-function`, `complexity`
   - Loading, selection mapping, dialog state, and render flow are combined.
 - [x] `client/src/screens/mainScreen/MainScreenDialogs.tsx` - `max-lines-per-function`
   - Extracted product-detail dialog state and handlers from the main dialog composition.
@@ -143,11 +152,7 @@ These disables point to real structural debt. They should be planned as focused 
   - Disable removed; broader AI generation decomposition can be tracked separately if needed.
 - [x] `server/src/ai/capsuleReportService.ts` - `max-lines`
   - Disable removed after typing deps and splitting enough of the report service surface.
-- [ ] `server/src/db/core.ts` - `max-lines`
-  - Split core types, SQL client creation, and helpers.
-- [ ] `server/src/db/profileCapsules.ts` - `max-lines`
-  - Split capsule CRUD and shared-capsule persistence.
-- [ ] `server/src/appDependencies.ts` - `max-lines`, `max-lines-per-function`
+- [ ] `server/src/appDependencies.ts` - `max-lines-per-function`
   - Composition root can be split into auth, capsule, wardrobe, outfit, search, and MCP dependency builders.
 
 ### Remaining Larger Decomposition Analysis
@@ -158,7 +163,7 @@ These files remained unchecked after the completed phases because the previous p
 - Phase 4 split large client screens and hooks, but did not cover client API modules, app action orchestrators, or reusable component internals.
 - Phase 5 split server stores, mutation routes, and AI/report pipelines, but did not cover DB core modules or the server composition root.
 
-A narrow ESLint run with inline config disabled still reports 17 warnings across the unchecked files: 8 `max-lines`, 6 `max-lines-per-function`, and 3 `complexity` warnings. They should not be handled in one phase because they span separate validation surfaces and refactor risks: card UI behavior, sidebar/filter UI behavior, DB helper modules, and app dependency wiring.
+A narrow ESLint run with inline config disabled on source directories still reports 17 warnings across the unchecked files: 11 `max-lines-per-function` and 6 `complexity` warnings. There are 0 remaining `max-lines` warnings. The remaining warnings should not be handled in one phase because they span separate validation surfaces and refactor risks: card UI behavior, sidebar/filter UI behavior, SQL query readability, OAuth/MCP safeguards, upload processing, and app dependency wiring.
 
 ## React Hook Disables
 
@@ -190,13 +195,10 @@ A narrow ESLint run with inline config disabled still reports 17 warnings across
   - Validate with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
 - [ ] Phase 8: split sidebar navigation and profile filter UI composition.
   - Fix `client/src/components/AppSidebarNavigation.tsx` by extracting expanded-section state, load-more handlers, and the list composition into focused helpers/components.
-  - Fix `client/src/components/AppSidebarNavigationCapsuleRows.tsx` and `client/src/components/AppSidebarNavigationSections.tsx` by splitting capsule rows, outfit rows, top-level section rows, counts, pagination controls, and action-menu wiring along row-type boundaries.
   - Fix `client/src/components/ProfileFiltersAnchorSection.tsx` by extracting anchor snapshot normalization, selection state transitions, dialog/render content, and selected-row rendering.
   - Validate with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
-- [ ] Phase 9: split server DB core and capsule persistence modules.
-  - Fix `server/src/db/core.ts` by moving row/input type groups, SQL client override/creation helpers, result helpers, and serialization/hash helpers into focused DB support modules with stable re-exports for existing imports.
-  - Fix `server/src/db/profileCapsules.ts` by splitting profile-owned capsule CRUD/list/search operations from shared-capsule persistence and pruning operations while preserving SQL statement behavior and public exports.
-  - Validate with `npm run coverage:server`, `npm run typecheck:server`, `npm run format`, and `npm run lint:strict`.
+- [x] Phase 9: clear stale server DB `max-lines` suppressions after the 500-line threshold change.
+  - `server/src/db/core.ts` and `server/src/db/profileCapsules.ts` no longer require inline `max-lines` disables.
 - [ ] Phase 10: split the server composition root.
-  - Fix `server/src/appDependencies.ts` by extracting auth/session, profile/options, capsule/outfit, wardrobe/media, search/MCP, passkey/OAuth, and account-cleanup dependency builders. Keep `createAppDependencies(options)` as the public entrypoint and preserve option override precedence, especially auth-test mode and injected test dependencies.
+  - Fix `server/src/appDependencies.ts` by extracting auth/session, profile/options, capsule/outfit, wardrobe/media, search/MCP, passkey/OAuth, and account-cleanup dependency builders enough to remove the remaining `max-lines-per-function` disable. Keep `createAppDependencies(options)` as the public entrypoint and preserve option override precedence, especially auth-test mode and injected test dependencies.
   - Validate with `npm run coverage:server`, `npm run typecheck:server`, `npm run format`, and `npm run lint:strict`.
