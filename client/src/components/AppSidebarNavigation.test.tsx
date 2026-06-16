@@ -318,6 +318,19 @@ describe("AppSidebarNavigation", () => {
     expect(injectedStyles).toContain("pointer-events:auto;}");
   });
 
+  test("keeps capsule actions visible in the overlay sidebar", () => {
+    renderNavigation({ isOverlaySidebar: true });
+
+    const capsuleRow = screen.getByRole("button", { name: "Capsule 1" });
+    const actionsSlot = capsuleRow.querySelector(".capsule-row-actions-slot");
+
+    expect(actionsSlot).not.toBeNull();
+    expect(getComputedStyle(actionsSlot as Element).opacity).toBe("1");
+    expect(getComputedStyle(actionsSlot as Element).width).toBe("32px");
+    expect(getComputedStyle(actionsSlot as Element).position).toBe("static");
+    expect(getComputedStyle(actionsSlot as Element).pointerEvents).toBe("auto");
+  });
+
   test("keeps outfit actions visible and enabled", () => {
     renderNavigation();
 
