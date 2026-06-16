@@ -205,6 +205,176 @@ function createWardrobeImageStorageDependencies() {
   };
 }
 
+function createRuntimeDependencies(googleClientId: string | null) {
+  return {
+    authTestMode: AUTH_TEST_MODE,
+    checkDatabaseConnectionImpl: checkDatabaseConnection,
+    clientOrigin: CLIENT_ORIGIN,
+    googleClientId,
+    mcpOAuthConfig: createMcpOAuthConfig(),
+    nodeEnv: NODE_ENV,
+  };
+}
+
+function createAuthSessionDependencies() {
+  return {
+    createPendingCodeImpl: createPendingCode,
+    createSessionImpl: createSession,
+    getSessionImpl: getSession,
+    revokeSessionImpl: revokeSession,
+    sendLoginCodeEmailImpl: sendLoginCodeEmail,
+    verifyCodeImpl: verifyCode,
+  };
+}
+
+function createProfileOptionDependencies() {
+  return {
+    createProfileImpl: createProfile,
+    deleteProfileImpl: deleteProfile,
+    getAudienceOptionsImpl: getAudienceOptions,
+    getFormalityLevelsImpl: getFormalityLevels,
+    getOccasionsImpl: getOccasions,
+    getPatternOptionsImpl: getPatternOptions,
+    getProfileImpl: getProfile,
+    getSeasonsImpl: getSeasons,
+    getStylesImpl: getStyles,
+    updateProfileImpl: updateProfile,
+    updateProfileLocaleImpl: updateProfileLocale,
+  };
+}
+
+function createCapsuleDependencies() {
+  return {
+    countCapsulesImpl: countCapsules,
+    createCapsuleImpl: createCapsule,
+    createCapsuleShareImpl: createCapsuleShare,
+    deleteCapsuleImpl: deleteCapsule,
+    duplicateCapsuleImpl: duplicateCapsule,
+    generateCapsuleReportImpl: generateCapsuleReportWithStoreLookups,
+    getCapsuleImpl: getCapsule,
+    getSharedCapsuleImpl: getSharedCapsule,
+    importSharedCapsuleImpl: importSharedCapsule,
+    listRecentCapsulesImpl: listRecentCapsules,
+    regenerateCapsuleWardrobeHandler: regenerateCapsuleWardrobe,
+    regenerateSelectedCapsuleItemsHandler: regenerateSelectedWardrobeItems,
+    renameCapsuleImpl: renameCapsule,
+    revertCapsuleImpl: revertCapsule,
+    saveCapsuleImpl: saveCapsule,
+    searchCapsulesImpl: searchCapsules,
+    setCapsulePinImpl: setCapsulePin,
+    streamCapsuleEventsImpl: capsuleEventHub.subscribe,
+    updateCapsuleReportImpl: updateCapsuleReport,
+    updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
+    validateCapsuleAnchorItemsImpl: (email, anchorItemRefs) =>
+      validateCapsuleAnchorItems({
+        email,
+        anchorItemRefs,
+        deps: {
+          getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
+          listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
+        },
+      }),
+  };
+}
+
+function createOutfitDependencies() {
+  return {
+    countOutfitsImpl: countOutfits,
+    createOutfitImpl: createOutfit,
+    deleteOutfitImpl: deleteOutfit,
+    deleteOutfitImageHandler: deleteOutfitImage,
+    deleteOutfitSetImageHandler: deleteOutfitSetImage,
+    duplicateOutfitImpl: duplicateOutfit,
+    generateOutfitImageHandler: generateOutfitImage,
+    generateOutfitReportImpl: generateOutfitReportWithStoreLookups,
+    generateOutfitSetImageHandler: generateOutfitSetImage,
+    getOutfitImpl: getOutfit,
+    getOutfitImageJobImpl: getOutfitImageJob,
+    getOutfitSetImageJobImpl: getOutfitSetImageJob,
+    listRecentOutfitsImpl: listRecentOutfits,
+    renameOutfitImpl: renameOutfit,
+    revertOutfitImpl: revertOutfit,
+    saveOutfitImpl: saveOutfit,
+    searchOutfitsImpl: searchOutfits,
+    setOutfitPinImpl: setOutfitPin,
+    streamOutfitEventsImpl: outfitEventHub.subscribe,
+    updateOutfitReportImpl: updateOutfitReport,
+    updateOutfitSnapshotImpl: updateOutfitSnapshot,
+  };
+}
+
+function createSearchMcpDependencies() {
+  return {
+    consumeMcpAuthorizationCodeImpl: consumeMcpAuthorizationCode,
+    getMcpRefreshTokenImpl: getMcpRefreshToken,
+    getMcpRegisteredClientImpl: getMcpRegisteredClient,
+    getSavedSearchImpl: getSavedSearch,
+    getSearchOptionsImpl: getSearchOptions,
+    getSearchStatsImpl: getSearchStats,
+    hasActiveMcpGrantImpl: hasActiveMcpGrant,
+    insertMcpAuthorizationCodeImpl: insertMcpAuthorizationCode,
+    insertMcpRefreshTokenImpl: insertMcpRefreshToken,
+    insertMcpRegisteredClientImpl: insertMcpRegisteredClient,
+    revokeMcpRefreshTokenImpl: revokeMcpRefreshToken,
+    rotateMcpRefreshTokenImpl: rotateMcpRefreshToken,
+    runMcpProductSearchImpl: runMcpProductSearch,
+    runSavedSearchImpl: runSavedSearch,
+    upsertMcpGrantImpl: upsertMcpGrant,
+  };
+}
+
+function createPasskeyOAuthDependencies() {
+  return {
+    consumePasskeyChallengeImpl: consumePasskeyChallenge,
+    deletePasskeyByIdForEmailImpl: deletePasskeyByIdForEmail,
+    generateAuthenticationOptionsImpl: generateAuthenticationOptions,
+    generateRegistrationOptionsImpl: generateRegistrationOptions,
+    getPasskeyByCredentialIdImpl: getPasskeyByCredentialId,
+    insertPasskeyChallengeImpl: insertPasskeyChallenge,
+    insertPasskeyImpl: insertPasskey,
+    listPasskeysImpl: listPasskeysByEmail,
+    passkeyOrigin: PASSKEY_ORIGIN,
+    passkeyRpId: PASSKEY_RP_ID,
+    passkeyRpName: PASSKEY_RP_NAME,
+    pruneExpiredPasskeyChallengesImpl: pruneExpiredPasskeyChallenges,
+    updatePasskeyAuthenticationImpl: updatePasskeyAuthentication,
+    verifyAuthenticationResponseImpl: verifyAuthenticationResponse,
+    verifyRegistrationResponseImpl: verifyRegistrationResponse,
+  };
+}
+
+function createWardrobeMediaDependencies() {
+  return {
+    buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
+    copyImageObjectToR2Impl: copyImageObjectToR2,
+    deleteLikedItemImpl: deleteLikedItemByUrl,
+    deleteWardrobeItemFromCatalogImpl: deleteWardrobeItemFromCatalogByUrl,
+    getPartialRegenerationJobImpl: getPartialRegenerationJob,
+    getProductByIdForEmailImpl: getProductByIdForEmail,
+    getProductByUrlForEmailImpl: getProductByUrlForEmail,
+    getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
+    getProductsByUrlsInOrderImpl: getProductsByUrlsInOrder,
+    getUploadedWardrobeItemImpl: getUploadedWardrobeItemById,
+    getWardrobeJobImpl: getWardrobeJob,
+    listLikedItemUrlsImpl: listLikedItemUrlsByEmail,
+    listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
+    listWardrobeItemsByUrlsImpl: listWardrobeItemsByUrlsForEmail,
+    listWardrobeItemsImpl: listWardrobeItemsByEmail,
+    normalizeWardrobeUploadImagesInChildImpl:
+      normalizeWardrobeUploadImagesInChild,
+    processWardrobeUploadFilesInChildImpl: processWardrobeUploadFilesInChild,
+    processWardrobeUploadUrlsInChildImpl: processWardrobeUploadUrlsInChild,
+    saveUploadedWardrobeItemsImpl: saveUploadedWardrobeItemsByEmail,
+    saveWardrobeItemFromCatalogImpl: saveWardrobeItemFromCatalogByUrl,
+    updateUploadedWardrobeItemDetailsImpl:
+      updateUploadedWardrobeItemDetailsById,
+    updateUploadedWardrobeItemMetadataImpl:
+      updateUploadedWardrobeItemMetadataById,
+    upsertLikedItemImpl: upsertLikedItemByUrl,
+    ...createWardrobeImageStorageDependencies(),
+  };
+}
+
 function clearAccountTransientState(email: string) {
   clearWardrobeJobsForEmail(email);
   clearPartialRegenerationJobsForEmail(email);
@@ -230,144 +400,33 @@ function generateCapsuleReportWithStoreLookups(
   });
 }
 
-// eslint-disable-next-line max-lines-per-function
+function createAccountCleanupDependencies() {
+  return {
+    clearAccountTransientStateImpl: clearAccountTransientState,
+  };
+}
+
+function createDefaultAppDependencies(googleClientId: string | null) {
+  return {
+    ...createRuntimeDependencies(googleClientId),
+    ...createAuthSessionDependencies(),
+    ...createProfileOptionDependencies(),
+    ...createCapsuleDependencies(),
+    ...createOutfitDependencies(),
+    ...createSearchMcpDependencies(),
+    ...createPasskeyOAuthDependencies(),
+    ...createWardrobeMediaDependencies(),
+    ...createAccountCleanupDependencies(),
+  };
+}
+
 export function createAppDependencies(options: Record<string, unknown> = {}) {
   const googleClientId =
     options.googleClientId === undefined
       ? GOOGLE_CLIENT_ID
       : (options.googleClientId as string | null);
   return {
-    authTestMode: AUTH_TEST_MODE,
-    buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
-    checkDatabaseConnectionImpl: checkDatabaseConnection,
-    clearAccountTransientStateImpl: clearAccountTransientState,
-    clientOrigin: CLIENT_ORIGIN,
-    consumePasskeyChallengeImpl: consumePasskeyChallenge,
-    createCapsuleImpl: createCapsule,
-    createCapsuleShareImpl: createCapsuleShare,
-    createOutfitImpl: createOutfit,
-    createPendingCodeImpl: createPendingCode,
-    createProfileImpl: createProfile,
-    createSessionImpl: createSession,
-    deleteCapsuleImpl: deleteCapsule,
-    deleteLikedItemImpl: deleteLikedItemByUrl,
-    deleteOutfitImpl: deleteOutfit,
-    deleteOutfitImageHandler: deleteOutfitImage,
-    deleteOutfitSetImageHandler: deleteOutfitSetImage,
-    deletePasskeyByIdForEmailImpl: deletePasskeyByIdForEmail,
-    deleteProfileImpl: deleteProfile,
-    duplicateCapsuleImpl: duplicateCapsule,
-    duplicateOutfitImpl: duplicateOutfit,
-    generateAuthenticationOptionsImpl: generateAuthenticationOptions,
-    generateCapsuleReportImpl: generateCapsuleReportWithStoreLookups,
-    generateOutfitImageHandler: generateOutfitImage,
-    generateOutfitReportImpl: generateOutfitReportWithStoreLookups,
-    generateOutfitSetImageHandler: generateOutfitSetImage,
-    generateRegistrationOptionsImpl: generateRegistrationOptions,
-    getAudienceOptionsImpl: getAudienceOptions,
-    getCapsuleImpl: getCapsule,
-    getFormalityLevelsImpl: getFormalityLevels,
-    getOccasionsImpl: getOccasions,
-    getOutfitImpl: getOutfit,
-    getOutfitImageJobImpl: getOutfitImageJob,
-    getOutfitSetImageJobImpl: getOutfitSetImageJob,
-    getPartialRegenerationJobImpl: getPartialRegenerationJob,
-    getPasskeyByCredentialIdImpl: getPasskeyByCredentialId,
-    getPatternOptionsImpl: getPatternOptions,
-    getProductByIdForEmailImpl: getProductByIdForEmail,
-    getProductByUrlForEmailImpl: getProductByUrlForEmail,
-    getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
-    getProductsByUrlsInOrderImpl: getProductsByUrlsInOrder,
-    getProfileImpl: getProfile,
-    getSavedSearchImpl: getSavedSearch,
-    getSearchOptionsImpl: getSearchOptions,
-    getSearchStatsImpl: getSearchStats,
-    getSeasonsImpl: getSeasons,
-    getSessionImpl: getSession,
-    getSharedCapsuleImpl: getSharedCapsule,
-    getMcpRegisteredClientImpl: getMcpRegisteredClient,
-    getMcpRefreshTokenImpl: getMcpRefreshToken,
-    getStylesImpl: getStyles,
-    getUploadedWardrobeItemImpl: getUploadedWardrobeItemById,
-    getWardrobeJobImpl: getWardrobeJob,
-    googleClientId,
-    importSharedCapsuleImpl: importSharedCapsule,
-    insertMcpAuthorizationCodeImpl: insertMcpAuthorizationCode,
-    insertMcpRefreshTokenImpl: insertMcpRefreshToken,
-    insertMcpRegisteredClientImpl: insertMcpRegisteredClient,
-    insertPasskeyChallengeImpl: insertPasskeyChallenge,
-    insertPasskeyImpl: insertPasskey,
-    consumeMcpAuthorizationCodeImpl: consumeMcpAuthorizationCode,
-    deleteWardrobeItemFromCatalogImpl: deleteWardrobeItemFromCatalogByUrl,
-    hasActiveMcpGrantImpl: hasActiveMcpGrant,
-    listPasskeysImpl: listPasskeysByEmail,
-    listLikedItemUrlsImpl: listLikedItemUrlsByEmail,
-    listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
-    listWardrobeItemsByUrlsImpl: listWardrobeItemsByUrlsForEmail,
-    listWardrobeItemsImpl: listWardrobeItemsByEmail,
-    listRecentCapsulesImpl: listRecentCapsules,
-    countCapsulesImpl: countCapsules,
-    listRecentOutfitsImpl: listRecentOutfits,
-    countOutfitsImpl: countOutfits,
-    nodeEnv: NODE_ENV,
-    passkeyOrigin: PASSKEY_ORIGIN,
-    passkeyRpId: PASSKEY_RP_ID,
-    passkeyRpName: PASSKEY_RP_NAME,
-    mcpOAuthConfig: createMcpOAuthConfig(),
-    pruneExpiredPasskeyChallengesImpl: pruneExpiredPasskeyChallenges,
-    regenerateCapsuleWardrobeHandler: regenerateCapsuleWardrobe,
-    regenerateSelectedCapsuleItemsHandler: regenerateSelectedWardrobeItems,
-    renameCapsuleImpl: renameCapsule,
-    renameOutfitImpl: renameOutfit,
-    revertCapsuleImpl: revertCapsule,
-    revertOutfitImpl: revertOutfit,
-    revokeMcpRefreshTokenImpl: revokeMcpRefreshToken,
-    revokeSessionImpl: revokeSession,
-    rotateMcpRefreshTokenImpl: rotateMcpRefreshToken,
-    runMcpProductSearchImpl: runMcpProductSearch,
-    runSavedSearchImpl: runSavedSearch,
-    saveCapsuleImpl: saveCapsule,
-    saveOutfitImpl: saveOutfit,
-    setCapsulePinImpl: setCapsulePin,
-    setOutfitPinImpl: setOutfitPin,
-    saveUploadedWardrobeItemsImpl: saveUploadedWardrobeItemsByEmail,
-    saveWardrobeItemFromCatalogImpl: saveWardrobeItemFromCatalogByUrl,
-    searchCapsulesImpl: searchCapsules,
-    searchOutfitsImpl: searchOutfits,
-    sendLoginCodeEmailImpl: sendLoginCodeEmail,
-    streamCapsuleEventsImpl: capsuleEventHub.subscribe,
-    streamOutfitEventsImpl: outfitEventHub.subscribe,
-    updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
-    updateCapsuleReportImpl: updateCapsuleReport,
-    updateOutfitReportImpl: updateOutfitReport,
-    updateOutfitSnapshotImpl: updateOutfitSnapshot,
-    copyImageObjectToR2Impl: copyImageObjectToR2,
-    validateCapsuleAnchorItemsImpl: (email, anchorItemRefs) =>
-      validateCapsuleAnchorItems({
-        email,
-        anchorItemRefs,
-        deps: {
-          listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
-          getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
-        },
-      }),
-    updatePasskeyAuthenticationImpl: updatePasskeyAuthentication,
-    upsertLikedItemImpl: upsertLikedItemByUrl,
-    updateProfileImpl: updateProfile,
-    updateProfileLocaleImpl: updateProfileLocale,
-    upsertMcpGrantImpl: upsertMcpGrant,
-    updateUploadedWardrobeItemDetailsImpl:
-      updateUploadedWardrobeItemDetailsById,
-    updateUploadedWardrobeItemMetadataImpl:
-      updateUploadedWardrobeItemMetadataById,
-    ...createWardrobeImageStorageDependencies(),
-    normalizeWardrobeUploadImagesInChildImpl:
-      normalizeWardrobeUploadImagesInChild,
-    processWardrobeUploadFilesInChildImpl: processWardrobeUploadFilesInChild,
-    processWardrobeUploadUrlsInChildImpl: processWardrobeUploadUrlsInChild,
-    verifyAuthenticationResponseImpl: verifyAuthenticationResponse,
-    verifyCodeImpl: verifyCode,
-    verifyRegistrationResponseImpl: verifyRegistrationResponse,
+    ...createDefaultAppDependencies(googleClientId),
     ...options,
     googleAuthClient: resolveGoogleAuthClient({ ...options, googleClientId }),
   };

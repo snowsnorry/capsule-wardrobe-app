@@ -25,4 +25,23 @@ describe("createAppDependencies outfit report wiring", () => {
       }),
     );
   });
+
+  test("keeps injected dependencies ahead of production defaults", () => {
+    const sendLoginCodeEmailImpl = vi.fn();
+    const mcpOAuthConfig = { issuer: "https://test.example.com" };
+
+    const deps = createAppDependencies({
+      authTestMode: true,
+      googleAuthClient: null,
+      googleClientId: null,
+      mcpOAuthConfig,
+      sendLoginCodeEmailImpl,
+    });
+
+    expect(deps.authTestMode).toBe(true);
+    expect(deps.googleAuthClient).toBeNull();
+    expect(deps.googleClientId).toBeNull();
+    expect(deps.mcpOAuthConfig).toBe(mcpOAuthConfig);
+    expect(deps.sendLoginCodeEmailImpl).toBe(sendLoginCodeEmailImpl);
+  });
 });

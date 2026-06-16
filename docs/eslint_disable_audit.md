@@ -10,7 +10,7 @@
 Current suppressed warning count:
 
 - [x] `max-lines`: 0
-- [ ] `max-lines-per-function`: 6
+- [ ] `max-lines-per-function`: 5
 - [ ] `complexity`: 3
 - [x] `react-hooks/exhaustive-deps`: 0
 - [x] `@typescript-eslint/no-explicit-any`: 0
@@ -152,7 +152,7 @@ These disables point to real structural debt. They should be planned as focused 
   - Disable removed; broader AI generation decomposition can be tracked separately if needed.
 - [x] `server/src/ai/capsuleReportService.ts` - `max-lines`
   - Disable removed after typing deps and splitting enough of the report service surface.
-- [ ] `server/src/appDependencies.ts` - `max-lines-per-function`
+- [x] `server/src/appDependencies.ts` - `max-lines-per-function`
   - Composition root can be split into auth, capsule, wardrobe, outfit, search, and MCP dependency builders.
 
 ### Remaining Larger Decomposition Analysis
@@ -200,6 +200,7 @@ A narrow ESLint run with inline config disabled on source directories still repo
   - Validated with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
 - [x] Phase 9: clear stale server DB `max-lines` suppressions after the 500-line threshold change.
   - `server/src/db/core.ts` and `server/src/db/profileCapsules.ts` no longer require inline `max-lines` disables.
-- [ ] Phase 10: split the server composition root.
+- [x] Phase 10: split the server composition root.
   - Fix `server/src/appDependencies.ts` by extracting auth/session, profile/options, capsule/outfit, wardrobe/media, search/MCP, passkey/OAuth, and account-cleanup dependency builders enough to remove the remaining `max-lines-per-function` disable. Keep `createAppDependencies(options)` as the public entrypoint and preserve option override precedence, especially auth-test mode and injected test dependencies.
-  - Validate with `npm run coverage:server`, `npm run typecheck:server`, `npm run format`, and `npm run lint:strict`.
+  - Added focused coverage for injected dependency precedence, including auth-test mode, MCP OAuth config, Google auth overrides, and injected email delivery.
+  - Validated with `npm run coverage:server`, `npm run typecheck:server`, sub-agent code review, `npm run format`, and `npm run lint:strict`.
