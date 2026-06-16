@@ -10,8 +10,8 @@
 Current suppressed warning count:
 
 - [x] `max-lines`: 0
-- [ ] `max-lines-per-function`: 11
-- [ ] `complexity`: 6
+- [ ] `max-lines-per-function`: 6
+- [ ] `complexity`: 3
 - [x] `react-hooks/exhaustive-deps`: 0
 - [x] `@typescript-eslint/no-explicit-any`: 0
 
@@ -130,9 +130,9 @@ These disables point to real structural debt. They should be planned as focused 
   - Extract action wiring, long-press/click behavior, and render sections.
 - [x] `client/src/components/ClothingCardParts.tsx` - `max-lines-per-function`
   - Split image, details, and actions into smaller parts.
-- [ ] `client/src/components/AppSidebarNavigation.tsx` - `max-lines-per-function`, `complexity`
+- [x] `client/src/components/AppSidebarNavigation.tsx` - `max-lines-per-function`, `complexity`
   - Extract section list state and handlers.
-- [ ] `client/src/components/ProfileFiltersAnchorSection.tsx` - `max-lines-per-function`, `complexity`
+- [x] `client/src/components/ProfileFiltersAnchorSection.tsx` - `max-lines-per-function`, `complexity`
   - Loading, selection mapping, dialog state, and render flow are combined.
 - [x] `client/src/screens/mainScreen/MainScreenDialogs.tsx` - `max-lines-per-function`
   - Extracted product-detail dialog state and handlers from the main dialog composition.
@@ -193,10 +193,11 @@ A narrow ESLint run with inline config disabled on source directories still repo
   - Fix `client/src/components/ClothingCard.tsx` by extracting action-state derivation, click/long-press wiring, and product-menu key behavior from the component body without changing selectable, liked, wardrobe-source, or mobile behavior.
   - Fix `client/src/components/ClothingCardParts.tsx` by splitting image rendering, detail rendering, action rendering, keyboard handling, and style helpers into smaller component/utility modules.
   - Validate with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
-- [ ] Phase 8: split sidebar navigation and profile filter UI composition.
+- [x] Phase 8: split sidebar navigation and profile filter UI composition.
   - Fix `client/src/components/AppSidebarNavigation.tsx` by extracting expanded-section state, load-more handlers, and the list composition into focused helpers/components.
   - Fix `client/src/components/ProfileFiltersAnchorSection.tsx` by extracting anchor snapshot normalization, selection state transitions, dialog/render content, and selected-row rendering.
-  - Validate with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
+  - Added a focused selected-anchor rows test to keep extracted UI composition above coverage thresholds.
+  - Validated with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
 - [x] Phase 9: clear stale server DB `max-lines` suppressions after the 500-line threshold change.
   - `server/src/db/core.ts` and `server/src/db/profileCapsules.ts` no longer require inline `max-lines` disables.
 - [ ] Phase 10: split the server composition root.
