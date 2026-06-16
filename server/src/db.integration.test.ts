@@ -126,24 +126,78 @@ type ProfileRow = {
 
 function createSqlMock(handlers: SqlResultHandler[]) {
   const calls: SqlCall[] = [];
-  async function sql<TRow = unknown>(
-    strings: TemplateStringsArray,
-    ...values: unknown[]
-  ): Promise<TRow[] | { count: number }> {
-    const text = strings.join(" ");
-    calls.push({ strings: [...strings], values, text });
-    const handler = handlers.shift();
+
+  function takeHandler(text: string): SqlResultHandler | undefined {
+    if (/count\(\*\)::integer/i.test(text)) {
+      const index = handlers.findIndex(isCountRowsHandler);
+      if (index >= 0) {
+        return handlers.splice(index, 1)[0];
+      }
+    }
+
+    if (/result_limit/i.test(text)) {
+      const index = handlers.findIndex(
+        (handler) => !isCountRowsHandler(handler),
+      );
+      if (index >= 0) {
+        return handlers.splice(index, 1)[0];
+      }
+    }
+
+    return handlers.shift();
+  }
+
+  async function runSqlCall<TRow = unknown>({
+    strings,
+    values,
+    text,
+  }: SqlCall): Promise<TRow[] | { count: number }> {
+    calls.push({ strings, values, text });
+    const handler = takeHandler(text);
     if (!handler) {
       throw new Error(`Unexpected SQL call: ${text}`);
     }
     if (typeof handler === "function") {
-      return handler({ strings: [...strings], values, text, calls }) as
+      return handler({ strings, values, text, calls }) as
         | TRow[]
         | { count: number };
     }
     return handler as TRow[] | { count: number };
   }
-  return { sql, calls };
+
+  const query = async <TRow = unknown>(
+    queryText: string,
+    values: readonly unknown[] = [],
+  ): Promise<TRow[] | { count: number }> =>
+    runSqlCall({
+      strings: [queryText],
+      values: [...values],
+      text: queryText,
+    });
+
+  async function sql<TRow = unknown>(
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): Promise<TRow[] | { count: number }> {
+    const text = strings.join(" ");
+    return runSqlCall({ strings: [...strings], values, text });
+  }
+  return { sql: Object.assign(sql, { query }), calls };
+}
+
+function isCountRowsHandler(handler: SqlResultHandler): boolean {
+  return (
+    Array.isArray(handler) &&
+    Boolean(handler[0]) &&
+    typeof handler[0] === "object" &&
+    "total" in handler[0]
+  );
+}
+
+function findSqlCall(calls: SqlCall[], pattern: RegExp): SqlCall {
+  const call = calls.find(({ text }) => pattern.test(text));
+  expect(call).toBeDefined();
+  return call as SqlCall;
 }
 
 afterEach(() => {
@@ -368,21 +422,23 @@ test("db integration shapes search persistence and searchProducts queries", asyn
   expect(results.page).toBe(2);
   expect(results.pageSize).toBe(50);
   expect(results.items[0]?.id).toBe("prod-1");
+  const countCall = findSqlCall(calls, /count\(\*\)::integer/i);
+  const itemCall = findSqlCall(calls, /result_limit/i);
 
   expect(calls[0].text).toMatch(/from search\s+where email =/i);
   expect(calls[0].values).toEqual(["user@example.com"]);
   expect(calls[1].text).toMatch(/insert into search/i);
   expect(calls[1].values[0]).toBe("user@example.com");
   expect(calls[1].values[2]).toBe(JSON.stringify([0.1, 0.2]));
-  expect(calls[2].text).toMatch(
+  expect(countCall.text).toMatch(
     /select count\(\*\)::integer as total\s+from filtered_products/i,
   );
-  expect(calls[2].values.some((value) => Array.isArray(value))).toBe(true);
-  expect(calls[2].values.some((value) => value === "[0.1,0.2]")).toBe(true);
-  expect(calls[2].values.some((value) => value === 0.35)).toBe(true);
-  expect(calls[2].values).toContain("semantic");
-  expect(calls[3].text).toMatch(/case[\s\S]*embedding <=>[\s\S]*as distance/i);
-  expect(calls[3].values.filter((value) => value === 50).length >= 2).toBe(
+  expect(countCall.values.some((value) => Array.isArray(value))).toBe(true);
+  expect(countCall.values.some((value) => value === "[0.1,0.2]")).toBe(true);
+  expect(countCall.values.some((value) => value === 0.35)).toBe(true);
+  expect(countCall.values).toContain("semantic");
+  expect(itemCall.text).toMatch(/case[\s\S]*embedding <=>[\s\S]*as distance/i);
+  expect(itemCall.values.filter((value) => value === 50).length >= 2).toBe(
     true,
   );
 });
@@ -403,15 +459,18 @@ test("db integration filters searchProducts by URL prefix", async () => {
 
   expect(results.total).toBe(1);
   expect(results.items[0]?.id).toBe("prod-1");
-  expect(calls[0].text).toMatch(/products\.url\s+like/i);
-  expect(calls[1].text).toMatch(/products\.url\s+like/i);
+  const countCall = findSqlCall(calls, /count\(\*\)::integer/i);
+  const itemCall = findSqlCall(calls, /result_limit/i);
+
+  expect(countCall.text).toMatch(/products\.url\s+like/i);
+  expect(itemCall.text).toMatch(/products\.url\s+like/i);
   expect(
-    calls[0].values.some(
+    countCall.values.some(
       (value) => value === "https://example.com/products/linen%",
     ),
   ).toBe(true);
   expect(
-    calls[1].values.some(
+    itemCall.values.some(
       (value) => value === "https://example.com/products/linen%",
     ),
   ).toBe(true);
@@ -436,18 +495,27 @@ test("db integration applies lexical text search across product text fields with
 
   expect(results.total).toBe(1);
   expect(results.items[0]?.id).toBe("prod-1");
-  expect(calls[0].text).toMatch(/lower\(coalesce\(name, ''\)\) like/i);
-  expect(calls[0].text).toMatch(/lower\(coalesce\(description, ''\)\) like/i);
-  expect(calls[0].text).toMatch(/lower\(coalesce\(composition, ''\)\) like/i);
-  expect(calls[0].text).toMatch(/unnest\(coalesce\(color_base/i);
-  expect(calls[0].text).toMatch(/lexical_score > 0/i);
-  expect(calls[0].text).toMatch(/cardinality\([\s\S]*::text\[\]\) = 0/i);
-  expect(calls[0].values).toContain("red");
-  expect(calls[0].values).toContain("red%");
-  expect(calls[0].values).toContain("%red%");
-  expect(calls[0].values).toContain("lexical");
-  expect(calls[0].values.some((value) => Array.isArray(value))).toBe(true);
-  expect(calls[1].text).toMatch(/order by[\s\S]*lexical_score/i);
+  const countCall = findSqlCall(calls, /count\(\*\)::integer/i);
+  const itemCall = findSqlCall(calls, /result_limit/i);
+
+  expect(countCall.text).toMatch(
+    /lower\(coalesce\(products\.name, ''\)\) like/i,
+  );
+  expect(countCall.text).toMatch(
+    /lower\(coalesce\(products\.description, ''\)\) like/i,
+  );
+  expect(countCall.text).toMatch(
+    /lower\(coalesce\(products\.composition, ''\)\) like/i,
+  );
+  expect(countCall.text).toMatch(/unnest\(coalesce\(products\.color_base/i);
+  expect(countCall.text).toMatch(/lexical_score > 0/i);
+  expect(countCall.text).toMatch(/cardinality\(params\.[a-z_]+\) = 0/i);
+  expect(countCall.values).toContain("red");
+  expect(countCall.values).toContain("red%");
+  expect(countCall.values).toContain("%red%");
+  expect(countCall.values).toContain("lexical");
+  expect(countCall.values.some((value) => Array.isArray(value))).toBe(true);
+  expect(itemCall.text).toMatch(/order by[\s\S]*lexical_score/i);
 });
 
 test("db integration escapes LIKE metacharacters in lexical text search", async () => {
@@ -464,9 +532,11 @@ test("db integration escapes LIKE metacharacters in lexical text search", async 
     textSearchMode: "lexical",
   });
 
-  expect(calls[0].text).toMatch(/like[\s\S]*escape '~'/i);
-  expect(calls[0].values).toContain("100~% cotton~_bag~~%");
-  expect(calls[0].values).toContain("%100~% cotton~_bag~~%");
+  const countCall = findSqlCall(calls, /count\(\*\)::integer/i);
+
+  expect(countCall.text).toMatch(/like[\s\S]*escape '~'/i);
+  expect(countCall.values).toContain("100~% cotton~_bag~~%");
+  expect(countCall.values).toContain("%100~% cotton~_bag~~%");
 });
 
 test("db integration applies hybrid rank fusion for text and semantic search", async () => {
@@ -486,15 +556,18 @@ test("db integration applies hybrid rank fusion for text and semantic search", a
   });
 
   expect(results.total).toBe(2);
-  expect(calls[0].text).toMatch(
+  const countCall = findSqlCall(calls, /count\(\*\)::integer/i);
+  const itemCall = findSqlCall(calls, /result_limit/i);
+
+  expect(countCall.text).toMatch(
     /lexical_score > 0[\s\S]*or[\s\S]*distance <=/i,
   );
-  expect(calls[1].text).toMatch(/row_number\(\) over[\s\S]*lexical_rank/i);
-  expect(calls[1].text).toMatch(/row_number\(\) over[\s\S]*semantic_rank/i);
-  expect(calls[1].text).toMatch(/1\.0 \/ \(60 \+ lexical_rank\)/i);
-  expect(calls[1].text).toMatch(/1\.0 \/ \(60 \+ semantic_rank\)/i);
-  expect(calls[0].values).toContain("hybrid");
-  expect(calls[0].values).toContain("[0.3,0.4]");
+  expect(itemCall.text).toMatch(/row_number\(\) over[\s\S]*lexical_rank/i);
+  expect(itemCall.text).toMatch(/row_number\(\) over[\s\S]*semantic_rank/i);
+  expect(itemCall.text).toMatch(/1\.0 \/ \(60 \+ lexical_rank\)/i);
+  expect(itemCall.text).toMatch(/1\.0 \/ \(60 \+ semantic_rank\)/i);
+  expect(countCall.values).toContain("hybrid");
+  expect(countCall.values).toContain("[0.3,0.4]");
 });
 
 test("db integration applies explicit search offset and limit", async () => {
@@ -515,9 +588,11 @@ test("db integration applies explicit search offset and limit", async () => {
   expect(results.total).toBe(3);
   expect(results.pageSize).toBe(10);
   expect(results.items[0]?.id).toBe("prod-2");
-  expect(calls[1].values.filter((value) => value === 10).length).toBe(1);
-  expect(calls[1].values.filter((value) => value === 20).length).toBe(1);
-  expect(calls[1].values).toContain("person@example.com");
+  const itemCall = findSqlCall(calls, /result_limit/i);
+
+  expect(itemCall.values.filter((value) => value === 10).length).toBe(1);
+  expect(itemCall.values.filter((value) => value === 20).length).toBe(1);
+  expect(itemCall.values).toContain("person@example.com");
 });
 
 test("db integration lists and saves user wardrobe items", async () => {

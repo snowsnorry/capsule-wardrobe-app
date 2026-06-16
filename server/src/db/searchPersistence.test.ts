@@ -1,5 +1,9 @@
 import { afterEach, test, expect } from "vitest";
-import { setSqlClientOverride, type SqlClientLike } from "./core.js";
+import {
+  setSqlClientOverride,
+  type SqlClientLike,
+  type SqlResultLike,
+} from "./core.js";
 import { buildPriceBuckets, searchProducts } from "./searchPersistence.js";
 
 afterEach(() => {
@@ -26,16 +30,7 @@ test("buildPriceBuckets returns a continuous bucket range with zero-count gaps",
 test("searchProducts applies liked-only filter with the profile email", async () => {
   const statements: string[] = [];
   const values: unknown[][] = [];
-  const sql = (async <TRow = unknown>(
-    query: TemplateStringsArray,
-    ...queryValues: readonly unknown[]
-  ) => {
-    statements.push(query.join("?").replace(/\s+/g, " ").trim());
-    values.push([...queryValues]);
-    return statements.length === 1
-      ? ([{ total: 0 }] as TRow[])
-      : ([] as TRow[]);
-  }) as SqlClientLike;
+  const sql = createSearchSqlRecorder({ statements, values });
   setSqlClientOverride(sql);
 
   await searchProducts({
@@ -47,3 +42,110 @@ test("searchProducts applies liked-only filter with the profile email", async ()
   expect(values.flat()).toContain(true);
   expect(values.flat()).toContain("person@example.com");
 });
+
+test("searchProducts passes search SQL file parameters in alias order", async () => {
+  const statements: string[] = [];
+  const values: unknown[][] = [];
+  const sql = createSearchSqlRecorder({ statements, values });
+  setSqlClientOverride(sql);
+
+  await searchProducts({
+    audience: ["woman"],
+    brand: ["cos"],
+    category: ["coat"],
+    closureType: ["zip"],
+    color: ["red"],
+    fit: ["regular"],
+    formalityLevel: ["formal"],
+    likedOnly: true,
+    limit: 24,
+    occasions: ["office"],
+    offset: 48,
+    pattern: ["solid"],
+    priceMax: 100,
+    priceMin: 10,
+    profileEmail: " person@example.com ",
+    queryEmbedding: [0.1, 0.2],
+    season: ["winter"],
+    semanticDistanceThreshold: 0.4,
+    silhouette: ["straight"],
+    style: ["classic"],
+    textQuery: " Red Coat ",
+    textSearchMode: "hybrid",
+    urlPrefix: "https://shop.example/item",
+  });
+
+  expect(statements).toHaveLength(2);
+  expect(
+    statements.every((statement) => statement.includes("query_params")),
+  ).toBe(true);
+  const countValues =
+    values[findStatementIndex(statements, "count(*)::integer")];
+  const itemValues = values[findStatementIndex(statements, "result_limit")];
+
+  expect(countValues).toEqual([
+    "[0.1,0.2]",
+    "red coat",
+    "red coat%",
+    "%red coat%",
+    ["cos"],
+    "https://shop.example/item%",
+    10,
+    100,
+    true,
+    "person@example.com",
+    ["woman"],
+    ["coat"],
+    ["winter"],
+    ["formal"],
+    ["classic"],
+    ["office"],
+    ["red"],
+    ["solid"],
+    ["straight"],
+    ["regular"],
+    ["zip"],
+    "hybrid",
+    0.4,
+  ]);
+  expect(itemValues).toEqual([...countValues, 24, 48]);
+});
+
+function createSearchSqlRecorder({
+  statements,
+  values,
+}: {
+  statements: string[];
+  values: unknown[][];
+}): SqlClientLike {
+  const query = async <TRow = unknown>(
+    queryText: string,
+    queryValues: readonly unknown[] = [],
+  ): Promise<SqlResultLike<TRow>> => {
+    statements.push(queryText.replace(/\s+/g, " ").trim());
+    values.push([...queryValues]);
+    return queryText.includes("count(*)::integer")
+      ? ([{ total: 0 }] as TRow[])
+      : ([] as TRow[]);
+  };
+
+  return Object.assign(
+    async <TRow = unknown>(
+      strings: TemplateStringsArray,
+      ...queryValues: readonly unknown[]
+    ): Promise<SqlResultLike<TRow>> => {
+      statements.push(strings.join("?").replace(/\s+/g, " ").trim());
+      values.push([...queryValues]);
+      return [] as TRow[];
+    },
+    { query },
+  ) as SqlClientLike;
+}
+
+function findStatementIndex(statements: string[], pattern: string): number {
+  const index = statements.findIndex((statement) =>
+    statement.includes(pattern),
+  );
+  expect(index).toBeGreaterThanOrEqual(0);
+  return index;
+}
