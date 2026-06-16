@@ -10,7 +10,7 @@ import {
 import { toAnchorItem } from "./ProfileFiltersAnchorUtils";
 import type { AnchorItemRef, AnchorItem } from "./ProfileFiltersAnchorTypes";
 
-export function getAnchorRefKey(ref: AnchorItemRef) {
+function getAnchorRefKey(ref: AnchorItemRef) {
   return `${ref.source}\u0000${ref.url}`;
 }
 
@@ -32,7 +32,7 @@ function getSnapshotAnchorSource(snapshot: OutfitItemSnapshot) {
   return snapshot.source === "uploaded" ? "uploaded" : "catalog";
 }
 
-export function normalizeAnchorRefs(refs: AnchorItemRef[] = []) {
+function normalizeAnchorRefs(refs: AnchorItemRef[] = []) {
   const seen = new Set<string>();
   return refs.filter((ref) => {
     const key = getAnchorRefKey(ref);

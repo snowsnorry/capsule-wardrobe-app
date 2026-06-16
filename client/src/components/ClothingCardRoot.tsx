@@ -200,4 +200,3 @@ function getMobileCardGestureSuppressionSx(isMobile: boolean) {
 }
 
 export { ClothingCardRoot };
-export type { ClothingCardRootProps };

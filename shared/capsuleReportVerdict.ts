@@ -111,4 +111,3 @@ export {
   normalizeCapsuleReportForDisplay,
   normalizeCapsuleReportVerdictForDisplay,
 };
-export type { CapsuleReportTone, CapsuleReportVerdictStatus };

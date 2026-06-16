@@ -104,4 +104,3 @@ export {
   normalizeOutfitReportForDisplay,
   normalizeOutfitReportVerdictForDisplay,
 };
-export type { OutfitReportTone, OutfitReportVerdictStatus };

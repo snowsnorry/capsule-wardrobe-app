@@ -11,7 +11,7 @@ import type {
   OutfitNavItem,
 } from "./AppSidebarNavigationTypes";
 
-export type ExpandedSectionId = "outfits" | "capsules" | "catalog";
+type ExpandedSectionId = "outfits" | "capsules" | "catalog";
 
 const initialExpandedSections: Record<ExpandedSectionId, boolean> = {
   outfits: true,
