@@ -126,9 +126,9 @@ These disables point to real structural debt. They should be planned as focused 
   - Split route state, app navigation, path navigation, and capsule/outfit navigation callbacks.
 - [x] `client/src/app/AppShellContent.tsx` - `max-lines`, `max-lines-per-function`, `complexity`
   - Split sidebar panel state, body, action menus, search dialogs, and shell/card layout.
-- [ ] `client/src/components/ClothingCard.tsx` - `max-lines-per-function`, `complexity`
+- [x] `client/src/components/ClothingCard.tsx` - `max-lines-per-function`, `complexity`
   - Extract action wiring, long-press/click behavior, and render sections.
-- [ ] `client/src/components/ClothingCardParts.tsx` - `max-lines-per-function`
+- [x] `client/src/components/ClothingCardParts.tsx` - `max-lines-per-function`
   - Split image, details, and actions into smaller parts.
 - [ ] `client/src/components/AppSidebarNavigation.tsx` - `max-lines-per-function`, `complexity`
   - Extract section list state and handlers.
@@ -189,7 +189,7 @@ A narrow ESLint run with inline config disabled on source directories still repo
   - Fixed `client/src/api/outfits.ts` by moving outfit URL/query helpers, item-reference normalization, SSE subscription/report streaming helpers, and PDF download helpers into focused API support modules while keeping the exported public API names stable for `client/src/api/outfits.test.ts` and app callers.
   - Fixed `client/src/app/capsuleActions.ts` by moving capsule lifecycle actions, report actions, profile-filter regeneration actions, and capsule search into focused action modules while preserving the barrel exports used by `useAppHandlers`, route sync, and tests.
   - Validated with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
-- [ ] Phase 7: split clothing card behavior and view parts.
+- [x] Phase 7: split clothing card behavior and view parts.
   - Fix `client/src/components/ClothingCard.tsx` by extracting action-state derivation, click/long-press wiring, and product-menu key behavior from the component body without changing selectable, liked, wardrobe-source, or mobile behavior.
   - Fix `client/src/components/ClothingCardParts.tsx` by splitting image rendering, detail rendering, action rendering, keyboard handling, and style helpers into smaller component/utility modules.
   - Validate with `npm run coverage:client`, `npm run typecheck:client`, `npm run format`, and `npm run lint:strict`.
