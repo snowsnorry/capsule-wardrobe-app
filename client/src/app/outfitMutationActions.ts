@@ -7,6 +7,7 @@ import {
   revertOutfit,
   saveOutfit,
   selectOutfit,
+  setOutfitPin,
   updateOutfitItems,
 } from "../api/outfits";
 import { fromContext, type AppActionContext } from "./actionContext";
@@ -118,6 +119,23 @@ export async function renameCurrentOutfit(
     outfitId,
     () => renameOutfit(outfitId, name) as Promise<OutfitMutationResponse>,
     (result) => setActiveOutfit(context, result.outfit || null),
+  );
+}
+
+export async function setCurrentOutfitPin(
+  context: AppActionContext,
+  outfitId: string,
+  pin: boolean,
+) {
+  await mutateCurrentOutfit(
+    context,
+    outfitId,
+    () => setOutfitPin(outfitId, pin) as Promise<OutfitMutationResponse>,
+    (result) => {
+      if (outfitId === fromContext<string>(context, "activeOutfitId")) {
+        setActiveOutfit(context, result.outfit || null);
+      }
+    },
   );
 }
 

@@ -140,6 +140,8 @@ function buildHandlers(handlers: ReturnType<typeof useAppHandlers>) {
     onRevertOutfit: handlers.handleRevertOutfit,
     onSaveCapsule: handlers.handleSaveCapsule,
     onSaveOutfit: handlers.handleSaveOutfit,
+    onSetCapsulePin: handlers.handleSetCapsulePin,
+    onSetOutfitPin: handlers.handleSetOutfitPin,
     onRemoveFromPersonalItems: handlers.handleRemoveFromPersonalItems,
     onSaveToPersonalItems: handlers.handleSaveToPersonalItems,
     onSetItemLike: handlers.handleSetItemLike,

@@ -143,6 +143,11 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   ).toBeTruthy();
   expect(
     statements.some((statement) =>
+      statement.includes("pin boolean not null default false"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
       statement.includes("create table if not exists shared_capsules"),
     ),
   ).toBeTruthy();
@@ -252,6 +257,7 @@ test("ensureTables runs every schema group in dependency order", async () => {
   expect(joined).toMatch(/create table if not exists profile_passkeys/);
   expect(joined).toMatch(/create table if not exists user_liked_items/);
   expect(joined).toMatch(/create table if not exists capsules/);
+  expect(joined).toMatch(/create table if not exists outfits/);
   expect(joined).toMatch(/create table if not exists shared_capsules/);
   expect(joined).toMatch(/create table if not exists wardrobe/);
   expect(joined).toMatch(

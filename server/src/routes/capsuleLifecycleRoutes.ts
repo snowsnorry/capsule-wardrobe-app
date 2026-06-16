@@ -50,6 +50,29 @@ function registerCapsuleMetadataRoutes(app, context) {
   const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
 
   app.patch(
+    "/capsules/:id/pin",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        if (typeof req.body?.pin !== "boolean") {
+          return res.status(400).json({ error: "invalid_payload" });
+        }
+        const capsule = await context.setCapsulePinImpl(
+          req.user.email,
+          req.params.id,
+          req.body.pin,
+        );
+        return sendCapsuleMutationResponse(req, res, capsule, context);
+      } catch (error) {
+        logError("[capsules/pin]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
+
+  app.patch(
     "/capsules/:id/rename",
     requireTrustedOrigin,
     requireAuth,

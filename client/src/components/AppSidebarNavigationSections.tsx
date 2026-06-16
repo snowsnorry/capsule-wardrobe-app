@@ -187,6 +187,7 @@ export function OutfitsSection({
   onOpenOutfit,
   onOpenOutfitActions,
   onSearchOutfits,
+  onSetOutfitPin,
   onToggle,
   outfitHasUnsavedChanges,
   t,
@@ -199,6 +200,7 @@ export function OutfitsSection({
   | "onOpenOutfit"
   | "onOpenOutfitActions"
   | "onSearchOutfits"
+  | "onSetOutfitPin"
 > & {
   activeApp: AppId;
   desktopSidebarRailWidth: number;
@@ -238,6 +240,7 @@ export function OutfitsSection({
           onLoadMoreOutfits={handleLoadMoreOutfits}
           onOpenOutfit={onOpenOutfit}
           onOpenOutfitActions={onOpenOutfitActions}
+          onSetOutfitPin={onSetOutfitPin}
           t={t}
           totalCount={navState.totalOutfitCount}
         />
@@ -263,6 +266,7 @@ export function CapsuleSection({
   onOpenCapsule,
   onOpenCapsuleActions,
   onSearchCapsules,
+  onSetCapsulePin,
   onToggle,
   t,
 }: Pick<
@@ -274,6 +278,7 @@ export function CapsuleSection({
   | "onOpenCapsule"
   | "onOpenCapsuleActions"
   | "onSearchCapsules"
+  | "onSetCapsulePin"
 > & {
   activeApp: AppId;
   desktopSidebarRailWidth: number;
@@ -324,6 +329,7 @@ export function CapsuleSection({
           onLoadMoreCapsules={handleLoadMoreCapsules}
           onOpenCapsule={onOpenCapsule}
           onOpenCapsuleActions={onOpenCapsuleActions}
+          onSetCapsulePin={onSetCapsulePin}
           t={t}
           totalCount={navState.totalCapsuleCount}
         />

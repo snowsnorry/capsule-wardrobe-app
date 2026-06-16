@@ -1,12 +1,4 @@
-import type { MouseEvent, ReactNode } from "react";
-import {
-  Divider,
-  ListItemIcon,
-  Menu,
-  MenuItem,
-  type SxProps,
-  type Theme,
-} from "@mui/material";
+import { Divider, Menu } from "@mui/material";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
@@ -14,7 +6,9 @@ import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRena
 import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import { useI18n } from "../../i18n/useI18n";
+import ActionMenuItem from "./CapsuleActionMenuItem";
 import { getCapsuleMenuPermissions } from "./CapsuleActionMenuPermissions";
+import CapsulePinMenuItem from "./CapsulePinMenuItem";
 import CardLayoutMenuSection from "./CapsuleActionMenuLayout";
 import type {
   CapsuleLike,
@@ -37,6 +31,7 @@ type CapsuleActionMenuProps = {
   onRename: () => void;
   onRevert: () => void;
   onSave: () => void;
+  onSetPin?: (pin: boolean) => void;
   onDuplicate: () => void;
   onShare: () => void;
   showShare?: boolean;
@@ -45,44 +40,8 @@ type CapsuleActionMenuProps = {
   mobileCardColumns?: MobileCardColumns;
   onMobileCardColumnsChange?: (value: MobileCardColumns) => void;
   onDelete: () => void;
+  pinCopyPrefix?: "capsule" | "outfit";
 };
-
-type ActionMenuItemProps = {
-  disabled?: boolean;
-  icon?: ReactNode;
-  reserveIconSpace?: boolean;
-  onAction: () => void;
-  onClose: () => void;
-  sx?: SxProps<Theme>;
-  children: ReactNode;
-};
-
-function ActionMenuItem({
-  disabled = false,
-  icon = null,
-  reserveIconSpace = false,
-  onAction,
-  onClose,
-  sx,
-  children,
-}: ActionMenuItemProps) {
-  const handleClick = (event: MouseEvent<HTMLElement>) => {
-    event.currentTarget.blur();
-    onClose();
-    onAction();
-  };
-
-  return (
-    <MenuItem disabled={disabled} onClick={handleClick} sx={sx}>
-      <ListItemIcon
-        sx={reserveIconSpace ? { visibility: "hidden" } : undefined}
-      >
-        {icon}
-      </ListItemIcon>
-      {children}
-    </MenuItem>
-  );
-}
 
 function ShareMenuItem({
   show,
@@ -178,6 +137,7 @@ function AnalyzeMenuSection({
 
 function CapsuleEditMenuSection({
   disabled,
+  capsule,
   canRevert,
   canSave,
   canDuplicate,
@@ -185,10 +145,13 @@ function CapsuleEditMenuSection({
   onRename,
   onRevert,
   onSave,
+  onSetPin,
   onDuplicate,
   onDelete,
+  pinCopyPrefix = "capsule",
 }: {
   disabled: boolean;
+  capsule?: CapsuleLike | null;
   canRevert: boolean;
   canSave: boolean;
   canDuplicate: boolean;
@@ -196,14 +159,24 @@ function CapsuleEditMenuSection({
   onRename: () => void;
   onRevert: () => void;
   onSave: () => void;
+  onSetPin?: (pin: boolean) => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  pinCopyPrefix?: "capsule" | "outfit";
 }) {
   const { t } = useI18n();
+  const isPinned = Boolean(capsule?.pin);
 
   return (
     <>
       <Divider />
+      <CapsulePinMenuItem
+        disabled={disabled || !capsule?.id || !onSetPin}
+        isPinned={isPinned}
+        onClose={onClose}
+        onSetPin={onSetPin}
+        pinCopyPrefix={pinCopyPrefix}
+      />
       <ActionMenuItem
         disabled={disabled}
         icon={<DriveFileRenameOutlineRoundedIcon fontSize="small" />}
@@ -240,19 +213,37 @@ function CapsuleEditMenuSection({
         </ActionMenuItem>
       ) : null}
       <Divider />
-      <ActionMenuItem
-        disabled={disabled}
-        icon={<DeleteOutlineRoundedIcon fontSize="small" />}
-        onAction={onDelete}
-        onClose={onClose}
-        sx={{
-          color: "error.main",
-          "& .MuiListItemIcon-root": { color: "inherit" },
-        }}
-      >
+      <DeleteMenuItem disabled={disabled} onClose={onClose} onDelete={onDelete}>
         {t("actions.delete")}
-      </ActionMenuItem>
+      </DeleteMenuItem>
     </>
+  );
+}
+
+function DeleteMenuItem({
+  children,
+  disabled,
+  onClose,
+  onDelete,
+}: {
+  children: string;
+  disabled: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <ActionMenuItem
+      disabled={disabled}
+      icon={<DeleteOutlineRoundedIcon fontSize="small" />}
+      onAction={onDelete}
+      onClose={onClose}
+      sx={{
+        color: "error.main",
+        "& .MuiListItemIcon-root": { color: "inherit" },
+      }}
+    >
+      {children}
+    </ActionMenuItem>
   );
 }
 
@@ -271,6 +262,7 @@ function CapsuleActionMenu({
   onRename,
   onRevert,
   onSave,
+  onSetPin,
   onDuplicate,
   onShare,
   showShare = true,
@@ -279,6 +271,7 @@ function CapsuleActionMenu({
   mobileCardColumns = 2,
   onMobileCardColumnsChange = undefined,
   onDelete,
+  pinCopyPrefix = "capsule",
 }: CapsuleActionMenuProps) {
   const { t } = useI18n();
   const permissions = getCapsuleMenuPermissions(
@@ -324,6 +317,7 @@ function CapsuleActionMenu({
       />
       <CapsuleEditMenuSection
         disabled={disabled}
+        capsule={capsule}
         canRevert={permissions.canRevert}
         canSave={permissions.canSave}
         canDuplicate={permissions.canDuplicate}
@@ -331,8 +325,10 @@ function CapsuleActionMenu({
         onRename={onRename}
         onRevert={onRevert}
         onSave={onSave}
+        onSetPin={onSetPin}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        pinCopyPrefix={pinCopyPrefix}
       />
     </Menu>
   );

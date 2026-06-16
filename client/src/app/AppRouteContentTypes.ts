@@ -136,6 +136,11 @@ export type AppRouteContentProps = SharedFilterProps & {
   onRevertOutfit: (outfitId?: string) => Promise<void>;
   onSaveCapsule: (capsuleId?: string) => Promise<void>;
   onSaveOutfit: (outfitId?: string) => Promise<void>;
+  onSetCapsulePin: (
+    capsuleId: string | undefined,
+    pin: boolean,
+  ) => Promise<void>;
+  onSetOutfitPin: (outfitId: string | undefined, pin: boolean) => Promise<void>;
   onReplaceOutfitItems: (
     outfitId: string,
     items: OutfitItemSnapshot[],

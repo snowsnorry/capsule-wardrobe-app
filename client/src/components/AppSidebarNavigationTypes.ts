@@ -5,6 +5,7 @@ type AppId = "capsule" | "outfit" | "explore" | "wardrobe" | "statistics";
 type CapsuleNavItem = {
   id?: string;
   name?: string;
+  pin?: boolean;
   updatedAt?: string;
   [key: string]: unknown;
 };
@@ -53,6 +54,8 @@ type AppSidebarNavigationProps = {
   ) => void;
   capsuleHasUnsavedChanges?: (capsule: CapsuleNavItem) => boolean;
   outfitHasUnsavedChanges?: (outfit: OutfitNavItem) => boolean;
+  onSetCapsulePin?: (capsuleId: string, pin: boolean) => Promise<void> | void;
+  onSetOutfitPin?: (outfitId: string, pin: boolean) => Promise<void> | void;
   onExpandedAction?: () => void;
   collapsedExpandHitbox?: ReactNode;
 };

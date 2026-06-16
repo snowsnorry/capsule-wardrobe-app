@@ -78,6 +78,14 @@ type AppHandlerBuilderOptions = {
   handleRevertOutfit: (outfitId?: string) => Promise<void>;
   handleSaveCapsule: (capsuleId?: string) => Promise<void>;
   handleSaveOutfit: (outfitId?: string) => Promise<void>;
+  handleSetCapsulePin: (
+    capsuleId: string | undefined,
+    pin: boolean,
+  ) => Promise<void>;
+  handleSetOutfitPin: (
+    outfitId: string | undefined,
+    pin: boolean,
+  ) => Promise<void>;
   navigateNewCapsule: (options?: { replace?: boolean }) => void;
   navigateNewOutfit: (options?: { replace?: boolean }) => void;
   sessionActionContext: SessionActionContext;
@@ -129,6 +137,7 @@ function buildCapsuleHandlers({
   handleRenameCapsule,
   handleRevertCapsule,
   handleSaveCapsule,
+  handleSetCapsulePin,
   navigateNewCapsule,
 }: AppHandlerBuilderOptions) {
   return {
@@ -157,6 +166,7 @@ function buildCapsuleHandlers({
       resetProfileFilters(getAppActionContext()),
     handleRevertCapsule,
     handleSaveCapsule,
+    handleSetCapsulePin,
     handleSaveProfile: async () => handleApplyCapsuleFilters(),
     handleSearchCapsules: async (query: string) => searchUserCapsules(query),
     handleShareCapsule: async (capsuleId = activeCapsuleId) =>
@@ -175,6 +185,7 @@ function buildOutfitHandlers({
   handleRenameOutfit,
   handleRevertOutfit,
   handleSaveOutfit,
+  handleSetOutfitPin,
   navigateNewOutfit,
 }: AppHandlerBuilderOptions) {
   return {
@@ -209,6 +220,7 @@ function buildOutfitHandlers({
     ) => replaceCurrentOutfitItems(getAppActionContext(), outfitId, items),
     handleRevertOutfit,
     handleSaveOutfit,
+    handleSetOutfitPin,
     handleSearchOutfits: async (query: string) => searchUserOutfits(query),
   };
 }

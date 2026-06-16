@@ -34,6 +34,11 @@ type CapsuleStoreDeps = {
     capsuleId: string;
     name: string;
   }) => Promise<CapsuleStoreRecord>;
+  updateCapsulePinByIdForEmailImpl?: (payload: {
+    email: string;
+    capsuleId: string;
+    pin: boolean;
+  }) => Promise<CapsuleStoreRecord>;
   revertCapsuleDraftByIdForEmailImpl?: (payload: {
     email: string;
     capsuleId: string;

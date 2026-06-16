@@ -117,6 +117,8 @@ function createProps(overrides = {}) {
     onOpenOutfitFromSidebar: vi.fn(async () => undefined),
     onSearchCapsules: vi.fn(),
     onSearchOutfits: vi.fn(),
+    onSetCapsulePin: vi.fn(async () => undefined),
+    onSetOutfitPin: vi.fn(async () => undefined),
     ...overrides,
   };
 }

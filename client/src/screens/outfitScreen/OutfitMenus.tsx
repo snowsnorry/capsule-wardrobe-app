@@ -13,6 +13,7 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
+import { RiPushpinLine, RiUnpinLine } from "react-icons/ri";
 import MobileProductCardContextMenu from "../../components/MobileProductCardContextMenu";
 import CardLayoutMenuSection from "../mainScreen/CapsuleActionMenuLayout";
 import { getCanonicalItemUrl, isLikedItem } from "../../utils/likedItemState";
@@ -36,6 +37,7 @@ type OutfitMenuProps = {
   onRename: () => void;
   onRevert: () => void;
   onSave: () => void;
+  onSetPin: (pin: boolean) => void;
   showCardLayout: boolean;
   showAnalyze: boolean;
   t: (key: string, params?: Record<string, unknown>) => string;
@@ -78,6 +80,7 @@ function OutfitLifecycleMenuSection({
   onRename,
   onRevert,
   onSave,
+  onSetPin,
   t,
 }: Pick<
   OutfitMenuProps,
@@ -88,14 +91,27 @@ function OutfitLifecycleMenuSection({
   | "onRename"
   | "onRevert"
   | "onSave"
+  | "onSetPin"
   | "t"
 >) {
   const hasOutfitId = Boolean(outfit?.id);
   const isSaved = outfit?.status === "saved";
+  const isPinned = Boolean(outfit?.pin);
 
   return (
     <>
       <Divider />
+      <MenuItem
+        disabled={disabled || !hasOutfitId}
+        onClick={() => onSetPin(!isPinned)}
+      >
+        <ListItemIcon>
+          {isPinned ? <RiUnpinLine /> : <RiPushpinLine />}
+        </ListItemIcon>
+        <ListItemText>
+          {t(isPinned ? "outfit.unpin" : "outfit.pin")}
+        </ListItemText>
+      </MenuItem>
       <MenuItem disabled={disabled || !hasOutfitId} onClick={onRename}>
         <ListItemIcon>
           <DriveFileRenameOutlineRoundedIcon fontSize="small" />
@@ -154,6 +170,7 @@ export function OutfitMenu({
   onRename,
   onRevert,
   onSave,
+  onSetPin,
   showCardLayout,
   showAnalyze,
   t,
@@ -190,6 +207,7 @@ export function OutfitMenu({
         onRename={onRename}
         onRevert={onRevert}
         onSave={onSave}
+        onSetPin={onSetPin}
       />
     </Menu>
   );

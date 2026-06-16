@@ -10,6 +10,7 @@ import {
   type RenameCapsuleInput,
   type SharedCapsuleRow,
   type UpdateCapsuleReportInput,
+  type UpdateCapsulePinInput,
   type UpdateCapsuleSavedSnapshotInput,
   type UpdateCapsuleSnapshotInput,
   type UpsertSharedCapsuleInput,
@@ -46,6 +47,7 @@ export async function createCapsuleRecord({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -66,6 +68,7 @@ export async function getCapsuleByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -90,13 +93,14 @@ export async function listRecentCapsulesByEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
     from capsules
     where email = ${email}
-    order by updated_at desc, created_at desc, id desc
+    order by pin desc, updated_at desc, created_at desc, id desc
     limit ${limit}
     offset ${offset}
   `,
@@ -134,6 +138,7 @@ export async function searchCapsulesByEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -141,7 +146,7 @@ export async function searchCapsulesByEmail({
     from capsules
     where email = ${email}
       and lower(name) like ${normalizedQuery}
-    order by updated_at desc, created_at desc
+    order by pin desc, updated_at desc, created_at desc, id desc
     limit ${limit}
   `,
   );
@@ -193,6 +198,7 @@ export async function updateCapsuleSnapshotByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -220,6 +226,7 @@ export async function updateCapsuleSavedSnapshotByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -255,6 +262,7 @@ export async function updateCapsuleReportByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -281,6 +289,34 @@ export async function renameCapsuleByIdForEmail({
       id,
       email,
       name,
+      pin,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `,
+  );
+  return row || null;
+}
+
+export async function updateCapsulePinByIdForEmail({
+  email,
+  capsuleId,
+  pin,
+}: UpdateCapsulePinInput): Promise<CapsuleRow | null> {
+  const sql = getSqlClient();
+  const row = getFirstRow(
+    await sql<CapsuleRow>`
+    update capsules
+    set
+      pin = ${pin},
+      updated_at = now()
+    where email = ${email} and id = ${capsuleId}
+    returning
+      id,
+      email,
+      name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -307,6 +343,7 @@ export async function saveCapsuleByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -332,6 +369,7 @@ export async function revertCapsuleDraftByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",

@@ -280,6 +280,8 @@ function createProps(
     onRevertOutfit: vi.fn(() => Promise.resolve()),
     onSaveCapsule: vi.fn(() => Promise.resolve()),
     onSaveOutfit: vi.fn(() => Promise.resolve()),
+    onSetCapsulePin: vi.fn(() => Promise.resolve()),
+    onSetOutfitPin: vi.fn(() => Promise.resolve()),
     onSearchCapsules: vi.fn(() =>
       Promise.resolve([{ id: "capsule-7", name: "Search result" }]),
     ),

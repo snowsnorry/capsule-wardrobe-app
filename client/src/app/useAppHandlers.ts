@@ -8,6 +8,7 @@ import {
   renameCurrentCapsule,
   revertCurrentCapsule,
   saveCurrentCapsule,
+  setCurrentCapsulePin,
 } from "./capsuleActions";
 import {
   deleteCurrentOutfitReport,
@@ -17,6 +18,7 @@ import {
   renameCurrentOutfit,
   revertCurrentOutfit,
   saveCurrentOutfit,
+  setCurrentOutfitPin,
   selectUserOutfit,
 } from "./outfitActions";
 import { selectCapsule } from "../api/capsules";
@@ -143,6 +145,15 @@ function buildCapsuleHandlerInputs({
     name: string,
     capsuleId = activeCapsuleId,
   ) => renameCurrentCapsule(getAppActionContext(), name, capsuleId);
+  const handleSetCapsulePin = async (
+    capsuleId: string | undefined,
+    pin: boolean,
+  ) =>
+    setCurrentCapsulePin(
+      getAppActionContext(),
+      capsuleId || activeCapsuleId,
+      pin,
+    );
   const handleDuplicateCapsule = async (
     name: string,
     capsuleId = activeCapsuleId,
@@ -176,6 +187,7 @@ function buildCapsuleHandlerInputs({
     handleRenameCapsule,
     handleRevertCapsule,
     handleSaveCapsule,
+    handleSetCapsulePin,
   };
 }
 
@@ -208,6 +220,11 @@ function buildOutfitHandlerInputs({
     revertCurrentOutfit(getAppActionContext(), outfitId);
   const handleRenameOutfit = async (name: string, outfitId = activeOutfitId) =>
     renameCurrentOutfit(getAppActionContext(), name, outfitId);
+  const handleSetOutfitPin = async (
+    outfitId: string | undefined,
+    pin: boolean,
+  ) =>
+    setCurrentOutfitPin(getAppActionContext(), outfitId || activeOutfitId, pin);
   const handleDuplicateOutfit = async (
     name: string,
     outfitId = activeOutfitId,
@@ -240,6 +257,7 @@ function buildOutfitHandlerInputs({
     handleRenameOutfit,
     handleRevertOutfit,
     handleSaveOutfit,
+    handleSetOutfitPin,
   };
 }
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { ComponentProps } from "react";
@@ -19,9 +19,13 @@ vi.mock("../i18n/useI18n", () => ({
           "wardrobe.searchOutfits": "Search outfits",
           "wardrobe.newOutfit": "New outfit",
           "capsule.new": "New capsule",
+          "capsule.pin": "Pin capsule",
           "capsule.search": "Search capsules",
+          "capsule.unpin": "Unpin capsule",
           "capsule.notSaved": "Not saved",
           "capsule.openCapsuleActions": "Capsule actions {name}",
+          "outfit.pin": "Pin outfit",
+          "outfit.unpin": "Unpin outfit",
         }[key] || key;
       return value.replace(/\{(\w+)\}/g, (_match, token: string) =>
         String(params?.[token] ?? `{${token}}`),
@@ -155,7 +159,84 @@ describe("AppSidebarNavigation", () => {
     expect(getComputedStyle(showMoreRow).marginLeft).toBe("0px");
     expect(getComputedStyle(showMoreRow).paddingLeft).toBe("40px");
     expect(exploreRow.querySelector("svg")).toBeNull();
-    expect(capsuleRow.firstElementChild).toHaveTextContent("Capsule 1");
+    expect(capsuleRow.querySelector(".MuiListItemText-root")).toHaveTextContent(
+      "Capsule 1",
+    );
+  });
+
+  test("sorts pinned capsule rows above unpinned rows inside their group", () => {
+    renderNavigation({
+      activeCapsuleId: "capsule-pinned-new",
+      activeCapsule: {
+        id: "capsule-pinned-new",
+        name: "Pinned new",
+        pin: true,
+        updatedAt: "2026-06-03T00:00:00.000Z",
+        status: "saved",
+      },
+      capsuleList: [
+        {
+          id: "capsule-unpinned",
+          name: "Unpinned latest",
+          pin: false,
+          updatedAt: "2026-06-04T00:00:00.000Z",
+          status: "saved",
+        },
+        {
+          id: "capsule-pinned-old",
+          name: "Pinned old",
+          pin: true,
+          updatedAt: "2026-06-01T00:00:00.000Z",
+          status: "saved",
+        },
+        {
+          id: "capsule-pinned-new",
+          name: "Pinned new",
+          pin: true,
+          updatedAt: "2026-06-03T00:00:00.000Z",
+          status: "saved",
+        },
+      ],
+      capsulePagination: {
+        limit: 10,
+        offset: 0,
+        total: 3,
+        hasMore: false,
+      },
+    });
+
+    const navigationText =
+      screen.getByTestId("sidebar-navigation-list").textContent || "";
+    expect(navigationText.indexOf("Pinned new")).toBeLessThan(
+      navigationText.indexOf("Pinned old"),
+    );
+    expect(navigationText.indexOf("Pinned old")).toBeLessThan(
+      navigationText.indexOf("Unpinned latest"),
+    );
+  });
+
+  test("pins capsule rows without triggering row open", () => {
+    const onOpenCapsule = vi.fn();
+    const onSetCapsulePin = vi.fn();
+    renderNavigation({ onOpenCapsule, onSetCapsulePin });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Pin capsule" })[0]);
+
+    expect(onSetCapsulePin).toHaveBeenCalledWith("capsule-1", true);
+    expect(onOpenCapsule).not.toHaveBeenCalled();
+
+    cleanup();
+    renderNavigation({
+      capsuleList: [{ ...createCapsules(1)[0], pin: true }],
+      activeCapsule: { ...createCapsules(1)[0], pin: true },
+      onOpenCapsule,
+      onSetCapsulePin,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Unpin capsule" }));
+
+    expect(onSetCapsulePin).toHaveBeenLastCalledWith("capsule-1", false);
+    expect(onOpenCapsule).not.toHaveBeenCalled();
   });
 
   test("keeps capsule unsaved dot and hover menu mutually exclusive", () => {

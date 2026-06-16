@@ -16,6 +16,7 @@ import {
   saveOutfit,
   searchOutfits,
   selectOutfit,
+  setOutfitPin,
   subscribeOutfitEvents,
   updateOutfitItems,
 } from "../api/outfits";
@@ -38,6 +39,7 @@ import {
   saveCurrentOutfit,
   searchUserOutfits,
   selectUserOutfit,
+  setCurrentOutfitPin,
 } from "./outfitActions";
 import { createActionContext } from "./testUtils";
 
@@ -57,6 +59,7 @@ vi.mock("../api/outfits", () => ({
   saveOutfit: vi.fn(),
   searchOutfits: vi.fn(),
   selectOutfit: vi.fn(),
+  setOutfitPin: vi.fn(),
   subscribeOutfitEvents: vi.fn(),
   updateOutfitItems: vi.fn(),
 }));
@@ -229,6 +232,9 @@ describe("outfitActions", () => {
     vi.mocked(renameOutfit).mockResolvedValue({
       outfit: { ...outfit, name: "Travel" },
     });
+    vi.mocked(setOutfitPin).mockResolvedValue({
+      outfit: { ...outfit, pin: true },
+    });
     vi.mocked(duplicateOutfit).mockResolvedValue({
       outfit: { ...outfit, id: "copy" },
     });
@@ -243,6 +249,7 @@ describe("outfitActions", () => {
     await saveCurrentOutfit(context, "outfit-1");
     await revertCurrentOutfit(context, "outfit-1");
     await renameCurrentOutfit(context, "Travel", "outfit-1");
+    await setCurrentOutfitPin(context, "outfit-1", true);
     await expect(
       duplicateCurrentOutfit(context, "Copy", "outfit-1"),
     ).resolves.toMatchObject({ id: "copy" });
@@ -251,19 +258,20 @@ describe("outfitActions", () => {
     expect(saveOutfit).toHaveBeenCalledWith("outfit-1");
     expect(revertOutfit).toHaveBeenCalledWith("outfit-1");
     expect(renameOutfit).toHaveBeenCalledWith("outfit-1", "Travel");
+    expect(setOutfitPin).toHaveBeenCalledWith("outfit-1", true);
     expect(duplicateOutfit).toHaveBeenCalledWith("outfit-1", "Copy");
     expect(updateOutfitItems).toHaveBeenCalledWith("outfit-1", []);
     expect(context.setActiveOutfitMeta).toHaveBeenCalledWith(
       expect.objectContaining({ id: "copy" }),
     );
-    expect(fetchRecentOutfits).toHaveBeenCalledTimes(5);
-    expect(context.setIsContentOperationLoading).toHaveBeenCalledTimes(10);
+    expect(fetchRecentOutfits).toHaveBeenCalledTimes(6);
+    expect(context.setIsContentOperationLoading).toHaveBeenCalledTimes(12);
     expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(
       1,
       true,
     );
     expect(context.setIsContentOperationLoading).toHaveBeenNthCalledWith(
-      10,
+      12,
       false,
     );
   });
@@ -277,6 +285,7 @@ describe("outfitActions", () => {
     await saveCurrentOutfit(context, "");
     await revertCurrentOutfit(context, "");
     await renameCurrentOutfit(context, "Name", "");
+    await setCurrentOutfitPin(context, "", true);
     await duplicateCurrentOutfit(context, "Copy", "");
     await deleteCurrentOutfit(context, "");
     await replaceCurrentOutfitItems(context, "", []);

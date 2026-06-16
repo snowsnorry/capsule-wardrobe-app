@@ -8,15 +8,9 @@ import {
 import type { CapsuleReport } from "../app/appTypes";
 
 type CapsuleResponse = JsonObject;
-type CapsuleReportResponse = {
-  ok: true;
-  report: CapsuleReport;
-};
+type CapsuleReportResponse = { ok: true; report: CapsuleReport };
 type CapsuleFilters = Record<string, unknown>;
-type CapsuleListOptions = {
-  limit?: number;
-  offset?: number;
-};
+type CapsuleListOptions = { limit?: number; offset?: number };
 type CapsuleCreatePayload = Record<string, unknown> & {
   filters?: CapsuleFilters | null;
   name?: string;
@@ -24,19 +18,14 @@ type CapsuleCreatePayload = Record<string, unknown> & {
 type CapsuleFiltersOptions = {
   regenerate?: boolean;
 };
-type RequestErrorWithStatus = Error & {
-  status: number;
-};
+type RequestErrorWithStatus = Error & { status: number };
 type EventStreamLike = {
   fetchEventSource: (
     url: string,
     options: Record<string, unknown>,
   ) => Promise<unknown>;
 };
-type CapsuleEventSourceMessage = {
-  data?: string;
-  event?: string;
-};
+type CapsuleEventSourceMessage = { data?: string; event?: string };
 type CapsuleReportStreamResponse = Pick<Response, "ok" | "status"> & {
   headers: Pick<Headers, "get">;
 };
@@ -233,6 +222,18 @@ async function renameCapsule(
   });
 }
 
+async function setCapsulePin(
+  id: string,
+  pin: boolean,
+): Promise<CapsuleResponse> {
+  return requestJson(capsuleUrl(`${capsuleIdPath(id)}/pin`), {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin }),
+  });
+}
+
 async function duplicateCapsule(
   id: string,
   name?: string,
@@ -386,6 +387,7 @@ export {
   renameCapsule,
   revertCapsule,
   saveCapsule,
+  setCapsulePin,
   fetchSharedCapsule,
   importSharedCapsule,
   selectCapsule,

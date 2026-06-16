@@ -6,6 +6,7 @@ import {
   renameCapsule,
   revertCapsule,
   saveCapsule,
+  setCapsulePin,
 } from "../api/capsules";
 import { fromContext, type AppActionContext } from "./actionContext";
 import { runContentOperation } from "./capsuleActionOperation";
@@ -143,6 +144,26 @@ async function renameCurrentCapsule(
   );
 }
 
+async function setCurrentCapsulePin(
+  context: AppActionContext,
+  capsuleId: string,
+  pin: boolean,
+) {
+  await mutateCurrentCapsule(
+    context,
+    capsuleId,
+    () => setCapsulePin(capsuleId, pin) as Promise<CapsuleMutationResponse>,
+    (result) => {
+      if (capsuleId === fromContext<string>(context, "activeCapsuleId")) {
+        fromContext<(capsule?: CapsuleMeta | null) => void>(
+          context,
+          "setActiveCapsuleMeta",
+        )(result.capsule);
+      }
+    },
+  );
+}
+
 async function duplicateCurrentCapsule(
   context: AppActionContext,
   name: string,
@@ -192,4 +213,5 @@ export {
   renameCurrentCapsule,
   revertCurrentCapsule,
   saveCurrentCapsule,
+  setCurrentCapsulePin,
 };

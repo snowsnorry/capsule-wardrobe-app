@@ -27,6 +27,10 @@ export type OutfitScreenProps = {
   onRevertOutfit: (outfitId?: string) => Promise<void>;
   onSaveToPersonalItems?: (item: WardrobeItem) => Promise<void>;
   onSaveOutfit: (outfitId?: string) => Promise<void>;
+  onSetOutfitPin?: (
+    outfitId: string | undefined,
+    pin: boolean,
+  ) => Promise<void>;
   onSetItemLike: (item: WardrobeItem, isLiked: boolean) => Promise<void>;
   onUpdateUploadedWardrobeItem?: (
     item: WardrobeItem,

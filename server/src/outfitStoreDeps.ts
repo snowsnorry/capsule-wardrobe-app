@@ -9,6 +9,7 @@ import {
   revertOutfitDraftByIdForEmail,
   saveOutfitByIdForEmail,
   searchOutfitsByEmail,
+  updateOutfitPinByIdForEmail,
   updateOutfitReportByIdForEmail,
   updateOutfitSnapshotByIdForEmail,
 } from "./db.js";
@@ -42,6 +43,11 @@ type OutfitStoreDeps = {
     email: string;
     outfitId: string;
     name: string;
+  }) => Promise<OutfitStoreRecord>;
+  updateOutfitPinByIdForEmailImpl?: (payload: {
+    email: string;
+    outfitId: string;
+    pin: boolean;
   }) => Promise<OutfitStoreRecord>;
   revertOutfitDraftByIdForEmailImpl?: (payload: {
     email: string;
@@ -80,6 +86,7 @@ const defaultOutfitStoreDeps: ResolvedOutfitStoreDeps = {
   revertOutfitDraftByIdForEmailImpl: revertOutfitDraftByIdForEmail,
   saveOutfitByIdForEmailImpl: saveOutfitByIdForEmail,
   searchOutfitsByEmailImpl: searchOutfitsByEmail,
+  updateOutfitPinByIdForEmailImpl: updateOutfitPinByIdForEmail,
   updateOutfitReportByIdForEmailImpl: updateOutfitReportByIdForEmail,
   updateOutfitSnapshotByIdForEmailImpl: updateOutfitSnapshotByIdForEmail,
 };

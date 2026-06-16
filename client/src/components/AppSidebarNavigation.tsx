@@ -60,6 +60,8 @@ function SidebarNavigationList({
   onOpenOutfitActions,
   onSearchCapsules,
   onSearchOutfits = () => {},
+  onSetCapsulePin,
+  onSetOutfitPin,
   onToggleSection,
   personalItemsCount,
   t,
@@ -100,6 +102,7 @@ function SidebarNavigationList({
         onOpenOutfit={onOpenOutfit}
         onOpenOutfitActions={onOpenOutfitActions}
         onSearchOutfits={onSearchOutfits}
+        onSetOutfitPin={onSetOutfitPin}
         onToggle={() => onToggleSection("outfits")}
         outfitHasUnsavedChanges={outfitHasUnsavedChanges}
         t={t}
@@ -121,6 +124,7 @@ function SidebarNavigationList({
         onOpenCapsule={onOpenCapsule}
         onOpenCapsuleActions={onOpenCapsuleActions}
         onSearchCapsules={onSearchCapsules}
+        onSetCapsulePin={onSetCapsulePin}
         onToggle={() => onToggleSection("capsules")}
         t={t}
       />
@@ -164,6 +168,8 @@ function AppSidebarNavigation({
   onOpenCapsuleActions,
   onOpenOutfit,
   onOpenOutfitActions,
+  onSetCapsulePin,
+  onSetOutfitPin,
   capsuleHasUnsavedChanges = () => false,
   outfitHasUnsavedChanges = () => false,
   onExpandedAction,
@@ -255,6 +261,8 @@ function AppSidebarNavigation({
         onOpenOutfitActions={onOpenOutfitActions}
         onSearchCapsules={onSearchCapsules}
         onSearchOutfits={onSearchOutfits}
+        onSetCapsulePin={onSetCapsulePin}
+        onSetOutfitPin={onSetOutfitPin}
         onToggleSection={handleToggleSection}
         personalItemsCount={personalItemsCount}
         t={t}

@@ -337,6 +337,7 @@ export type CapsuleDraft = {
 export type CapsuleMeta = {
   id?: string;
   name?: string;
+  pin?: boolean;
   draft?: CapsuleDraft | null;
   saved?: CapsuleDraft | null;
   effective?: CapsuleDraft | null;
@@ -347,6 +348,7 @@ export type CapsuleMeta = {
 export type OutfitMeta = {
   id?: string;
   name?: string;
+  pin?: boolean;
   draft?: OutfitSnapshot | null;
   saved?: OutfitSnapshot | null;
   effective?: OutfitSnapshot | null;

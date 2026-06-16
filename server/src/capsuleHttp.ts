@@ -164,6 +164,7 @@ export function toCapsuleSummary(capsule) {
   return {
     id: capsule.id,
     name: capsule.name,
+    pin: Boolean(capsule.pin),
     status: capsule.status,
     createdAt: capsule.createdAt,
     updatedAt: capsule.updatedAt,

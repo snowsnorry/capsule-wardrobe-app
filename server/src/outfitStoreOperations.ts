@@ -128,6 +128,21 @@ async function renameOutfitForStore(
   );
 }
 
+async function setOutfitPinForStore(
+  email: string,
+  outfitId: string,
+  pin: boolean,
+  deps: ResolvedOutfitStoreDeps,
+): Promise<NormalizedOutfitRecord | null> {
+  return normalizeOutfitRecord(
+    await deps.updateOutfitPinByIdForEmailImpl({
+      email,
+      outfitId,
+      pin,
+    }),
+  );
+}
+
 async function duplicateOutfitForStore(
   email: string,
   outfitId: string,
@@ -177,6 +192,8 @@ function createOutfitStoreOperations(deps: ResolvedOutfitStoreDeps) {
     ) => listRecentOutfitsForStore(email, limit, offset, deps),
     renameOutfit: (email: string, outfitId: string, name: string) =>
       renameOutfitForStore(email, outfitId, name, deps),
+    setOutfitPin: (email: string, outfitId: string, pin: boolean) =>
+      setOutfitPinForStore(email, outfitId, pin, deps),
     revertOutfit: async (email: string, outfitId: string) =>
       normalizeOutfitRecord(
         await deps.revertOutfitDraftByIdForEmailImpl({ email, outfitId }),

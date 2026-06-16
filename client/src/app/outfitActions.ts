@@ -14,6 +14,7 @@ export {
   revertCurrentOutfit,
   saveCurrentOutfit,
   selectUserOutfit,
+  setCurrentOutfitPin,
 } from "./outfitMutationActions";
 export {
   deleteCurrentOutfitImage,

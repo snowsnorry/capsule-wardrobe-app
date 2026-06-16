@@ -252,6 +252,7 @@ export type CapsuleRow = {
   id: string;
   email: string;
   name: string;
+  pin?: boolean | null;
   draft: JsonObject | null;
   saved: JsonObject | null;
   createdAt: string | Date;
@@ -262,6 +263,7 @@ export type OutfitRow = {
   id: string;
   email: string;
   name: string;
+  pin?: boolean | null;
   draft: JsonObject | null;
   saved: JsonObject | null;
   createdAt: string | Date;
@@ -338,6 +340,18 @@ export type RenameOutfitInput = {
   email: string;
   outfitId: string;
   name: string;
+};
+
+export type UpdateCapsulePinInput = {
+  email: string;
+  capsuleId: string;
+  pin: boolean;
+};
+
+export type UpdateOutfitPinInput = {
+  email: string;
+  outfitId: string;
+  pin: boolean;
 };
 
 export type UpsertSharedCapsuleInput = {

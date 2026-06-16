@@ -15,6 +15,7 @@ describe("capsule HTTP responses", () => {
     const capsule = {
       id: "capsule-1",
       name: "Travel",
+      pin: true,
       status: "saved",
       draft: {
         filters: {},
@@ -26,6 +27,7 @@ describe("capsule HTTP responses", () => {
 
     const response = toCapsuleResponse(capsule);
 
+    expect(response.pin).toBe(true);
     expect(response.draft?.report?.verdict).toEqual({
       llmStatus: "excellent",
       score: 0.5,

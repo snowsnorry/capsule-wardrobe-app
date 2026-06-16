@@ -15,6 +15,7 @@ import {
   refreshCapsuleList,
   saveCurrentCapsule,
   searchUserCapsules,
+  setCurrentCapsulePin,
   shareCurrentCapsule,
 } from "./capsuleActions";
 import {
@@ -35,6 +36,7 @@ import {
   revertCapsule,
   saveCapsule,
   searchCapsules,
+  setCapsulePin,
   shareCapsule,
   updateCapsuleFilters,
 } from "../api/capsules";
@@ -52,6 +54,7 @@ vi.mock("../api/capsules", () => ({
   revertCapsule: vi.fn(),
   saveCapsule: vi.fn(),
   searchCapsules: vi.fn(),
+  setCapsulePin: vi.fn(),
   shareCapsule: vi.fn(),
   updateCapsuleFilters: vi.fn(),
 }));
@@ -175,6 +178,9 @@ describe("capsuleActions", () => {
     vi.mocked(renameCapsule).mockResolvedValue({
       capsule: createTestCapsule({ name: "Renamed" }),
     });
+    vi.mocked(setCapsulePin).mockResolvedValue({
+      capsule: createTestCapsule({ pin: true }),
+    });
     vi.mocked(deleteCapsule).mockResolvedValue({
       activeCapsule: createTestCapsule({ id: "capsule-2" }),
     });
@@ -183,12 +189,14 @@ describe("capsuleActions", () => {
     await saveCurrentCapsule(context, "capsule-1");
     await revertCurrentCapsule(context, "capsule-1");
     await renameCurrentCapsule(context, "Renamed", "capsule-1");
+    await setCurrentCapsulePin(context, "capsule-1", true);
     await deleteCurrentCapsule(context, "capsule-1");
     await saveCurrentCapsule(context, "");
 
     expect(saveCapsule).toHaveBeenCalledWith("capsule-1");
     expect(revertCapsule).toHaveBeenCalledWith("capsule-1");
     expect(renameCapsule).toHaveBeenCalledWith("capsule-1", "Renamed");
+    expect(setCapsulePin).toHaveBeenCalledWith("capsule-1", true);
     expect(deleteCapsule).toHaveBeenCalledWith("capsule-1");
     expect(context.setActiveCapsuleMeta).toHaveBeenCalledWith(
       expect.objectContaining({ status: "saved" }),
@@ -423,12 +431,16 @@ describe("capsuleActions", () => {
     vi.mocked(renameCapsule).mockResolvedValue({
       capsule: createTestCapsule({ id: "capsule-2", name: "Other" }),
     });
+    vi.mocked(setCapsulePin).mockResolvedValue({
+      capsule: createTestCapsule({ id: "capsule-2", pin: true }),
+    });
     vi.mocked(deleteCapsule).mockResolvedValue({});
     const context = createActionContext({ activeCapsuleId: "capsule-1" });
 
     await saveCurrentCapsule(context, "capsule-2");
     await revertCurrentCapsule(context, "capsule-2");
     await renameCurrentCapsule(context, "Other", "capsule-2");
+    await setCurrentCapsulePin(context, "capsule-2", true);
     await deleteCurrentCapsule(context, "capsule-2");
 
     expect(context.setActiveCapsuleMeta).not.toHaveBeenCalled();

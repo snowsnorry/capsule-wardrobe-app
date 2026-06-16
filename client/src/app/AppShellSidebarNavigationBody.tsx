@@ -1,7 +1,10 @@
 import { Box } from "@mui/material";
 import type { RefObject } from "react";
 import AppSidebarNavigation from "../components/AppSidebarNavigation";
-import type { AppId } from "../components/AppSidebarNavigationTypes";
+import type {
+  AppId,
+  AppSidebarNavigationProps,
+} from "../components/AppSidebarNavigationTypes";
 import type { AppShellCapsuleActionMenuController } from "./AppShellCapsuleActionMenu";
 import type { AppShellOutfitActionMenuController } from "./AppShellOutfitActionMenu";
 import type {
@@ -48,6 +51,11 @@ type AppShellSidebarNavigationBodyProps = {
   ) => Promise<void>;
   onSearchCapsules: () => void;
   onSearchOutfits: () => void;
+  onSetCapsulePin: (
+    capsuleId: string | undefined,
+    pin: boolean,
+  ) => Promise<void>;
+  onSetOutfitPin: (outfitId: string | undefined, pin: boolean) => Promise<void>;
   personalItemsCount?: number | null;
 };
 
@@ -70,6 +78,54 @@ function SidebarExpandHitbox({ onClick }: { onClick: () => void }) {
       sx={{ flex: 1, minHeight: 0, cursor: "pointer" }}
     />
   );
+}
+
+function buildNavigationHandlers({
+  capsuleActionMenuControllerRef,
+  closeSidebar,
+  isOverlaySidebar,
+  onOpenCapsuleFromSidebar,
+  onOpenOutfitFromSidebar,
+  onSetCapsulePin,
+  onSetOutfitPin,
+  outfitActionMenuControllerRef,
+}: Pick<
+  AppShellSidebarNavigationBodyProps,
+  | "capsuleActionMenuControllerRef"
+  | "closeSidebar"
+  | "isOverlaySidebar"
+  | "onOpenCapsuleFromSidebar"
+  | "onOpenOutfitFromSidebar"
+  | "onSetCapsulePin"
+  | "onSetOutfitPin"
+  | "outfitActionMenuControllerRef"
+>) {
+  const overlayCompletion = getOverlayCompletion(
+    isOverlaySidebar,
+    closeSidebar,
+  );
+  const onOpenCapsuleActions: NonNullable<
+    AppSidebarNavigationProps["onOpenCapsuleActions"]
+  > = (event, capsule) =>
+    capsuleActionMenuControllerRef.current?.openCapsuleActions(event, capsule);
+  const onOpenOutfitActions: NonNullable<
+    AppSidebarNavigationProps["onOpenOutfitActions"]
+  > = (event, outfit) =>
+    outfitActionMenuControllerRef.current?.openOutfitActions(event, outfit);
+
+  return {
+    onOpenCapsule: (capsuleId: string) =>
+      void onOpenCapsuleFromSidebar(capsuleId, overlayCompletion),
+    onOpenOutfit: (outfitId: string) =>
+      void onOpenOutfitFromSidebar(outfitId, overlayCompletion),
+    onOpenCapsuleActions,
+    onOpenOutfitActions,
+    onSetCapsulePin: (capsuleId: string | undefined, pin: boolean) =>
+      void onSetCapsulePin(capsuleId, pin),
+    onSetOutfitPin: (outfitId: string | undefined, pin: boolean) =>
+      void onSetOutfitPin(outfitId, pin),
+    overlayCompletion,
+  };
 }
 
 export default function AppShellSidebarNavigationBody({
@@ -99,12 +155,20 @@ export default function AppShellSidebarNavigationBody({
   onOpenOutfitFromSidebar,
   onSearchCapsules,
   onSearchOutfits,
+  onSetCapsulePin,
+  onSetOutfitPin,
   personalItemsCount,
 }: AppShellSidebarNavigationBodyProps) {
-  const overlayCompletion = getOverlayCompletion(
-    isOverlaySidebar,
+  const navigationHandlers = buildNavigationHandlers({
+    capsuleActionMenuControllerRef,
     closeSidebar,
-  );
+    isOverlaySidebar,
+    onOpenCapsuleFromSidebar,
+    onOpenOutfitFromSidebar,
+    onSetCapsulePin,
+    onSetOutfitPin,
+    outfitActionMenuControllerRef,
+  });
 
   return (
     <AppSidebarNavigation
@@ -126,37 +190,22 @@ export default function AppShellSidebarNavigationBody({
       onLoadMoreCapsules={onLoadMoreCapsules}
       onLoadMoreOutfits={onLoadMoreOutfits}
       onCreateCapsule={async () => {
-        await onCreateCapsuleFromSidebar(overlayCompletion);
+        await onCreateCapsuleFromSidebar(navigationHandlers.overlayCompletion);
       }}
       onCreateOutfit={async () => {
-        await onCreateOutfitFromSidebar(overlayCompletion);
+        await onCreateOutfitFromSidebar(navigationHandlers.overlayCompletion);
       }}
       onSearchCapsules={onSearchCapsules}
       onSearchOutfits={onSearchOutfits}
-      onOpenCapsule={(capsuleId) => {
-        void onOpenCapsuleFromSidebar(
-          capsuleId,
-          isOverlaySidebar ? closeSidebar : undefined,
-        );
-      }}
-      onOpenOutfit={(outfitId) => {
-        void onOpenOutfitFromSidebar(
-          outfitId,
-          isOverlaySidebar ? closeSidebar : undefined,
-        );
-      }}
-      onOpenCapsuleActions={(event, capsule) => {
-        capsuleActionMenuControllerRef.current?.openCapsuleActions(
-          event,
-          capsule,
-        );
-      }}
-      onOpenOutfitActions={(event, outfit) => {
-        outfitActionMenuControllerRef.current?.openOutfitActions(event, outfit);
-      }}
+      onOpenCapsule={navigationHandlers.onOpenCapsule}
+      onOpenOutfit={navigationHandlers.onOpenOutfit}
+      onOpenCapsuleActions={navigationHandlers.onOpenCapsuleActions}
+      onOpenOutfitActions={navigationHandlers.onOpenOutfitActions}
+      onSetCapsulePin={navigationHandlers.onSetCapsulePin}
+      onSetOutfitPin={navigationHandlers.onSetOutfitPin}
       capsuleHasUnsavedChanges={hasUnsavedCapsuleChanges}
       outfitHasUnsavedChanges={hasUnsavedCapsuleChanges}
-      onExpandedAction={overlayCompletion}
+      onExpandedAction={navigationHandlers.overlayCompletion}
       collapsedExpandHitbox={
         <SidebarExpandHitbox onClick={expandCollapsedSidebar} />
       }

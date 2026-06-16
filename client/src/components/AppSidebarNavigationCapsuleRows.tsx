@@ -9,6 +9,7 @@ import {
 } from "@mui/material";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
+import { RiPushpinFill, RiPushpinLine } from "react-icons/ri";
 import type {
   AppSidebarNavigationProps,
   CapsuleNavItem,
@@ -31,6 +32,8 @@ function getCapsuleName(capsule: CapsuleNavItem | null | undefined) {
 
 function sortNavItemsByUpdated<T extends CapsuleNavItem>(items: T[]) {
   return [...items].sort((left, right) => {
+    const pinOrder = Number(Boolean(right.pin)) - Number(Boolean(left.pin));
+    if (pinOrder !== 0) return pinOrder;
     const updated = String(right.updatedAt || "").localeCompare(
       String(left.updatedAt || ""),
     );
@@ -45,6 +48,46 @@ export function sortCapsulesByUpdated(capsules: CapsuleNavItem[]) {
 
 export function sortOutfitsByUpdated(outfits: OutfitNavItem[]) {
   return sortNavItemsByUpdated(outfits);
+}
+
+const capsulePinSlotSx = {
+  alignItems: "center",
+  display: "flex",
+  height: "100%",
+  justifyContent: "center",
+  left: 0,
+  opacity: 0,
+  pointerEvents: "none",
+  position: "absolute",
+  top: 0,
+  transition: "opacity 160ms ease",
+  width: topLevelIconRailWidth,
+};
+
+const capsulePinButtonSx = {
+  width: 28,
+  height: 28,
+  minWidth: 0,
+  flexShrink: 0,
+  color: "text.secondary",
+  "& svg": { fontSize: 18 },
+};
+
+function capsuleActionsSlotSx(isOverlaySidebar: boolean) {
+  return {
+    display: "flex",
+    position: isOverlaySidebar ? "static" : "absolute",
+    right: 0,
+    flex: "0 0 auto",
+    opacity: isOverlaySidebar ? 1 : 0,
+    width: isOverlaySidebar ? 32 : 0,
+    height: 32,
+    minWidth: 0,
+    overflow: "hidden",
+    pointerEvents: isOverlaySidebar ? "auto" : "none",
+    transform: isOverlaySidebar ? "translateX(0)" : "translateX(6px)",
+    transition: "opacity 160ms ease, transform 180ms ease",
+  };
 }
 
 function capsuleRowSx(isOverlaySidebar: boolean) {
@@ -65,24 +108,21 @@ function capsuleRowSx(isOverlaySidebar: boolean) {
       mr: 0.75,
       transition: "opacity 160ms ease, width 180ms ease, margin 180ms ease",
     },
+    "& .capsule-row-pin-slot": capsulePinSlotSx,
+    "& .capsule-row-pin-slot[data-pinned='true']": {
+      opacity: 1,
+      pointerEvents: "auto",
+    },
+    "&:hover .capsule-row-pin-slot, &:focus-within .capsule-row-pin-slot": {
+      opacity: 1,
+      pointerEvents: "auto",
+    },
+    "& .capsule-row-pin": capsulePinButtonSx,
     "& .capsule-row-text": {
       pr: 0,
       transition: "padding-right 180ms ease",
     },
-    "& .capsule-row-actions-slot": {
-      display: "flex",
-      position: isOverlaySidebar ? "static" : "absolute",
-      right: 0,
-      flex: "0 0 auto",
-      opacity: isOverlaySidebar ? 1 : 0,
-      width: isOverlaySidebar ? 32 : 0,
-      height: 32,
-      minWidth: 0,
-      overflow: "hidden",
-      pointerEvents: isOverlaySidebar ? "auto" : "none",
-      transform: isOverlaySidebar ? "translateX(0)" : "translateX(6px)",
-      transition: "opacity 160ms ease, transform 180ms ease",
-    },
+    "& .capsule-row-actions-slot": capsuleActionsSlotSx(isOverlaySidebar),
     "&:hover .capsule-row-unsaved-dot, &:focus-within .capsule-row-unsaved-dot":
       {
         opacity: 0,
@@ -106,13 +146,51 @@ function capsuleRowSx(isOverlaySidebar: boolean) {
         pointerEvents: "auto",
       },
     "@media (prefers-reduced-motion: reduce)": {
-      "& .capsule-row-unsaved-dot, & .capsule-row-text, & .capsule-row-actions-slot":
+      "& .capsule-row-unsaved-dot, & .capsule-row-text, & .capsule-row-actions-slot, & .capsule-row-pin-slot":
         {
           transition: "none",
           transform: "none",
         },
     },
   };
+}
+
+function CapsulePinButton({
+  capsuleId,
+  isInteractionDisabled,
+  isPinned,
+  label,
+  onSetPin,
+}: {
+  capsuleId: string;
+  isInteractionDisabled: boolean;
+  isPinned: boolean;
+  label: string;
+  onSetPin?: (capsuleId: string, pin: boolean) => Promise<void> | void;
+}) {
+  if (!capsuleId || !onSetPin) return null;
+
+  return (
+    <Box
+      className="capsule-row-pin-slot"
+      data-pinned={isPinned ? "true" : "false"}
+    >
+      <Tooltip title={label}>
+        <IconButton
+          className="capsule-row-pin"
+          aria-label={label}
+          size="small"
+          disabled={isInteractionDisabled}
+          onClick={(event) => {
+            event.stopPropagation();
+            void onSetPin(capsuleId, !isPinned);
+          }}
+        >
+          {isPinned ? <RiPushpinFill /> : <RiPushpinLine />}
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
 }
 
 function CapsuleUnsavedDot({
@@ -198,6 +276,8 @@ function CapsuleRow({
   capsuleHasUnsavedChanges,
   onOpenCapsule,
   onOpenCapsuleActions,
+  onSetCapsulePin,
+  pinCopyPrefix,
   t,
 }: {
   capsule: CapsuleNavItem;
@@ -207,20 +287,32 @@ function CapsuleRow({
   capsuleHasUnsavedChanges: (capsule: CapsuleNavItem) => boolean;
   onOpenCapsule?: (capsuleId: string) => void;
   onOpenCapsuleActions?: AppSidebarNavigationProps["onOpenCapsuleActions"];
+  onSetCapsulePin?: (capsuleId: string, pin: boolean) => Promise<void> | void;
+  pinCopyPrefix: "capsule" | "outfit";
   t: Translate;
 }) {
   const capsuleId = getCapsuleId(capsule);
   const capsuleName = getCapsuleName(capsule);
   const isActive = capsuleId === activeCapsuleId;
+  const isPinned = Boolean(capsule.pin);
+  const pinLabel = t(`${pinCopyPrefix}.${isPinned ? "unpin" : "pin"}`);
 
   return (
     <Tooltip title={capsuleName} placement="right">
       <ListItemButton
+        aria-label={capsuleName}
         selected={isActive}
         disabled={isInteractionDisabled}
         onClick={() => (capsuleId ? onOpenCapsule?.(capsuleId) : undefined)}
         sx={capsuleRowSx(isOverlaySidebar)}
       >
+        <CapsulePinButton
+          capsuleId={capsuleId}
+          isInteractionDisabled={isInteractionDisabled}
+          isPinned={isPinned}
+          label={pinLabel}
+          onSetPin={onSetCapsulePin}
+        />
         <CapsuleRowText capsuleName={capsuleName} isActive={isActive} />
         <CapsuleUnsavedDot
           isVisible={capsuleHasUnsavedChanges(capsule)}
@@ -246,6 +338,8 @@ function ActiveCapsuleAppend({
   isOverlaySidebar,
   onOpenCapsule,
   onOpenCapsuleActions,
+  onSetCapsulePin,
+  pinCopyPrefix,
   t,
 }: {
   activeCapsule: CapsuleNavItem;
@@ -255,6 +349,8 @@ function ActiveCapsuleAppend({
   isOverlaySidebar: boolean;
   onOpenCapsule?: (capsuleId: string) => void;
   onOpenCapsuleActions?: AppSidebarNavigationProps["onOpenCapsuleActions"];
+  onSetCapsulePin?: (capsuleId: string, pin: boolean) => Promise<void> | void;
+  pinCopyPrefix: "capsule" | "outfit";
   t: Translate;
 }) {
   return (
@@ -272,6 +368,8 @@ function ActiveCapsuleAppend({
         capsuleHasUnsavedChanges={capsuleHasUnsavedChanges}
         onOpenCapsule={onOpenCapsule}
         onOpenCapsuleActions={onOpenCapsuleActions}
+        onSetCapsulePin={onSetCapsulePin}
+        pinCopyPrefix={pinCopyPrefix}
         t={t}
       />
     </>
@@ -290,6 +388,8 @@ export function CapsuleRows({
   onLoadMoreCapsules,
   onOpenCapsule,
   onOpenCapsuleActions,
+  onSetCapsulePin,
+  pinCopyPrefix = "capsule",
   t,
   totalCount,
 }: {
@@ -304,6 +404,8 @@ export function CapsuleRows({
   onLoadMoreCapsules?: () => Promise<void> | void;
   onOpenCapsule?: (capsuleId: string) => void;
   onOpenCapsuleActions?: AppSidebarNavigationProps["onOpenCapsuleActions"];
+  onSetCapsulePin?: (capsuleId: string, pin: boolean) => Promise<void> | void;
+  pinCopyPrefix?: "capsule" | "outfit";
   t: Translate;
   totalCount: number;
 }) {
@@ -312,11 +414,9 @@ export function CapsuleRows({
     Boolean(activeCapsuleId) &&
     Boolean(activeCapsule) &&
     !visibleCapsuleIds.has(activeCapsuleId);
-  const displayedCapsuleCount =
-    capsuleList.length + (shouldAppendActiveCapsule ? 1 : 0);
   const adjustedRemainingCount = Math.max(
     0,
-    totalCount - displayedCapsuleCount,
+    totalCount - capsuleList.length - (shouldAppendActiveCapsule ? 1 : 0),
   );
   const showMoreCount = Math.min(sidebarPageSize, adjustedRemainingCount);
 
@@ -332,6 +432,8 @@ export function CapsuleRows({
           capsuleHasUnsavedChanges={capsuleHasUnsavedChanges}
           onOpenCapsule={onOpenCapsule}
           onOpenCapsuleActions={onOpenCapsuleActions}
+          onSetCapsulePin={onSetCapsulePin}
+          pinCopyPrefix={pinCopyPrefix}
           t={t}
         />
       ))}
@@ -344,6 +446,8 @@ export function CapsuleRows({
           isOverlaySidebar={isOverlaySidebar}
           onOpenCapsule={onOpenCapsule}
           onOpenCapsuleActions={onOpenCapsuleActions}
+          onSetCapsulePin={onSetCapsulePin}
+          pinCopyPrefix={pinCopyPrefix}
           t={t}
         />
       ) : null}
@@ -375,6 +479,7 @@ export function OutfitRows({
   onLoadMoreOutfits,
   onOpenOutfit,
   onOpenOutfitActions,
+  onSetOutfitPin,
   t,
   totalCount,
 }: {
@@ -389,6 +494,7 @@ export function OutfitRows({
   onLoadMoreOutfits?: () => Promise<void> | void;
   onOpenOutfit?: (outfitId: string) => void;
   onOpenOutfitActions?: AppSidebarNavigationProps["onOpenOutfitActions"];
+  onSetOutfitPin?: (outfitId: string, pin: boolean) => Promise<void> | void;
   t: Translate;
   totalCount: number;
 }) {
@@ -405,6 +511,8 @@ export function OutfitRows({
       onLoadMoreCapsules={onLoadMoreOutfits}
       onOpenCapsule={onOpenOutfit}
       onOpenCapsuleActions={onOpenOutfitActions}
+      onSetCapsulePin={onSetOutfitPin}
+      pinCopyPrefix="outfit"
       t={t}
       totalCount={totalCount}
     />

@@ -7,6 +7,7 @@ import {
   type OutfitLookupInput,
   type OutfitRow,
   type RenameOutfitInput,
+  type UpdateOutfitPinInput,
   type UpdateOutfitReportInput,
   type UpdateOutfitSnapshotInput,
 } from "./core.js";
@@ -42,6 +43,7 @@ export async function createOutfitRecord({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -62,6 +64,7 @@ export async function getOutfitByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -86,13 +89,14 @@ export async function listRecentOutfitsByEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
       updated_at as "updatedAt"
     from outfits
     where email = ${email}
-    order by updated_at desc, created_at desc, id desc
+    order by pin desc, updated_at desc, created_at desc, id desc
     limit ${limit}
     offset ${offset}
   `,
@@ -130,6 +134,7 @@ export async function searchOutfitsByEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -137,7 +142,7 @@ export async function searchOutfitsByEmail({
     from outfits
     where email = ${email}
       and lower(name) like ${normalizedQuery}
-    order by updated_at desc, created_at desc
+    order by pin desc, updated_at desc, created_at desc, id desc
     limit ${limit}
   `,
   );
@@ -172,6 +177,7 @@ export async function updateOutfitSnapshotByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -206,6 +212,7 @@ export async function updateOutfitReportByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -232,6 +239,34 @@ export async function renameOutfitByIdForEmail({
       id,
       email,
       name,
+      pin,
+      draft,
+      saved,
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `,
+  );
+  return row || null;
+}
+
+export async function updateOutfitPinByIdForEmail({
+  email,
+  outfitId,
+  pin,
+}: UpdateOutfitPinInput): Promise<OutfitRow | null> {
+  const sql = getSqlClient();
+  const row = getFirstRow(
+    await sql<OutfitRow>`
+    update outfits
+    set
+      pin = ${pin},
+      updated_at = now()
+    where email = ${email} and id = ${outfitId}
+    returning
+      id,
+      email,
+      name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -258,6 +293,7 @@ export async function saveOutfitByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",
@@ -283,6 +319,7 @@ export async function revertOutfitDraftByIdForEmail({
       id,
       email,
       name,
+      pin,
       draft,
       saved,
       created_at as "createdAt",

@@ -98,6 +98,13 @@ function createCapsuleMutationDependencies() {
       saved: null,
       status: "new",
     }),
+    setCapsulePinImpl: async (_email, id, pin) => ({
+      id,
+      pin,
+      draft: null,
+      saved: null,
+      status: "new",
+    }),
     duplicateCapsuleImpl: async () => ({
       id: "capsule-3",
       name: "<New capsule (1)>",

@@ -1024,6 +1024,10 @@ test("capsule mutation state and metadata routes map success and missing records
         calls.push({ type: "rename", id, name });
         return { id, name, draft: null, saved: null, status: "new" };
       },
+      setCapsulePinImpl: async (_email, id, pin) => {
+        calls.push({ type: "pin", id, pin });
+        return { id, pin, draft: null, saved: null, status: "new" };
+      },
       duplicateCapsuleImpl: async (_email, id, name) => {
         calls.push({ type: "duplicate", id, name });
         return {
@@ -1068,6 +1072,26 @@ test("capsule mutation state and metadata routes map success and missing records
   });
   expect(rename.response.status).toBe(200);
   expect((rename.json.capsule as { name?: string }).name).toBe("Travel edit");
+
+  const pinned = await requestJson(baseUrl, "/capsules/capsule-1/pin", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { pin: true },
+  });
+  expect(pinned.response.status).toBe(200);
+  expect((pinned.json.capsule as { pin?: boolean }).pin).toBe(true);
+
+  const invalidPin = await requestJson(baseUrl, "/capsules/capsule-1/pin", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { pin: "true" },
+  });
+  expect(invalidPin.response.status).toBe(400);
+  expect(invalidPin.json).toEqual({ error: "invalid_payload" });
 
   const invalidRename = await requestJson(
     baseUrl,
@@ -1119,6 +1143,7 @@ test("capsule mutation state and metadata routes map success and missing records
     { type: "save", id: "capsule-1" },
     { type: "revert", id: "capsule-1" },
     { type: "rename", id: "capsule-1", name: "Travel edit" },
+    { type: "pin", id: "capsule-1", pin: true },
     { type: "duplicate", id: "capsule-1", name: "Copy name" },
     { type: "delete", id: "capsule-1" },
   ]);
@@ -1154,6 +1179,7 @@ test("capsule mutation routes map store failures and not-found responses", async
       saveCapsuleImpl: async () => null,
       revertCapsuleImpl: async () => null,
       renameCapsuleImpl: async () => null,
+      setCapsulePinImpl: async () => null,
       duplicateCapsuleImpl: async () => null,
       getCapsuleImpl: async () => null,
       deleteCapsuleImpl: async () => false,
@@ -1226,6 +1252,20 @@ test("capsule mutation routes map store failures and not-found responses", async
   );
   expect(renameMissing.response.status).toBe(404);
   expect(renameMissing.json).toEqual({ error: "not_found" });
+
+  const pinMissing = await requestJson(
+    missingMutationsServer.baseUrl,
+    "/capsules/capsule-1/pin",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { pin: true },
+    },
+  );
+  expect(pinMissing.response.status).toBe(404);
+  expect(pinMissing.json).toEqual({ error: "not_found" });
 
   const duplicateMissing = await requestJson(
     missingMutationsServer.baseUrl,

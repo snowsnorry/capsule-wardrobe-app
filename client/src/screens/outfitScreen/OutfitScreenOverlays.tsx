@@ -62,6 +62,7 @@ export type OutfitScreenOverlaysProps = {
   onSaveOutfit: OutfitScreenProps["onSaveOutfit"];
   onSaveToPersonalItems?: OutfitScreenProps["onSaveToPersonalItems"];
   onSelectEntry: (entry: OutfitItemSnapshot) => void;
+  onSetOutfitPin?: OutfitScreenProps["onSetOutfitPin"];
   onSetConfirmDialog: Dispatch<SetStateAction<OutfitConfirmState>>;
   onSetImageDialogOpen: (open: boolean) => void;
   onSetItemMenu: Dispatch<SetStateAction<ItemMenuState>>;
@@ -102,6 +103,7 @@ function OutfitMenuOverlay({
   onRequestRename,
   onRequestRevert,
   onSaveOutfit,
+  onSetOutfitPin,
   onUpdateColumns,
   showAnalyze,
   t,
@@ -130,6 +132,10 @@ function OutfitMenuOverlay({
       onSave={() => {
         onMenuClose();
         void onSaveOutfit(activeOutfit?.id);
+      }}
+      onSetPin={(pin) => {
+        onMenuClose();
+        void onSetOutfitPin?.(activeOutfit?.id, pin);
       }}
       showCardLayout={isMobile}
       showAnalyze={showAnalyze}

@@ -38,6 +38,10 @@ type AppShellCapsuleActionMenuProps = {
   onRenameCapsule: (name: string, capsuleId?: string) => Promise<void>;
   onRevertCapsule: (capsuleId?: string) => Promise<void>;
   onSaveCapsule: (capsuleId?: string) => Promise<void>;
+  onSetCapsulePin: (
+    capsuleId: string | undefined,
+    pin: boolean,
+  ) => Promise<void>;
   onShareCapsule: MainScreenProps["onShareCapsule"];
 };
 
@@ -57,6 +61,7 @@ type ShellCapsuleMenuProps = {
   onRename: (state: NameDialogState) => void;
   onRevert: (state: ConfirmState) => void;
   onSaveCapsule: AppShellCapsuleActionMenuProps["onSaveCapsule"];
+  onSetCapsulePin: AppShellCapsuleActionMenuProps["onSetCapsulePin"];
   onShare: (capsule: CapsuleLike | null) => void;
 };
 
@@ -162,6 +167,7 @@ function ShellCapsuleMenu({
   onRename,
   onRevert,
   onSaveCapsule,
+  onSetCapsulePin,
   onShare,
 }: ShellCapsuleMenuProps) {
   return (
@@ -186,6 +192,7 @@ function ShellCapsuleMenu({
         })
       }
       onSave={() => void onSaveCapsule(menuCapsuleRef.current?.id)}
+      onSetPin={(pin) => void onSetCapsulePin(menuCapsuleRef.current?.id, pin)}
       onDuplicate={() =>
         onDuplicate(makeNameDialog("save-as", menuCapsuleRef.current))
       }
@@ -212,6 +219,7 @@ export default function AppShellCapsuleActionMenu({
   onRenameCapsule,
   onRevertCapsule,
   onSaveCapsule,
+  onSetCapsulePin,
   onShareCapsule,
 }: AppShellCapsuleActionMenuProps) {
   const [menu, setMenu] = useState<SidebarCapsuleMenuState>({
@@ -269,6 +277,7 @@ export default function AppShellCapsuleActionMenu({
         onRename={setNameDialog}
         onRevert={setConfirm}
         onSaveCapsule={onSaveCapsule}
+        onSetCapsulePin={onSetCapsulePin}
         onShare={(capsule) => void shareCapsule(capsule, true)}
       />
       <NameDialog

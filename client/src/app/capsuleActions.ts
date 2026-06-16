@@ -6,6 +6,7 @@ export {
   renameCurrentCapsule,
   revertCurrentCapsule,
   saveCurrentCapsule,
+  setCurrentCapsulePin,
 } from "./capsuleLifecycleActions";
 export {
   deleteCurrentCapsuleReport,

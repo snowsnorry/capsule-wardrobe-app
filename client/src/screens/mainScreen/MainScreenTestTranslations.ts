@@ -34,6 +34,8 @@ const labels = {
     editName: "Edit capsule name",
     regenerateAll: "Regenerate all",
     exportPdf: "Export as PDF",
+    pin: "Pin capsule",
+    unpin: "Unpin capsule",
     rename: "Rename",
     revert: "Revert",
     saveAs: "Save as...",
@@ -143,6 +145,8 @@ const labels = {
   outfit: {
     nameLabel: "Outfit name",
     categoryCount: "{category}: {count}",
+    pin: "Pin outfit",
+    unpin: "Unpin outfit",
   },
   wardrobe: {
     filters: {

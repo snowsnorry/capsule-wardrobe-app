@@ -16,6 +16,7 @@ import {
   revertOutfitDraftByIdForEmail,
   saveOutfitByIdForEmail,
   searchOutfitsByEmail,
+  updateOutfitPinByIdForEmail,
   updateOutfitSnapshotByIdForEmail,
 } from "./profileOutfits.js";
 
@@ -43,6 +44,7 @@ const outfitRow: OutfitRow = {
   id: "outfit-1",
   email: "person@example.com",
   name: "Weekend",
+  pin: false,
   draft: { items: [] },
   saved: null,
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -119,12 +121,19 @@ describe("profile outfit persistence helpers", () => {
     expect(values[3]).toEqual(["person@example.com", 5, 10]);
     expect(values[4]).toEqual(["person@example.com"]);
     expect(values[5]).toEqual(["person@example.com", "%weekend%", 4]);
+    expect(statements[3]).toContain(
+      "order by pin desc, updated_at desc, created_at desc, id desc",
+    );
+    expect(statements[5]).toContain(
+      "order by pin desc, updated_at desc, created_at desc, id desc",
+    );
   });
 
   test("updates mutable outfit state and reports deletion by affected rows", async () => {
-    const { values } = useQueuedSql([
+    const { statements, values } = useQueuedSql([
       [outfitRow],
       [],
+      [outfitRow],
       [outfitRow],
       [outfitRow],
       [outfitRow],
@@ -166,6 +175,13 @@ describe("profile outfit persistence helpers", () => {
       }),
     ).resolves.toEqual(outfitRow);
     await expect(
+      updateOutfitPinByIdForEmail({
+        email: "person@example.com",
+        outfitId: "outfit-1",
+        pin: true,
+      }),
+    ).resolves.toEqual(outfitRow);
+    await expect(
       deleteOutfitByIdForEmail({
         email: "person@example.com",
         outfitId: "outfit-1",
@@ -185,6 +201,8 @@ describe("profile outfit persistence helpers", () => {
     ]);
     expect(values[1]).toEqual([null, "person@example.com", "missing"]);
     expect(values[2]).toEqual(["Travel", "person@example.com", "outfit-1"]);
+    expect(statements[5]).toContain("pin = ?");
+    expect(values[5]).toEqual([true, "person@example.com", "outfit-1"]);
     expect(values.at(-1)).toEqual(["person@example.com", "missing"]);
   });
 });

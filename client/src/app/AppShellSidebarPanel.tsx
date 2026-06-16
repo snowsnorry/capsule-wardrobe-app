@@ -203,6 +203,8 @@ function AppShellSidebarBodyContent({
       onOpenOutfitFromSidebar={props.onOpenOutfitFromSidebar || noopAsync}
       onSearchCapsules={model.sidebarSearch.open}
       onSearchOutfits={model.outfitSidebarSearch.open}
+      onSetCapsulePin={props.onSetCapsulePin}
+      onSetOutfitPin={props.onSetOutfitPin || noopAsync}
       personalItemsCount={model.personalItemsCount}
     />
   );
@@ -228,6 +230,7 @@ function AppShellSidebarActionMenus({
         onRenameCapsule={props.onRenameCapsule}
         onRevertCapsule={props.onRevertCapsule}
         onSaveCapsule={props.onSaveCapsule}
+        onSetCapsulePin={props.onSetCapsulePin}
         onShareCapsule={props.onShareCapsule}
       />
       <AppShellOutfitActionMenu
@@ -241,6 +244,7 @@ function AppShellSidebarActionMenus({
         onRenameOutfit={props.onRenameOutfit || noopAsync}
         onRevertOutfit={props.onRevertOutfit || noopAsync}
         onSaveOutfit={props.onSaveOutfit || noopAsync}
+        onSetOutfitPin={props.onSetOutfitPin || noopAsync}
       />
     </>
   );

@@ -12,6 +12,7 @@ type AppNavigationOptions = {
 export type CapsuleLike = {
   id?: string;
   name?: string;
+  pin?: boolean;
   status?: string;
   draft?: unknown;
   effective?: {
@@ -86,6 +87,10 @@ export type MainScreenProps = {
   onSaveCapsule?: (capsuleId?: string) => Promise<void> | void;
   onRevertCapsule?: (capsuleId?: string) => Promise<void> | void;
   onRenameCapsule?: (name: string, capsuleId?: string) => Promise<void> | void;
+  onSetCapsulePin?: (
+    capsuleId: string | undefined,
+    pin: boolean,
+  ) => Promise<void> | void;
   onDuplicateCapsule?: (
     name: string,
     capsuleId?: string,

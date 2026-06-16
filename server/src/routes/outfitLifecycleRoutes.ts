@@ -50,6 +50,29 @@ function registerOutfitMetadataRoutes(app, context) {
   const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
 
   app.patch(
+    "/outfits/:id/pin",
+    requireTrustedOrigin,
+    requireAuth,
+    requireCsrf,
+    async (req, res) => {
+      try {
+        if (typeof req.body?.pin !== "boolean") {
+          return res.status(400).json({ error: "invalid_payload" });
+        }
+        const outfit = await context.setOutfitPinImpl(
+          req.user.email,
+          req.params.id,
+          req.body.pin,
+        );
+        return sendOutfitMutationResponse(req, res, outfit, context);
+      } catch (error) {
+        logError("[outfits/pin]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
+
+  app.patch(
     "/outfits/:id/rename",
     requireTrustedOrigin,
     requireAuth,

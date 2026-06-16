@@ -119,6 +119,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "outfit.nameLabel": "Outfit name",
         "outfit.openActions": "Open actions",
         "outfit.openMissingItemActions": "Open missing item actions",
+        "outfit.pin": "Pin outfit",
         "outfit.renameTitle": "Rename outfit",
         "outfit.regenerateReport": "Regenerate report",
         "outfit.reportConfidence": "Confidence",
@@ -145,6 +146,7 @@ vi.mock("../../i18n/useI18n", () => ({
         "outfit.removeItemTitle": "Remove item",
         "outfit.removeSelectedCount": `Remove ${params?.count ?? 0}`,
         "outfit.removeSelectedTitle": "Remove selected items",
+        "outfit.unpin": "Unpin outfit",
         "outfit.revertConfirm": "Revert",
         "outfit.revertConfirmBody": "Discard unsaved changes?",
         "outfit.revertTitle": "Revert changes",
@@ -1283,6 +1285,37 @@ describe("OutfitScreen", () => {
       await openOutfitActions(user);
       await user.click(screen.getByRole("menuitem", { name: "Save as" }));
       expect(onDuplicateOutfit).toHaveBeenCalledWith("Weekend", "outfit-1");
+    });
+  });
+
+  test("pins and unpins an outfit from the outfit-level menu", async () => {
+    const user = userEvent.setup();
+    const onSetOutfitPin = vi.fn(() => Promise.resolve());
+    const activeOutfit = {
+      id: "outfit-1",
+      name: "Weekend",
+      status: "saved",
+      effective: { items: [] },
+    };
+    renderScreen({
+      activeOutfit,
+      onSetOutfitPin,
+    });
+
+    await expectNoBrowserConfirm(async () => {
+      await openOutfitActions(user);
+      await user.click(screen.getByRole("menuitem", { name: "Pin outfit" }));
+      expect(onSetOutfitPin).toHaveBeenCalledWith("outfit-1", true);
+
+      cleanup();
+      renderScreen({
+        activeOutfit: { ...activeOutfit, pin: true },
+        onSetOutfitPin,
+      });
+
+      await openOutfitActions(user);
+      await user.click(screen.getByRole("menuitem", { name: "Unpin outfit" }));
+      expect(onSetOutfitPin).toHaveBeenLastCalledWith("outfit-1", false);
     });
   });
 

@@ -264,6 +264,8 @@ const en = {
     editName: "Edit capsule name",
     regenerateAll: "Regenerate all",
     exportPdf: "Export as PDF",
+    pin: "Pin capsule",
+    unpin: "Unpin capsule",
     rename: "Rename",
     revert: "Revert",
     saveAs: "Save as...",
@@ -377,6 +379,8 @@ const en = {
   outfit: {
     addItems: "Add items",
     analyzeOutfit: "Analyze",
+    pin: "Pin outfit",
+    unpin: "Unpin outfit",
     nameLabel: "Outfit name",
     saveAsTitle: "Save outfit as",
     renameTitle: "Rename outfit",

@@ -169,6 +169,15 @@ async function renameOutfit(id: string, name: string): Promise<OutfitResponse> {
   });
 }
 
+async function setOutfitPin(id: string, pin: boolean): Promise<OutfitResponse> {
+  return requestJson(outfitUrl(`${outfitIdPath(id)}/pin`), {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin }),
+  });
+}
+
 async function duplicateOutfit(
   id: string,
   name?: string,
@@ -231,6 +240,7 @@ export {
   saveOutfit,
   searchOutfits,
   selectOutfit,
+  setOutfitPin,
   subscribeOutfitEvents,
   updateOutfitItems,
 };

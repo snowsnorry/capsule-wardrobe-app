@@ -150,6 +150,7 @@ function renderMenu(
     onRenameOutfit: vi.fn(async () => undefined),
     onRevertOutfit: vi.fn(async () => undefined),
     onSaveOutfit: vi.fn(async () => undefined),
+    onSetOutfitPin: vi.fn(async () => undefined),
     ...overrides,
   };
   const result = render(<AppShellOutfitActionMenu {...props} />);

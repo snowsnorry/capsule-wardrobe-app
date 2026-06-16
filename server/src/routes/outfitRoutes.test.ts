@@ -258,6 +258,9 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
     id,
     name,
   }));
+  const setOutfitPinImpl = vi.fn(async (_email, id, pin) =>
+    id === "missing" ? null : { ...outfit, id, pin },
+  );
   const duplicateOutfitImpl = vi.fn(async (_email, id, name) =>
     id === "missing" ? null : { ...outfit, id: "outfit-copy", name },
   );
@@ -337,6 +340,7 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
       saveOutfitImpl,
       revertOutfitImpl,
       renameOutfitImpl,
+      setOutfitPinImpl,
       duplicateOutfitImpl,
       getOutfitImpl,
       getCapsuleImpl,
@@ -521,6 +525,41 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
     "outfit-1",
     "Travel",
   );
+
+  const pinned = await requestJson(baseUrl, "/outfits/outfit-1/pin", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { pin: true },
+  });
+  expect(pinned.response.status).toBe(200);
+  expect(setOutfitPinImpl).toHaveBeenCalledWith(
+    "person@example.com",
+    "outfit-1",
+    true,
+  );
+  expect((pinned.json.outfit as { pin?: boolean }).pin).toBe(true);
+
+  const invalidPin = await requestJson(baseUrl, "/outfits/outfit-1/pin", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { pin: "true" },
+  });
+  expect(invalidPin.response.status).toBe(400);
+  expect(invalidPin.json).toEqual({ error: "invalid_payload" });
+
+  const missingPin = await requestJson(baseUrl, "/outfits/missing/pin", {
+    method: "PATCH",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { pin: true },
+  });
+  expect(missingPin.response.status).toBe(404);
+  expect(missingPin.json).toEqual({ error: "not_found" });
 
   const duplicated = await requestJson(
     baseUrl,

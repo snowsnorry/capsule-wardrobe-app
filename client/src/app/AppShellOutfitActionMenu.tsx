@@ -36,6 +36,7 @@ type AppShellOutfitActionMenuProps = {
   onRenameOutfit: (name: string, outfitId?: string) => Promise<void>;
   onRevertOutfit: (outfitId?: string) => Promise<void>;
   onSaveOutfit: (outfitId?: string) => Promise<void>;
+  onSetOutfitPin: (outfitId: string | undefined, pin: boolean) => Promise<void>;
 };
 
 type SidebarOutfitMenuState = {
@@ -180,6 +181,7 @@ function OutfitActionMenuList({
   onClose,
   onDownloadOutfitPdf,
   onSaveOutfit,
+  onSetOutfitPin,
   setConfirm,
   setNameDialog,
 }: {
@@ -189,6 +191,7 @@ function OutfitActionMenuList({
   onClose: () => void;
   onDownloadOutfitPdf: AppShellOutfitActionMenuProps["onDownloadOutfitPdf"];
   onSaveOutfit: AppShellOutfitActionMenuProps["onSaveOutfit"];
+  onSetOutfitPin: AppShellOutfitActionMenuProps["onSetOutfitPin"];
   setConfirm: (state: ConfirmState) => void;
   setNameDialog: (state: NameDialogState) => void;
 }) {
@@ -200,6 +203,7 @@ function OutfitActionMenuList({
       capsule={menu.outfit}
       disabled={disabled}
       allowUnknownShareContent
+      pinCopyPrefix="outfit"
       showShare={false}
       onDownloadPdf={() => void onDownloadOutfitPdf(menuOutfitRef.current?.id)}
       onRename={() => setNameDialog(makeNameDialog("rename", menu.outfit))}
@@ -211,6 +215,7 @@ function OutfitActionMenuList({
         })
       }
       onSave={() => void onSaveOutfit(menuOutfitRef.current?.id)}
+      onSetPin={(pin) => void onSetOutfitPin(menuOutfitRef.current?.id, pin)}
       onDuplicate={() => setNameDialog(makeNameDialog("save-as", menu.outfit))}
       onShare={() => {}}
       onDelete={() =>
@@ -235,6 +240,7 @@ export default function AppShellOutfitActionMenu({
   onRenameOutfit,
   onRevertOutfit,
   onSaveOutfit,
+  onSetOutfitPin,
 }: AppShellOutfitActionMenuProps) {
   const [menu, setMenu] = useState<SidebarOutfitMenuState>({
     anchor: null,
@@ -281,6 +287,7 @@ export default function AppShellOutfitActionMenu({
         onClose={closeMenu}
         onDownloadOutfitPdf={onDownloadOutfitPdf}
         onSaveOutfit={onSaveOutfit}
+        onSetOutfitPin={onSetOutfitPin}
         setConfirm={setConfirm}
         setNameDialog={setNameDialog}
       />

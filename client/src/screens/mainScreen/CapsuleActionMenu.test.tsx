@@ -154,6 +154,42 @@ describe("CapsuleActionMenu", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("shows pin actions above rename and toggles capsule pin state", async () => {
+    const user = userEvent.setup();
+    const onSetPin = vi.fn();
+    renderCapsuleActionMenu({ onSetPin });
+
+    const menuLabels = screen
+      .getAllByRole("menuitem")
+      .map((item) => item.textContent || "");
+    expect(menuLabels.indexOf("Pin capsule")).toBeLessThan(
+      menuLabels.indexOf("Rename"),
+    );
+
+    await user.click(screen.getByRole("menuitem", { name: "Pin capsule" }));
+
+    expect(onSetPin).toHaveBeenCalledWith(true);
+
+    cleanup();
+    const onUnpin = vi.fn();
+    renderCapsuleActionMenu({
+      onSetPin: onUnpin,
+      pinCopyPrefix: "outfit",
+      capsule: {
+        id: "outfit-1",
+        name: "Weekend",
+        pin: true,
+        draft: null,
+        saved: null,
+        status: "saved",
+      },
+    });
+
+    await user.click(screen.getByRole("menuitem", { name: "Unpin outfit" }));
+
+    expect(onUnpin).toHaveBeenCalledWith(false);
+  });
+
   test("does not call action callbacks while disabled", async () => {
     const onDownloadPdf = vi.fn();
     renderCapsuleActionMenu({ disabled: true, onDownloadPdf });

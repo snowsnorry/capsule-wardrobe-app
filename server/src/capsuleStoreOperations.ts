@@ -162,6 +162,21 @@ async function renameCapsuleForStore(
   );
 }
 
+async function setCapsulePinForStore(
+  email: string,
+  capsuleId: string,
+  pin: boolean,
+  deps: ResolvedCapsuleStoreDeps,
+): Promise<NormalizedCapsuleRecord | null> {
+  return normalizeCapsuleRecord(
+    await deps.updateCapsulePinByIdForEmailImpl({
+      email,
+      capsuleId,
+      pin,
+    }),
+  );
+}
+
 async function duplicateCapsuleForStore(
   email: string,
   capsuleId: string,
@@ -271,6 +286,8 @@ function createCapsuleStoreOperations(deps: ResolvedCapsuleStoreDeps) {
       offset: number = 0,
     ) => listRecentCapsulesForStore(email, limit, offset, deps),
     countCapsules: (email: string) => deps.countCapsulesByEmailImpl(email),
+    setCapsulePin: (email: string, capsuleId: string, pin: boolean) =>
+      setCapsulePinForStore(email, capsuleId, pin, deps),
     resolveActiveCapsule: async () => null,
     revertCapsule: async (email: string, capsuleId: string) =>
       normalizeCapsuleRecord(

@@ -19,6 +19,7 @@ const capsuleActions = vi.hoisted(() => ({
   revertCurrentCapsule: vi.fn(),
   saveCurrentCapsule: vi.fn(),
   searchUserCapsules: vi.fn(),
+  setCurrentCapsulePin: vi.fn(),
   shareCurrentCapsule: vi.fn(),
 }));
 const profileActions = vi.hoisted(() => ({
@@ -52,6 +53,7 @@ const outfitActions = vi.hoisted(() => ({
   saveCurrentOutfit: vi.fn(),
   searchUserOutfits: vi.fn(),
   selectUserOutfit: vi.fn(),
+  setCurrentOutfitPin: vi.fn(),
 }));
 const likedItemActions = vi.hoisted(() => ({
   setItemLike: vi.fn(),
@@ -172,6 +174,8 @@ describe("useAppHandlers", () => {
     await result.current.handleRevertOutfit();
     await result.current.handleRenameCapsule("Renamed");
     await result.current.handleRenameOutfit("Outfit renamed");
+    await result.current.handleSetCapsulePin("capsule-1", true);
+    await result.current.handleSetOutfitPin("outfit-1", true);
     await result.current.handleDuplicateCapsule("Copy");
     await result.current.handleDuplicateOutfit("Outfit copy");
     await result.current.handleDeleteCapsuleReport();
@@ -281,6 +285,16 @@ describe("useAppHandlers", () => {
     expect(outfitActions.generateCurrentOutfitImage).toHaveBeenCalledWith(
       actionContext,
       "outfit-1",
+    );
+    expect(capsuleActions.setCurrentCapsulePin).toHaveBeenCalledWith(
+      actionContext,
+      "capsule-1",
+      true,
+    );
+    expect(outfitActions.setCurrentOutfitPin).toHaveBeenCalledWith(
+      actionContext,
+      "outfit-1",
+      true,
     );
     expect(capsulesApi.selectCapsule).toHaveBeenCalledWith("capsule-2");
     expect(navigateCapsule).toHaveBeenCalledWith("capsule-2");

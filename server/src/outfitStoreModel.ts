@@ -21,6 +21,7 @@ export type OutfitRecord = {
 
 export type NormalizedOutfitRecord = Omit<OutfitRecord, "draft" | "saved"> & {
   id?: string | null;
+  pin?: boolean | null;
   draft: OutfitSnapshot | null;
   saved: OutfitSnapshot | null;
   status: "new" | "saved" | "modified";

@@ -55,6 +55,7 @@ export function toOutfitSummary(outfit) {
   return {
     id: outfit.id,
     name: outfit.name,
+    pin: Boolean(outfit.pin),
     status: outfit.status,
     createdAt: outfit.createdAt,
     updatedAt: outfit.updatedAt,

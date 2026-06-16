@@ -336,6 +336,7 @@ function buildOverlayProps({
         ...new Set([...current, getOutfitItemKey(entry)]),
       ]),
     onSetConfirmDialog: confirm.setConfirmDialog,
+    onSetOutfitPin: props.onSetOutfitPin,
     onSetImageDialogOpen: screen.setImageDialogOpen,
     onSetItemMenu: screen.setItemMenu,
     onSetPreviewItem: preview.setPreviewItem,

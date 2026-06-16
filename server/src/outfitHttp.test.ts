@@ -51,6 +51,7 @@ describe("outfitHttp", () => {
     const outfit = {
       id: "outfit-1",
       name: "Weekend",
+      pin: true,
       draft: null,
       saved: savedSnapshot,
       status: "saved",
@@ -61,6 +62,7 @@ describe("outfitHttp", () => {
     expect(toOutfitSummary(outfit)).toEqual({
       id: "outfit-1",
       name: "Weekend",
+      pin: true,
       status: "saved",
       createdAt: "2026-01-01",
       updatedAt: "2026-01-02",

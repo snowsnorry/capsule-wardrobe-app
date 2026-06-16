@@ -32,6 +32,7 @@ import {
   saveOutfit,
   searchOutfits,
   selectOutfit,
+  setOutfitPin,
   subscribeOutfitEvents,
   updateOutfitItems,
 } from "./outfits";
@@ -177,6 +178,7 @@ describe("outfits api", () => {
     await saveOutfit("outfit-1");
     await revertOutfit("outfit-1");
     await renameOutfit("outfit-1", "Travel");
+    await setOutfitPin("outfit-1", true);
     await duplicateOutfit("outfit-1", "Travel copy");
     await duplicateOutfit("outfit-1");
     await selectOutfit("outfit-1");
@@ -232,6 +234,14 @@ describe("outfits api", () => {
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       7,
+      "https://api.example.test/outfits/outfit-1/pin",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ pin: true }),
+      }),
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      8,
       "https://api.example.test/outfits/outfit-1/duplicate",
       expect.objectContaining({
         method: "POST",
@@ -239,17 +249,17 @@ describe("outfits api", () => {
       }),
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      8,
+      9,
       "https://api.example.test/outfits/outfit-1/duplicate",
       expect.objectContaining({ body: JSON.stringify({}) }),
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      9,
+      10,
       "https://api.example.test/outfits/outfit-1/select",
       { method: "POST", credentials: "include" },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      10,
+      11,
       "https://api.example.test/outfits/outfit-1",
       { method: "DELETE", credentials: "include" },
     );

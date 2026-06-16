@@ -264,6 +264,8 @@ const ru = {
     editName: "Изменить название капсулы",
     regenerateAll: "Обновить все",
     exportPdf: "Экспорт в PDF",
+    pin: "Закрепить капсулу",
+    unpin: "Открепить капсулу",
     rename: "Переименовать",
     revert: "Откатить",
     saveAs: "Сохранить как...",
@@ -378,6 +380,8 @@ const ru = {
   outfit: {
     addItems: "Добавить вещи",
     analyzeOutfit: "Анализ",
+    pin: "Закрепить аутфит",
+    unpin: "Открепить аутфит",
     nameLabel: "Название аутфита",
     saveAsTitle: "Сохранить образ как",
     renameTitle: "Переименовать образ",

@@ -63,6 +63,7 @@ export type CapsuleRecord = {
 
 export type NormalizedCapsuleRecord = Omit<CapsuleRecord, "draft" | "saved"> & {
   id?: string | null;
+  pin?: boolean | null;
   draft: CapsuleSnapshot | null;
   saved: CapsuleSnapshot | null;
   status: "new" | "saved" | "modified";

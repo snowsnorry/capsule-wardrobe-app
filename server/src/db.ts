@@ -86,6 +86,7 @@ export {
   updateCapsuleSavedSnapshotByIdForEmail,
   updateCapsuleSnapshotByIdForEmail,
   updateCapsuleReportByIdForEmail,
+  updateCapsulePinByIdForEmail,
   renameCapsuleByIdForEmail,
   saveCapsuleByIdForEmail,
   revertCapsuleDraftByIdForEmail,
@@ -106,6 +107,7 @@ export {
   revertOutfitDraftByIdForEmail,
   saveOutfitByIdForEmail,
   searchOutfitsByEmail,
+  updateOutfitPinByIdForEmail,
   updateOutfitReportByIdForEmail,
   updateOutfitSnapshotByIdForEmail,
 } from "./db/profileOutfits.js";

@@ -110,6 +110,12 @@ function HeaderCapsuleMenu({ menuProps }: { menuProps: MenusProps }) {
         })
       }
       onSave={menuProps.props.onSaveCapsule || (() => {})}
+      onSetPin={(pin) =>
+        void menuProps.props.onSetCapsulePin?.(
+          menuProps.props.activeCapsule?.id,
+          pin,
+        )
+      }
       onDuplicate={() =>
         menuProps.setNameDialog(
           makeNameDialog("save-as", menuProps.props.activeCapsule),
@@ -161,6 +167,12 @@ function RowCapsuleMenu({
       }
       onSave={() =>
         menuProps.props.onSaveCapsule?.(menuProps.rowMenuCapsule?.id)
+      }
+      onSetPin={(pin) =>
+        void menuProps.props.onSetCapsulePin?.(
+          menuProps.rowMenuCapsule?.id,
+          pin,
+        )
       }
       onRegenerateAll={() => {}}
       onDuplicate={() =>

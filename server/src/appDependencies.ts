@@ -41,6 +41,7 @@ import {
   revertCapsule,
   saveCapsule,
   searchCapsules,
+  setCapsulePin,
   updateCapsuleReport,
   updateCapsuleSnapshot,
 } from "./capsuleStore.js";
@@ -55,6 +56,7 @@ import {
   revertOutfit,
   saveOutfit,
   searchOutfits,
+  setOutfitPin,
   updateOutfitReport,
   updateOutfitSnapshot,
 } from "./outfitStore.js";
@@ -327,6 +329,8 @@ export function createAppDependencies(options: Record<string, unknown> = {}) {
     runSavedSearchImpl: runSavedSearch,
     saveCapsuleImpl: saveCapsule,
     saveOutfitImpl: saveOutfit,
+    setCapsulePinImpl: setCapsulePin,
+    setOutfitPinImpl: setOutfitPin,
     saveUploadedWardrobeItemsImpl: saveUploadedWardrobeItemsByEmail,
     saveWardrobeItemFromCatalogImpl: saveWardrobeItemFromCatalogByUrl,
     searchCapsulesImpl: searchCapsules,

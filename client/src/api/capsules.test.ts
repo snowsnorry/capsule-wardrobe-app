@@ -31,6 +31,7 @@ import {
   saveCapsule,
   searchCapsules,
   selectCapsule,
+  setCapsulePin,
   shareCapsule,
   updateCapsuleFilters,
   updateCapsuleRejectedUrls,
@@ -230,6 +231,7 @@ describe("capsules api", () => {
     await saveCapsule("capsule-1");
     await revertCapsule("capsule-1");
     await renameCapsule("capsule-1", "Renamed");
+    await setCapsulePin("capsule-1", true);
     await duplicateCapsule("capsule-1");
     await duplicateCapsule("capsule-1", "Copy");
     await selectCapsule("capsule-1");
@@ -263,12 +265,12 @@ describe("capsules api", () => {
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       4,
-      "https://api.example.test/capsules/capsule-1/duplicate",
+      "https://api.example.test/capsules/capsule-1/pin",
       {
-        method: "POST",
+        method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ pin: true }),
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
@@ -278,11 +280,21 @@ describe("capsules api", () => {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Copy" }),
+        body: JSON.stringify({}),
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       6,
+      "https://api.example.test/capsules/capsule-1/duplicate",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Copy" }),
+      },
+    );
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      7,
       "https://api.example.test/capsules/capsule-1/select",
       {
         method: "POST",
@@ -290,7 +302,7 @@ describe("capsules api", () => {
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      7,
+      8,
       "https://api.example.test/capsules/capsule-1",
       {
         method: "DELETE",

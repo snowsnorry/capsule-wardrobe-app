@@ -86,6 +86,7 @@ function MainRoute(props: AppRouteContentProps) {
       onSaveCapsule={props.onSaveCapsule}
       onRevertCapsule={props.onRevertCapsule}
       onRenameCapsule={props.onRenameCapsule}
+      onSetCapsulePin={props.onSetCapsulePin}
       onDuplicateCapsule={props.onDuplicateCapsule}
       onDeleteCapsule={props.onDeleteCapsule}
       onDeleteCapsuleReport={props.onDeleteCapsuleReport}
@@ -209,6 +210,7 @@ export default function AppRouteContent(props: AppRouteContentProps) {
           onRevertOutfit={props.onRevertOutfit}
           onSaveToPersonalItems={props.onSaveToPersonalItems}
           onSaveOutfit={props.onSaveOutfit}
+          onSetOutfitPin={props.onSetOutfitPin}
           onSetItemLike={props.onSetItemLike}
           onUpdateUploadedWardrobeItem={props.onUpdateUploadedWardrobeItem}
         />
