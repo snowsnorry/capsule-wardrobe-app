@@ -11,6 +11,7 @@ import {
   AddItemsCatalogPanel,
   AddItemsDialogSelectionSummary,
 } from "./OutfitAddItemsDialogPanels";
+import { CatalogResultsHeader } from "./OutfitAddItemsDialogParts";
 import type { OutfitAddItemsDialogModel } from "./useOutfitAddItemsDialog";
 
 const personalItemsApi = vi.hoisted(() => ({
@@ -102,6 +103,37 @@ afterEach(() => {
 });
 
 describe("AddItemsDialog", () => {
+  test("renders pattern swatches in catalog active filter chips", () => {
+    renderWithTheme(
+      <CatalogResultsHeader
+        activeChips={[
+          {
+            key: "pattern:solid,argyle",
+            field: "pattern",
+            values: ["solid", "argyle"],
+            optionGroup: "patterns",
+            title: "Pattern",
+            label: "Pattern: Solid, Argyle",
+            valueLabels: ["Solid", "Argyle"],
+          },
+        ]}
+        formattedTotal="12"
+        onDeleteChip={vi.fn()}
+        t={t}
+      />,
+    );
+
+    const chipRoot = screen.getByTestId("active-filter-chip-pattern");
+    expect(
+      chipRoot.querySelector('[data-pattern-swatch="solid"]'),
+    ).not.toBeNull();
+    const emptySlot = chipRoot.querySelector(
+      '[data-pattern-swatch-empty="argyle"]',
+    );
+    expect(emptySlot).not.toBeNull();
+    expect(emptySlot).toHaveStyle({ width: "18px", height: "18px" });
+  });
+
   test("renders a fullscreen dialog and submits the selected initial items", () => {
     personalItemsApi.fetchPersonalItems.mockResolvedValue({ items: [] });
     const selected: OutfitItemSnapshot = {

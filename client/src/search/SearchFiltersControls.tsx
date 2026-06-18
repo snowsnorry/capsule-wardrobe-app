@@ -34,12 +34,14 @@ function MultiSelectChips({
   onToggle,
   defaultLabel,
   defaultPosition = "start",
+  renderPrefix,
 }: {
   items: SelectItem[];
   values: string[];
   onToggle: (value: string | null) => void;
   defaultLabel?: string;
   defaultPosition?: "start" | "end";
+  renderPrefix?: (value: string) => ReactNode;
 }) {
   const defaultChip = defaultLabel ? (
     <Chip
@@ -56,7 +58,16 @@ function MultiSelectChips({
       {items.map((item) => (
         <Chip
           key={item.value}
-          label={item.label}
+          label={
+            renderPrefix ? (
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                {renderPrefix(item.value)}
+                <span>{item.label}</span>
+              </Stack>
+            ) : (
+              item.label
+            )
+          }
           clickable
           color={values.includes(item.value) ? "primary" : "default"}
           onClick={() => onToggle(item.value)}

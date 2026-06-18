@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Box, Chip, CircularProgress, Stack, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { ActiveFilterChipLabel } from "../../components/ActiveFilterChipLabel";
 import type { ActiveFilterChip } from "../../search/searchState";
 
 export function StatisticsCard({
@@ -151,7 +152,7 @@ function ActiveFilterChips({
             <Chip
               key={chip.key}
               data-testid={`active-filter-chip-${chip.field}`}
-              label={chip.label}
+              label={<ActiveFilterChipLabel chip={chip} />}
               onDelete={() => onDeleteChip(chip)}
               sx={{
                 maxWidth: "100%",

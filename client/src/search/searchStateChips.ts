@@ -256,6 +256,9 @@ function pushFacetChips(
     key: `${facet.field}:${facet.values.join(",")}`,
     field: facet.field,
     values: facet.values,
+    optionGroup: facet.optionGroup,
+    title: facet.title,
     label: `${facet.title}: ${labelValues.join(", ")}`,
+    valueLabels: labelValues,
   });
 }

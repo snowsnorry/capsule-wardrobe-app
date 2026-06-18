@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import BookmarkBorderRoundedIcon from "@mui/icons-material/BookmarkBorderRounded";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
+import { ActiveFilterChipLabel } from "../../components/ActiveFilterChipLabel";
 import ProductLabelText from "../../components/ProductLabelText";
 import type { ActiveFilterChip } from "../../search/searchState";
 import type { SearchResultItem, SearchStatus } from "./searchTypes";
@@ -129,7 +130,7 @@ function ResultsHeader({
             <Chip
               key={chip.key}
               data-testid={`active-filter-chip-${chip.field}`}
-              label={chip.label}
+              label={<ActiveFilterChipLabel chip={chip} />}
               onDelete={() => onDeleteActiveChip(chip)}
               sx={{
                 maxWidth: "100%",

@@ -108,6 +108,31 @@ describe("SearchResultsList", () => {
     expect(onDeleteActiveChip).toHaveBeenCalledWith(chip);
   });
 
+  test("renders pattern swatches in active filter chips", () => {
+    const patternChip = {
+      key: "pattern:solid,argyle",
+      field: "pattern" as const,
+      values: ["solid", "argyle"],
+      optionGroup: "patterns",
+      title: "Pattern",
+      label: "Pattern: Solid, Argyle",
+      valueLabels: ["Solid", "Argyle"],
+    };
+
+    render(<SearchResultsList {...baseProps} activeChips={[patternChip]} />);
+
+    const chipRoot = screen.getByTestId("active-filter-chip-pattern");
+    expect(chipRoot).toHaveTextContent("Pattern:Solid,Argyle");
+    expect(
+      chipRoot.querySelector('[data-pattern-swatch="solid"]'),
+    ).not.toBeNull();
+    const emptySlot = chipRoot.querySelector(
+      '[data-pattern-swatch-empty="argyle"]',
+    );
+    expect(emptySlot).not.toBeNull();
+    expect(emptySlot).toHaveStyle({ width: "18px", height: "18px" });
+  });
+
   test("keeps custom result rows keyboard operable with a visible focus style", async () => {
     const user = userEvent.setup();
     const onSelectResult = vi.fn();

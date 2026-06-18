@@ -293,6 +293,35 @@ describe("ProfileFiltersSidebar", () => {
     expect(
       accentColorSelect.querySelector('[aria-hidden="true"]'),
     ).not.toBeNull();
+    const selectedPatternSwatch = patternSelect.querySelector(
+      '[data-pattern-swatch="solid"]',
+    );
+    expect(selectedPatternSwatch).not.toBeNull();
+    expect(selectedPatternSwatch).toHaveStyle({
+      width: "18px",
+      height: "18px",
+    });
+
+    await user.click(patternSelect);
+
+    const solidPatternOption = await screen.findByRole("option", {
+      name: "Solid",
+    });
+    const argylePatternOption = screen.getByRole("option", {
+      name: "Argyle",
+    });
+    expect(
+      solidPatternOption.querySelector('[data-pattern-swatch="solid"]'),
+    ).not.toBeNull();
+    const emptyPatternSlot = argylePatternOption.querySelector(
+      '[data-pattern-swatch-empty="argyle"]',
+    );
+    expect(emptyPatternSlot).not.toBeNull();
+    expect(emptyPatternSlot).toHaveStyle({
+      width: "18px",
+      height: "18px",
+    });
+    await user.keyboard("{Escape}");
 
     await user.click(accentColorSelect);
 

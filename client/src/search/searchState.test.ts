@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  buildActiveFilterChips,
   buildSearchOptionsPayload,
   createSearchState,
   EMPTY_SEARCH_OPTIONS,
@@ -118,5 +119,43 @@ describe("searchState", () => {
       categories: ["top"],
       priceRange: { min: null, max: null },
     });
+  });
+
+  test("buildActiveFilterChips preserves pattern metadata for swatch labels", () => {
+    const state = createSearchState(
+      {
+        pattern: ["solid", "argyle"],
+      },
+      EMPTY_SEARCH_OPTIONS.priceRange,
+    );
+
+    const chips = buildActiveFilterChips({
+      state,
+      options: {
+        ...EMPTY_SEARCH_OPTIONS,
+        patterns: ["solid", "argyle"],
+      },
+      locale: "en",
+      t: (key) =>
+        ({
+          "profile.patternTitle": "Pattern",
+        })[key] || key,
+      translateOption: (_group, value) =>
+        ({
+          solid: "Solid",
+          argyle: "Argyle",
+        })[value] || value,
+    });
+
+    expect(chips).toContainEqual(
+      expect.objectContaining({
+        field: "pattern",
+        optionGroup: "patterns",
+        title: "Pattern",
+        values: ["solid", "argyle"],
+        valueLabels: ["Solid", "Argyle"],
+        label: "Pattern: Solid, Argyle",
+      }),
+    );
   });
 });

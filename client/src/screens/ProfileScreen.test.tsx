@@ -235,6 +235,16 @@ describe("ProfileScreen", () => {
     expect(argyle).toBeInTheDocument();
     expect(graphic).toBeInTheDocument();
     expect(
+      solid
+        .closest(".MuiChip-root")
+        ?.querySelector('[data-pattern-swatch="solid"]'),
+    ).not.toBeNull();
+    const argyleSlot = argyle
+      .closest(".MuiChip-root")
+      ?.querySelector('[data-pattern-swatch-empty="argyle"]');
+    expect(argyleSlot).not.toBeNull();
+    expect(argyleSlot).toHaveStyle({ width: "18px", height: "18px" });
+    expect(
       solid.compareDocumentPosition(argyle) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });

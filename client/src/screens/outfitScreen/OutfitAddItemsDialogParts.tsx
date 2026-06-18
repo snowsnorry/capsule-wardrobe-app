@@ -1,5 +1,6 @@
 import { Box, Chip, LinearProgress, Stack, Typography } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
+import { ActiveFilterChipLabel } from "../../components/ActiveFilterChipLabel";
 import AnchorPickerCard from "../../components/ProfileFiltersAnchorPickerCard";
 import { pickerDialogLoadingDividerSx } from "../../components/ProfileFiltersAnchorStyles";
 import type { Translate } from "../../components/ProfileFiltersAnchorTypes";
@@ -45,7 +46,7 @@ export function CatalogResultsHeader({
             <Chip
               key={chip.key}
               data-testid={`active-filter-chip-${chip.field}`}
-              label={chip.label}
+              label={<ActiveFilterChipLabel chip={chip} />}
               onDelete={() => onDeleteChip(chip)}
               sx={{
                 maxWidth: "100%",

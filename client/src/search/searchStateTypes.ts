@@ -106,4 +106,7 @@ export type ActiveFilterChip = {
   values?: string[];
   value?: string;
   label: string;
+  optionGroup?: string;
+  title?: string;
+  valueLabels?: string[];
 };
