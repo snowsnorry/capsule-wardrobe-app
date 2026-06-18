@@ -111,6 +111,24 @@ test("searchProducts passes search SQL file parameters in alias order", async ()
   expect(itemValues).toEqual([...countValues, 24, 48]);
 });
 
+test("searchProducts qualifies result columns that overlap with query params", async () => {
+  const statements: string[] = [];
+  const values: unknown[][] = [];
+  const sql = createSearchSqlRecorder({ statements, values });
+  setSqlClientOverride(sql);
+
+  await searchProducts({ brand: ["cos"] });
+
+  const itemStatement =
+    statements[findStatementIndex(statements, "result_limit")];
+
+  expect(itemStatement).toContain("matching_products.brand");
+  expect(itemStatement).toContain("matching_products.audience");
+  expect(itemStatement).toContain("matching_products.category");
+  expect(itemStatement).not.toMatch(/\bcoalesce\(brand,/i);
+  expect(itemStatement).not.toMatch(/\bcoalesce\(name,/i);
+});
+
 function createSearchSqlRecorder({
   statements,
   values,

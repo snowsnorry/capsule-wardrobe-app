@@ -135,24 +135,30 @@ matching_products AS (
   SELECT
     filtered_products.*,
     row_number() OVER (
-      ORDER BY lexical_score DESC, lower(coalesce(brand, '')) ASC, lower(coalesce(name, '')) ASC
+      ORDER BY
+        filtered_products.lexical_score DESC,
+        lower(coalesce(filtered_products.brand, '')) ASC,
+        lower(coalesce(filtered_products.name, '')) ASC
     ) AS lexical_rank,
     row_number() OVER (
-      ORDER BY distance ASC NULLS LAST, lower(coalesce(brand, '')) ASC, lower(coalesce(name, '')) ASC
+      ORDER BY
+        filtered_products.distance ASC NULLS LAST,
+        lower(coalesce(filtered_products.brand, '')) ASC,
+        lower(coalesce(filtered_products.name, '')) ASC
     ) AS semantic_rank
   FROM filtered_products
   CROSS JOIN query_params AS params
   WHERE
     params.text_search_mode = 'none'
-    OR (params.text_search_mode = 'lexical' AND lexical_score > 0)
+    OR (params.text_search_mode = 'lexical' AND filtered_products.lexical_score > 0)
     OR (
       params.text_search_mode = 'hybrid'
       AND (
-        lexical_score > 0
+        filtered_products.lexical_score > 0
         OR (
           params.embedding_vector_text IS NOT NULL
           AND params.semantic_distance_threshold IS NOT NULL
-          AND distance <= params.semantic_distance_threshold
+          AND filtered_products.distance <= params.semantic_distance_threshold
         )
       )
     )
@@ -161,34 +167,34 @@ matching_products AS (
       AND (
         params.embedding_vector_text IS NULL
         OR params.semantic_distance_threshold IS NULL
-        OR distance <= params.semantic_distance_threshold
+        OR filtered_products.distance <= params.semantic_distance_threshold
       )
     )
 )
 SELECT
-  id,
-  name,
-  url,
-  description,
-  brand,
-  price,
-  currency,
-  availability,
-  image_url AS "imageUrl",
-  audience,
-  category,
-  season,
-  formality_level AS "formalityLevel",
-  style,
-  occasions,
-  color_base AS "colorBase",
-  pattern,
-  finish,
-  is_neutral AS "isNeutral",
-  composition,
-  silhouette,
-  fit,
-  closure_type AS "closureType",
+  matching_products.id,
+  matching_products.name,
+  matching_products.url,
+  matching_products.description,
+  matching_products.brand,
+  matching_products.price,
+  matching_products.currency,
+  matching_products.availability,
+  matching_products.image_url AS "imageUrl",
+  matching_products.audience,
+  matching_products.category,
+  matching_products.season,
+  matching_products.formality_level AS "formalityLevel",
+  matching_products.style,
+  matching_products.occasions,
+  matching_products.color_base AS "colorBase",
+  matching_products.pattern,
+  matching_products.finish,
+  matching_products.is_neutral AS "isNeutral",
+  matching_products.composition,
+  matching_products.silhouette,
+  matching_products.fit,
+  matching_products.closure_type AS "closureType",
   EXISTS (
     SELECT 1
     FROM wardrobe
@@ -202,28 +208,28 @@ SELECT
     WHERE user_liked_items.user_email = params.profile_email
       AND user_liked_items.item_url = matching_products.url
   ) AS "isLiked",
-  distance
+  matching_products.distance
 FROM matching_products
 CROSS JOIN query_params AS params
 ORDER BY
   CASE
     WHEN params.text_search_mode = 'hybrid' THEN
-      (CASE WHEN lexical_score > 0 THEN 1.0 / (60 + lexical_rank) ELSE 0 END)
+      (CASE WHEN matching_products.lexical_score > 0 THEN 1.0 / (60 + matching_products.lexical_rank) ELSE 0 END)
       +
       (
         CASE
           WHEN params.semantic_distance_threshold IS NOT NULL
-            AND distance <= params.semantic_distance_threshold
-          THEN 1.0 / (60 + semantic_rank)
+            AND matching_products.distance <= params.semantic_distance_threshold
+          THEN 1.0 / (60 + matching_products.semantic_rank)
           ELSE 0
         END
       )
     ELSE NULL
   END DESC NULLS LAST,
-  CASE WHEN params.text_search_mode = 'lexical' THEN lexical_score ELSE NULL END DESC NULLS LAST,
-  CASE WHEN params.text_search_mode = 'semantic' THEN distance ELSE NULL END ASC NULLS LAST,
-  CASE WHEN params.text_search_mode = 'semantic' THEN lexical_score ELSE NULL END DESC NULLS LAST,
-  lower(coalesce(brand, '')) ASC,
-  lower(coalesce(name, '')) ASC
+  CASE WHEN params.text_search_mode = 'lexical' THEN matching_products.lexical_score ELSE NULL END DESC NULLS LAST,
+  CASE WHEN params.text_search_mode = 'semantic' THEN matching_products.distance ELSE NULL END ASC NULLS LAST,
+  CASE WHEN params.text_search_mode = 'semantic' THEN matching_products.lexical_score ELSE NULL END DESC NULLS LAST,
+  lower(coalesce(matching_products.brand, '')) ASC,
+  lower(coalesce(matching_products.name, '')) ASC
 LIMIT (SELECT result_limit FROM query_params)
 OFFSET (SELECT result_offset FROM query_params)

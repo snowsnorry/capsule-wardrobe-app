@@ -564,8 +564,12 @@ test("db integration applies hybrid rank fusion for text and semantic search", a
   );
   expect(itemCall.text).toMatch(/row_number\(\) over[\s\S]*lexical_rank/i);
   expect(itemCall.text).toMatch(/row_number\(\) over[\s\S]*semantic_rank/i);
-  expect(itemCall.text).toMatch(/1\.0 \/ \(60 \+ lexical_rank\)/i);
-  expect(itemCall.text).toMatch(/1\.0 \/ \(60 \+ semantic_rank\)/i);
+  expect(itemCall.text).toMatch(
+    /1\.0 \/ \(60 \+ matching_products\.lexical_rank\)/i,
+  );
+  expect(itemCall.text).toMatch(
+    /1\.0 \/ \(60 \+ matching_products\.semantic_rank\)/i,
+  );
   expect(countCall.values).toContain("hybrid");
   expect(countCall.values).toContain("[0.3,0.4]");
 });
