@@ -1,14 +1,10 @@
-import type AccentColorChips from "./AccentColorChips";
-import type StylePreferenceSelector from "./StylePreferenceSelector";
-
-type StyleOptions = Parameters<
-  typeof StylePreferenceSelector
->[0]["styleOptions"];
-type AccentColorOptions = Parameters<typeof AccentColorChips>[0]["options"];
-type AccentColorValue = Parameters<
-  NonNullable<Parameters<typeof AccentColorChips>[0]["onSelect"]>
->[0];
 type ProfileFilterValue = string;
+type StyleOptions = {
+  core?: ProfileFilterValue[];
+  aesthetics?: ProfileFilterValue[];
+};
+type AccentColorValue = ProfileFilterValue | null;
+type AccentColorOptions = ProfileFilterValue[];
 type CapsuleSourceMode =
   | "catalog_only"
   | "wardrobe_preferred"
