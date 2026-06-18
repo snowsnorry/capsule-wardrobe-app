@@ -65,10 +65,10 @@ function PasskeySignInButton({
         disabled={loading}
         sx={{
           width: "min(320px, 100%)",
-          height: 40,
+          height: "var(--cw-control-action-height)",
           position: "relative",
           justifyContent: "center",
-          borderRadius: "var(--cw-radius-dialog)",
+          borderRadius: "var(--cw-radius-control)",
           borderColor: "divider",
           backgroundColor: "background.paper",
           color: "text.primary",

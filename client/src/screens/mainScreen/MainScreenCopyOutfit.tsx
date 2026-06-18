@@ -49,7 +49,7 @@ export function CopyOutfitActionRow(model: MainScreenViewProps) {
         direction="row"
         spacing={1.5}
         sx={{
-          minHeight: 32,
+          minHeight: "var(--cw-control-action-height)",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 1.5,

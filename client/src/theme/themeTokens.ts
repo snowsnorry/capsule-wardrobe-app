@@ -9,6 +9,10 @@ const appThemeTokens = {
     pill: "999px",
     circle: "50%",
   },
+  controls: {
+    actionHeight: 40,
+    actionRadius: "999px",
+  },
   typography: {
     wordmarkFamily: '"Leckerli One", cursive',
     confirmationCodeFamily:

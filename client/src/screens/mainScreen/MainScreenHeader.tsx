@@ -188,7 +188,10 @@ function HeaderActions({
       <Stack
         direction="row"
         spacing={1}
-        sx={{ minHeight: 40, alignItems: "center" }}
+        sx={{
+          minHeight: "var(--cw-control-action-height)",
+          alignItems: "center",
+        }}
       >
         <Button
           variant="outlined"
@@ -212,7 +215,10 @@ function HeaderActions({
     <Stack
       direction="row"
       spacing={1}
-      sx={{ minHeight: 40, alignItems: "center" }}
+      sx={{
+        minHeight: "var(--cw-control-action-height)",
+        alignItems: "center",
+      }}
     >
       {showAnalyze ? (
         <Button

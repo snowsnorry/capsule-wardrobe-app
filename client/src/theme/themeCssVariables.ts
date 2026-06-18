@@ -48,6 +48,8 @@ function createThemeCssVariables(mode: ThemeMode) {
     "--cw-radius-detail": appThemeTokens.radii.detail,
     "--cw-radius-pill": appThemeTokens.radii.pill,
     "--cw-radius-circle": appThemeTokens.radii.circle,
+    "--cw-radius-control": appThemeTokens.controls.actionRadius,
+    "--cw-control-action-height": `${appThemeTokens.controls.actionHeight}px`,
     "--cw-font-family-wordmark": appThemeTokens.typography.wordmarkFamily,
     "--cw-font-family-confirmation-code":
       appThemeTokens.typography.confirmationCodeFamily,

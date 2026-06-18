@@ -285,9 +285,6 @@ function OutfitHeaderActions({
         onClick={onAnalyze}
         sx={{
           display: hasReport || isMobile ? "none" : "inline-flex",
-          height: 32,
-          minHeight: 32,
-          py: 0,
           px: 1.5,
         }}
       >
@@ -299,9 +296,6 @@ function OutfitHeaderActions({
         disabled={disabled}
         onClick={onAdd}
         sx={{
-          height: 32,
-          minHeight: 32,
-          py: 0,
           px: 1.5,
         }}
       >
@@ -319,7 +313,7 @@ function OutfitHeaderActions({
 }
 
 const outfitHeaderActionsSx = {
-  minHeight: 40,
+  minHeight: "var(--cw-control-action-height)",
   alignItems: "center",
   justifyContent: "flex-end",
   ml: "auto",

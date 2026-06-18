@@ -115,7 +115,6 @@ const anchorSourceToggleGroupSx = {
   flexShrink: 0,
   "& .MuiToggleButton-root": {
     minWidth: 44,
-    height: 32,
     fontSize: 14,
     px: 1.25,
     textTransform: "none",

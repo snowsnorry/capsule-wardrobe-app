@@ -209,8 +209,8 @@ const toolbarActionsSx = {
 
 const mobileMenuButtonSx = {
   flex: "0 0 auto",
-  width: 40,
-  height: 40,
+  width: "var(--cw-control-action-height)",
+  height: "var(--cw-control-action-height)",
 } as const;
 
 const filterGroupSx = {
@@ -219,7 +219,6 @@ const filterGroupSx = {
   overflowX: "auto",
   "& .MuiToggleButton-root": {
     minWidth: 44,
-    height: 32,
     fontSize: 14,
     px: 1.25,
     textTransform: "none",

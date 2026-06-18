@@ -148,6 +148,50 @@ describe("theme component menu alignment", () => {
   });
 });
 
+describe("theme action control sizing", () => {
+  test("exposes shared action control variables", () => {
+    const variables = createThemeCssVariables("light");
+
+    expect(variables["--cw-control-action-height"]).toBe("40px");
+    expect(variables["--cw-radius-control"]).toBe("999px");
+  });
+
+  test("applies shared action sizing to button controls", () => {
+    const theme = createAppTheme("light");
+    const buttonRoot = theme.components?.MuiButton?.styleOverrides
+      ?.root as Record<string, unknown>;
+    const buttonGroupRoot = theme.components?.MuiButtonGroup?.styleOverrides
+      ?.root as Record<string, unknown>;
+    const buttonGroupGrouped = theme.components?.MuiButtonGroup?.styleOverrides
+      ?.grouped as Record<string, unknown>;
+
+    expect(buttonRoot.minHeight).toBe("var(--cw-control-action-height)");
+    expect(buttonRoot.borderRadius).toBe("var(--cw-radius-control)");
+    expect(buttonGroupRoot.borderRadius).toBe("var(--cw-radius-control)");
+    expect(buttonGroupGrouped.minHeight).toBe(
+      "var(--cw-control-action-height)",
+    );
+  });
+
+  test("applies shared action sizing to toggle controls", () => {
+    const theme = createAppTheme("light");
+    const toggleButtonRoot = theme.components?.MuiToggleButton?.styleOverrides
+      ?.root as Record<string, unknown>;
+    const toggleGroupRoot = theme.components?.MuiToggleButtonGroup
+      ?.styleOverrides?.root as Record<string, unknown>;
+    const toggleGroupGrouped = theme.components?.MuiToggleButtonGroup
+      ?.styleOverrides?.grouped as Record<string, unknown>;
+
+    expect(toggleButtonRoot.minHeight).toBe("var(--cw-control-action-height)");
+    expect(toggleButtonRoot.borderRadius).toBe("var(--cw-radius-control)");
+    expect(toggleGroupRoot.minHeight).toBe("var(--cw-control-action-height)");
+    expect(toggleGroupRoot.borderRadius).toBe("var(--cw-radius-control)");
+    expect(toggleGroupGrouped.minHeight).toBe(
+      "var(--cw-control-action-height)",
+    );
+  });
+});
+
 describe("theme component contrast", () => {
   test("keeps light selected chips above contrast thresholds", () => {
     const theme = createAppTheme("light");

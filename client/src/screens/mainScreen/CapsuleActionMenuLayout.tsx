@@ -83,7 +83,7 @@ const toggleButtonGroupSx = {
   alignSelf: "start",
   "& .MuiToggleButton-root": {
     minWidth: 44,
-    height: 40,
+    height: "var(--cw-control-action-height)",
     px: 1.25,
   },
 } as const;

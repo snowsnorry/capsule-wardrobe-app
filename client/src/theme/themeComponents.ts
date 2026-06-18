@@ -45,6 +45,8 @@ const menuItemHorizontalPaddingPx = 16;
 const menuItemIconColumnWidthPx = 36;
 const mixedIconMenuItemTextOffsetPx =
   menuItemHorizontalPaddingPx + menuItemIconColumnWidthPx;
+const actionControlHeight = "var(--cw-control-action-height)";
+const actionControlRadius = "var(--cw-radius-control)";
 
 // MUI component configuration is intentionally centralized here.
 // eslint-disable-next-line max-lines-per-function
@@ -87,6 +89,8 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
       },
       styleOverrides: {
         root: {
+          minHeight: actionControlHeight,
+          borderRadius: actionControlRadius,
           textTransform: "none",
           fontWeight: appThemeTokens.typography.denseLabelWeight,
           transition:
@@ -117,6 +121,75 @@ function createComponentOverrides(mode: ThemeMode): Components<Theme> {
             borderColor: tone.disabledButtonBorder,
             color: tone.disabledButtonColor,
           },
+        },
+      },
+    },
+    MuiButtonGroup: {
+      styleOverrides: {
+        root: {
+          borderRadius: actionControlRadius,
+          "&.MuiButtonGroup-horizontal .MuiButtonGroup-firstButton, &.MuiButtonGroup-horizontal .MuiButtonGroup-middleButton":
+            {
+              borderTopRightRadius: 0,
+              borderBottomRightRadius: 0,
+            },
+          "&.MuiButtonGroup-horizontal .MuiButtonGroup-lastButton, &.MuiButtonGroup-horizontal .MuiButtonGroup-middleButton":
+            {
+              borderTopLeftRadius: 0,
+              borderBottomLeftRadius: 0,
+            },
+          "&.MuiButtonGroup-vertical .MuiButtonGroup-firstButton, &.MuiButtonGroup-vertical .MuiButtonGroup-middleButton":
+            {
+              borderBottomRightRadius: 0,
+              borderBottomLeftRadius: 0,
+            },
+          "&.MuiButtonGroup-vertical .MuiButtonGroup-lastButton, &.MuiButtonGroup-vertical .MuiButtonGroup-middleButton":
+            {
+              borderTopRightRadius: 0,
+              borderTopLeftRadius: 0,
+            },
+        },
+        grouped: {
+          minHeight: actionControlHeight,
+        },
+      },
+    },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          minHeight: actionControlHeight,
+          borderRadius: actionControlRadius,
+        },
+      },
+    },
+    MuiToggleButtonGroup: {
+      styleOverrides: {
+        root: {
+          minHeight: actionControlHeight,
+          borderRadius: actionControlRadius,
+          "&.MuiToggleButtonGroup-horizontal .MuiToggleButtonGroup-firstButton, &.MuiToggleButtonGroup-horizontal .MuiToggleButtonGroup-middleButton":
+            {
+              borderTopRightRadius: 0,
+              borderBottomRightRadius: 0,
+            },
+          "&.MuiToggleButtonGroup-horizontal .MuiToggleButtonGroup-lastButton, &.MuiToggleButtonGroup-horizontal .MuiToggleButtonGroup-middleButton":
+            {
+              borderTopLeftRadius: 0,
+              borderBottomLeftRadius: 0,
+            },
+          "&.MuiToggleButtonGroup-vertical .MuiToggleButtonGroup-firstButton, &.MuiToggleButtonGroup-vertical .MuiToggleButtonGroup-middleButton":
+            {
+              borderBottomRightRadius: 0,
+              borderBottomLeftRadius: 0,
+            },
+          "&.MuiToggleButtonGroup-vertical .MuiToggleButtonGroup-lastButton, &.MuiToggleButtonGroup-vertical .MuiToggleButtonGroup-middleButton":
+            {
+              borderTopRightRadius: 0,
+              borderTopLeftRadius: 0,
+            },
+        },
+        grouped: {
+          minHeight: actionControlHeight,
         },
       },
     },
