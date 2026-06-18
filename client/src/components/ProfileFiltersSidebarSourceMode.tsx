@@ -66,6 +66,7 @@ const sourceModeSelectedLabelSx = {
 const sourceModeSelectSx = {
   bgcolor: "action.hover",
   borderRadius: "var(--cw-radius-card)",
+  height: 40,
   "&& .MuiSelect-select": {
     alignItems: "center",
     color: "text.primary",

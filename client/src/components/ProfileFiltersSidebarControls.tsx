@@ -1,7 +1,8 @@
-import { Stack, TextField } from "@mui/material";
-import AccentColorChips from "./AccentColorChips";
+import { Box, Stack, TextField } from "@mui/material";
+import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 import { FilterSectionTitle } from "./ProfileFilterSectionTitle";
 import { ProfileFilterChipSection } from "./ProfileFilterChipSection";
+import { ProfileFilterSelectSection } from "./ProfileFilterSelectSection";
 import StylePreferenceSelector from "./StylePreferenceSelector";
 import type {
   ProfileFiltersSidebarProps,
@@ -36,6 +37,7 @@ function ProfileFilterControls({
         disabled={disabled}
         showSectionHeading={false}
         bodyVariant="body2"
+        aestheticControl="select"
       />
       <ProfileFilterChipSection
         title={t("profile.occasionsTitle")}
@@ -67,8 +69,13 @@ function ProfileFilterControls({
         disabled={disabled}
         onSelect={props.onSelectAudience}
       />
-      <ProfileAccentColorSection disabled={disabled} props={props} t={t} />
-      <ProfileFilterChipSection
+      <ProfileAccentColorSection
+        disabled={disabled}
+        locale={locale}
+        props={props}
+        t={t}
+      />
+      <ProfileFilterSelectSection
         title={t("profile.patternTitle")}
         hint={t("profile.patternHint")}
         options={sortedPatternOptions}
@@ -76,7 +83,7 @@ function ProfileFilterControls({
         optionGroup="patterns"
         locale={locale}
         disabled={disabled}
-        onSelect={props.onSelectPattern}
+        onSelect={(value) => props.onSelectPattern(value as ProfileFilterValue)}
       />
     </>
   );
@@ -84,26 +91,49 @@ function ProfileFilterControls({
 
 function ProfileAccentColorSection({
   disabled,
+  locale,
   props,
   t,
 }: {
   disabled: boolean;
+  locale: string;
   props: ProfileFiltersSidebarProps;
   t: Translate;
 }) {
   return (
-    <Stack spacing={1.5}>
-      <FilterSectionTitle
-        title={t("profile.accentColorTitle")}
-        hint={t("profile.accentColorHint")}
-      />
-      <AccentColorChips
-        options={props.accentColorOptions}
-        selectedValue={props.selectedAccentColor}
-        onSelect={props.onSelectAccentColor}
-        disabled={disabled}
-      />
-    </Stack>
+    <ProfileFilterSelectSection
+      title={t("profile.accentColorTitle")}
+      hint={t("profile.accentColorHint")}
+      options={props.accentColorOptions}
+      selectedValue={props.selectedAccentColor}
+      optionGroup="accentColors"
+      locale={locale}
+      disabled={disabled}
+      onSelect={props.onSelectAccentColor}
+      emptyOption={{
+        value: "",
+        label: t("profile.accentColorNotImportant"),
+      }}
+      renderPrefix={renderAccentColorSwatch}
+    />
+  );
+}
+
+function renderAccentColorSwatch(value: ProfileFilterValue) {
+  return (
+    <Box
+      aria-hidden="true"
+      sx={{
+        width: 12,
+        height: 12,
+        borderRadius: "999px",
+        boxSizing: "border-box",
+        border: "1px solid",
+        borderColor: "divider",
+        flex: "0 0 auto",
+        ...getColorSwatchStyle(value),
+      }}
+    />
   );
 }
 

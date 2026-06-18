@@ -2,6 +2,7 @@ import { Chip, Stack, Typography } from "@mui/material";
 import type { TypographyProps } from "@mui/material/Typography";
 import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
+import { ProfileFilterSelectSection } from "./ProfileFilterSelectSection";
 
 const CORE_DISPLAY_ORDER = ["casual", "smart_casual", "formal"] as const;
 
@@ -23,6 +24,14 @@ type StylePreferenceSelectorProps = {
   showSectionHeading?: boolean;
   titleVariant?: TypographyProps["variant"];
   bodyVariant?: TypographyProps["variant"];
+  aestheticControl?: "chips" | "select";
+};
+
+type StyleSectionProps = {
+  bodyVariant: TypographyProps["variant"];
+  disabled: boolean;
+  locale: string;
+  t: (key: string) => string;
 };
 
 function sortCoreOptions(items: StyleOption[]): StyleOption[] {
@@ -64,6 +73,7 @@ function StylePreferenceSelector({
   showSectionHeading = true,
   titleVariant = "h5",
   bodyVariant = "body1",
+  aestheticControl = "chips",
 }: StylePreferenceSelectorProps) {
   const { t, locale } = useI18n();
   const coreOptions = sortCoreOptions(styleOptions?.core || []);
@@ -85,57 +95,131 @@ function StylePreferenceSelector({
         </Stack>
       ) : null}
 
-      <Stack spacing={1.5}>
-        <Stack spacing={0.5}>
-          <Typography variant={bodyVariant} sx={{ fontWeight: 600 }}>
-            {t("profile.styleCoreTitle")}
-          </Typography>
-          <Typography variant={bodyVariant} color="text.secondary">
-            {t("profile.styleCoreHint")}
-          </Typography>
-        </Stack>
-        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
-          {coreOptions.map((style) => (
-            <Chip
-              key={style}
-              label={translateOption("styles", style, locale)}
-              clickable
-              disabled={disabled}
-              color={selectedStyleCore === style ? "primary" : "default"}
-              onClick={() => onSelectStyleCore(style)}
-            />
-          ))}
-        </Stack>
-      </Stack>
+      <CoreStyleSection
+        bodyVariant={bodyVariant}
+        disabled={disabled}
+        locale={locale}
+        options={coreOptions}
+        selectedStyleCore={selectedStyleCore}
+        onSelectStyleCore={onSelectStyleCore}
+        t={t}
+      />
 
-      <Stack spacing={1.5}>
-        <Stack spacing={0.5}>
-          <Typography variant={bodyVariant} sx={{ fontWeight: 600 }}>
-            {t("profile.styleAestheticTitle")}
-          </Typography>
-          <Typography variant={bodyVariant} color="text.secondary">
-            {t("profile.styleAestheticHint")}
-          </Typography>
-        </Stack>
-        <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
+      <AestheticStyleSection
+        aestheticControl={aestheticControl}
+        bodyVariant={bodyVariant}
+        disabled={disabled}
+        locale={locale}
+        options={aestheticsOptions}
+        selectedStyleAesthetic={selectedStyleAesthetic}
+        onSelectStyleAesthetic={onSelectStyleAesthetic}
+        t={t}
+      />
+    </Stack>
+  );
+}
+
+function CoreStyleSection({
+  bodyVariant,
+  disabled,
+  locale,
+  options,
+  selectedStyleCore,
+  onSelectStyleCore,
+  t,
+}: StyleSectionProps & {
+  options: StyleOption[];
+  selectedStyleCore: StyleOption | null;
+  onSelectStyleCore: (style: StyleOption) => void;
+}) {
+  return (
+    <Stack spacing={1.5}>
+      <Stack spacing={0.5}>
+        <Typography variant={bodyVariant} sx={{ fontWeight: 600 }}>
+          {t("profile.styleCoreTitle")}
+        </Typography>
+        <Typography variant={bodyVariant} color="text.secondary">
+          {t("profile.styleCoreHint")}
+        </Typography>
+      </Stack>
+      <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
+        {options.map((style) => (
           <Chip
-            label={t("profile.styleAestheticNotImportant")}
+            key={style}
+            label={translateOption("styles", style, locale)}
             clickable
             disabled={disabled}
-            color={selectedStyleAesthetic === null ? "primary" : "default"}
-            onClick={() => onSelectStyleAesthetic(null)}
+            color={selectedStyleCore === style ? "primary" : "default"}
+            onClick={() => onSelectStyleCore(style)}
           />
-          {aestheticsOptions.map((style) => (
-            <Chip
-              key={style}
-              label={translateOption("styles", style, locale)}
-              clickable
-              disabled={disabled}
-              color={selectedStyleAesthetic === style ? "primary" : "default"}
-              onClick={() => onSelectStyleAesthetic(style)}
-            />
-          ))}
-        </Stack>
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
+function AestheticStyleSection({
+  aestheticControl,
+  bodyVariant,
+  disabled,
+  locale,
+  options,
+  selectedStyleAesthetic,
+  onSelectStyleAesthetic,
+  t,
+}: StyleSectionProps & {
+  aestheticControl: "chips" | "select";
+  options: StyleOption[];
+  selectedStyleAesthetic: StyleOption | null;
+  onSelectStyleAesthetic: (style: StyleOption | null) => void;
+}) {
+  if (aestheticControl === "select") {
+    return (
+      <ProfileFilterSelectSection
+        title={t("profile.styleAestheticTitle")}
+        hint={t("profile.styleAestheticHint")}
+        options={options}
+        selectedValue={selectedStyleAesthetic}
+        optionGroup="styles"
+        locale={locale}
+        disabled={disabled}
+        onSelect={onSelectStyleAesthetic}
+        emptyOption={{
+          value: "",
+          label: t("profile.styleAestheticNotImportant"),
+        }}
+      />
+    );
+  }
+
+  return (
+    <Stack spacing={1.5}>
+      <Stack spacing={0.5}>
+        <Typography variant={bodyVariant} sx={{ fontWeight: 600 }}>
+          {t("profile.styleAestheticTitle")}
+        </Typography>
+        <Typography variant={bodyVariant} color="text.secondary">
+          {t("profile.styleAestheticHint")}
+        </Typography>
+      </Stack>
+      <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
+        <Chip
+          label={t("profile.styleAestheticNotImportant")}
+          clickable
+          disabled={disabled}
+          color={selectedStyleAesthetic === null ? "primary" : "default"}
+          onClick={() => onSelectStyleAesthetic(null)}
+        />
+        {options.map((style) => (
+          <Chip
+            key={style}
+            label={translateOption("styles", style, locale)}
+            clickable
+            disabled={disabled}
+            color={selectedStyleAesthetic === style ? "primary" : "default"}
+            onClick={() => onSelectStyleAesthetic(style)}
+          />
+        ))}
       </Stack>
     </Stack>
   );

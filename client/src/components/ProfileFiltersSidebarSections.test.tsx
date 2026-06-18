@@ -30,6 +30,7 @@ function t(key: string, params?: Record<string, unknown>) {
     "profile.audienceHint": "Hint",
     "profile.accentColorTitle": "Accent color",
     "profile.accentColorHint": "Hint",
+    "profile.accentColorNotImportant": "No accent color",
     "profile.patternTitle": "Pattern",
     "profile.patternHint": "Hint",
     "profile.additionalInfoTitle": "Additional information",
@@ -277,12 +278,15 @@ describe("ProfileFiltersSidebarSections", () => {
     });
 
     await user.click(screen.getByRole("button", { name: "formal" }));
-    await user.click(screen.getByRole("button", { name: "retro" }));
+    await user.click(screen.getByRole("combobox", { name: "Aesthetics" }));
+    await user.click(await screen.findByRole("option", { name: "retro" }));
     await user.click(screen.getByRole("button", { name: "travel" }));
     await user.click(screen.getByRole("button", { name: "winter" }));
     await user.click(screen.getByRole("button", { name: "man" }));
-    await user.click(screen.getByRole("button", { name: "red" }));
-    await user.click(screen.getByRole("button", { name: "Stripe" }));
+    await user.click(screen.getByRole("combobox", { name: "Accent color" }));
+    await user.click(await screen.findByRole("option", { name: "red" }));
+    await user.click(screen.getByRole("combobox", { name: "Pattern" }));
+    await user.click(await screen.findByRole("option", { name: "Stripe" }));
     await user.click(screen.getByRole("combobox", { name: "Item source" }));
     await user.click(
       await screen.findByRole("option", { name: "Personal items + catalog" }),
@@ -381,9 +385,14 @@ describe("ProfileFiltersSidebarSections", () => {
       "aria-disabled",
       "true",
     );
-    expect(screen.getByRole("button", { name: "red" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
+    expect(screen.getByRole("combobox", { name: "Aesthetics" })).toHaveClass(
+      "Mui-disabled",
+    );
+    expect(screen.getByRole("combobox", { name: "Accent color" })).toHaveClass(
+      "Mui-disabled",
+    );
+    expect(screen.getByRole("combobox", { name: "Pattern" })).toHaveClass(
+      "Mui-disabled",
     );
     expect(
       screen.getByPlaceholderText("Additional placeholder"),

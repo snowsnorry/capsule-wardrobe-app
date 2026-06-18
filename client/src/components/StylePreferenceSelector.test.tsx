@@ -139,6 +139,53 @@ describe("StylePreferenceSelector", () => {
     expect(onSelectStyleAesthetic).toHaveBeenNthCalledWith(2, null);
   });
 
+  test("can render aesthetic selection as a nullable select", async () => {
+    const user = userEvent.setup();
+    const onSelectStyleAesthetic = vi.fn();
+
+    const { rerender } = renderSelector({
+      selectedStyleAesthetic: null,
+      onSelectStyleAesthetic,
+      aestheticControl: "select",
+    });
+
+    expect(
+      screen.getByRole("combobox", { name: "Aesthetic style" }),
+    ).toHaveTextContent("Aesthetic not important");
+    expect(
+      screen.queryByRole("button", { name: "Aesthetic not important" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("combobox", { name: "Aesthetic style" }));
+    await user.click(await screen.findByRole("option", { name: "Retro" }));
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <StylePreferenceSelector
+          styleOptions={{
+            core: ["formal", "casual"],
+            aesthetics: ["retro", "minimalistic"],
+          }}
+          selectedStyleCore="casual"
+          selectedStyleAesthetic="retro"
+          onSelectStyleCore={vi.fn()}
+          onSelectStyleAesthetic={onSelectStyleAesthetic}
+          aestheticControl="select"
+        />
+      </ThemeProvider>,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Aesthetic style" }));
+    await user.click(
+      await screen.findByRole("option", {
+        name: "Aesthetic not important",
+      }),
+    );
+
+    expect(onSelectStyleAesthetic).toHaveBeenNthCalledWith(1, "retro");
+    expect(onSelectStyleAesthetic).toHaveBeenNthCalledWith(2, null);
+  });
+
   test("can hide the section heading when requested", () => {
     renderSelector({ showSectionHeading: false });
 

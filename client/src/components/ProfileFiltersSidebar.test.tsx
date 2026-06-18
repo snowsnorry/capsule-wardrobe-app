@@ -257,28 +257,88 @@ describe("ProfileFiltersSidebar", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("renders capsule-only dropdown controls with selected values", async () => {
+    const user = userEvent.setup();
+    const { container } = renderSidebar();
+    const itemSourceSelect = screen.getByRole("combobox", {
+      name: "Item source",
+    });
+    const aestheticSelect = screen.getByRole("combobox", {
+      name: "Aesthetic style",
+    });
+    const accentColorSelect = screen.getByRole("combobox", {
+      name: "Accent color",
+    });
+    const patternSelect = screen.getByRole("combobox", { name: "Pattern" });
+
+    expect(
+      screen.queryByRole("button", { name: "Aesthetic not important" }),
+    ).not.toBeInTheDocument();
+    expect(aestheticSelect).toHaveTextContent("Aesthetic not important");
+    expect(accentColorSelect).toHaveTextContent("blue");
+    expect(patternSelect).toHaveTextContent("Solid");
+    expect(getSelectRoot(itemSourceSelect)).toHaveStyle({ height: "40px" });
+    expect(getSelectRoot(aestheticSelect)).toHaveStyle({ height: "40px" });
+    expect(getSelectRoot(accentColorSelect)).toHaveStyle({ height: "40px" });
+    expect(getSelectRoot(patternSelect)).toHaveStyle({ height: "40px" });
+    expect(getSelectedValueLabel(aestheticSelect)).toHaveStyle({
+      fontWeight: "600",
+    });
+    expect(getSelectedValueLabel(accentColorSelect)).toHaveStyle({
+      fontWeight: "600",
+    });
+    expect(getSelectedValueLabel(patternSelect)).toHaveStyle({
+      fontWeight: "600",
+    });
+    expect(
+      accentColorSelect.querySelector('[aria-hidden="true"]'),
+    ).not.toBeNull();
+
+    await user.click(accentColorSelect);
+
+    const redOption = await screen.findByRole("option", { name: "red" });
+    expect(redOption.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    expect(redOption.querySelector(".MuiTypography-root")).not.toHaveStyle({
+      fontWeight: "600",
+    });
+    expect(container.querySelectorAll(".MuiChip-root")).not.toHaveLength(0);
+  });
+
+  function getSelectRoot(select: HTMLElement) {
+    const root = select.closest(".MuiInputBase-root");
+    expect(root).not.toBeNull();
+    return root as HTMLElement;
+  }
+
+  function getSelectedValueLabel(select: HTMLElement) {
+    const label = select.querySelector(".MuiTypography-root");
+    expect(label).not.toBeNull();
+    return label as HTMLElement;
+  }
+
   test("keeps a null pattern unselected in the UI", () => {
     renderSidebar({
       selectedPattern: null,
     });
 
-    expect(screen.getByRole("button", { name: "Solid" })).not.toHaveClass(
-      "MuiChip-colorPrimary",
-    );
-    expect(screen.getByRole("button", { name: "Solid" })).toHaveClass(
-      "MuiChip-colorDefault",
+    expect(screen.getByRole("combobox", { name: "Pattern" })).toHaveTextContent(
+      "",
     );
     expect(screen.queryByText("Pattern not important")).not.toBeInTheDocument();
   });
 
-  test("sorts pattern chips alphabetically by label with solid pinned first", () => {
+  test("sorts pattern options alphabetically by label with solid pinned first", async () => {
+    const user = userEvent.setup();
+
     renderSidebar({
       patternOptions: ["stripe", "solid", "abstract"],
     });
 
-    const solid = screen.getByRole("button", { name: "Solid" });
-    const abstract = screen.getByRole("button", { name: "Abstract" });
-    const stripe = screen.getByRole("button", { name: "Stripe" });
+    await user.click(screen.getByRole("combobox", { name: "Pattern" }));
+
+    const solid = await screen.findByRole("option", { name: "Solid" });
+    const abstract = screen.getByRole("option", { name: "Abstract" });
+    const stripe = screen.getByRole("option", { name: "Stripe" });
 
     expect(
       solid.compareDocumentPosition(abstract) &
@@ -290,14 +350,18 @@ describe("ProfileFiltersSidebar", () => {
     ).toBeTruthy();
   });
 
-  test("renders the full canonical pattern list in the sidebar", () => {
+  test("renders the full canonical pattern list in the sidebar", async () => {
+    const user = userEvent.setup();
+
     renderSidebar({
       patternOptions: ["stripe", "solid", "abstract"],
     });
 
-    const solid = screen.getByRole("button", { name: "Solid" });
-    const argyle = screen.getByRole("button", { name: "Argyle" });
-    const graphic = screen.getByRole("button", { name: "Graphic" });
+    await user.click(screen.getByRole("combobox", { name: "Pattern" }));
+
+    const solid = await screen.findByRole("option", { name: "Solid" });
+    const argyle = screen.getByRole("option", { name: "Argyle" });
+    const graphic = screen.getByRole("option", { name: "Graphic" });
 
     expect(argyle).toBeInTheDocument();
     expect(graphic).toBeInTheDocument();
