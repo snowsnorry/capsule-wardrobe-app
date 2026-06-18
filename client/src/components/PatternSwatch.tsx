@@ -97,4 +97,4 @@ function isPatternSwatchPattern(
   return Object.prototype.hasOwnProperty.call(PATTERN_SPRITE_COORDS, pattern);
 }
 
-export { PatternSwatch, isPatternSwatchPattern };
+export { PatternSwatch };
