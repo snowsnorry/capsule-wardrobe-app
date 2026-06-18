@@ -241,9 +241,9 @@ describe("ProfileScreen", () => {
     ).not.toBeNull();
     const argyleSlot = argyle
       .closest(".MuiChip-root")
-      ?.querySelector('[data-pattern-swatch-empty="argyle"]');
+      ?.querySelector('[data-pattern-swatch="argyle"]');
     expect(argyleSlot).not.toBeNull();
-    expect(argyleSlot).toHaveStyle({ width: "18px", height: "18px" });
+    expect(argyleSlot).toHaveStyle({ width: "20px", height: "20px" });
     expect(
       solid.compareDocumentPosition(argyle) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

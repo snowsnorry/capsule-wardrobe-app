@@ -298,8 +298,8 @@ describe("ProfileFiltersSidebar", () => {
     );
     expect(selectedPatternSwatch).not.toBeNull();
     expect(selectedPatternSwatch).toHaveStyle({
-      width: "18px",
-      height: "18px",
+      width: "20px",
+      height: "20px",
     });
 
     await user.click(patternSelect);
@@ -313,13 +313,13 @@ describe("ProfileFiltersSidebar", () => {
     expect(
       solidPatternOption.querySelector('[data-pattern-swatch="solid"]'),
     ).not.toBeNull();
-    const emptyPatternSlot = argylePatternOption.querySelector(
-      '[data-pattern-swatch-empty="argyle"]',
+    const argylePatternSwatch = argylePatternOption.querySelector(
+      '[data-pattern-swatch="argyle"]',
     );
-    expect(emptyPatternSlot).not.toBeNull();
-    expect(emptyPatternSlot).toHaveStyle({
-      width: "18px",
-      height: "18px",
+    expect(argylePatternSwatch).not.toBeNull();
+    expect(argylePatternSwatch).toHaveStyle({
+      width: "20px",
+      height: "20px",
     });
     await user.keyboard("{Escape}");
 

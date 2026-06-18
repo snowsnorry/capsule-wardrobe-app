@@ -1,20 +1,45 @@
 import { type CSSProperties } from "react";
-import {
-  isSvgPattern,
-  renderSvgPatternSwatch,
-  type SvgPattern,
-} from "./PatternSwatchSvg";
 
-type CssPattern =
-  | "solid"
-  | "stripe"
-  | "check"
-  | "polka_dot"
-  | "ribbed"
-  | "waffle"
-  | "color_block";
+const PATTERN_SPRITE_URL = "/patterns/pattern-sprite.webp";
+const SPRITE_COLUMNS = 7;
+const SPRITE_ROWS = 4;
+const DEFAULT_SIZE = 20;
+const TILE_RENDER_SCALE = 1;
 
-type PatternSwatchPattern = CssPattern | SvgPattern;
+const PATTERN_SPRITE_COORDS = {
+  abstract: [0, 0],
+  argyle: [1, 0],
+  cable: [2, 0],
+  camo: [3, 0],
+  check: [4, 0],
+  color_block: [5, 0],
+  corduroy: [6, 0],
+
+  crocodile: [0, 1],
+  floral: [1, 1],
+  graphic: [2, 1],
+  herringbone: [3, 1],
+  houndstooth: [4, 1],
+  jacquard: [5, 1],
+  lace: [6, 1],
+
+  leopard: [0, 2],
+  logo: [1, 2],
+  marble: [2, 2],
+  paisley: [3, 2],
+  polka_dot: [4, 2],
+  quilted: [5, 2],
+  ribbed: [6, 2],
+
+  snake: [0, 3],
+  solid: [1, 3],
+  stripe: [2, 3],
+  tie_dye: [3, 3],
+  waffle: [4, 3],
+  zebra: [5, 3],
+} as const;
+
+type PatternSwatchPattern = keyof typeof PATTERN_SPRITE_COORDS;
 
 type PatternSwatchProps = {
   pattern: string;
@@ -23,129 +48,25 @@ type PatternSwatchProps = {
   style?: CSSProperties;
 };
 
-const DEFAULT_SIZE = 18;
-
-const swatchColors = {
-  border: "rgba(15, 23, 42, 0.22)",
-  ink: "#1f2937",
-  inkSoft: "rgba(31, 41, 55, 0.58)",
-  line: "rgba(31, 41, 55, 0.32)",
-  paper: "#f8fafc",
-};
-
-const CSS_PATTERN_STYLES: Record<CssPattern, CSSProperties> = {
-  solid: {
-    backgroundColor: "#94a3b8",
-  },
-  stripe: {
-    backgroundColor: swatchColors.paper,
-    backgroundImage: `repeating-linear-gradient(
-      45deg,
-      ${swatchColors.ink} 0 2px,
-      ${swatchColors.paper} 2px 5px
-    )`,
-  },
-  check: {
-    backgroundColor: swatchColors.paper,
-    backgroundImage: `repeating-conic-gradient(
-      ${swatchColors.ink} 0 25%,
-      ${swatchColors.paper} 0 50%
-    )`,
-    backgroundSize: "7px 7px",
-  },
-  polka_dot: {
-    backgroundColor: swatchColors.paper,
-    backgroundImage: `radial-gradient(
-      circle,
-      ${swatchColors.ink} 0 1.7px,
-      transparent 1.8px
-    )`,
-    backgroundPosition: "1px 1px",
-    backgroundSize: "6px 6px",
-  },
-  ribbed: {
-    backgroundColor: "#e2e8f0",
-    backgroundImage: `repeating-linear-gradient(
-      90deg,
-      ${swatchColors.inkSoft} 0 1px,
-      transparent 1px 3px
-    )`,
-  },
-  waffle: {
-    backgroundColor: "#e2e8f0",
-    backgroundImage: `
-      repeating-linear-gradient(
-        0deg,
-        ${swatchColors.line} 0 1px,
-        transparent 1px 5px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        ${swatchColors.line} 0 1px,
-        transparent 1px 5px
-      )
-    `,
-  },
-  color_block: {
-    backgroundImage:
-      "linear-gradient(135deg, #0f172a 0 34%, #94a3b8 34% 67%, #f8fafc 67% 100%)",
-  },
-};
-
 function PatternSwatch({
   pattern,
   size = DEFAULT_SIZE,
   className,
   style,
 }: PatternSwatchProps) {
-  if (isCssPattern(pattern)) {
-    return (
-      <CssPatternSwatch
-        pattern={pattern}
-        size={size}
-        className={className}
-        style={style}
-      />
-    );
+  if (!isPatternSwatchPattern(pattern)) {
+    return null;
   }
 
-  if (isSvgPattern(pattern)) {
-    return renderSvgPatternSwatch({ pattern, size, className, style });
-  }
+  const [col, row] = PATTERN_SPRITE_COORDS[pattern];
+  const scaledTileSize = size * TILE_RENDER_SCALE;
+  const backgroundSize = `${SPRITE_COLUMNS * scaledTileSize}px ${
+    SPRITE_ROWS * scaledTileSize
+  }px`;
+  const backgroundPosition = `${-col * scaledTileSize}px ${
+    -row * scaledTileSize
+  }px`;
 
-  return (
-    <span
-      aria-hidden="true"
-      className={className}
-      data-pattern-swatch-empty={pattern}
-      style={{
-        width: size,
-        height: size,
-        flex: `0 0 ${size}px`,
-        display: "inline-block",
-        visibility: "hidden",
-        ...style,
-      }}
-    />
-  );
-}
-
-function isPatternSwatchPattern(
-  pattern: string,
-): pattern is PatternSwatchPattern {
-  return isCssPattern(pattern) || isSvgPattern(pattern);
-}
-
-function isCssPattern(pattern: string): pattern is CssPattern {
-  return pattern in CSS_PATTERN_STYLES;
-}
-
-function CssPatternSwatch({
-  pattern,
-  size,
-  className,
-  style,
-}: PatternSwatchProps & { pattern: CssPattern; size: number }) {
   return (
     <span
       aria-hidden="true"
@@ -156,16 +77,24 @@ function CssPatternSwatch({
         height: size,
         flex: `0 0 ${size}px`,
         display: "inline-block",
-        boxSizing: "border-box",
         overflow: "hidden",
         verticalAlign: "middle",
-        borderRadius: 999,
-        border: `1px solid ${swatchColors.border}`,
-        ...CSS_PATTERN_STYLES[pattern],
+        borderRadius: "50%",
+        backgroundImage: `url(${PATTERN_SPRITE_URL})`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize,
+        backgroundPosition,
+        boxShadow: "inset 0 0 0 1px rgba(15, 23, 42, 0.22)",
         ...style,
       }}
     />
   );
+}
+
+function isPatternSwatchPattern(
+  pattern: string,
+): pattern is PatternSwatchPattern {
+  return Object.prototype.hasOwnProperty.call(PATTERN_SPRITE_COORDS, pattern);
 }
 
 export { PatternSwatch, isPatternSwatchPattern };

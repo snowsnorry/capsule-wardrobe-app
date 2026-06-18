@@ -127,13 +127,13 @@ describe("SearchFiltersSidebar", () => {
     const solidSwatch = solid
       .closest(".MuiChip-root")
       ?.querySelector('[data-pattern-swatch="solid"]');
-    const argyleSlot = argyle
+    const argyleSwatch = argyle
       .closest(".MuiChip-root")
-      ?.querySelector('[data-pattern-swatch-empty="argyle"]');
+      ?.querySelector('[data-pattern-swatch="argyle"]');
     expect(solidSwatch).not.toBeNull();
-    expect(solidSwatch).toHaveStyle({ width: "18px", height: "18px" });
-    expect(argyleSlot).not.toBeNull();
-    expect(argyleSlot).toHaveStyle({ width: "18px", height: "18px" });
+    expect(solidSwatch).toHaveStyle({ width: "20px", height: "20px" });
+    expect(argyleSwatch).not.toBeNull();
+    expect(argyleSwatch).toHaveStyle({ width: "20px", height: "20px" });
   });
 
   test("sorts core, aesthetics, seasons, and audience display values", () => {

@@ -40,10 +40,10 @@ describe("StatisticsSummaryCard", () => {
     expect(
       chipRoot.querySelector('[data-pattern-swatch="solid"]'),
     ).not.toBeNull();
-    const emptySlot = chipRoot.querySelector(
-      '[data-pattern-swatch-empty="argyle"]',
+    const argyleSwatch = chipRoot.querySelector(
+      '[data-pattern-swatch="argyle"]',
     );
-    expect(emptySlot).not.toBeNull();
-    expect(emptySlot).toHaveStyle({ width: "18px", height: "18px" });
+    expect(argyleSwatch).not.toBeNull();
+    expect(argyleSwatch).toHaveStyle({ width: "20px", height: "20px" });
   });
 });
