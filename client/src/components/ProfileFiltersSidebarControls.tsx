@@ -1,9 +1,9 @@
-import { Box, Stack, TextField } from "@mui/material";
-import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
+import { Stack, TextField } from "@mui/material";
 import { FilterSectionTitle } from "./ProfileFilterSectionTitle";
 import { ProfileFilterChipSection } from "./ProfileFilterChipSection";
 import { ProfileFilterSelectSection } from "./ProfileFilterSelectSection";
 import { PatternSwatch } from "./PatternSwatch";
+import ColorSwatch from "./ColorSwatch";
 import StylePreferenceSelector from "./StylePreferenceSelector";
 import type {
   ProfileFiltersSidebarProps,
@@ -122,21 +122,7 @@ function ProfileAccentColorSection({
 }
 
 function renderAccentColorSwatch(value: ProfileFilterValue) {
-  return (
-    <Box
-      aria-hidden="true"
-      sx={{
-        width: 12,
-        height: 12,
-        borderRadius: "999px",
-        boxSizing: "border-box",
-        border: "1px solid",
-        borderColor: "divider",
-        flex: "0 0 auto",
-        ...getColorSwatchStyle(value),
-      }}
-    />
-  );
+  return <ColorSwatch value={value} />;
 }
 
 function renderPatternSwatch(value: ProfileFilterValue) {

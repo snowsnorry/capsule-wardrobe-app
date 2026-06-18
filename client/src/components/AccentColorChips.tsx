@@ -1,7 +1,7 @@
-import { Box, Chip, Stack } from "@mui/material";
+import { Chip, Stack } from "@mui/material";
 import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
-import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
+import ColorSwatch from "./ColorSwatch";
 
 type AccentColorValue = string;
 
@@ -63,17 +63,7 @@ function AccentColorChips({
           onClick={() => handleToggle(item)}
           label={
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: "999px",
-                  boxSizing: "border-box",
-                  border: "1px solid",
-                  borderColor: "divider",
-                  ...getColorSwatchStyle(item),
-                }}
-              />
+              <ColorSwatch value={item} />
               <span>{translateOption("accentColors", item, locale)}</span>
             </Stack>
           }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { translateOption } from "../../i18n";
-import { getColorSwatchStyle } from "../../../../shared/colorSwatches.js";
 import { buildProductDetailGroups } from "../../../../shared/productDetail.js";
+import ColorSwatch from "../ColorSwatch";
 import {
   getProductDetailImageUrl,
   getProductDetailRawImageUrl,
@@ -93,18 +93,7 @@ function ColorValues({
           spacing={0.7}
           sx={{ alignItems: "center" }}
         >
-          <Box
-            sx={{
-              width: 12,
-              height: 12,
-              borderRadius: "var(--cw-radius-pill)",
-              boxSizing: "border-box",
-              flexShrink: 0,
-              border: "1px solid",
-              borderColor: "divider",
-              ...getColorSwatchStyle(value.key),
-            }}
-          />
+          <ColorSwatch value={value.key} />
           <span>{value.label}</span>
         </Stack>
       ))}
