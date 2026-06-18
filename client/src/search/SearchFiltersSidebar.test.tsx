@@ -39,7 +39,7 @@ const options = {
   occasions: ["office"],
   audience: ["woman", "man", "all"],
   colors: ["blue"],
-  patterns: ["stripe", "solid", "abstract"],
+  patterns: ["stripe", "solid", "abstract", "argyle"],
   silhouettes: ["straight"],
   fits: ["regular"],
   closureTypes: ["button"],
@@ -101,6 +101,7 @@ describe("SearchFiltersSidebar", () => {
       name: "Not important",
     });
     const abstract = patternQueries.getByRole("button", { name: "Abstract" });
+    const argyle = patternQueries.getByRole("button", { name: "Argyle" });
     const solid = patternQueries.getByRole("button", { name: "Solid" });
     const stripe = patternQueries.getByRole("button", { name: "Stripe" });
 
@@ -113,8 +114,26 @@ describe("SearchFiltersSidebar", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
+      abstract.compareDocumentPosition(argyle) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      argyle.compareDocumentPosition(solid) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
       solid.compareDocumentPosition(stripe) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+
+    const solidSwatch = solid
+      .closest(".MuiChip-root")
+      ?.querySelector('[data-pattern-swatch="solid"]');
+    const argyleSwatch = argyle
+      .closest(".MuiChip-root")
+      ?.querySelector('[data-pattern-swatch="argyle"]');
+    expect(solidSwatch).not.toBeNull();
+    expect(solidSwatch).toHaveStyle({ width: "20px", height: "20px" });
+    expect(argyleSwatch).not.toBeNull();
+    expect(argyleSwatch).toHaveStyle({ width: "20px", height: "20px" });
   });
 
   test("sorts core, aesthetics, seasons, and audience display values", () => {

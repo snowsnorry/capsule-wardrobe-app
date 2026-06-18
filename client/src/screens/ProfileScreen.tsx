@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import LocaleSwitcher from "../components/LocaleSwitcher";
 import AccentColorChips from "../components/AccentColorChips";
+import { PatternSwatch } from "../components/PatternSwatch";
 import StylePreferenceSelector from "../components/StylePreferenceSelector";
 import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
@@ -103,7 +104,20 @@ function ProfileChipSection({
         {options.map((item) => (
           <Chip
             key={item}
-            label={translateOption(optionGroup, item, locale)}
+            label={
+              optionGroup === "patterns" ? (
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center" }}
+                >
+                  <PatternSwatch pattern={item} />
+                  <span>{translateOption(optionGroup, item, locale)}</span>
+                </Stack>
+              ) : (
+                translateOption(optionGroup, item, locale)
+              )
+            }
             clickable
             color={selectedValues.includes(item) ? "primary" : "default"}
             onClick={() => onSelect(item)}

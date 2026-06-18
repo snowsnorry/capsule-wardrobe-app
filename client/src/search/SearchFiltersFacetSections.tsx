@@ -1,5 +1,6 @@
 import { Stack } from "@mui/material";
 import AccentColorChips from "../components/AccentColorChips";
+import { PatternSwatch } from "../components/PatternSwatch";
 import {
   MultiSelectChips,
   SearchSection,
@@ -99,6 +100,7 @@ function SearchProductAttributeSections({
           items={filterItems.patternItems}
           values={draftState.pattern}
           defaultLabel={t("search.notImportant")}
+          renderPrefix={(value) => <PatternSwatch pattern={value} />}
           onToggle={(value) =>
             updateDraftState(updateMultiValue("pattern", value))
           }

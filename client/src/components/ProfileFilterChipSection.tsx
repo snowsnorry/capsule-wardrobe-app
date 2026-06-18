@@ -1,5 +1,6 @@
 import { Chip, Stack } from "@mui/material";
 import { translateOption } from "../i18n";
+import { PatternSwatch } from "./PatternSwatch";
 import { FilterSectionTitle } from "./ProfileFilterSectionTitle";
 import type { ProfileFilterValue } from "./ProfileFiltersSidebarTypes";
 
@@ -31,7 +32,16 @@ function ProfileFilterChipSection({
         {options.map((item) => (
           <Chip
             key={item}
-            label={translateOption(optionGroup, item, locale)}
+            label={
+              optionGroup === "patterns" ? (
+                <PatternChipLabel
+                  label={translateOption(optionGroup, item, locale)}
+                  value={item}
+                />
+              ) : (
+                translateOption(optionGroup, item, locale)
+              )
+            }
             clickable
             disabled={disabled}
             color={
@@ -43,6 +53,21 @@ function ProfileFilterChipSection({
           />
         ))}
       </Stack>
+    </Stack>
+  );
+}
+
+function PatternChipLabel({
+  label,
+  value,
+}: {
+  label: string;
+  value: ProfileFilterValue;
+}) {
+  return (
+    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+      <PatternSwatch pattern={value} />
+      <span>{label}</span>
     </Stack>
   );
 }

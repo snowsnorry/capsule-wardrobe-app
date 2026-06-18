@@ -3,6 +3,7 @@ import { getColorSwatchStyle } from "../../../shared/colorSwatches.js";
 import { FilterSectionTitle } from "./ProfileFilterSectionTitle";
 import { ProfileFilterChipSection } from "./ProfileFilterChipSection";
 import { ProfileFilterSelectSection } from "./ProfileFilterSelectSection";
+import { PatternSwatch } from "./PatternSwatch";
 import StylePreferenceSelector from "./StylePreferenceSelector";
 import type {
   ProfileFiltersSidebarProps,
@@ -84,6 +85,7 @@ function ProfileFilterControls({
         locale={locale}
         disabled={disabled}
         onSelect={(value) => props.onSelectPattern(value as ProfileFilterValue)}
+        renderPrefix={renderPatternSwatch}
       />
     </>
   );
@@ -135,6 +137,10 @@ function renderAccentColorSwatch(value: ProfileFilterValue) {
       }}
     />
   );
+}
+
+function renderPatternSwatch(value: ProfileFilterValue) {
+  return <PatternSwatch pattern={value} />;
 }
 
 function ProfileTextSection({

@@ -108,6 +108,35 @@ describe("SearchResultsList", () => {
     expect(onDeleteActiveChip).toHaveBeenCalledWith(chip);
   });
 
+  test("renders pattern swatches in active filter chips", () => {
+    const patternChip = {
+      key: "pattern:solid,argyle",
+      field: "pattern" as const,
+      values: ["solid", "argyle"],
+      optionGroup: "patterns",
+      title: "Pattern",
+      label: "Pattern: Solid, Argyle",
+      valueLabels: ["Solid", "Argyle"],
+    };
+
+    render(<SearchResultsList {...baseProps} activeChips={[patternChip]} />);
+
+    const chipRoot = screen.getByTestId("active-filter-chip-pattern");
+    expect(chipRoot).toHaveTextContent("Pattern: Solid, Argyle");
+    expect(screen.getByLabelText("Pattern: Solid, Argyle")).toBeInTheDocument();
+    expect(
+      chipRoot.querySelector('[aria-label="Pattern: Solid, Argyle"]'),
+    ).not.toBeNull();
+    expect(
+      chipRoot.querySelector('[data-pattern-swatch="solid"]'),
+    ).not.toBeNull();
+    const argyleSwatch = chipRoot.querySelector(
+      '[data-pattern-swatch="argyle"]',
+    );
+    expect(argyleSwatch).not.toBeNull();
+    expect(argyleSwatch).toHaveStyle({ width: "20px", height: "20px" });
+  });
+
   test("keeps custom result rows keyboard operable with a visible focus style", async () => {
     const user = userEvent.setup();
     const onSelectResult = vi.fn();

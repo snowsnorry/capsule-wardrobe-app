@@ -11,6 +11,7 @@ import {
   AddItemsCatalogPanel,
   AddItemsDialogSelectionSummary,
 } from "./OutfitAddItemsDialogPanels";
+import { CatalogResultsHeader } from "./OutfitAddItemsDialogParts";
 import type { OutfitAddItemsDialogModel } from "./useOutfitAddItemsDialog";
 
 const personalItemsApi = vi.hoisted(() => ({
@@ -102,6 +103,42 @@ afterEach(() => {
 });
 
 describe("AddItemsDialog", () => {
+  test("renders pattern swatches in catalog active filter chips", () => {
+    renderWithTheme(
+      <CatalogResultsHeader
+        activeChips={[
+          {
+            key: "pattern:solid,argyle",
+            field: "pattern",
+            values: ["solid", "argyle"],
+            optionGroup: "patterns",
+            title: "Pattern",
+            label: "Pattern: Solid, Argyle",
+            valueLabels: ["Solid", "Argyle"],
+          },
+        ]}
+        formattedTotal="12"
+        onDeleteChip={vi.fn()}
+        t={t}
+      />,
+    );
+
+    const chipRoot = screen.getByTestId("active-filter-chip-pattern");
+    expect(chipRoot).toHaveTextContent("Pattern: Solid, Argyle");
+    expect(screen.getByLabelText("Pattern: Solid, Argyle")).toBeInTheDocument();
+    expect(
+      chipRoot.querySelector('[aria-label="Pattern: Solid, Argyle"]'),
+    ).not.toBeNull();
+    expect(
+      chipRoot.querySelector('[data-pattern-swatch="solid"]'),
+    ).not.toBeNull();
+    const argyleSwatch = chipRoot.querySelector(
+      '[data-pattern-swatch="argyle"]',
+    );
+    expect(argyleSwatch).not.toBeNull();
+    expect(argyleSwatch).toHaveStyle({ width: "20px", height: "20px" });
+  });
+
   test("renders a fullscreen dialog and submits the selected initial items", () => {
     personalItemsApi.fetchPersonalItems.mockResolvedValue({ items: [] });
     const selected: OutfitItemSnapshot = {

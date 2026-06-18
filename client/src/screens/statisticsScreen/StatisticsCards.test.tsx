@@ -1,0 +1,54 @@
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { StatisticsSummaryCard } from "./StatisticsCards";
+
+const theme = createTheme();
+
+describe("StatisticsSummaryCard", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  test("renders pattern swatches in active filter chips", () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <StatisticsSummaryCard
+          title="Statistics"
+          subtitle="Summary"
+          totalLabel="12"
+          chips={[
+            {
+              key: "pattern:solid,argyle",
+              field: "pattern",
+              values: ["solid", "argyle"],
+              optionGroup: "patterns",
+              title: "Pattern",
+              label: "Pattern: Solid, Argyle",
+              valueLabels: ["Solid", "Argyle"],
+            },
+          ]}
+          isLoading={false}
+          onDeleteChip={vi.fn()}
+          activeFiltersLabel="Active filters"
+          noActiveFiltersLabel="No active filters"
+        />
+      </ThemeProvider>,
+    );
+
+    const chipRoot = screen.getByTestId("active-filter-chip-pattern");
+    expect(chipRoot).toHaveTextContent("Pattern: Solid, Argyle");
+    expect(screen.getByLabelText("Pattern: Solid, Argyle")).toBeInTheDocument();
+    expect(
+      chipRoot.querySelector('[aria-label="Pattern: Solid, Argyle"]'),
+    ).not.toBeNull();
+    expect(
+      chipRoot.querySelector('[data-pattern-swatch="solid"]'),
+    ).not.toBeNull();
+    const argyleSwatch = chipRoot.querySelector(
+      '[data-pattern-swatch="argyle"]',
+    );
+    expect(argyleSwatch).not.toBeNull();
+    expect(argyleSwatch).toHaveStyle({ width: "20px", height: "20px" });
+  });
+});
