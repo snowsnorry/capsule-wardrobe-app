@@ -17,6 +17,7 @@ function ActiveFilterChipLabel({
 
   return (
     <Stack
+      aria-label={chip.label}
       component="span"
       direction="row"
       spacing={0.75}
@@ -24,7 +25,7 @@ function ActiveFilterChipLabel({
     >
       {chip.title ? (
         <Box component="span" sx={{ flex: "0 0 auto" }}>
-          {chip.title}:
+          {chip.title}:{" "}
         </Box>
       ) : null}
       <Stack
@@ -44,7 +45,7 @@ function ActiveFilterChipLabel({
             <PatternSwatch pattern={value} />
             <Box component="span">
               {labels[index] || value}
-              {index < valueCount - 1 ? "," : ""}
+              {index < valueCount - 1 ? ", " : ""}
             </Box>
           </Stack>
         ))}

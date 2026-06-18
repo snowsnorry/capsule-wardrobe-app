@@ -37,6 +37,11 @@ describe("StatisticsSummaryCard", () => {
     );
 
     const chipRoot = screen.getByTestId("active-filter-chip-pattern");
+    expect(chipRoot).toHaveTextContent("Pattern: Solid, Argyle");
+    expect(screen.getByLabelText("Pattern: Solid, Argyle")).toBeInTheDocument();
+    expect(
+      chipRoot.querySelector('[aria-label="Pattern: Solid, Argyle"]'),
+    ).not.toBeNull();
     expect(
       chipRoot.querySelector('[data-pattern-swatch="solid"]'),
     ).not.toBeNull();
