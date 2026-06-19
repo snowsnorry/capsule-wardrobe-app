@@ -53,6 +53,14 @@ test("getPersonalItemsReportByEmail returns the stored row", async () => {
   expect(values[0]).toEqual(["person@example.com"]);
 });
 
+test("getPersonalItemsReportByEmail returns null when no row exists", async () => {
+  createSqlRecorder([[]]);
+
+  await expect(
+    getPersonalItemsReportByEmail("person@example.com"),
+  ).resolves.toBeNull();
+});
+
 test("upsertPersonalItemsReportByEmail stores sorted unique URLs", async () => {
   const { statements, values } = createSqlRecorder([
     [
@@ -83,6 +91,28 @@ test("upsertPersonalItemsReportByEmail stores sorted unique URLs", async () => {
     "person@example.com",
     JSON.stringify({ schemaVersion: 1 }),
     ["https://example.com/2", "wardrobe://1"],
+  ]);
+});
+
+test("upsertPersonalItemsReportByEmail normalizes blank URL values and requires a returned row", async () => {
+  const { values } = createSqlRecorder([[]]);
+
+  await expect(
+    upsertPersonalItemsReportByEmail({
+      email: "person@example.com",
+      personalItemUrls: [
+        "",
+        " wardrobe://2 ",
+        null as unknown as string,
+        "wardrobe://2",
+      ],
+      report: { schemaVersion: 1 },
+    }),
+  ).rejects.toThrow("personal_items_report_upsert_failed");
+  expect(values[0]).toEqual([
+    "person@example.com",
+    JSON.stringify({ schemaVersion: 1 }),
+    ["wardrobe://2"],
   ]);
 });
 

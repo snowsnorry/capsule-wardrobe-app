@@ -253,35 +253,37 @@ export function ChildRow({
 }) {
   return (
     <Tooltip title={label} placement="right">
-      <ListItemButton
-        selected={isActive}
-        disabled={isInteractionDisabled}
-        onClick={onClick}
-        sx={{
-          borderRadius: "var(--cw-radius-card)",
-          mb: 0.25,
-          ml: 0,
-          pl: topLevelIconRailWidth,
-          pr: 1.5,
-          minHeight: 34,
-          py: 0.5,
-          width: "100%",
-        }}
-      >
-        <ListItemText
-          primary={label}
-          slotProps={{
-            primary: {
-              noWrap: true,
-              sx: {
-                fontSize: "14px",
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? "primary.main" : "text.secondary",
-              },
-            },
+      <Box component="span" sx={{ display: "block" }}>
+        <ListItemButton
+          selected={isActive}
+          disabled={isInteractionDisabled}
+          onClick={onClick}
+          sx={{
+            borderRadius: "var(--cw-radius-card)",
+            mb: 0.25,
+            ml: 0,
+            pl: topLevelIconRailWidth,
+            pr: 1.5,
+            minHeight: 34,
+            py: 0.5,
+            width: "100%",
           }}
-        />
-      </ListItemButton>
+        >
+          <ListItemText
+            primary={label}
+            slotProps={{
+              primary: {
+                noWrap: true,
+                sx: {
+                  fontSize: "14px",
+                  fontWeight: isActive ? 700 : 500,
+                  color: isActive ? "primary.main" : "text.secondary",
+                },
+              },
+            }}
+          />
+        </ListItemButton>
+      </Box>
     </Tooltip>
   );
 }

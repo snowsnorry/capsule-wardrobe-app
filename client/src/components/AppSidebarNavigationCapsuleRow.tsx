@@ -52,18 +52,20 @@ function CapsulePinButton({
       data-pinned={isPinned ? "true" : "false"}
     >
       <Tooltip title={label}>
-        <IconButton
-          className="capsule-row-pin"
-          aria-label={label}
-          size="small"
-          disabled={isInteractionDisabled}
-          onClick={(event) => {
-            event.stopPropagation();
-            void onSetPin(capsuleId, !isPinned);
-          }}
-        >
-          {isPinned ? <RiPushpinFill /> : <RiPushpinLine />}
-        </IconButton>
+        <Box component="span">
+          <IconButton
+            className="capsule-row-pin"
+            aria-label={label}
+            size="small"
+            disabled={isInteractionDisabled}
+            onClick={(event) => {
+              event.stopPropagation();
+              void onSetPin(capsuleId, !isPinned);
+            }}
+          >
+            {isPinned ? <RiPushpinFill /> : <RiPushpinLine />}
+          </IconButton>
+        </Box>
       </Tooltip>
     </Box>
   );

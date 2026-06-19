@@ -360,6 +360,111 @@ test("personal items report routes read stale state generate and delete reports"
   });
 });
 
+test("personal items report route returns current URL snapshot when no report exists", async (t) => {
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getPersonalItemsReportImpl: async () => null,
+      listWardrobeItemsImpl: async () => [
+        { id: "1", url: " wardrobe://2 ", source: "uploaded" },
+        { id: "2", url: "https://example.com/1", source: "from_catalog" },
+        { id: "3", url: "wardrobe://2", source: "uploaded" },
+        { id: "4", url: "", source: "uploaded" },
+      ],
+    },
+  });
+
+  const fetched = await requestJson(baseUrl, "/wardrobe/items/report", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(fetched.response.status).toBe(200);
+  expect(fetched.json).toEqual({
+    ok: true,
+    report: null,
+    personalItemUrls: ["https://example.com/1", "wardrobe://2"],
+    generatedAt: null,
+    stale: false,
+  });
+});
+
+test("personal items report routes map generation failures to SSE fatal events", async (t) => {
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      generatePersonalItemsReportImpl: async (_email, context) => {
+        if (context === "bad payload") {
+          throw Object.assign(new Error("bad payload"), {
+            code: "invalid_payload",
+          });
+        }
+        if (context === "missing items") {
+          throw Object.assign(new Error("missing items"), {
+            code: "not_found",
+          });
+        }
+        throw new Error("llm unavailable");
+      },
+    },
+  });
+
+  await expect(
+    requestReportStream(baseUrl, { context: 42 }),
+  ).resolves.toMatchObject({
+    response: { status: 200 },
+    text: expect.stringContaining("invalid_payload"),
+  });
+
+  const invalid = await requestReportStream(baseUrl, {
+    context: "bad payload",
+  });
+  expect(parseSseEvents(invalid.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    { event: "fatal", data: { error: "invalid_payload" } },
+  ]);
+
+  const missing = await requestReportStream(baseUrl, {
+    context: "missing items",
+  });
+  expect(parseSseEvents(missing.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    { event: "fatal", data: { error: "not_found" } },
+  ]);
+
+  const unavailable = await requestReportStream(baseUrl, {
+    context: "service outage",
+  });
+  expect(parseSseEvents(unavailable.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    { event: "fatal", data: { error: "service_unavailable" } },
+  ]);
+});
+
+test("personal items report routes return service unavailable for read and delete failures", async (t) => {
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      deletePersonalItemsReportImpl: async () => {
+        throw new Error("delete failed");
+      },
+      getPersonalItemsReportImpl: async () => {
+        throw new Error("read failed");
+      },
+    },
+  });
+
+  const fetched = await requestJson(baseUrl, "/wardrobe/items/report", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(fetched.response.status).toBe(503);
+  expect(fetched.json).toEqual({ error: "service_unavailable" });
+
+  const deleted = await requestJson(baseUrl, "/wardrobe/items/report", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(deleted.response.status).toBe(503);
+  expect(deleted.json).toEqual({ error: "service_unavailable" });
+});
+
 test("wardrobe routes update uploaded item details", async (t) => {
   const calls: unknown[] = [];
   const { baseUrl } = await startTestServer(t, {

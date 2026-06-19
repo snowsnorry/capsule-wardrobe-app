@@ -1,8 +1,18 @@
 import { describe, expect, test, vi } from "vitest";
-import { generatePersonalItemsReport } from "./personalItemsReportService.js";
-import { applyComputedPersonalItemsVerdictScore } from "./personalItemsReportScoring.js";
+import {
+  generatePersonalItemsReport,
+  getPersonalItemUrls,
+} from "./personalItemsReportService.js";
+import {
+  applyComputedPersonalItemsVerdictScore,
+  computeVerdictScore,
+} from "./personalItemsReportScoring.js";
 import { parsePersonalItemsReportLlmOutput } from "./personalItemsReportValidation.js";
 import type { PersonalItemsReportLlmOutput } from "./personalItemsReportTypes.js";
+import {
+  buildPersonalItemsReportError,
+  isPersonalItemsReportDomainError,
+} from "./personalItemsReportErrors.js";
 
 const wardrobeItems = [
   {
@@ -275,6 +285,82 @@ describe("generatePersonalItemsReport", () => {
     ).rejects.toMatchObject({ code: "invalid_payload" });
     expect(deps.upsertPersonalItemsReportImpl).not.toHaveBeenCalled();
   });
+
+  test("rejects current items without report ids before persisting", async () => {
+    const deps = createDeps({
+      items: [{ ...wardrobeItems[0], id: "" }],
+    });
+
+    await expect(
+      generatePersonalItemsReport("person@example.com", null, deps),
+    ).rejects.toMatchObject({
+      code: "invalid_payload",
+      message: "missing_item_id",
+    });
+    expect(deps.upsertPersonalItemsReportImpl).not.toHaveBeenCalled();
+  });
+
+  test("rejects empty wardrobes and unavailable report generators", async () => {
+    await expect(
+      generatePersonalItemsReport(
+        "person@example.com",
+        null,
+        createDeps({ items: [] }),
+      ),
+    ).rejects.toMatchObject({ code: "not_found" });
+
+    const deps = createDeps();
+    deps.getGenerateJsonWithLlmImpl = vi.fn(() => null as never);
+
+    await expect(
+      generatePersonalItemsReport("person@example.com", null, deps),
+    ).rejects.toMatchObject({
+      code: "service_unavailable",
+      message: "llm_unavailable",
+    });
+  });
+
+  test("preserves domain errors and wraps unexpected generation failures", async () => {
+    const domainDeps = createDeps();
+    domainDeps.generateJsonWithLlm.mockRejectedValueOnce(
+      buildPersonalItemsReportError("invalid_payload", "bad_llm_payload"),
+    );
+
+    await expect(
+      generatePersonalItemsReport("person@example.com", null, domainDeps),
+    ).rejects.toMatchObject({
+      code: "invalid_payload",
+      message: "bad_llm_payload",
+    });
+
+    const unexpectedDeps = createDeps();
+    unexpectedDeps.generateJsonWithLlm.mockRejectedValueOnce(new Error("boom"));
+
+    await expect(
+      generatePersonalItemsReport("person@example.com", null, unexpectedDeps),
+    ).rejects.toMatchObject({ code: "service_unavailable" });
+  });
+});
+
+test("personal items report URL snapshots trim numbers and sort unique values", () => {
+  expect(
+    getPersonalItemUrls([
+      { url: " wardrobe://2 " },
+      { url: 42 },
+      { url: "wardrobe://2" },
+      { url: Number.NaN },
+      { url: "" },
+    ]),
+  ).toEqual(["42", "wardrobe://2"]);
+});
+
+test("personal items report domain error helper classifies known codes", () => {
+  expect(
+    isPersonalItemsReportDomainError(
+      buildPersonalItemsReportError("not_found"),
+    ),
+  ).toBe(true);
+  expect(isPersonalItemsReportDomainError(new Error("boom"))).toBe(false);
 });
 
 test("personal items report validation rejects unknown referenced item ids", () => {
@@ -312,4 +398,163 @@ test("personal items report scoring preserves llm verdict values", () => {
     llmStatus: "good",
     status: "good",
   });
+});
+
+test("personal items report scoring caps weak verdict and issue states", () => {
+  const computeWith = (
+    mutate: (report: PersonalItemsReportLlmOutput) => void,
+  ) => {
+    const report = buildLlmReport();
+    mutate(report);
+    return computeVerdictScore(report);
+  };
+
+  expect(computeWith((report) => (report.verdict.status = "incomplete"))).toBe(
+    0.59,
+  );
+  expect(computeWith((report) => (report.verdict.status = "unbalanced"))).toBe(
+    0.69,
+  );
+  expect(
+    computeWith((report) => (report.verdict.status = "usable_with_gaps")),
+  ).toBe(0.79);
+  expect(
+    computeWith((report) => {
+      report.issues = [
+        {
+          code: "missing_shoes",
+          severity: "critical",
+          dimension: "coverage",
+          message: "Missing shoes.",
+          affectedItemIds: [],
+          suggestion: "Add shoes.",
+        },
+      ];
+    }),
+  ).toBeLessThanOrEqual(0.69);
+  expect(
+    computeWith((report) => {
+      report.issues = [
+        {
+          code: "thin_shoes",
+          severity: "warning",
+          dimension: "coverage",
+          message: "Thin shoes.",
+          affectedItemIds: [],
+          suggestion: "Add another pair.",
+        },
+      ];
+    }),
+  ).toBeLessThanOrEqual(0.89);
+});
+
+test("personal items report scoring caps weak wardrobe structure", () => {
+  const computeWith = (
+    mutate: (report: PersonalItemsReportLlmOutput) => void,
+  ) => {
+    const report = buildLlmReport();
+    mutate(report);
+    return computeVerdictScore(report);
+  };
+
+  expect(
+    computeWith((report) => {
+      report.coverage.coreRoleCoverage.tops = "missing";
+    }),
+  ).toBe(0.59);
+  expect(
+    computeWith((report) => {
+      report.coverage.coreRoleCoverage.bottoms = "thin";
+    }),
+  ).toBeLessThanOrEqual(0.79);
+  expect(
+    computeWith((report) => {
+      report.personalItemsOverview.categoryCounts.dress = 1;
+      report.coverage.coreRoleCoverage.tops = "missing";
+      report.coverage.coreRoleCoverage.dresses = "thin";
+    }),
+  ).toBeLessThanOrEqual(0.79);
+  expect(
+    computeWith((report) => {
+      report.outfitReadiness.overallScore = 0.35;
+    }),
+  ).toBe(0.59);
+  expect(
+    computeWith((report) => {
+      report.outfitReadiness.supportedFormulaTypes = [];
+    }),
+  ).toBe(0.59);
+  expect(
+    computeWith((report) => {
+      report.outfitReadiness.estimatedOutfitRange.max = 0;
+    }),
+  ).toBe(0.59);
+  expect(
+    computeWith((report) => {
+      report.outfitReadiness.overallScore = 0.5;
+      report.scores.outfitReadiness = 0.5;
+    }),
+  ).toBeLessThanOrEqual(0.69);
+  expect(
+    computeWith((report) => {
+      report.outfitReadiness.overallScore = 0.6;
+      report.scores.outfitReadiness = 0.6;
+    }),
+  ).toBeLessThanOrEqual(0.79);
+});
+
+test("personal items report scoring caps category balance confidence and low dimensions", () => {
+  const computeWith = (
+    mutate: (report: PersonalItemsReportLlmOutput) => void,
+  ) => {
+    const report = buildLlmReport();
+    mutate(report);
+    return computeVerdictScore(report);
+  };
+
+  expect(
+    computeWith((report) => {
+      report.personalItemsOverview.detectedCategoryBalance = "fragmented";
+    }),
+  ).toBeLessThanOrEqual(0.74);
+  expect(
+    computeWith((report) => {
+      report.personalItemsOverview.detectedCategoryBalance = "shoe_limited";
+    }),
+  ).toBeLessThanOrEqual(0.84);
+  expect(
+    computeWith((report) => {
+      report.personalItemsOverview.detectedCategoryBalance = "top_heavy";
+    }),
+  ).toBeLessThanOrEqual(0.89);
+  expect(
+    computeWith((report) => {
+      report.scores.coverage = 0.35;
+    }),
+  ).toBe(0.59);
+  expect(
+    computeWith((report) => {
+      report.scores.outfitReadiness = 0.5;
+    }),
+  ).toBeLessThanOrEqual(0.69);
+  expect(
+    computeWith((report) => {
+      report.scores.versatility = 0.4;
+    }),
+  ).toBeLessThanOrEqual(0.74);
+  expect(
+    computeWith((report) => {
+      report.scores.seasonality = 0.35;
+    }),
+  ).toBeLessThanOrEqual(0.79);
+  expect(
+    computeWith((report) => {
+      report.confidence.overall = 0.3;
+    }),
+  ).toBe(0.59);
+  expect(
+    computeWith((report) => {
+      report.confidence.overall = 0.4;
+    }),
+  ).toBeLessThanOrEqual(0.69);
 });
