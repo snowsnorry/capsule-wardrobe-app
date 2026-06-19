@@ -63,6 +63,22 @@ function CapsulePinButton({
   );
 }
 
+function CapsulePinnedIndicator({ isPinned }: { isPinned: boolean }) {
+  if (!isPinned) return null;
+
+  return (
+    <Box
+      aria-hidden="true"
+      className="capsule-row-pin-slot capsule-row-pin-indicator"
+      data-pinned="true"
+    >
+      <Box component="span" className="capsule-row-pin">
+        <RiPushpinFill />
+      </Box>
+    </Box>
+  );
+}
+
 function CapsuleUnsavedDot({
   isVisible,
   label,
@@ -187,6 +203,7 @@ export function CapsuleRow({
   const isActive = capsuleId === activeCapsuleId;
   const isPinned = Boolean(capsule.pin);
   const pinLabel = t(`${pinCopyPrefix}.${isPinned ? "unpin" : "pin"}`);
+  const showInlinePin = !isOverlaySidebar;
 
   return (
     <ListItemButton
@@ -196,13 +213,17 @@ export function CapsuleRow({
       onClick={() => (capsuleId ? onOpenCapsule?.(capsuleId) : undefined)}
       sx={capsuleRowSx(isOverlaySidebar)}
     >
-      <CapsulePinButton
-        capsuleId={capsuleId}
-        isInteractionDisabled={isInteractionDisabled}
-        isPinned={isPinned}
-        label={pinLabel}
-        onSetPin={onSetCapsulePin}
-      />
+      {showInlinePin ? (
+        <CapsulePinButton
+          capsuleId={capsuleId}
+          isInteractionDisabled={isInteractionDisabled}
+          isPinned={isPinned}
+          label={pinLabel}
+          onSetPin={onSetCapsulePin}
+        />
+      ) : (
+        <CapsulePinnedIndicator isPinned={isPinned} />
+      )}
       <CapsuleRowText capsuleName={capsuleName} isActive={isActive} />
       <CapsuleUnsavedDot
         isVisible={capsuleHasUnsavedChanges(capsule)}

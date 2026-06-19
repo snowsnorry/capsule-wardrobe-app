@@ -331,6 +331,56 @@ describe("AppSidebarNavigation", () => {
     expect(getComputedStyle(actionsSlot as Element).pointerEvents).toBe("auto");
   });
 
+  test("opens overlay capsule rows directly without exposing inline pin controls", async () => {
+    const user = userEvent.setup();
+    const onOpenCapsule = vi.fn();
+    const onSetCapsulePin = vi.fn();
+    renderNavigation({
+      isOverlaySidebar: true,
+      onOpenCapsule,
+      onSetCapsulePin,
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Pin capsule" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Capsule actions Capsule 1" }),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Capsule 1" }));
+
+    expect(onOpenCapsule).toHaveBeenCalledWith("capsule-1");
+    expect(onSetCapsulePin).not.toHaveBeenCalled();
+  });
+
+  test("keeps pinned indicators visible in overlay capsule rows without inline pin actions", async () => {
+    const user = userEvent.setup();
+    const onOpenCapsule = vi.fn();
+    const onSetCapsulePin = vi.fn();
+    renderNavigation({
+      isOverlaySidebar: true,
+      capsuleList: [{ ...createCapsules(1)[0], pin: true }],
+      activeCapsule: { ...createCapsules(1)[0], pin: true },
+      onOpenCapsule,
+      onSetCapsulePin,
+    });
+
+    const capsuleRow = screen.getByRole("button", { name: "Capsule 1" });
+
+    expect(
+      screen.queryByRole("button", { name: "Unpin capsule" }),
+    ).not.toBeInTheDocument();
+    expect(
+      capsuleRow.querySelector(".capsule-row-pin-indicator"),
+    ).not.toBeNull();
+
+    await user.click(capsuleRow);
+
+    expect(onOpenCapsule).toHaveBeenCalledWith("capsule-1");
+    expect(onSetCapsulePin).not.toHaveBeenCalled();
+  });
+
   test("keeps outfit actions visible and enabled", () => {
     renderNavigation();
 
