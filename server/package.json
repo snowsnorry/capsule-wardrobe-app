@@ -16,10 +16,10 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.104.2",
-    "@aws-sdk/client-s3": "^3.1071.0",
+    "@anthropic-ai/sdk": "^0.105.0",
+    "@aws-sdk/client-s3": "^3.1073.0",
     "@fontsource/dm-sans": "^5.0.18",
-    "@google/genai": "^2.8.0",
+    "@google/genai": "^2.9.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@neondatabase/serverless": "^1.1.0",
     "@pdf-lib/fontkit": "^1.1.1",
@@ -37,7 +37,7 @@
     "ollama": "^0.6.3",
     "openai": "^6.44.0",
     "pdf-lib": "^1.17.1",
-    "sharp": "^0.35.1",
+    "sharp": "^0.35.2",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
