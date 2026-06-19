@@ -36,12 +36,14 @@ export function saveLastPromptArtifacts({
   prompt,
   currentCapsuleCollage,
   currentOutfitCollage,
+  personalItemsCollage,
   userProfile = null,
   systemPrompt = "",
 }: {
   prompt?: string | null;
   currentCapsuleCollage?: PromptDebugImageCategory | null;
   currentOutfitCollage?: ImageAssetLike | null;
+  personalItemsCollage?: ImageAssetLike | null;
   userProfile?: UserProfileLike | null;
   systemPrompt?: string | null;
 } = {}) {
@@ -70,6 +72,13 @@ export function saveLastPromptArtifacts({
     writeFileSync(
       new URL("current-outfit.jpg", LAST_PROMPT_DIR_URL),
       currentOutfitCollage.buffer,
+    );
+  }
+
+  if (personalItemsCollage?.buffer) {
+    writeFileSync(
+      new URL("personal-items.jpg", LAST_PROMPT_DIR_URL),
+      personalItemsCollage.buffer,
     );
   }
 }

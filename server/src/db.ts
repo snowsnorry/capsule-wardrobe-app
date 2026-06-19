@@ -62,6 +62,11 @@ export {
   saveWardrobeItemFromCatalogByUrl,
 } from "./db/wardrobe.js";
 export {
+  deletePersonalItemsReportByEmail,
+  getPersonalItemsReportByEmail,
+  upsertPersonalItemsReportByEmail,
+} from "./db/personalItemsReports.js";
+export {
   deleteLikedItemByUrl,
   listLikedItemUrlsByEmail,
   upsertLikedItemByUrl,

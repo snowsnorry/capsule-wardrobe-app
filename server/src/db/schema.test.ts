@@ -200,6 +200,16 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   ).toBeTruthy();
   expect(
     statements.some((statement) =>
+      statement.includes("create table if not exists personal_items_reports"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
+      statement.includes("personal_item_urls text[] not null"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
       statement.includes("create table if not exists search"),
     ),
   ).toBeTruthy();

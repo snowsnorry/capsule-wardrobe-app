@@ -54,6 +54,7 @@ const WARDROBE_SCHEMA_FILES = [
   "060_create_wardrobe_table.sql",
   "061_create_wardrobe_profile_email_updated_at_index.sql",
   "062_create_wardrobe_profile_email_from_catalog_url_index.sql",
+  "063_create_personal_items_reports_table.sql",
 ] as const;
 
 const MCP_OAUTH_SCHEMA_FILES = [

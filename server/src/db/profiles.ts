@@ -169,6 +169,7 @@ export async function deleteProfileByEmail(email: string): Promise<boolean> {
   await sql`delete from capsules where email = ${email}`;
   await sql`delete from outfits where email = ${email}`;
   await sql`delete from shared_capsules where profile_email = ${email}`;
+  await sql`delete from personal_items_reports where email = ${email}`;
   await sql`delete from wardrobe where profile_email = ${email}`;
   await sql`delete from user_liked_items where user_email = ${email}`;
   await sql`delete from search where email = ${email}`;

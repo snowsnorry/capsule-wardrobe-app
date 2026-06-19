@@ -87,6 +87,7 @@ import {
 import { deleteOutfitImage, generateOutfitImage } from "./ai/outfitImages.js";
 import { generateOutfitReport } from "./ai/outfitReportService.js";
 import { generateCapsuleReport } from "./ai/capsuleReportService.js";
+import { generatePersonalItemsReport } from "./ai/personalItemsReportService.js";
 import { capsuleEventHub } from "./ai/capsuleEvents.js";
 import { outfitEventHub } from "./ai/outfitEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
@@ -97,6 +98,7 @@ import {
   consumePasskeyChallenge,
   deletePasskeyByIdForEmail,
   deleteLikedItemByUrl,
+  deletePersonalItemsReportByEmail,
   deleteUploadedWardrobeItemById,
   deleteWardrobeItemFromCatalogByUrl,
   getPasskeyByCredentialId,
@@ -104,6 +106,7 @@ import {
   getMcpRegisteredClient,
   getProductByIdForEmail,
   getProductByUrlForEmail,
+  getPersonalItemsReportByEmail,
   getProductsByUrlsForEmailInOrder,
   getProductsByUrlsInOrder,
   getUploadedWardrobeItemById,
@@ -119,6 +122,7 @@ import {
   listLikedItemUrlsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
+  upsertPersonalItemsReportByEmail,
   updateUploadedWardrobeItemDetailsById,
   updateUploadedWardrobeItemMetadataById,
   listPasskeysByEmail,
@@ -348,7 +352,11 @@ function createWardrobeMediaDependencies() {
     buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
     copyImageObjectToR2Impl: copyImageObjectToR2,
     deleteLikedItemImpl: deleteLikedItemByUrl,
+    deletePersonalItemsReportImpl: deletePersonalItemsReportByEmail,
     deleteWardrobeItemFromCatalogImpl: deleteWardrobeItemFromCatalogByUrl,
+    generatePersonalItemsReportImpl:
+      generatePersonalItemsReportWithStoreLookups,
+    getPersonalItemsReportImpl: getPersonalItemsReportByEmail,
     getPartialRegenerationJobImpl: getPartialRegenerationJob,
     getProductByIdForEmailImpl: getProductByIdForEmail,
     getProductByUrlForEmailImpl: getProductByUrlForEmail,
@@ -397,6 +405,16 @@ function generateCapsuleReportWithStoreLookups(
 ) {
   return generateCapsuleReport(email, capsuleId, {
     updateCapsuleReportImpl: updateCapsuleReport,
+  });
+}
+
+function generatePersonalItemsReportWithStoreLookups(
+  email: string,
+  personalItemsContext?: string | null,
+) {
+  return generatePersonalItemsReport(email, personalItemsContext, {
+    listWardrobeItemsImpl: listWardrobeItemsByEmail,
+    upsertPersonalItemsReportImpl: upsertPersonalItemsReportByEmail,
   });
 }
 

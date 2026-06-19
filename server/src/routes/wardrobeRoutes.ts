@@ -3,6 +3,7 @@ import { normalizeWardrobeSourceParam } from "./wardrobeRouteParams.js";
 import { registerWardrobeUploadRoute } from "./wardrobeFileUploadRoute.js";
 import { registerUploadedWardrobeItemUpdateRoute } from "./wardrobeUploadedItemUpdateRoute.js";
 import { registerWardrobeUrlUploadRoute } from "./wardrobeUrlUploadRoute.js";
+import { registerPersonalItemsReportRoutes } from "./personalItemsReportRoutes.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
 
@@ -24,6 +25,7 @@ function getHttpUrl(value: unknown): string {
 
 export function registerWardrobeRoutes(app, context) {
   registerWardrobeListRoute(app, context);
+  registerPersonalItemsReportRoutes(app, context);
   registerWardrobeUploadRoute(app, context);
   registerWardrobeUrlUploadRoute(app, context);
   registerUploadedWardrobeItemUpdateRoute(

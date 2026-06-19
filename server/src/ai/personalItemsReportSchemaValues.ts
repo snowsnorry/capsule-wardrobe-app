@@ -1,0 +1,116 @@
+const CATEGORY_KEYS = [
+  "top",
+  "bottom",
+  "midlayer",
+  "outerwear",
+  "dress",
+  "shoes",
+  "bag",
+  "belt",
+  "swimwear",
+  "other",
+] as const;
+
+const COVERAGE_LEVEL_VALUES = [
+  "missing",
+  "thin",
+  "adequate",
+  "strong",
+  "overrepresented",
+];
+const COVERAGE_LEVEL_WITH_NOT_APPLICABLE_VALUES = [
+  ...COVERAGE_LEVEL_VALUES,
+  "not_applicable",
+];
+const SEASON_VALUES = ["spring", "summer", "autumn", "winter"];
+const FORMALITY_VALUES = ["casual", "smart_casual", "formal"];
+const STYLE_VALUES = [
+  "minimalistic",
+  "street_style",
+  "romantic",
+  "preppy",
+  "retro",
+  "boho",
+  "nautical",
+  "safari",
+  "equestrian",
+  "military",
+  "grunge",
+  "sporty",
+  "mixed",
+  "unclear",
+];
+const COLOR_VALUES = [
+  "black",
+  "white",
+  "grey",
+  "brown",
+  "beige",
+  "light blue",
+  "blue",
+  "green",
+  "red",
+  "pink",
+  "purple",
+  "yellow",
+  "orange",
+  "metallic",
+  "multicolor",
+  "burgundy",
+  "khaki",
+  "navy",
+  "denim",
+];
+const WEATHER_VALUES = [
+  "dry",
+  "light_rain",
+  "rain",
+  "windy",
+  "hot",
+  "warm",
+  "cool",
+  "cold",
+  "snow",
+  "indoor",
+  "unknown",
+];
+const REPORT_DIMENSION_VALUES = [
+  "coverage",
+  "outfit_readiness",
+  "versatility",
+  "style",
+  "seasonality",
+  "color",
+  "formality",
+  "efficiency",
+  "practicality",
+  "metadata",
+  "confidence",
+];
+const CONFIDENCE_ASPECT_VALUES = [
+  "material_weight",
+  "exact_fit",
+  "color_accuracy",
+  "image_quality",
+  "item_metadata",
+  "weather_protection",
+  "warmth_level",
+  "occasion_suitability",
+  "style_interpretation",
+  "personal_items_combinatorics",
+  "user_lifestyle_context",
+  "unknown",
+];
+
+export {
+  CATEGORY_KEYS,
+  COLOR_VALUES,
+  CONFIDENCE_ASPECT_VALUES,
+  COVERAGE_LEVEL_VALUES,
+  COVERAGE_LEVEL_WITH_NOT_APPLICABLE_VALUES,
+  FORMALITY_VALUES,
+  REPORT_DIMENSION_VALUES,
+  SEASON_VALUES,
+  STYLE_VALUES,
+  WEATHER_VALUES,
+};

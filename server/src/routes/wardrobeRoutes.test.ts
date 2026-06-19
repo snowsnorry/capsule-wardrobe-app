@@ -50,6 +50,23 @@ async function requestUploadUrls(baseUrl, urls) {
   };
 }
 
+async function requestReportStream(baseUrl, body = {}) {
+  const response = await fetch(`${baseUrl}/wardrobe/items/report`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      cookie: AUTH_COOKIE,
+      "X-CSRF-Token": CSRF_TOKEN,
+      origin: TEST_CLIENT_ORIGIN,
+    },
+    body: JSON.stringify(body),
+  });
+  return {
+    response,
+    text: await response.text(),
+  };
+}
+
 function parseSseEvents(text: string) {
   return text
     .trim()
@@ -239,6 +256,108 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
       payload: { email: "person@example.com", url: "https://example.com/1" },
     },
   ]);
+});
+
+test("personal items report routes read stale state generate and delete reports", async (t) => {
+  const calls: unknown[] = [];
+  const storedReport = {
+    email: "person@example.com",
+    generatedAt: "2026-06-19T10:00:00.000Z",
+    personalItemUrls: ["wardrobe://1"],
+    report: {
+      schemaVersion: 1,
+      verdict: { status: "good", score: 0.8, summary: "Usable." },
+    },
+  };
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      deletePersonalItemsReportImpl: async (email) => {
+        calls.push({ type: "deleteReport", payload: email });
+        return true;
+      },
+      generatePersonalItemsReportImpl: async (email, context) => {
+        calls.push({ type: "generateReport", payload: { email, context } });
+        return {
+          generatedAt: "2026-06-19T11:00:00.000Z",
+          personalItemUrls: ["https://example.com/2", "wardrobe://1"],
+          report: {
+            schemaVersion: 1,
+            verdict: { status: "excellent", score: 0.92, summary: "Ready." },
+          },
+        };
+      },
+      getPersonalItemsReportImpl: async (email) => {
+        calls.push({ type: "getReport", payload: email });
+        return storedReport;
+      },
+      listWardrobeItemsImpl: async (payload) => {
+        calls.push({ type: "listItems", payload });
+        return [
+          { id: "1", url: "wardrobe://1", source: "uploaded" },
+          {
+            id: "2",
+            url: "https://example.com/2",
+            source: "from_catalog",
+          },
+        ];
+      },
+    },
+  });
+
+  const fetched = await requestJson(baseUrl, "/wardrobe/items/report", {
+    cookie: AUTH_COOKIE,
+  });
+  expect(fetched.response.status).toBe(200);
+  expect(fetched.json).toEqual({
+    ok: true,
+    report: storedReport.report,
+    personalItemUrls: ["wardrobe://1"],
+    generatedAt: "2026-06-19T10:00:00.000Z",
+    stale: true,
+  });
+
+  const missingCsrf = await requestJson(baseUrl, "/wardrobe/items/report", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    body: { context: "office" },
+  });
+  expect(missingCsrf.response.status).toBe(403);
+
+  const generated = await requestReportStream(baseUrl, { context: "office" });
+  expect(generated.response.status).toBe(200);
+  expect(parseSseEvents(generated.text)).toEqual([
+    { event: "progress", data: { status: "pending" } },
+    {
+      event: "complete",
+      data: {
+        ok: true,
+        generatedAt: "2026-06-19T11:00:00.000Z",
+        personalItemUrls: ["https://example.com/2", "wardrobe://1"],
+        report: {
+          schemaVersion: 1,
+          verdict: { status: "excellent", score: 0.92, summary: "Ready." },
+        },
+      },
+    },
+  ]);
+
+  const deleted = await requestJson(baseUrl, "/wardrobe/items/report", {
+    method: "DELETE",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+  expect(deleted.response.status).toBe(200);
+  expect(deleted.json).toEqual({ ok: true, removed: true });
+  expect(calls).toContainEqual({
+    type: "generateReport",
+    payload: { email: "person@example.com", context: "office" },
+  });
+  expect(calls).toContainEqual({
+    type: "deleteReport",
+    payload: "person@example.com",
+  });
 });
 
 test("wardrobe routes update uploaded item details", async (t) => {
