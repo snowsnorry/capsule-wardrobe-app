@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Divider, Menu } from "@mui/material";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
@@ -5,6 +6,11 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import RestoreRoundedIcon from "@mui/icons-material/RestoreRounded";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
+import MobileContextMenuOverlay from "../../components/MobileContextMenuOverlay";
+import type {
+  MobileContextMenuOriginRect,
+  MobileContextMenuPresentation,
+} from "../../components/MobileContextMenuTypes";
 import { useI18n } from "../../i18n/useI18n";
 import ActionMenuItem from "./CapsuleActionMenuItem";
 import { getCapsuleMenuPermissions } from "./CapsuleActionMenuPermissions";
@@ -22,6 +28,10 @@ type CapsuleActionMenuProps = {
   onClose: () => void;
   capsule?: CapsuleLike | null;
   disabled?: boolean;
+  presentation?: MobileContextMenuPresentation;
+  originRect?: MobileContextMenuOriginRect;
+  mobilePreview?: ReactNode;
+  mobileLabel?: string;
   showAnalyze?: boolean;
   canAnalyze?: boolean;
   onAnalyze?: () => void;
@@ -42,6 +52,86 @@ type CapsuleActionMenuProps = {
   onDelete: () => void;
   pinCopyPrefix?: "capsule" | "outfit";
 };
+
+type CapsuleActionMenuItemsProps = Pick<
+  CapsuleActionMenuProps,
+  | "canAnalyze"
+  | "capsule"
+  | "mobileCardColumns"
+  | "onAnalyze"
+  | "onDelete"
+  | "onDownloadPdf"
+  | "onDuplicate"
+  | "onMobileCardColumnsChange"
+  | "onRegenerateAll"
+  | "onRename"
+  | "onRevert"
+  | "onSave"
+  | "onSetPin"
+  | "onShare"
+  | "pinCopyPrefix"
+  | "showAnalyze"
+  | "showCardLayout"
+  | "showRegenerateAll"
+  | "showShare"
+> & {
+  disabled: boolean;
+  onClose: () => void;
+  permissions: ReturnType<typeof getCapsuleMenuPermissions>;
+};
+
+type NormalizedCapsuleActionMenuProps = CapsuleActionMenuProps & {
+  allowUnknownShareContent: boolean;
+  canAnalyze: boolean;
+  disabled: boolean;
+  mobileCardColumns: MobileCardColumns;
+  onMobileCardColumnsChange: ((value: MobileCardColumns) => void) | undefined;
+  pinCopyPrefix: "capsule" | "outfit";
+  showAnalyze: boolean;
+  showCardLayout: boolean;
+  showRegenerateAll: boolean;
+  showShare: boolean;
+};
+
+function normalizeCapsuleActionMenuProps(
+  props: CapsuleActionMenuProps,
+): NormalizedCapsuleActionMenuProps {
+  return {
+    ...props,
+    allowUnknownShareContent: props.allowUnknownShareContent ?? false,
+    canAnalyze: props.canAnalyze ?? false,
+    disabled: props.disabled ?? false,
+    mobileCardColumns: props.mobileCardColumns ?? 2,
+    onMobileCardColumnsChange: props.onMobileCardColumnsChange,
+    pinCopyPrefix: props.pinCopyPrefix ?? "capsule",
+    showAnalyze: props.showAnalyze ?? false,
+    showCardLayout: props.showCardLayout ?? false,
+    showRegenerateAll: props.showRegenerateAll ?? false,
+    showShare: props.showShare ?? true,
+  };
+}
+
+function getMobileActionMenuLabel({
+  capsule,
+  mobileLabel,
+  pinCopyPrefix,
+  t,
+}: Pick<
+  NormalizedCapsuleActionMenuProps,
+  "capsule" | "mobileLabel" | "pinCopyPrefix"
+> & {
+  t: ReturnType<typeof useI18n>["t"];
+}) {
+  if (mobileLabel) {
+    return mobileLabel;
+  }
+
+  if (pinCopyPrefix === "outfit") {
+    return t("outfit.openActions");
+  }
+
+  return t("capsule.openCapsuleActions", { name: capsule?.name || "" });
+}
 
 function ShareMenuItem({
   show,
@@ -247,40 +337,34 @@ function DeleteMenuItem({
   );
 }
 
-function CapsuleActionMenu({
-  anchorEl,
-  open,
-  onClose,
-  capsule,
-  disabled = false,
-  showAnalyze = false,
+function CapsuleActionMenuItems({
   canAnalyze = false,
+  capsule,
+  disabled,
+  mobileCardColumns = 2,
   onAnalyze,
-  showRegenerateAll = false,
-  onRegenerateAll,
+  onClose,
+  onDelete,
   onDownloadPdf,
+  onDuplicate,
+  onMobileCardColumnsChange,
+  onRegenerateAll,
   onRename,
   onRevert,
   onSave,
   onSetPin,
-  onDuplicate,
   onShare,
-  showShare = true,
-  allowUnknownShareContent = false,
-  showCardLayout = false,
-  mobileCardColumns = 2,
-  onMobileCardColumnsChange = undefined,
-  onDelete,
+  permissions,
   pinCopyPrefix = "capsule",
-}: CapsuleActionMenuProps) {
+  showAnalyze = false,
+  showCardLayout = false,
+  showRegenerateAll = false,
+  showShare = true,
+}: CapsuleActionMenuItemsProps) {
   const { t } = useI18n();
-  const permissions = getCapsuleMenuPermissions(
-    capsule,
-    allowUnknownShareContent,
-  );
 
   return (
-    <Menu anchorEl={anchorEl} open={open} onClose={onClose}>
+    <>
       <RegenerateAllMenuSection
         show={showRegenerateAll}
         disabled={disabled}
@@ -330,7 +414,98 @@ function CapsuleActionMenu({
         onDelete={onDelete}
         pinCopyPrefix={pinCopyPrefix}
       />
-    </Menu>
+    </>
+  );
+}
+
+function CapsuleActionMenu(props: CapsuleActionMenuProps) {
+  const {
+    anchorEl,
+    open,
+    onClose,
+    capsule,
+    disabled,
+    showAnalyze,
+    canAnalyze,
+    onAnalyze,
+    showRegenerateAll,
+    onRegenerateAll,
+    onDownloadPdf,
+    onRename,
+    onRevert,
+    onSave,
+    onSetPin,
+    onDuplicate,
+    onShare,
+    showShare,
+    allowUnknownShareContent,
+    showCardLayout,
+    mobileCardColumns,
+    onMobileCardColumnsChange,
+    onDelete,
+    pinCopyPrefix,
+    presentation,
+    originRect,
+    mobilePreview,
+  } = normalizeCapsuleActionMenuProps(props);
+  const { t } = useI18n();
+  const permissions = getCapsuleMenuPermissions(
+    capsule,
+    allowUnknownShareContent,
+  );
+  const isMobileContextMenu = presentation === "mobile-context";
+  const resolvedMobileLabel = getMobileActionMenuLabel({
+    capsule,
+    mobileLabel: props.mobileLabel,
+    pinCopyPrefix,
+    t,
+  });
+  const actions = (
+    <CapsuleActionMenuItems
+      canAnalyze={canAnalyze}
+      capsule={capsule}
+      disabled={disabled}
+      mobileCardColumns={mobileCardColumns}
+      onAnalyze={onAnalyze}
+      onClose={onClose}
+      onDelete={onDelete}
+      onDownloadPdf={onDownloadPdf}
+      onDuplicate={onDuplicate}
+      onMobileCardColumnsChange={onMobileCardColumnsChange}
+      onRegenerateAll={onRegenerateAll}
+      onRename={onRename}
+      onRevert={onRevert}
+      onSave={onSave}
+      onSetPin={onSetPin}
+      onShare={onShare}
+      permissions={permissions}
+      pinCopyPrefix={pinCopyPrefix}
+      showAnalyze={showAnalyze}
+      showCardLayout={showCardLayout}
+      showRegenerateAll={showRegenerateAll}
+      showShare={showShare}
+    />
+  );
+
+  return (
+    <>
+      <Menu
+        anchorEl={anchorEl}
+        open={open && !isMobileContextMenu}
+        onClose={onClose}
+      >
+        {actions}
+      </Menu>
+      <MobileContextMenuOverlay
+        actions={actions}
+        label={resolvedMobileLabel}
+        open={open && isMobileContextMenu}
+        originRect={originRect}
+        preview={mobilePreview}
+        previewSurface="paper"
+        onClose={onClose}
+      />
+    </>
   );
 }
 

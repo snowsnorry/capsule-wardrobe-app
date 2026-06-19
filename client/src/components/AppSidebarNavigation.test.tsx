@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -32,6 +33,7 @@ vi.mock("../i18n/useI18n", () => ({
           "capsule.openCapsuleActions": "Capsule actions {name}",
           "outfit.pin": "Pin outfit",
           "outfit.unpin": "Unpin outfit",
+          "outfit.openActions": "Open outfit actions",
         }[key] || key;
       return value.replace(/\{(\w+)\}/g, (_match, token: string) =>
         String(params?.[token] ?? `{${token}}`),
@@ -41,8 +43,21 @@ vi.mock("../i18n/useI18n", () => ({
 }));
 
 import AppSidebarNavigation from "./AppSidebarNavigation";
+import { CapsuleRowPreview } from "./AppSidebarNavigationCapsuleRow";
 
 const theme = createTheme();
+const originalPointerEvent = window.PointerEvent;
+
+class TestPointerEvent extends MouseEvent {
+  pointerId: number;
+  pointerType: string;
+
+  constructor(type: string, init: PointerEventInit = {}) {
+    super(type, init);
+    this.pointerId = init.pointerId ?? 0;
+    this.pointerType = init.pointerType ?? "";
+  }
+}
 
 function createCapsules(count: number) {
   return Array.from({ length: count }, (_item, index) => {
@@ -50,6 +65,18 @@ function createCapsules(count: number) {
     return {
       id: `capsule-${number}`,
       name: `Capsule ${number}`,
+      updatedAt: `2026-06-${String(30 - index).padStart(2, "0")}T00:00:00.000Z`,
+      status: number === 1 ? "modified" : "saved",
+    };
+  });
+}
+
+function createOutfits(count: number) {
+  return Array.from({ length: count }, (_item, index) => {
+    const number = index + 1;
+    return {
+      id: `outfit-${number}`,
+      name: `Outfit ${number}`,
       updatedAt: `2026-06-${String(30 - index).padStart(2, "0")}T00:00:00.000Z`,
       status: number === 1 ? "modified" : "saved",
     };
@@ -102,6 +129,15 @@ function setElementSize(
 describe("AppSidebarNavigation", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
+    if (originalPointerEvent) {
+      Object.defineProperty(window, "PointerEvent", {
+        configurable: true,
+        value: originalPointerEvent,
+      });
+    } else {
+      Reflect.deleteProperty(window, "PointerEvent");
+    }
   });
 
   test("renders the flat two-level navigation with section disclosure headers", () => {
@@ -348,10 +384,308 @@ describe("AppSidebarNavigation", () => {
       screen.getByRole("button", { name: "Capsule actions Capsule 1" }),
     ).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Capsule 1" }));
+    const capsuleRow = screen.getByRole("button", { name: "Capsule 1" });
+
+    expect(capsuleRow).toHaveAttribute("aria-haspopup", "menu");
+    expect(capsuleRow).toHaveAttribute("aria-keyshortcuts", "Shift+F10");
+
+    await user.click(capsuleRow);
 
     expect(onOpenCapsule).toHaveBeenCalledWith("capsule-1");
     expect(onSetCapsulePin).not.toHaveBeenCalled();
+  });
+
+  test("opens capsule actions from overlay row touch long press and suppresses the follow-up click", () => {
+    vi.useFakeTimers();
+    const vibrate = vi.fn();
+    Object.defineProperty(navigator, "vibrate", {
+      configurable: true,
+      value: vibrate,
+    });
+    const onOpenCapsule = vi.fn();
+    const onOpenCapsuleActions = vi.fn();
+    renderNavigation({
+      isOverlaySidebar: true,
+      onOpenCapsule,
+      onOpenCapsuleActions,
+    });
+
+    const capsuleRow = screen.getByRole("button", { name: "Capsule 1" });
+    vi.spyOn(capsuleRow, "getBoundingClientRect").mockReturnValue({
+      top: 24,
+      left: 12,
+      width: 280,
+      height: 36,
+      right: 292,
+      bottom: 60,
+      x: 12,
+      y: 24,
+      toJSON: () => ({}),
+    });
+
+    fireEvent.pointerDown(capsuleRow, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 20,
+      clientY: 30,
+    });
+
+    expect(capsuleRow).toHaveStyle({ transform: "scale(0.94)" });
+
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+
+    expect(vibrate).toHaveBeenCalledWith(10);
+    expect(onOpenCapsuleActions).toHaveBeenCalledWith(
+      capsuleRow,
+      expect.objectContaining({ id: "capsule-1" }),
+      {
+        presentation: "mobile-context",
+        originRect: { top: 24, left: 12, width: 280, height: 36 },
+      },
+    );
+
+    fireEvent.click(capsuleRow);
+
+    expect(onOpenCapsule).not.toHaveBeenCalled();
+  });
+
+  test("suppresses the native context menu event after overlay row long press", () => {
+    vi.useFakeTimers();
+    const onOpenCapsuleActions = vi.fn();
+    renderNavigation({
+      isOverlaySidebar: true,
+      onOpenCapsuleActions,
+    });
+
+    const capsuleRow = screen.getByRole("button", { name: "Capsule 1" });
+    fireEvent.pointerDown(capsuleRow, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 20,
+      clientY: 30,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+
+    expect(fireEvent.contextMenu(capsuleRow)).toBe(false);
+    expect(onOpenCapsuleActions).toHaveBeenCalledTimes(1);
+  });
+
+  test("does not start overlay row long press from the row action button", () => {
+    vi.useFakeTimers();
+    const onOpenCapsuleActions = vi.fn();
+    renderNavigation({
+      isOverlaySidebar: true,
+      onOpenCapsuleActions,
+    });
+
+    const actionButton = screen.getByRole("button", {
+      name: "Capsule actions Capsule 1",
+    });
+    fireEvent.pointerDown(actionButton, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 20,
+      clientY: 30,
+    });
+    const actionIcon = actionButton.querySelector("svg");
+    expect(actionIcon).not.toBeNull();
+    fireEvent.pointerDown(actionIcon as Element, {
+      pointerType: "touch",
+      pointerId: 2,
+      clientX: 20,
+      clientY: 30,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+
+    expect(onOpenCapsuleActions).not.toHaveBeenCalled();
+  });
+
+  test("keeps regular overlay row touch taps as capsule navigation", () => {
+    vi.useFakeTimers();
+    const onOpenCapsule = vi.fn();
+    const onOpenCapsuleActions = vi.fn();
+    renderNavigation({
+      isOverlaySidebar: true,
+      onOpenCapsule,
+      onOpenCapsuleActions,
+    });
+
+    const capsuleRow = screen.getByRole("button", { name: "Capsule 1" });
+    fireEvent.pointerDown(capsuleRow, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 20,
+      clientY: 30,
+    });
+    fireEvent.pointerUp(capsuleRow, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 20,
+      clientY: 30,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+    fireEvent.click(capsuleRow);
+
+    expect(onOpenCapsule).toHaveBeenCalledWith("capsule-1");
+    expect(onOpenCapsuleActions).not.toHaveBeenCalled();
+  });
+
+  test("cancels overlay row long press after movement or pointer cancel", async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(window, "PointerEvent", {
+      configurable: true,
+      value: TestPointerEvent,
+    });
+    const onOpenCapsuleActions = vi.fn();
+    renderNavigation({
+      isOverlaySidebar: true,
+      onOpenCapsuleActions,
+    });
+
+    const capsuleRow = screen.getByRole("button", { name: "Capsule 1" });
+    fireEvent.pointerDown(capsuleRow, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 20,
+      clientY: 30,
+    });
+    await act(async () => {});
+    fireEvent.pointerMove(capsuleRow, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 36,
+      clientY: 30,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+
+    expect(onOpenCapsuleActions).not.toHaveBeenCalled();
+    expect(capsuleRow).toHaveStyle({ transform: "scale(1)" });
+
+    fireEvent.pointerDown(capsuleRow, {
+      pointerType: "touch",
+      pointerId: 2,
+      clientX: 20,
+      clientY: 30,
+    });
+    await act(async () => {});
+    fireEvent.pointerCancel(capsuleRow, {
+      pointerType: "touch",
+      pointerId: 2,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+
+    expect(onOpenCapsuleActions).not.toHaveBeenCalled();
+    expect(capsuleRow).toHaveStyle({ transform: "scale(1)" });
+  });
+
+  test("opens outfit actions from overlay row touch long press", () => {
+    vi.useFakeTimers();
+    const onOpenOutfit = vi.fn();
+    const onOpenOutfitActions = vi.fn();
+    renderNavigation({
+      activeApp: "outfit",
+      isOverlaySidebar: true,
+      outfitList: createOutfits(1),
+      activeOutfitId: "outfit-1",
+      activeOutfit: createOutfits(1)[0],
+      onOpenOutfit,
+      onOpenOutfitActions,
+    });
+
+    const outfitRow = screen.getByRole("button", { name: "Outfit 1" });
+    vi.spyOn(outfitRow, "getBoundingClientRect").mockReturnValue({
+      top: 64,
+      left: 16,
+      width: 260,
+      height: 34,
+      right: 276,
+      bottom: 98,
+      x: 16,
+      y: 64,
+      toJSON: () => ({}),
+    });
+    fireEvent.pointerDown(outfitRow, {
+      pointerType: "touch",
+      pointerId: 1,
+      clientX: 20,
+      clientY: 70,
+    });
+    act(() => {
+      vi.advanceTimersByTime(520);
+    });
+
+    expect(onOpenOutfitActions).toHaveBeenCalledWith(
+      outfitRow,
+      expect.objectContaining({ id: "outfit-1" }),
+      {
+        presentation: "mobile-context",
+        originRect: { top: 64, left: 16, width: 260, height: 34 },
+      },
+    );
+
+    fireEvent.click(outfitRow);
+
+    expect(onOpenOutfit).not.toHaveBeenCalled();
+  });
+
+  test("renders mobile row previews without action affordances", () => {
+    const { container } = render(
+      <ThemeProvider theme={theme}>
+        <CapsuleRowPreview
+          capsule={{ ...createCapsules(1)[0], pin: true }}
+          activeCapsuleId="capsule-1"
+        />
+      </ThemeProvider>,
+    );
+
+    expect(container.querySelector(".capsule-row-actions")).toBeNull();
+    expect(container.querySelector(".capsule-row-actions-slot")).toBeNull();
+    const pinIcon = container.querySelector(".capsule-row-pin");
+    expect(pinIcon).not.toBeNull();
+    expect(getComputedStyle(pinIcon as Element).display).toBe("inline-flex");
+    expect(getComputedStyle(pinIcon as Element).alignItems).toBe("center");
+    expect(getComputedStyle(pinIcon as Element).justifyContent).toBe("center");
+  });
+
+  test("opens overlay row actions from keyboard and native context menu events", () => {
+    const onOpenCapsule = vi.fn();
+    const onOpenCapsuleActions = vi.fn();
+    renderNavigation({
+      isOverlaySidebar: true,
+      onOpenCapsule,
+      onOpenCapsuleActions,
+    });
+
+    const capsuleRow = screen.getByRole("button", { name: "Capsule 1" });
+    fireEvent.keyDown(capsuleRow, { key: "ContextMenu" });
+
+    expect(onOpenCapsuleActions).toHaveBeenCalledWith(
+      capsuleRow,
+      expect.objectContaining({ id: "capsule-1" }),
+      { presentation: "mobile-context" },
+    );
+
+    onOpenCapsuleActions.mockClear();
+    fireEvent.contextMenu(capsuleRow);
+
+    expect(onOpenCapsuleActions).toHaveBeenCalledWith(
+      capsuleRow,
+      expect.objectContaining({ id: "capsule-1" }),
+      { presentation: "mobile-context" },
+    );
+    expect(onOpenCapsule).not.toHaveBeenCalled();
   });
 
   test("keeps pinned indicators visible in overlay capsule rows without inline pin actions", async () => {
@@ -599,7 +933,11 @@ describe("AppSidebarNavigation", () => {
     expect(onCreateCapsule).toHaveBeenCalled();
     expect(onSearchCapsules).toHaveBeenCalled();
     expect(onOpenCapsule).toHaveBeenCalledWith("capsule-1");
-    expect(onOpenCapsuleActions).toHaveBeenCalled();
+    expect(onOpenCapsuleActions).toHaveBeenCalledWith(
+      expect.any(HTMLButtonElement),
+      expect.objectContaining({ id: "capsule-1" }),
+      { presentation: "anchored" },
+    );
   });
 
   test("loads more capsule rows and hides show more when all loaded rows are visible", async () => {

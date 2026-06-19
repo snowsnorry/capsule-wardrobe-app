@@ -1,5 +1,5 @@
 import { createRef } from "react";
-import type { MouseEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import AppShellSidebarNavigationBody from "./AppShellSidebarNavigationBody";
@@ -26,13 +26,15 @@ vi.mock("../components/AppSidebarNavigation", () => ({
     onExpandedAction?: () => void;
     onOpenCapsule: (capsuleId: string) => void;
     onOpenCapsuleActions: (
-      event: MouseEvent<HTMLElement>,
+      anchor: HTMLElement,
       capsule: { id: string; status: string },
+      options: { presentation: "anchored" | "mobile-context" },
     ) => void;
     onOpenOutfit: (outfitId: string) => void;
     onOpenOutfitActions: (
-      event: MouseEvent<HTMLElement>,
+      anchor: HTMLElement,
       outfit: { id: string; status: string },
+      options: { presentation: "anchored" | "mobile-context" },
     ) => void;
     outfitHasUnsavedChanges: (outfit: { status?: string }) => boolean;
   }) => (
@@ -52,7 +54,11 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       <button
         type="button"
         onClick={(event) =>
-          onOpenCapsuleActions(event, { id: "capsule-1", status: "modified" })
+          onOpenCapsuleActions(
+            event.currentTarget,
+            { id: "capsule-1", status: "modified" },
+            { presentation: "anchored" },
+          )
         }
       >
         capsule actions
@@ -60,7 +66,11 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       <button
         type="button"
         onClick={(event) =>
-          onOpenOutfitActions(event, { id: "outfit-1", status: "new" })
+          onOpenOutfitActions(
+            event.currentTarget,
+            { id: "outfit-1", status: "new" },
+            { presentation: "anchored" },
+          )
         }
       >
         outfit actions
@@ -157,16 +167,24 @@ describe("AppShellSidebarNavigationBody", () => {
     );
     expect(
       props.capsuleActionMenuControllerRef.current?.openCapsuleActions,
-    ).toHaveBeenCalledWith(expect.any(Object), {
-      id: "capsule-1",
-      status: "modified",
-    });
+    ).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        id: "capsule-1",
+        status: "modified",
+      },
+      { presentation: "anchored" },
+    );
     expect(
       props.outfitActionMenuControllerRef.current?.openOutfitActions,
-    ).toHaveBeenCalledWith(expect.any(Object), {
-      id: "outfit-1",
-      status: "new",
-    });
+    ).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        id: "outfit-1",
+        status: "new",
+      },
+      { presentation: "anchored" },
+    );
     expect(props.closeSidebar).toHaveBeenCalledTimes(1);
     expect(props.expandCollapsedSidebar).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("capsule-new")).toHaveTextContent("true");

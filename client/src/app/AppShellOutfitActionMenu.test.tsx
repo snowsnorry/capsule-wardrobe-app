@@ -7,7 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ComponentProps, MouseEvent } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import AppShellOutfitActionMenu from "./AppShellOutfitActionMenu";
 import type { AppShellOutfitActionMenuController } from "./AppShellOutfitActionMenu";
 
@@ -18,13 +18,16 @@ vi.mock("../screens/mainScreen/CapsuleActionMenu", () => ({
     onDelete,
     onDownloadPdf,
     onDuplicate,
+    mobilePreview,
     onRename,
     onRevert,
     onSave,
     onShare,
     open,
+    presentation,
   }: {
     capsule: { id?: string; name?: string; status?: string } | null;
+    mobilePreview?: ReactNode;
     onClose: () => void;
     onDelete: () => void;
     onDownloadPdf: () => void;
@@ -34,8 +37,16 @@ vi.mock("../screens/mainScreen/CapsuleActionMenu", () => ({
     onSave: () => void;
     onShare: () => void;
     open: boolean;
+    presentation?: "anchored" | "mobile-context";
   }) =>
-    open ? (
+    open && presentation === "mobile-context" ? (
+      <div role="dialog" aria-label="outfit.openActions">
+        {mobilePreview}
+        <button type="button" onClick={onRename}>
+          rename
+        </button>
+      </div>
+    ) : open ? (
       <div data-testid="mock-outfit-menu">
         <span data-testid="mock-outfit-menu-name">{capsule?.name}</span>
         <span data-testid="mock-outfit-menu-status">{capsule?.status}</span>
@@ -157,10 +168,6 @@ function renderMenu(
   return { ...result, controller: () => controller, props };
 }
 
-function clickEventFor(element: HTMLElement) {
-  return { currentTarget: element } as unknown as MouseEvent<HTMLElement>;
-}
-
 afterEach(() => {
   cleanup();
 });
@@ -173,11 +180,15 @@ describe("AppShellOutfitActionMenu", () => {
 
     await waitFor(() => expect(controller()).not.toBeNull());
     act(() => {
-      controller()?.openOutfitActions(clickEventFor(button), {
-        id: "outfit-1",
-        name: "Stale name",
-        status: "saved",
-      });
+      controller()?.openOutfitActions(
+        button,
+        {
+          id: "outfit-1",
+          name: "Stale name",
+          status: "saved",
+        },
+        { presentation: "anchored" },
+      );
     });
 
     expect(screen.getByTestId("mock-outfit-menu-name")).toHaveTextContent(
@@ -202,11 +213,15 @@ describe("AppShellOutfitActionMenu", () => {
 
     await waitFor(() => expect(controller()).not.toBeNull());
     act(() => {
-      controller()?.openOutfitActions(clickEventFor(button), {
-        id: "outfit-2",
-        name: "Travel",
-        status: "saved",
-      });
+      controller()?.openOutfitActions(
+        button,
+        {
+          id: "outfit-2",
+          name: "Travel",
+          status: "saved",
+        },
+        { presentation: "anchored" },
+      );
     });
 
     fireEvent.click(screen.getByRole("button", { name: "rename" }));
@@ -227,25 +242,61 @@ describe("AppShellOutfitActionMenu", () => {
     expect(screen.queryByTestId("mock-outfit-menu")).not.toBeInTheDocument();
 
     act(() => {
-      controller()?.openOutfitActions(clickEventFor(button), {
-        id: "outfit-2",
-        name: "Travel",
-        status: "saved",
-      });
+      controller()?.openOutfitActions(
+        button,
+        {
+          id: "outfit-2",
+          name: "Travel",
+          status: "saved",
+        },
+        { presentation: "anchored" },
+      );
     });
     fireEvent.click(screen.getByRole("button", { name: "delete" }));
     fireEvent.click(screen.getByRole("button", { name: "close" }));
     expect(screen.queryByTestId("mock-outfit-menu")).not.toBeInTheDocument();
 
     act(() => {
-      controller()?.openOutfitActions(clickEventFor(button), {
-        id: "outfit-2",
-        name: "Travel",
-        status: "saved",
-      });
+      controller()?.openOutfitActions(
+        button,
+        {
+          id: "outfit-2",
+          name: "Travel",
+          status: "saved",
+        },
+        { presentation: "anchored" },
+      );
     });
     fireEvent.click(screen.getByRole("button", { name: "delete" }));
     fireEvent.click(screen.getByRole("button", { name: "confirm" }));
     expect(props.onDeleteOutfit).toHaveBeenCalledWith("outfit-2");
+  });
+
+  test("renders row preview actions in the mobile context menu", async () => {
+    const { controller } = renderMenu({ activeOutfitMeta: null });
+    const button = document.createElement("button");
+    document.body.append(button);
+
+    await waitFor(() => expect(controller()).not.toBeNull());
+    act(() => {
+      controller()?.openOutfitActions(
+        button,
+        {
+          id: "outfit-mobile",
+          name: "Travel mobile",
+          status: "modified",
+        },
+        {
+          presentation: "mobile-context",
+          originRect: { top: 10, left: 20, width: 240, height: 34 },
+        },
+      );
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "outfit.openActions" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Travel mobile")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "rename" })).toBeVisible();
   });
 });

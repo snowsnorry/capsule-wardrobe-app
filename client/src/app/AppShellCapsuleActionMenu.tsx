@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent, RefObject } from "react";
+import type { RefObject } from "react";
+import type {
+  MobileContextMenuOpenOptions,
+  MobileContextMenuOriginRect,
+  MobileContextMenuPresentation,
+} from "../components/MobileContextMenuTypes";
+import { CapsuleRowPreview } from "../components/AppSidebarNavigationCapsuleRow";
 import CapsuleActionMenu from "../screens/mainScreen/CapsuleActionMenu";
 import {
   ConfirmDialog,
@@ -20,8 +26,9 @@ import type { CapsuleMeta } from "./appTypes";
 
 export type AppShellCapsuleActionMenuController = {
   openCapsuleActions: (
-    event: MouseEvent<HTMLElement>,
+    anchor: HTMLElement,
     capsule: CapsuleMeta,
+    options: MobileContextMenuOpenOptions,
   ) => void;
 };
 
@@ -48,6 +55,8 @@ type AppShellCapsuleActionMenuProps = {
 type SidebarCapsuleMenuState = {
   anchor: CapsuleMenuAnchor;
   capsule: CapsuleLike | null;
+  originRect?: MobileContextMenuOriginRect;
+  presentation?: MobileContextMenuPresentation;
 };
 
 type ShellCapsuleMenuProps = {
@@ -147,10 +156,15 @@ function useRegisterCapsuleActionMenuController({
 }) {
   useEffect(() => {
     onRegisterController({
-      openCapsuleActions: (event, capsule) => {
+      openCapsuleActions: (anchor, capsule, options) => {
         const nextCapsule = mergeActiveCapsule(capsule, activeCapsuleMeta);
         menuCapsuleRef.current = nextCapsule;
-        setMenu({ anchor: event.currentTarget, capsule: nextCapsule });
+        setMenu({
+          anchor,
+          capsule: nextCapsule,
+          originRect: options.originRect,
+          presentation: options.presentation,
+        });
       },
     });
   }, [activeCapsuleMeta, menuCapsuleRef, onRegisterController, setMenu]);
@@ -177,6 +191,16 @@ function ShellCapsuleMenu({
       onClose={onClose}
       capsule={menu.capsule}
       disabled={disabled}
+      presentation={menu.presentation}
+      originRect={menu.originRect}
+      mobilePreview={
+        menu.capsule ? (
+          <CapsuleRowPreview
+            capsule={menu.capsule}
+            activeCapsuleId={String(menu.capsule.id || "")}
+          />
+        ) : null
+      }
       allowUnknownShareContent
       onDownloadPdf={() =>
         void onDownloadWardrobePdf(menuCapsuleRef.current?.id)

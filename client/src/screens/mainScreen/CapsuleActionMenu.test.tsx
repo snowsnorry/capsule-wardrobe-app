@@ -154,6 +154,30 @@ describe("CapsuleActionMenu", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("renders actions below a row preview in the mobile context menu", async () => {
+    renderCapsuleActionMenu({
+      presentation: "mobile-context",
+      originRect: { top: 16, left: 20, width: 240, height: 34 },
+      mobilePreview: <div>Spring edit row preview</div>,
+      allowUnknownShareContent: true,
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "Capsule actions Spring edit" }),
+    ).toBeInTheDocument();
+    const preview = screen.getByText("Spring edit row preview");
+    expect(preview).toBeInTheDocument();
+    expect(
+      getComputedStyle(preview.parentElement as Element).backgroundColor,
+    ).toBe("rgb(255, 255, 255)");
+    expect(
+      getComputedStyle(preview.parentElement as Element).borderRadius,
+    ).toBe("var(--cw-radius-card)");
+    expect(
+      await screen.findByRole("menuitem", { name: "Export as PDF" }),
+    ).toBeInTheDocument();
+  });
+
   test("shows pin actions above rename and toggles capsule pin state", async () => {
     const user = userEvent.setup();
     const onSetPin = vi.fn();

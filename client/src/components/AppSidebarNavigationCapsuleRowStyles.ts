@@ -15,6 +15,9 @@ const capsulePinSlotSx = {
 };
 
 const capsulePinButtonSx = {
+  alignItems: "center",
+  display: "inline-flex",
+  justifyContent: "center",
   width: 28,
   height: 28,
   minWidth: 0,
@@ -40,7 +43,15 @@ function capsuleActionsSlotSx(isOverlaySidebar: boolean) {
   };
 }
 
-export function capsuleRowSx(isOverlaySidebar: boolean) {
+function getCapsuleRowTransformTransition(isPressing: boolean) {
+  if (isPressing) {
+    return "transform 520ms linear";
+  }
+
+  return "transform 140ms cubic-bezier(0.2, 0, 0, 1)";
+}
+
+export function capsuleRowSx(isOverlaySidebar: boolean, isPressing = false) {
   return {
     borderRadius: "var(--cw-radius-card)",
     mb: 0.25,
@@ -51,6 +62,10 @@ export function capsuleRowSx(isOverlaySidebar: boolean) {
     py: 0.5,
     columnGap: 0.5,
     position: "relative",
+    transform: isPressing ? "scale(0.94)" : "scale(1)",
+    transformOrigin: "center",
+    transition: getCapsuleRowTransformTransition(isPressing),
+    willChange: isPressing ? "transform" : undefined,
     width: "100%",
     "& .capsule-row-unsaved-dot": {
       opacity: 1,
@@ -96,6 +111,8 @@ export function capsuleRowSx(isOverlaySidebar: boolean) {
         pointerEvents: "auto",
       },
     "@media (prefers-reduced-motion: reduce)": {
+      transform: "none",
+      transition: "none",
       "& .capsule-row-unsaved-dot, & .capsule-row-text, & .capsule-row-actions-slot, & .capsule-row-pin-slot":
         {
           transition: "none",

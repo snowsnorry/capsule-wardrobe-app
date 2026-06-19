@@ -1,4 +1,5 @@
-import type { MouseEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
+import type { MobileContextMenuOpenOptions } from "./MobileContextMenuTypes";
 
 type AppId = "capsule" | "outfit" | "explore" | "wardrobe" | "statistics";
 
@@ -19,6 +20,8 @@ type CapsuleNavPagination = {
 
 type OutfitNavItem = CapsuleNavItem;
 type OutfitNavPagination = CapsuleNavPagination;
+
+type SidebarActionMenuOpenOptions = MobileContextMenuOpenOptions;
 
 type AppSidebarNavigationProps = {
   activeApp: AppId;
@@ -45,12 +48,14 @@ type AppSidebarNavigationProps = {
   onOpenCapsule?: (capsuleId: string) => void;
   onOpenOutfit?: (outfitId: string) => void;
   onOpenCapsuleActions?: (
-    event: MouseEvent<HTMLElement>,
+    anchor: HTMLElement,
     capsule: CapsuleNavItem,
+    options: SidebarActionMenuOpenOptions,
   ) => void;
   onOpenOutfitActions?: (
-    event: MouseEvent<HTMLElement>,
+    anchor: HTMLElement,
     outfit: OutfitNavItem,
+    options: SidebarActionMenuOpenOptions,
   ) => void;
   capsuleHasUnsavedChanges?: (capsule: CapsuleNavItem) => boolean;
   outfitHasUnsavedChanges?: (outfit: OutfitNavItem) => boolean;
@@ -67,4 +72,5 @@ export type {
   CapsuleNavPagination,
   OutfitNavItem,
   OutfitNavPagination,
+  SidebarActionMenuOpenOptions,
 };

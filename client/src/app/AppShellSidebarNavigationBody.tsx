@@ -106,12 +106,20 @@ function buildNavigationHandlers({
   );
   const onOpenCapsuleActions: NonNullable<
     AppSidebarNavigationProps["onOpenCapsuleActions"]
-  > = (event, capsule) =>
-    capsuleActionMenuControllerRef.current?.openCapsuleActions(event, capsule);
+  > = (anchor, capsule, options) =>
+    capsuleActionMenuControllerRef.current?.openCapsuleActions(
+      anchor,
+      capsule,
+      options,
+    );
   const onOpenOutfitActions: NonNullable<
     AppSidebarNavigationProps["onOpenOutfitActions"]
-  > = (event, outfit) =>
-    outfitActionMenuControllerRef.current?.openOutfitActions(event, outfit);
+  > = (anchor, outfit, options) =>
+    outfitActionMenuControllerRef.current?.openOutfitActions(
+      anchor,
+      outfit,
+      options,
+    );
 
   return {
     onOpenCapsule: (capsuleId: string) =>

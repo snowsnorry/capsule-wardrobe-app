@@ -54,22 +54,24 @@ vi.mock("../components/AppSidebarNavigation", () => ({
     onOpenOutfit: (outfitId: string) => void;
     onLoadMoreOutfits: () => void;
     onOpenCapsuleActions: (
-      event: React.MouseEvent<HTMLElement>,
+      anchor: HTMLElement,
       capsule: {
         id: string;
         name: string;
         saved?: unknown;
         status: string;
       },
+      options: { presentation: "anchored" | "mobile-context" },
     ) => void;
     onOpenOutfitActions: (
-      event: React.MouseEvent<HTMLElement>,
+      anchor: HTMLElement,
       outfit: {
         id: string;
         name: string;
         saved?: unknown;
         status: string;
       },
+      options: { presentation: "anchored" | "mobile-context" },
     ) => void;
     personalItemsCount?: number | null;
     outfitHasUnsavedChanges: (outfit: { status?: string }) => boolean;
@@ -99,12 +101,16 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       <button
         type="button"
         onClick={(event) =>
-          onOpenCapsuleActions(event, {
-            id: "capsule-2",
-            name: "Travel",
-            saved: { data: { wardrobe: { items: [{ id: "item-1" }] } } },
-            status: "modified",
-          })
+          onOpenCapsuleActions(
+            event.currentTarget,
+            {
+              id: "capsule-2",
+              name: "Travel",
+              saved: { data: { wardrobe: { items: [{ id: "item-1" }] } } },
+              status: "modified",
+            },
+            { presentation: "anchored" },
+          )
         }
       >
         open capsule actions
@@ -112,12 +118,16 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       <button
         type="button"
         onClick={(event) =>
-          onOpenCapsuleActions(event, {
-            id: "capsule-1",
-            name: "Stale active name",
-            saved: { data: { wardrobe: { items: [{ id: "item-2" }] } } },
-            status: "saved",
-          })
+          onOpenCapsuleActions(
+            event.currentTarget,
+            {
+              id: "capsule-1",
+              name: "Stale active name",
+              saved: { data: { wardrobe: { items: [{ id: "item-2" }] } } },
+              status: "saved",
+            },
+            { presentation: "anchored" },
+          )
         }
       >
         open active capsule actions
@@ -125,12 +135,16 @@ vi.mock("../components/AppSidebarNavigation", () => ({
       <button
         type="button"
         onClick={(event) =>
-          onOpenOutfitActions(event, {
-            id: "outfit-2",
-            name: "Travel outfit",
-            saved: { items: [] },
-            status: "modified",
-          })
+          onOpenOutfitActions(
+            event.currentTarget,
+            {
+              id: "outfit-2",
+              name: "Travel outfit",
+              saved: { items: [] },
+              status: "modified",
+            },
+            { presentation: "anchored" },
+          )
         }
       >
         open outfit actions

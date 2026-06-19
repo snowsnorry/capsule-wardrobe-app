@@ -1,18 +1,12 @@
 import type { MouseEvent } from "react";
+import type {
+  MobileContextMenuOpenOptions,
+  MobileContextMenuOriginRect,
+  MobileContextMenuPresentation,
+} from "./MobileContextMenuTypes";
 
-type ProductMenuPresentation = "anchored" | "mobile-context";
-
-type MobileContextMenuOriginRect = {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-};
-
-type ProductMenuOpenOptions = {
-  presentation: ProductMenuPresentation;
-  originRect?: MobileContextMenuOriginRect;
-};
+type ProductMenuPresentation = MobileContextMenuPresentation;
+type ProductMenuOpenOptions = MobileContextMenuOpenOptions;
 
 type SelectionToggleIcon = "check" | "thumb-down";
 

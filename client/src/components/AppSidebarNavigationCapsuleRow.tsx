@@ -6,6 +6,11 @@ import {
   ListItemText,
   Tooltip,
 } from "@mui/material";
+import type {
+  KeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import { RiPushpinFill, RiPushpinLine } from "react-icons/ri";
@@ -23,6 +28,7 @@ import type {
   CapsuleNavItem,
 } from "./AppSidebarNavigationTypes";
 import type { Translate } from "./AppSidebarNavigationRows";
+import { useMobileLongPressContextMenu } from "./MobileLongPressContextMenu";
 import { useOverflowTooltip } from "./useOverflowTooltip";
 
 function CapsulePinButton({
@@ -102,25 +108,33 @@ function CapsuleActionsButton({
   capsuleName,
   isInteractionDisabled,
   onOpenCapsuleActions,
+  pinCopyPrefix,
   t,
 }: {
   capsule: CapsuleNavItem;
   capsuleName: string;
   isInteractionDisabled: boolean;
   onOpenCapsuleActions?: AppSidebarNavigationProps["onOpenCapsuleActions"];
+  pinCopyPrefix: "capsule" | "outfit";
   t: Translate;
 }) {
   if (!onOpenCapsuleActions) return null;
+  const label =
+    pinCopyPrefix === "outfit"
+      ? t("outfit.openActions")
+      : t("capsule.openCapsuleActions", { name: capsuleName });
   return (
     <Box className="capsule-row-actions-slot">
       <IconButton
         className="capsule-row-actions"
-        aria-label={t("capsule.openCapsuleActions", { name: capsuleName })}
+        aria-label={label}
         size="small"
         disabled={isInteractionDisabled}
         onClick={(event) => {
           event.stopPropagation();
-          onOpenCapsuleActions(event, capsule);
+          onOpenCapsuleActions(event.currentTarget, capsule, {
+            presentation: "anchored",
+          });
         }}
       >
         <MoreVertRoundedIcon fontSize="small" />
@@ -186,6 +200,58 @@ function CapsuleRowText({
   );
 }
 
+function useCapsuleRowMobileContextMenu({
+  capsule,
+  isInteractionDisabled,
+  isOverlaySidebar,
+  onOpenCapsuleActions,
+}: Pick<
+  CapsuleRowProps,
+  | "capsule"
+  | "isInteractionDisabled"
+  | "isOverlaySidebar"
+  | "onOpenCapsuleActions"
+>) {
+  const enabled =
+    isOverlaySidebar &&
+    !isInteractionDisabled &&
+    typeof onOpenCapsuleActions === "function";
+  const mobileLongPress = useMobileLongPressContextMenu({
+    enabled,
+    shouldStart: shouldStartSidebarRowLongPress,
+    onOpen: (anchor, originRect) =>
+      onOpenCapsuleActions?.(anchor, capsule, {
+        presentation: "mobile-context",
+        ...(originRect ? { originRect } : {}),
+      }),
+  });
+  const openMobileContextMenu = (anchor: HTMLElement) => {
+    if (enabled) {
+      mobileLongPress.openMobileMenu(anchor);
+    }
+  };
+
+  return {
+    hasMobileContextMenu: enabled,
+    isPressing: mobileLongPress.isPressing,
+    onContextMenu: (event: ReactMouseEvent<HTMLElement>) => {
+      if (!enabled) {
+        return;
+      }
+      event.preventDefault();
+      openMobileContextMenu(event.currentTarget);
+    },
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+      if (isKeyboardContextMenuEvent(event) && enabled) {
+        event.preventDefault();
+        openMobileContextMenu(event.currentTarget);
+      }
+    },
+    pointerHandlers: mobileLongPress.pointerHandlers,
+    shouldSuppressClick: mobileLongPress.shouldSuppressClick,
+  };
+}
+
 export function CapsuleRow({
   capsule,
   activeCapsuleId,
@@ -204,14 +270,37 @@ export function CapsuleRow({
   const isPinned = Boolean(capsule.pin);
   const pinLabel = t(`${pinCopyPrefix}.${isPinned ? "unpin" : "pin"}`);
   const showInlinePin = !isOverlaySidebar;
+  const mobileContextMenu = useCapsuleRowMobileContextMenu({
+    capsule,
+    isInteractionDisabled,
+    isOverlaySidebar,
+    onOpenCapsuleActions,
+  });
+  const handleClick = () => {
+    if (mobileContextMenu.shouldSuppressClick()) {
+      return;
+    }
+    if (capsuleId) {
+      onOpenCapsule?.(capsuleId);
+    }
+  };
 
   return (
     <ListItemButton
       aria-label={capsuleName}
+      aria-haspopup={
+        mobileContextMenu.hasMobileContextMenu ? "menu" : undefined
+      }
+      aria-keyshortcuts={
+        mobileContextMenu.hasMobileContextMenu ? "Shift+F10" : undefined
+      }
       selected={isActive}
       disabled={isInteractionDisabled}
-      onClick={() => (capsuleId ? onOpenCapsule?.(capsuleId) : undefined)}
-      sx={capsuleRowSx(isOverlaySidebar)}
+      onClick={handleClick}
+      onContextMenu={mobileContextMenu.onContextMenu}
+      onKeyDown={mobileContextMenu.onKeyDown}
+      {...mobileContextMenu.pointerHandlers}
+      sx={capsuleRowSx(isOverlaySidebar, mobileContextMenu.isPressing)}
     >
       {showInlinePin ? (
         <CapsulePinButton
@@ -234,10 +323,60 @@ export function CapsuleRow({
         capsuleName={capsuleName}
         isInteractionDisabled={isInteractionDisabled}
         onOpenCapsuleActions={onOpenCapsuleActions}
+        pinCopyPrefix={pinCopyPrefix}
         t={t}
       />
     </ListItemButton>
   );
+}
+
+export function CapsuleRowPreview({
+  capsule,
+  activeCapsuleId,
+}: {
+  capsule: CapsuleNavItem;
+  activeCapsuleId: string;
+}) {
+  const capsuleId = getCapsuleId(capsule);
+  const capsuleName = getCapsuleName(capsule);
+  const isActive = capsuleId === activeCapsuleId;
+  const isPinned = Boolean(capsule.pin);
+  const hasUnsavedChanges =
+    capsule.status === "new" || capsule.status === "modified";
+  const t = (key: string) => key;
+
+  return (
+    <ListItemButton
+      aria-hidden="true"
+      component="div"
+      selected={isActive}
+      tabIndex={-1}
+      sx={{
+        ...capsuleRowSx(true, false),
+        mb: 0,
+        pointerEvents: "none",
+      }}
+    >
+      <CapsulePinnedIndicator isPinned={isPinned} />
+      <CapsuleRowText capsuleName={capsuleName} isActive={isActive} />
+      <CapsuleUnsavedDot
+        isVisible={hasUnsavedChanges}
+        label={t("capsule.notSaved")}
+      />
+    </ListItemButton>
+  );
+}
+
+function shouldStartSidebarRowLongPress(event: ReactPointerEvent<HTMLElement>) {
+  const target = event.target;
+  return !(
+    target instanceof Element &&
+    target.closest(".capsule-row-actions, .capsule-row-pin")
+  );
+}
+
+function isKeyboardContextMenuEvent(event: KeyboardEvent<HTMLElement>) {
+  return event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
 }
 
 export function ActiveCapsuleAppend({

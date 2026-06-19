@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent, RefObject } from "react";
+import type { RefObject } from "react";
+import { CapsuleRowPreview } from "../components/AppSidebarNavigationCapsuleRow";
+import type {
+  MobileContextMenuOpenOptions,
+  MobileContextMenuOriginRect,
+  MobileContextMenuPresentation,
+} from "../components/MobileContextMenuTypes";
 import CapsuleActionMenu from "../screens/mainScreen/CapsuleActionMenu";
 import {
   ConfirmDialog,
@@ -18,8 +24,9 @@ import type { OutfitMeta } from "./appTypes";
 
 export type AppShellOutfitActionMenuController = {
   openOutfitActions: (
-    event: MouseEvent<HTMLElement>,
+    anchor: HTMLElement,
     outfit: OutfitMeta,
+    options: MobileContextMenuOpenOptions,
   ) => void;
 };
 
@@ -42,6 +49,8 @@ type AppShellOutfitActionMenuProps = {
 type SidebarOutfitMenuState = {
   anchor: CapsuleMenuAnchor;
   outfit: CapsuleLike | null;
+  originRect?: MobileContextMenuOriginRect;
+  presentation?: MobileContextMenuPresentation;
 };
 
 function makeNameDialog(
@@ -123,10 +132,15 @@ function useRegisterOutfitActionMenuController({
 }) {
   useEffect(() => {
     onRegisterController({
-      openOutfitActions: (event, outfit) => {
+      openOutfitActions: (anchor, outfit, options) => {
         const nextOutfit = mergeActiveOutfit(outfit, activeOutfitMeta);
         menuOutfitRef.current = nextOutfit;
-        setMenu({ anchor: event.currentTarget, outfit: nextOutfit });
+        setMenu({
+          anchor,
+          outfit: nextOutfit,
+          originRect: options.originRect,
+          presentation: options.presentation,
+        });
       },
     });
   }, [activeOutfitMeta, menuOutfitRef, onRegisterController, setMenu]);
@@ -202,6 +216,16 @@ function OutfitActionMenuList({
       onClose={onClose}
       capsule={menu.outfit}
       disabled={disabled}
+      presentation={menu.presentation}
+      originRect={menu.originRect}
+      mobilePreview={
+        menu.outfit ? (
+          <CapsuleRowPreview
+            capsule={menu.outfit}
+            activeCapsuleId={String(menu.outfit.id || "")}
+          />
+        ) : null
+      }
       allowUnknownShareContent
       pinCopyPrefix="outfit"
       showShare={false}
