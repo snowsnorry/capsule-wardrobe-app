@@ -72,5 +72,4 @@ export type {
   CapsuleNavPagination,
   OutfitNavItem,
   OutfitNavPagination,
-  SidebarActionMenuOpenOptions,
 };

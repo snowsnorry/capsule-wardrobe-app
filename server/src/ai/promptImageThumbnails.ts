@@ -54,9 +54,4 @@ function buildPromptImageThumbnailUrl(
   return `${thumbnailAssetBaseUrl}/${sha256Hex(original)}_${PROMPT_IMAGE_THUMBNAIL_WIDTH}.webp`;
 }
 
-export {
-  PROMPT_IMAGE_THUMBNAIL_WIDTH,
-  buildPromptImageThumbnailUrl,
-  normalizeThumbnailAssetBaseUrl,
-  sha256Hex,
-};
+export { buildPromptImageThumbnailUrl, sha256Hex };

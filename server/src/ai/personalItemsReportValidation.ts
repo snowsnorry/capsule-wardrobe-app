@@ -188,4 +188,4 @@ function parsePersonalItemsReportLlmOutput(
   return report;
 }
 
-export { buildExpectedCategoryCounts, parsePersonalItemsReportLlmOutput };
+export { parsePersonalItemsReportLlmOutput };

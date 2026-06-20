@@ -381,8 +381,5 @@ export type {
   PersonalItemsReportModel,
   WardrobeFiltersModel,
   WardrobeItemsModel,
-  WardrobeProductDetailModel,
-  WardrobeScreenContentActions,
-  WardrobeScreenContentModel,
 };
 export { WardrobeScreenContent };

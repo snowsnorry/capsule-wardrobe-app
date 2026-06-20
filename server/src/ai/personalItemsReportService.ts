@@ -15,7 +15,6 @@ import { applyComputedPersonalItemsVerdictScore } from "./personalItemsReportSco
 import {
   createPersonalItemsReportServiceDeps,
   type PersonalItemsReportJsonGenerator,
-  type PersonalItemsReportRow,
   type PersonalItemsReportServiceDeps,
   type PersonalItemsReportServiceDepsOverrides,
 } from "./personalItemsReportServiceDeps.js";
@@ -216,9 +215,4 @@ async function generatePersonalItemsReport(
   }
 }
 
-export {
-  generatePersonalItemsReport,
-  getPersonalItemUrls,
-  type PersonalItemsReportGenerationResult,
-  type PersonalItemsReportRow,
-};
+export { generatePersonalItemsReport, getPersonalItemUrls };

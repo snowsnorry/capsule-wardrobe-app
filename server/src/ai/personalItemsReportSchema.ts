@@ -450,4 +450,4 @@ function buildPersonalItemsReportFormat(): JsonSchemaFormat {
   };
 }
 
-export { CATEGORY_KEYS, buildPersonalItemsReportFormat };
+export { buildPersonalItemsReportFormat };

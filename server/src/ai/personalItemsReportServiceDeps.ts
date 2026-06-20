@@ -83,7 +83,6 @@ function createPersonalItemsReportServiceDeps(
 export {
   createPersonalItemsReportServiceDeps,
   type PersonalItemsReportJsonGenerator,
-  type PersonalItemsReportRow,
   type PersonalItemsReportServiceDeps,
   type PersonalItemsReportServiceDepsOverrides,
 };

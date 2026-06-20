@@ -210,5 +210,4 @@ export {
   buildPersonalItemsReportCollage,
   renderPersonalItemsReportPrompt,
   toPersonalItemsReportItem,
-  toPersonalItemsReportPromptImageItem,
 };

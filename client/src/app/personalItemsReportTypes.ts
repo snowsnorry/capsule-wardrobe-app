@@ -27,12 +27,7 @@ type PersonalItemsReportEstimatedOutfitRange = {
   confidence?: "low" | "medium" | "high" | string;
 };
 
-export type PersonalItemsReportItemReference = {
-  id: string;
-  label: string;
-};
-
-export type PersonalItemsReportStyleCluster = {
+type PersonalItemsReportStyleCluster = {
   label?: string;
   style?: string;
   itemCount?: number;

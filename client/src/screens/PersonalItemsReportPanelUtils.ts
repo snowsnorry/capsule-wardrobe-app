@@ -231,7 +231,6 @@ export {
   getPersonalItemsReportVerdictLabel,
   joinItemReferenceLabels,
   toPercent,
-  type ItemReference,
   type ItemReferenceResolver,
   type Translate as PersonalItemsReportTranslate,
 };

@@ -109,5 +109,4 @@ export {
   getPersonalItemsReportVerdictStatusForScore,
   getPersonalItemsReportVerdictToneForScore,
   normalizePersonalItemsReportForDisplay,
-  normalizePersonalItemsReportVerdictForDisplay,
 };

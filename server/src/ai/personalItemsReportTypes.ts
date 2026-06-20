@@ -211,10 +211,8 @@ type PersonalItemsReportItem = {
 };
 
 export type {
-  CategoryCounts,
   PersonalItemsReport,
   PersonalItemsReportItem,
   PersonalItemsReportLlmOutput,
   PersonalItemsReportSeverity,
-  PersonalItemsReportVerdictStatus,
 };
