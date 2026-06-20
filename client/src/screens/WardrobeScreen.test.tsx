@@ -1194,6 +1194,12 @@ describe("WardrobeScreen", () => {
 
   test("exports the current filtered wardrobe as PDF from the action menu", async () => {
     const user = userEvent.setup();
+    let resolveDownload: () => void = () => {};
+    api.downloadPersonalItemsPdf.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveDownload = resolve;
+      }),
+    );
     renderScreen();
 
     await screen.findByTestId("wardrobe-card-wardrobe-1");
@@ -1206,6 +1212,21 @@ describe("WardrobeScreen", () => {
 
     expect(api.downloadPersonalItemsPdf).toHaveBeenCalledWith({
       source: "uploaded",
+    });
+    const toolbar = screen.getByTestId("wardrobe-toolbar");
+    const progress = within(toolbar).getByRole("progressbar");
+    expect(progress).toBeInTheDocument();
+
+    await act(async () => {
+      resolveDownload();
+    });
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("wardrobe-toolbar")).queryByRole(
+          "progressbar",
+        ),
+      ).not.toBeInTheDocument();
     });
   });
 

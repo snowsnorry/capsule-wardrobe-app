@@ -1,7 +1,9 @@
 import type { MouseEvent } from "react";
 import {
+  Box,
   Button,
   IconButton,
+  LinearProgress,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
@@ -21,6 +23,7 @@ type WardrobeToolbarProps = {
   limitSurfaceEnd?: boolean;
   likedOnly: boolean;
   isLoading: boolean;
+  showProgress?: boolean;
   onAnalyze: () => void;
   onFilterChange: (filter: WardrobeFilter) => void;
   onLikedOnlyChange: (likedOnly: boolean) => void;
@@ -49,33 +52,32 @@ function WardrobeMobileToolbar({
   onOpenMenu,
   onOpenUpload,
   onOpenUrlUpload,
+  showProgress = false,
   t,
 }: Omit<WardrobeToolbarProps, "isMobile">) {
   return (
-    <Stack
-      direction="row"
-      spacing={1}
-      data-testid="wardrobe-toolbar"
-      sx={mobileToolbarSx}
-    >
-      <WardrobeUploadSplitButton
-        disabled={isLoading}
-        isMobile
-        onOpenUpload={onOpenUpload}
-        onOpenUrlUpload={onOpenUrlUpload}
-        t={t}
-      />
-      <Stack direction="row" spacing={0.75} sx={mobileActionsSx}>
-        <IconButton
-          aria-label={t("wardrobe.openMenu")}
+    <Box data-testid="wardrobe-toolbar" sx={mobileToolbarSx}>
+      <Stack direction="row" spacing={1} sx={mobileToolbarControlsSx}>
+        <WardrobeUploadSplitButton
           disabled={isLoading}
-          onClick={onOpenMenu}
-          sx={mobileMenuButtonSx}
-        >
-          <MoreVertRoundedIcon />
-        </IconButton>
+          isMobile
+          onOpenUpload={onOpenUpload}
+          onOpenUrlUpload={onOpenUrlUpload}
+          t={t}
+        />
+        <Stack direction="row" spacing={0.75} sx={mobileActionsSx}>
+          <IconButton
+            aria-label={t("wardrobe.openMenu")}
+            disabled={isLoading}
+            onClick={onOpenMenu}
+            sx={mobileMenuButtonSx}
+          >
+            <MoreVertRoundedIcon />
+          </IconButton>
+        </Stack>
       </Stack>
-    </Stack>
+      <WardrobeHeaderProgress show={showProgress} />
+    </Box>
   );
 }
 
@@ -92,71 +94,73 @@ function WardrobeDesktopToolbar({
   onOpenMenu,
   onOpenUpload,
   onOpenUrlUpload,
+  showProgress = false,
   t,
 }: Omit<WardrobeToolbarProps, "isMobile">) {
   return (
-    <Stack
-      direction="row"
-      spacing={1.5}
+    <Box
       data-testid="wardrobe-toolbar"
       sx={getDesktopToolbarSx(limitSurfaceEnd)}
     >
-      <Stack direction="row" spacing={1} sx={desktopFiltersSx}>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={filter}
-          onChange={(_event, value: WardrobeFilter | null) => {
-            if (value) {
-              onFilterChange(value);
-            }
-          }}
-          aria-label={t("wardrobe.filterLabel")}
-          sx={filterGroupSx}
-        >
-          {FILTERS.map((value) => (
-            <ToggleButton
-              key={value}
-              value={value}
-              disabled={isLoading}
-              aria-label={t(filterKey(value))}
-            >
-              {t(filterKey(value))}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-        <WardrobeLikedOnlyToggle
-          disabled={isLoading}
-          likedOnly={likedOnly}
-          onLikedOnlyChange={onLikedOnlyChange}
-          t={t}
-        />
-      </Stack>
-      <Stack direction="row" spacing={1} sx={toolbarActionsSx}>
-        {!hasReport ? (
-          <Button
-            variant="outlined"
-            disabled={isLoading || !canAnalyze}
-            onClick={onAnalyze}
+      <Stack direction="row" spacing={1.5} sx={desktopToolbarControlsSx}>
+        <Stack direction="row" spacing={1} sx={desktopFiltersSx}>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={filter}
+            onChange={(_event, value: WardrobeFilter | null) => {
+              if (value) {
+                onFilterChange(value);
+              }
+            }}
+            aria-label={t("wardrobe.filterLabel")}
+            sx={filterGroupSx}
           >
-            {t("wardrobe.analyzePersonalItems")}
-          </Button>
-        ) : null}
-        <WardrobeUploadSplitButton
-          disabled={isLoading}
-          onOpenUpload={onOpenUpload}
-          onOpenUrlUpload={onOpenUrlUpload}
-          t={t}
-        />
-        <IconButton
-          aria-label={t("wardrobe.openMenu")}
-          disabled={isLoading}
-          onClick={onOpenMenu}
-        >
-          <MoreVertRoundedIcon />
-        </IconButton>
+            {FILTERS.map((value) => (
+              <ToggleButton
+                key={value}
+                value={value}
+                disabled={isLoading}
+                aria-label={t(filterKey(value))}
+              >
+                {t(filterKey(value))}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+          <WardrobeLikedOnlyToggle
+            disabled={isLoading}
+            likedOnly={likedOnly}
+            onLikedOnlyChange={onLikedOnlyChange}
+            t={t}
+          />
+        </Stack>
+        <Stack direction="row" spacing={1} sx={toolbarActionsSx}>
+          {!hasReport ? (
+            <Button
+              variant="outlined"
+              disabled={isLoading || !canAnalyze}
+              onClick={onAnalyze}
+            >
+              {t("wardrobe.analyzePersonalItems")}
+            </Button>
+          ) : null}
+          <WardrobeUploadSplitButton
+            disabled={isLoading}
+            onOpenUpload={onOpenUpload}
+            onOpenUrlUpload={onOpenUrlUpload}
+            t={t}
+          />
+          <IconButton
+            aria-label={t("wardrobe.openMenu")}
+            disabled={isLoading}
+            onClick={onOpenMenu}
+          >
+            <MoreVertRoundedIcon />
+          </IconButton>
+        </Stack>
       </Stack>
-    </Stack>
+      <WardrobeHeaderProgress show={showProgress} />
+    </Box>
   );
 }
 
@@ -168,11 +172,18 @@ function WardrobeToolbar(props: WardrobeToolbarProps) {
   );
 }
 
+function WardrobeHeaderProgress({ show }: { show: boolean }) {
+  return (
+    <Box sx={toolbarProgressSlotSx}>
+      {show ? <LinearProgress color="success" sx={toolbarProgressSx} /> : null}
+    </Box>
+  );
+}
+
 const toolbarSurfaceSx = {
   position: "sticky",
   top: 0,
   zIndex: (theme) => theme.zIndex.appBar,
-  alignItems: "center",
   bgcolor: "background.default",
   boxShadow: (theme) => `0 0 0 100vmax ${theme.palette.background.default}`,
   clipPath: "inset(-100vmax -100vmax 0)",
@@ -180,7 +191,7 @@ const toolbarSurfaceSx = {
     content: '""',
     position: "absolute",
     right: "-100vmax",
-    bottom: 0,
+    bottom: 2,
     left: "-100vmax",
     borderBottom: "1px solid",
     borderColor: "divider",
@@ -190,6 +201,10 @@ const toolbarSurfaceSx = {
 
 const desktopToolbarSx = {
   ...toolbarSurfaceSx,
+} as const;
+
+const desktopToolbarControlsSx = {
+  alignItems: "center",
   justifyContent: "space-between",
   flexWrap: "wrap",
   py: 1.5,
@@ -212,13 +227,25 @@ function getDesktopToolbarSx(limitSurfaceEnd: boolean) {
 
 const mobileToolbarSx = {
   ...toolbarSurfaceSx,
-  alignItems: "center",
-  justifyContent: "flex-end",
   width: "calc(100% + 32px)",
   mx: -2,
+  boxSizing: "border-box",
+} as const;
+
+const mobileToolbarControlsSx = {
+  alignItems: "center",
+  justifyContent: "flex-end",
   px: 2,
   py: 1,
-  boxSizing: "border-box",
+} as const;
+
+const toolbarProgressSlotSx = {
+  height: 2,
+  overflow: "hidden",
+} as const;
+
+const toolbarProgressSx = {
+  height: 2,
 } as const;
 
 const desktopFiltersSx = {

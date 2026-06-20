@@ -163,6 +163,7 @@ function WardrobeScreenToolbar({
       limitSurfaceEnd={model.showFloatingReportInspector}
       likedOnly={model.filters.likedOnly}
       isLoading={model.isActionBusy}
+      showProgress={model.wardrobeItems.isDownloadingPdf}
       t={model.t}
       onAnalyze={() => void model.personalItemsReport.generateReport()}
       onFilterChange={model.filters.setFilter}
