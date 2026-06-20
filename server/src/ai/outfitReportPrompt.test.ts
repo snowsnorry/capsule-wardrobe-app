@@ -5,6 +5,7 @@ import {
   renderOutfitReportPrompt,
 } from "./outfitReportPrompt.js";
 import { createOutfitReportServiceDeps } from "./outfitReportServiceDeps.js";
+import { buildPromptImageThumbnailUrl } from "./promptImageThumbnails.js";
 
 function createDeps(overrides = {}) {
   return createOutfitReportServiceDeps({
@@ -93,6 +94,11 @@ describe("outfitReportPrompt", () => {
           id: "item-1",
           category: "bottom",
           imageUrl: "https://images.example.com/item.jpg",
+          source: null,
+          thumbnailUrl: buildPromptImageThumbnailUrl(
+            "https://images.example.com/item.jpg",
+            null,
+          ),
         },
       ],
     });

@@ -18,6 +18,7 @@ type WardrobeToolbarProps = {
   filter: WardrobeFilter;
   hasReport: boolean;
   isMobile: boolean;
+  limitSurfaceEnd?: boolean;
   likedOnly: boolean;
   isLoading: boolean;
   onAnalyze: () => void;
@@ -83,6 +84,7 @@ function WardrobeDesktopToolbar({
   filter,
   hasReport,
   isLoading,
+  limitSurfaceEnd = false,
   likedOnly,
   onAnalyze,
   onFilterChange,
@@ -97,7 +99,7 @@ function WardrobeDesktopToolbar({
       direction="row"
       spacing={1.5}
       data-testid="wardrobe-toolbar"
-      sx={desktopToolbarSx}
+      sx={getDesktopToolbarSx(limitSurfaceEnd)}
     >
       <Stack direction="row" spacing={1} sx={desktopFiltersSx}>
         <ToggleButtonGroup
@@ -192,6 +194,21 @@ const desktopToolbarSx = {
   flexWrap: "wrap",
   py: 1.5,
 } as const;
+
+function getDesktopToolbarSx(limitSurfaceEnd: boolean) {
+  if (!limitSurfaceEnd) {
+    return desktopToolbarSx;
+  }
+
+  return {
+    ...desktopToolbarSx,
+    clipPath: "inset(-100vmax 0 0 -100vmax)",
+    "&::after": {
+      ...desktopToolbarSx["&::after"],
+      right: 0,
+    },
+  } as const;
+}
 
 const mobileToolbarSx = {
   ...toolbarSurfaceSx,

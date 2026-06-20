@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { generateCapsuleReport } from "./capsuleReportService.js";
+import { buildPromptImageThumbnailUrl } from "./promptImageThumbnails.js";
 
 const capsuleItems = [
   {
@@ -297,11 +298,18 @@ describe("generateCapsuleReport", () => {
           id: "catalog-top-1",
           category: "top",
           imageUrl: "https://images.example.com/top.jpg",
+          source: "from_catalog",
+          thumbnailUrl: buildPromptImageThumbnailUrl(
+            "https://images.example.com/top.jpg",
+            "from_catalog",
+          ),
         },
         {
           id: "W18",
           category: "bottom",
           imageUrl: "https://images.example.com/bottom.jpg",
+          source: "uploaded",
+          thumbnailUrl: "https://images.example.com/bottom_320.webp",
         },
       ],
     });

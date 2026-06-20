@@ -30,7 +30,7 @@ const likedApi = vi.hoisted(() => ({
   removeItemLike: vi.fn(),
 }));
 const useI18nMock = vi.hoisted(() => vi.fn());
-const useMediaQueryMock = vi.hoisted(() => vi.fn(() => false));
+const useMediaQueryMock = vi.hoisted(() => vi.fn((_query?: string) => false));
 
 vi.mock("../api/personalItems", () => api);
 vi.mock("../api/likedItems", () => likedApi);
@@ -850,6 +850,33 @@ describe("WardrobeScreen", () => {
     expect(getComputedStyle(toolbar).clipPath).toBe(
       "inset(-100vmax -100vmax 0)",
     );
+  });
+
+  test("limits the desktop toolbar surface before the floating report inspector", async () => {
+    useMediaQueryMock.mockImplementation((query?: string) =>
+      String(query || "").includes("min-width: 1800px"),
+    );
+    api.fetchPersonalItemsReport.mockResolvedValueOnce({
+      ok: true,
+      report: {
+        verdict: {
+          score: 0.76,
+          status: "good",
+          summary: "Solid Personal items foundation.",
+        },
+      },
+      stale: false,
+      generatedAt: "2026-06-19T10:00:00.000Z",
+    });
+
+    renderScreen();
+
+    expect(
+      await screen.findByTestId("personal-items-report-floating-inspector"),
+    ).toBeInTheDocument();
+    expect(
+      getComputedStyle(screen.getByTestId("wardrobe-toolbar")).clipPath,
+    ).toBe("inset(-100vmax 0 0 -100vmax)");
   });
 
   test("opens upload dialog as a full-screen mobile picker", async () => {

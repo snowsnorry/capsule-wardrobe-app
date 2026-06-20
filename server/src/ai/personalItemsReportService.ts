@@ -160,6 +160,7 @@ async function generateAndPersistReport({
     systemPrompt: PERSONAL_ITEMS_REPORT_SYSTEM_PROMPT,
   });
   const parsedReport = parsePersonalItemsReportLlmOutput(json, {
+    itemCategories: context.reportItems.map((item) => item.category),
     itemCount: context.reportItems.length,
     itemIds: context.reportItems.map((item) => item.id),
   });

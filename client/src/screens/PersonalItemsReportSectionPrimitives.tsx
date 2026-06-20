@@ -73,6 +73,41 @@ function compactValue(value: unknown) {
   return formatReportValue(value);
 }
 
+const proseDetailKeys = new Set([
+  "blockers",
+  "gaps",
+  "limitations",
+  "limits",
+  "risks",
+  "strengths",
+]);
+
+function joinReportValues(values: string[]) {
+  const separator = values.every((value) => /[.!?…]$/.test(value.trim()))
+    ? " "
+    : ", ";
+  return values.join(separator);
+}
+
+function detailValue(row: ValueRow) {
+  const { key, value } = row;
+  if (Array.isArray(value)) {
+    return joinReportValues(
+      value
+        .filter(hasText)
+        .map((item) =>
+          proseDetailKeys.has(key) && typeof item === "string"
+            ? item
+            : formatReportValue(item),
+        ),
+    );
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  return compactValue(value);
+}
+
 function ValueRows({ rows }: { rows: Array<ValueRow | null> }) {
   const visibleRows = rows.filter((row): row is ValueRow => Boolean(row));
   if (!visibleRows.length) return null;
@@ -92,7 +127,7 @@ function ValueRows({ rows }: { rows: Array<ValueRow | null> }) {
         <Box key={row.key} sx={{ display: "contents" }}>
           <Typography
             variant="body2"
-            sx={{ color: "text.secondary", fontWeight: 700 }}
+            sx={{ color: "text.primary", fontWeight: 750 }}
           >
             {row.label}
           </Typography>
@@ -102,6 +137,34 @@ function ValueRows({ rows }: { rows: Array<ValueRow | null> }) {
         </Box>
       ))}
     </Box>
+  );
+}
+
+function DetailRows({ rows }: { rows: Array<ValueRow | null> }) {
+  const visibleRows = rows.filter((row): row is ValueRow => Boolean(row));
+  if (!visibleRows.length) return null;
+
+  return (
+    <Stack spacing={1.1} sx={{ pt: 0.25 }}>
+      {visibleRows.map((row) => (
+        <Stack key={row.key} spacing={0.45}>
+          <Typography variant="body2" sx={{ fontWeight: 750 }}>
+            {row.label}
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              ...reportListTextSx,
+              lineHeight: 1.62,
+              maxWidth: "72ch",
+              textWrap: "pretty",
+            }}
+          >
+            {detailValue(row)}
+          </Typography>
+        </Stack>
+      ))}
+    </Stack>
   );
 }
 
@@ -167,7 +230,11 @@ function Notes({ value }: { value: string | null | undefined }) {
   return (
     <Typography
       variant="body2"
-      sx={{ ...reportListTextSx, color: "text.secondary" }}
+      sx={{
+        ...reportListTextSx,
+        maxWidth: "72ch",
+        textWrap: "pretty",
+      }}
     >
       {value}
     </Typography>
@@ -190,7 +257,7 @@ function RelatedItems({
     <Typography
       data-testid="personal-items-report-related-items"
       variant="body2"
-      sx={{ color: "text.secondary", fontSize: "0.8rem", lineHeight: 1.45 }}
+      sx={reportListTextSx}
     >
       <Box component="span" sx={{ fontWeight: 750 }}>
         {t("wardrobe.reportRelatedItems")}
@@ -301,6 +368,7 @@ export type { ReportContentProps };
 
 export {
   hasText,
+  DetailRows,
   Notes,
   optionalRow,
   percentLabel,

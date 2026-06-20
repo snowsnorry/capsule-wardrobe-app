@@ -127,6 +127,7 @@ function WardrobeScreenToolbar({
       filter={model.filters.filter}
       hasReport={model.hasReportOrLoading}
       isMobile={model.isOverlay}
+      limitSurfaceEnd={model.showFloatingReportInspector}
       likedOnly={model.filters.likedOnly}
       isLoading={model.isActionBusy}
       t={model.t}

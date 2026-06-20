@@ -1,10 +1,10 @@
 import { Box, Stack, Typography } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import type { PersonalItemsReport } from "../app/appTypes";
 import { ReportSection } from "./outfitScreen/OutfitReportPanelSectionPrimitives";
 import { formatReportValue } from "./PersonalItemsReportPanelUtils";
 import {
+  DetailRows,
   hasText,
   Notes,
   optionalRow,
@@ -60,16 +60,21 @@ function OverviewSection({
       t("wardrobe.reportDominantFormalityLevels"),
       overview.dominantFormalityLevels,
     ),
+  ];
+  const detailRows = [
     optionalRow("tags", t("wardrobe.reportSummaryTags"), overview.summaryTags),
   ];
-  if (!rows.some(Boolean)) return null;
+  if (!rows.some(Boolean) && !detailRows.some(Boolean)) return null;
 
   return (
     <ReportSection
       title={t("wardrobe.reportOverview")}
       icon={<InfoOutlinedIcon color="primary" fontSize="small" />}
     >
-      <ValueRows rows={rows} />
+      <Stack spacing={1.25}>
+        <ValueRows rows={rows} />
+        <DetailRows rows={detailRows} />
+      </Stack>
     </ReportSection>
   );
 }
@@ -120,10 +125,7 @@ function CoverageSection({
   }
 
   return (
-    <ReportSection
-      title={t("wardrobe.reportCoverage")}
-      icon={<TuneOutlinedIcon color="primary" fontSize="small" />}
-    >
+    <ReportSection title={t("wardrobe.reportCoverage")}>
       <Stack spacing={1.25}>
         <ValueRows rows={rows} />
         <Bottlenecks rows={bottlenecks} />
@@ -184,6 +186,8 @@ function OutfitReadinessSection({
       t("wardrobe.reportOverallScore"),
       percentLabel(readiness.overallScore),
     ),
+  ];
+  const detailRows = [
     optionalRow(
       "formulas",
       t("wardrobe.reportSupportedFormulaTypes"),
@@ -196,12 +200,19 @@ function OutfitReadinessSection({
       readiness.mainBlockers,
     ),
   ];
-  if (!rows.some(Boolean) && !hasText(readiness.notes)) return null;
+  if (
+    !rows.some(Boolean) &&
+    !detailRows.some(Boolean) &&
+    !hasText(readiness.notes)
+  ) {
+    return null;
+  }
 
   return (
     <ReportSection title={t("wardrobe.reportOutfitReadiness")}>
       <Stack spacing={1.25}>
         <ValueRows rows={rows} />
+        <DetailRows rows={detailRows} />
         <Notes value={readiness.notes} />
       </Stack>
     </ReportSection>
@@ -241,18 +252,27 @@ function VersatilitySection({
       t("wardrobe.reportPrimaryUseModes"),
       versatility.primaryUseModes,
     ),
+  ];
+  const detailRows = [
     optionalRow(
       "limits",
       t("wardrobe.reportLimitingFactors"),
       versatility.limitingFactors,
     ),
   ];
-  if (!rows.some(Boolean) && !hasText(versatility.notes)) return null;
+  if (
+    !rows.some(Boolean) &&
+    !detailRows.some(Boolean) &&
+    !hasText(versatility.notes)
+  ) {
+    return null;
+  }
 
   return (
     <ReportSection title={t("wardrobe.reportVersatility")}>
       <Stack spacing={1.25}>
         <ValueRows rows={rows} />
+        <DetailRows rows={detailRows} />
         <Notes value={versatility.notes} />
       </Stack>
     </ReportSection>

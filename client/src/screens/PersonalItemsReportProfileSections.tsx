@@ -1,7 +1,4 @@
 import { Box, Stack, Typography } from "@mui/material";
-import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
-import StyleOutlinedIcon from "@mui/icons-material/StyleOutlined";
-import WbSunnyOutlinedIcon from "@mui/icons-material/WbSunnyOutlined";
 import type { PersonalItemsReport } from "../app/appTypes";
 import {
   HighlightRow,
@@ -9,6 +6,7 @@ import {
 } from "./outfitScreen/OutfitReportPanelSectionPrimitives";
 import { formatReportValue } from "./PersonalItemsReportPanelUtils";
 import {
+  DetailRows,
   hasText,
   Notes,
   optionalRow,
@@ -52,10 +50,7 @@ function StyleProfileSection({
   }
 
   return (
-    <ReportSection
-      title={t("wardrobe.reportStyleProfile")}
-      icon={<StyleOutlinedIcon color="primary" fontSize="small" />}
-    >
+    <ReportSection title={t("wardrobe.reportStyleProfile")}>
       <Stack spacing={1.25}>
         <ValueRows rows={rows} />
         <StyleClusters
@@ -156,21 +151,27 @@ function SeasonalitySection({
       t("wardrobe.reportWeatherSuitability"),
       seasonality.weatherSuitability,
     ),
+  ];
+  const detailRows = [
     optionalRow(
       "limitations",
       t("wardrobe.reportWeatherLimitations"),
       seasonality.weatherLimitations,
     ),
   ];
-  if (!rows.some(Boolean) && !hasText(seasonality.notes)) return null;
+  if (
+    !rows.some(Boolean) &&
+    !detailRows.some(Boolean) &&
+    !hasText(seasonality.notes)
+  ) {
+    return null;
+  }
 
   return (
-    <ReportSection
-      title={t("wardrobe.reportSeasonality")}
-      icon={<WbSunnyOutlinedIcon color="primary" fontSize="small" />}
-    >
+    <ReportSection title={t("wardrobe.reportSeasonality")}>
       <Stack spacing={1.25}>
         <ValueRows rows={rows} />
+        <DetailRows rows={detailRows} />
         <Notes value={seasonality.notes} />
       </Stack>
     </ReportSection>
@@ -213,18 +214,24 @@ function ColorAnalysisSection({
       color.contrastLevel,
     ),
     optionalRow("harmony", t("wardrobe.reportHarmony"), color.harmony),
+  ];
+  const detailRows = [
     optionalRow("gaps", t("wardrobe.reportColorGaps"), color.colorGaps),
     optionalRow("risks", t("wardrobe.reportColorRisks"), color.colorRisks),
   ];
-  if (!rows.some(Boolean) && !hasText(color.notes)) return null;
+  if (
+    !rows.some(Boolean) &&
+    !detailRows.some(Boolean) &&
+    !hasText(color.notes)
+  ) {
+    return null;
+  }
 
   return (
-    <ReportSection
-      title={t("wardrobe.reportColorAnalysis")}
-      icon={<PaletteOutlinedIcon color="primary" fontSize="small" />}
-    >
+    <ReportSection title={t("wardrobe.reportColorAnalysis")}>
       <Stack spacing={1.25}>
         <ValueRows rows={rows} />
+        <DetailRows rows={detailRows} />
         <Notes value={color.notes} />
       </Stack>
     </ReportSection>
@@ -258,6 +265,8 @@ function EfficiencySection({
       t("wardrobe.reportOrphanItemRisk"),
       efficiency.orphanItemRisk,
     ),
+  ];
+  const detailRows = [
     optionalRow(
       "strengths",
       t("wardrobe.reportUnderusedStrengths"),
@@ -266,6 +275,7 @@ function EfficiencySection({
   ];
   if (
     !rows.some(Boolean) &&
+    !detailRows.some(Boolean) &&
     !redundancies.length &&
     !orphans.length &&
     !hasText(efficiency.notes)
@@ -277,6 +287,7 @@ function EfficiencySection({
     <ReportSection title={t("wardrobe.reportEfficiency")}>
       <Stack spacing={1.25}>
         <ValueRows rows={rows} />
+        <DetailRows rows={detailRows} />
         <ReferenceRows
           rows={redundancies.map((row, index) => ({
             ids: row.itemIds || [],

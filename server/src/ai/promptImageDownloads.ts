@@ -20,6 +20,17 @@ import {
   resolveSourceImageUrl,
 } from "./promptImagesShared.js";
 
+type DownloadIdentity = Pick<
+  PromptImageDownloadResult,
+  "category" | "id" | "imageUrl" | "originalImageUrl"
+>;
+
+type PromptImageDownloadCandidate = {
+  cacheKey: string;
+  imageUrl: string;
+  originalImageUrl: string;
+};
+
 function getDownloadIdentity(item: PromptImageItemLike) {
   return {
     id: String(item?.id ?? ""),
@@ -29,9 +40,47 @@ function getDownloadIdentity(item: PromptImageItemLike) {
   };
 }
 
+function addPromptImageDownloadCandidate(
+  candidates: PromptImageDownloadCandidate[],
+  candidate: PromptImageDownloadCandidate,
+) {
+  if (
+    !candidate.imageUrl ||
+    candidates.some((entry) => entry.imageUrl === candidate.imageUrl)
+  ) {
+    return;
+  }
+
+  candidates.push(candidate);
+}
+
+function getPromptImageDownloadCandidates(
+  item: PromptImageItemLike,
+  identity: DownloadIdentity,
+) {
+  const candidates: PromptImageDownloadCandidate[] = [];
+  const fallbackOriginalImageUrl =
+    identity.originalImageUrl || getOriginalImageUrl(item?.imageUrl);
+  const thumbnailImageUrl = resolveSourceImageUrl(item?.thumbnailUrl);
+  const thumbnailOriginalImageUrl = getOriginalImageUrl(item?.thumbnailUrl);
+
+  addPromptImageDownloadCandidate(candidates, {
+    cacheKey: thumbnailOriginalImageUrl,
+    imageUrl: thumbnailImageUrl,
+    originalImageUrl: fallbackOriginalImageUrl,
+  });
+  addPromptImageDownloadCandidate(candidates, {
+    cacheKey: fallbackOriginalImageUrl,
+    imageUrl: identity.imageUrl,
+    originalImageUrl: fallbackOriginalImageUrl,
+  });
+
+  return candidates;
+}
+
 function buildSkippedDownloadResult(
-  identity,
-  reason,
+  identity: DownloadIdentity,
+  reason: string,
 ): PromptImageDownloadResult {
   return {
     ...identity,
@@ -46,10 +95,10 @@ function buildSkippedDownloadResult(
 }
 
 async function buildCachedDownloadResult(
-  identity,
+  identity: DownloadIdentity,
   cachedImage,
   includeOriginalMimeType = false,
-) {
+): Promise<PromptImageDownloadResult> {
   const metadata = await sharp(cachedImage.buffer)
     .metadata()
     .catch(() => ({}));
@@ -65,6 +114,34 @@ async function buildCachedDownloadResult(
     originalMimeType: includeOriginalMimeType
       ? cachedImage.mimeType
       : undefined,
+    width,
+    height,
+  };
+}
+
+async function inspectPromptImageMetadata(buffer: Buffer | Uint8Array) {
+  const metadata = await sharp(buffer, {
+    failOn: "none",
+    limitInputPixels: MAX_SOURCE_IMAGE_PIXELS,
+  }).metadata();
+  return getMetadataDimensions(metadata);
+}
+
+async function buildCachedPromptDownloadResult(
+  identity: DownloadIdentity,
+  cachedImage,
+): Promise<PromptImageDownloadResult> {
+  const { width, height } = await inspectPromptImageMetadata(
+    cachedImage.buffer,
+  );
+  return {
+    ...identity,
+    source: "cache",
+    cachePath: cachedImage.cachePath,
+    status: "downloaded",
+    reason: null,
+    mimeType: cachedImage.mimeType,
+    buffer: cachedImage.buffer,
     width,
     height,
   };
@@ -145,57 +222,65 @@ async function downloadPromptImageAsset(
   timings: PromptImageTimings | null = null,
 ): Promise<PromptImageDownloadResult> {
   const identity = getDownloadIdentity(item);
+  const candidates = getPromptImageDownloadCandidates(item, identity);
 
-  if (!identity.imageUrl) {
+  if (candidates.length === 0) {
     return buildSkippedDownloadResult(identity, "missing_image_url");
   }
 
-  try {
-    const cacheLookupStartedAt = nowMs();
-    const cachedImage = await readImageFromLocalCache(item?.imageUrl);
-    addTiming(timings, "cacheLookupMs", cacheLookupStartedAt);
-    if (cachedImage?.buffer) {
-      const inspectStartedAt = nowMs();
-      const cachedResult = await buildCachedDownloadResult(
-        identity,
-        cachedImage,
-      );
-      addTiming(timings, "sourceInspectMs", inspectStartedAt);
-      return cachedResult;
-    }
-
-    const fetchStartedAt = nowMs();
-    const response = await fetchImageResponse(identity.imageUrl);
-    addTiming(timings, "networkFetchMs", fetchStartedAt);
-
-    const sourceBuffer = Buffer.from(await response.arrayBuffer());
-    const inspectStartedAt = nowMs();
-    const metadata = await sharp(sourceBuffer, {
-      failOn: "none",
-      limitInputPixels: MAX_SOURCE_IMAGE_PIXELS,
-    })
-      .metadata()
-      .catch(() => ({}));
-    addTiming(timings, "sourceInspectMs", inspectStartedAt);
-    const { width, height } = getMetadataDimensions(metadata);
-
-    return {
+  let lastIdentity = identity;
+  let lastReason = "download_failed";
+  for (const candidate of candidates) {
+    const candidateIdentity = {
       ...identity,
-      source: "download",
-      status: "downloaded",
-      reason: null,
-      mimeType:
-        String(response.headers.get("content-type") || "").toLowerCase() ||
-        "application/octet-stream",
-      buffer: sourceBuffer,
-      width,
-      height,
+      imageUrl: candidate.imageUrl,
+      originalImageUrl: candidate.originalImageUrl,
     };
-  } catch (error) {
-    const reason = getDownloadFailureReason(error);
-    logDownloadFailure(identity, reason);
-    return buildSkippedDownloadResult(identity, reason);
+    lastIdentity = candidateIdentity;
+
+    try {
+      const cacheLookupStartedAt = nowMs();
+      const cachedImage = await readImageFromLocalCache(candidate.cacheKey);
+      addTiming(timings, "cacheLookupMs", cacheLookupStartedAt);
+      if (cachedImage?.buffer) {
+        const inspectStartedAt = nowMs();
+        const cachedResult = await buildCachedPromptDownloadResult(
+          candidateIdentity,
+          cachedImage,
+        );
+        addTiming(timings, "sourceInspectMs", inspectStartedAt);
+        return cachedResult;
+      }
+
+      const fetchStartedAt = nowMs();
+      const response = await fetchImageResponse(candidate.imageUrl);
+      addTiming(timings, "networkFetchMs", fetchStartedAt);
+
+      const sourceBuffer = Buffer.from(await response.arrayBuffer());
+      const inspectStartedAt = nowMs();
+      const { width, height } = await inspectPromptImageMetadata(sourceBuffer);
+      addTiming(timings, "sourceInspectMs", inspectStartedAt);
+
+      return {
+        ...candidateIdentity,
+        source: "download",
+        status: "downloaded",
+        reason: null,
+        mimeType:
+          String(response.headers.get("content-type") || "").toLowerCase() ||
+          "application/octet-stream",
+        buffer: sourceBuffer,
+        width,
+        height,
+      };
+    } catch (error) {
+      const reason = getDownloadFailureReason(error);
+      lastReason = reason;
+      logDownloadFailure(candidateIdentity, reason);
+    }
   }
+
+  return buildSkippedDownloadResult(lastIdentity, lastReason);
 }
 
 async function downloadProductImageAssets(items: PromptImageItemLike[] = []) {

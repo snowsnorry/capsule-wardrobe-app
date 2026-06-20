@@ -13,6 +13,7 @@ import {
   buildPersonalItemsReportError,
   isPersonalItemsReportDomainError,
 } from "./personalItemsReportErrors.js";
+import { buildPromptImageThumbnailUrl } from "./promptImageThumbnails.js";
 
 const wardrobeItems = [
   {
@@ -252,11 +253,18 @@ describe("generatePersonalItemsReport", () => {
           id: "2",
           category: "bottom",
           imageUrl: "https://images.example.com/jeans.jpg",
+          source: "from_catalog",
+          thumbnailUrl: buildPromptImageThumbnailUrl(
+            "https://images.example.com/jeans.jpg",
+            "from_catalog",
+          ),
         },
         {
           id: "1",
           category: "top",
           imageUrl: "https://images.example.com/tee.jpg",
+          source: "uploaded",
+          thumbnailUrl: "https://images.example.com/tee_320.webp",
         },
       ],
     });
@@ -270,6 +278,52 @@ describe("generatePersonalItemsReport", () => {
       expect.objectContaining({
         email: "person@example.com",
         personalItemUrls: ["https://example.com/jeans", "wardrobe://1"],
+      }),
+    );
+  });
+
+  test("normalizes deterministic overview counts from source items", async () => {
+    const deps = createDeps({
+      llmJson: buildLlmReport({
+        personalItemsOverview: {
+          ...buildLlmReport().personalItemsOverview,
+          itemCount: 99,
+          categoryCounts: {
+            ...buildLlmReport().personalItemsOverview.categoryCounts,
+            top: 0,
+            bottom: 0,
+            dress: 1,
+          },
+        },
+      }),
+    });
+
+    await expect(
+      generatePersonalItemsReport("person@example.com", null, deps),
+    ).resolves.toMatchObject({
+      report: {
+        personalItemsOverview: {
+          itemCount: 2,
+          categoryCounts: {
+            bottom: 1,
+            top: 1,
+            dress: 0,
+          },
+        },
+      },
+    });
+    expect(deps.upsertPersonalItemsReportImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        report: expect.objectContaining({
+          personalItemsOverview: expect.objectContaining({
+            itemCount: 2,
+            categoryCounts: expect.objectContaining({
+              bottom: 1,
+              top: 1,
+              dress: 0,
+            }),
+          }),
+        }),
       }),
     );
   });

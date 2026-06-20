@@ -59,6 +59,7 @@ const labels: Record<string, string> = {
   "wardrobe.reportOutfitVariety": "Outfit variety",
   "wardrobe.reportOverallScore": "Overall score",
   "wardrobe.reportOverrepresentedCategories": "Overrepresented categories",
+  "wardrobe.reportOverview": "Overview",
   "wardrobe.reportPaletteType": "Palette type",
   "wardrobe.reportPotentialOrphans": "Potential orphans",
   "wardrobe.reportPrimarySeasons": "Primary seasons",
@@ -109,6 +110,7 @@ const labels: Record<string, string> = {
   "wardrobe.reportVerdict.unclear": "Unclear",
   "wardrobe.reportVerdict.unbalanced": "Unbalanced",
   "wardrobe.reportVerdict.usable_with_gaps": "Usable with gaps",
+  "wardrobe.reportVersatility": "Versatility",
   "wardrobe.reportWeakCategories": "Weak categories",
   "wardrobe.reportWeakSeasons": "Weak seasons",
   "wardrobe.reportWeatherLimitations": "Weather limitations",
@@ -400,6 +402,72 @@ describe("PersonalItemsReportPanel", () => {
     expect(screen.queryByText("Seasonality")).toBeNull();
     expect(screen.queryByText("Color analysis")).toBeNull();
     expect(screen.queryByText("Efficiency")).toBeNull();
+  });
+
+  test("renders detail-only report subsections", () => {
+    renderPanel({
+      verdict: {
+        score: 0.5,
+        status: "usable_with_gaps",
+        summary: "Narrative details only.",
+      },
+      personalItemsOverview: {
+        summaryTags: ["compact_core"],
+      },
+      outfitReadiness: {
+        estimatedOutfitRange: { min: 2, max: 12, confidence: "medium" },
+        mainBlockers: ["Most outfits need a cleaner shoe option."],
+        supportedFormulaTypes: ["top_bottom"],
+      },
+      versatility: {
+        limitingFactors: [
+          "The wardrobe is almost entirely casual, which narrows occasion range.",
+          "Graphic Affliction T-shirts and utility outerwear create a stronger street-grunge direction.",
+          "Outerwear variety is high, but midlayer variety is low.",
+        ],
+      },
+      seasonality: {
+        weatherLimitations: ["Rain protection is only partly covered."],
+      },
+      colorAnalysis: {
+        colorGaps: ["A lighter neutral base would help."],
+        colorRisks: ["Warm accents may dominate muted outfits."],
+      },
+      efficiency: {
+        underusedStrengths: ["The shoe range could support more outfits."],
+      },
+    });
+
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText("Summary tags")).toBeInTheDocument();
+    expect(screen.getByText("Compact Core")).toBeInTheDocument();
+    expect(screen.getByText("Outfit readiness")).toBeInTheDocument();
+    expect(screen.getByText("Supported outfit formulas")).toBeInTheDocument();
+    expect(screen.getByText("Top Bottom")).toBeInTheDocument();
+    expect(screen.getByText("Estimated outfit range")).toBeInTheDocument();
+    expect(
+      screen.getByText("2-12 outfits, Medium confidence"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Main blockers")).toBeInTheDocument();
+    expect(
+      screen.getByText("Most outfits need a cleaner shoe option."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Versatility")).toBeInTheDocument();
+    expect(screen.getByText("Limiting factors")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The wardrobe is almost entirely casual, which narrows occasion range. Graphic Affliction T-shirts and utility outerwear create a stronger street-grunge direction. Outerwear variety is high, but midlayer variety is low.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/range\., Graphic Affliction/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Seasonality")).toBeInTheDocument();
+    expect(screen.getByText("Weather limitations")).toBeInTheDocument();
+    expect(screen.getByText("Color gaps")).toBeInTheDocument();
+    expect(screen.getByText("Color risks")).toBeInTheDocument();
+    expect(screen.getByText("Efficiency")).toBeInTheDocument();
+    expect(screen.getByText("Underused strengths")).toBeInTheDocument();
   });
 });
 

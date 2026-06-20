@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { generateOutfitReport } from "./outfitReportService.js";
+import { buildPromptImageThumbnailUrl } from "./promptImageThumbnails.js";
 
 const outfitItems = [
   { url: "https://example.com/top", source: "from_catalog" },
@@ -206,11 +207,18 @@ describe("generateOutfitReport", () => {
           id: "catalog-top-1",
           category: "top",
           imageUrl: "https://images.example.com/top.jpg",
+          source: "from_catalog",
+          thumbnailUrl: buildPromptImageThumbnailUrl(
+            "https://images.example.com/top.jpg",
+            "from_catalog",
+          ),
         },
         {
           id: "W18",
           category: "bottom",
           imageUrl: "https://images.example.com/bottom.jpg",
+          source: "uploaded",
+          thumbnailUrl: "https://images.example.com/bottom_320.webp",
         },
       ],
     });

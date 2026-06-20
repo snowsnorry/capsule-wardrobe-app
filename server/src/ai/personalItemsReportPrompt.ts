@@ -11,6 +11,7 @@ import type {
   PromptDebugImageCategory,
   PromptImageItemLike,
 } from "./types.js";
+import { buildPromptImageThumbnailUrl } from "./promptImageThumbnails.js";
 
 const PERSONAL_ITEMS_REPORT_COLLAGE_CATEGORY = "Personal Items";
 const PERSONAL_ITEMS_REPORT_PROMPT_TEMPLATE = loadPromptTemplate(
@@ -88,17 +89,21 @@ function toPersonalItemsReportPromptImageItem(
   if (!id) {
     return null;
   }
+  const source = getStringField(item, "source");
+  const imageUrl = getStringField(
+    item,
+    "imageUrl",
+    "image_url",
+    "rawImageUrl",
+    "raw_image_url",
+  );
 
   return {
     id,
     category: getStringField(item, "category") || "other",
-    imageUrl: getStringField(
-      item,
-      "imageUrl",
-      "image_url",
-      "rawImageUrl",
-      "raw_image_url",
-    ),
+    imageUrl,
+    source,
+    thumbnailUrl: buildPromptImageThumbnailUrl(imageUrl, source),
   };
 }
 
@@ -205,4 +210,5 @@ export {
   buildPersonalItemsReportCollage,
   renderPersonalItemsReportPrompt,
   toPersonalItemsReportItem,
+  toPersonalItemsReportPromptImageItem,
 };
