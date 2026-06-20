@@ -6,7 +6,6 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
-import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import type { PersonalItemSource } from "../api/personalItems";
 import WardrobeLikedOnlyToggle from "./WardrobeLikedOnlyToggle";
@@ -135,10 +134,8 @@ function WardrobeDesktopToolbar({
         {!hasReport ? (
           <Button
             variant="outlined"
-            startIcon={<AutoAwesomeRoundedIcon />}
             disabled={isLoading || !canAnalyze}
             onClick={onAnalyze}
-            sx={{ px: 1.5 }}
           >
             {t("wardrobe.analyzePersonalItems")}
           </Button>
