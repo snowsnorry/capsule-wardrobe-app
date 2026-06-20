@@ -22,7 +22,7 @@ function isThreeByFour(width: number | undefined, height: number | undefined) {
 }
 
 function encodePortraitCanvasImage(
-  image: sharp.Sharp,
+  image: ReturnType<typeof sharp>,
   mimeType: string | null | undefined,
 ) {
   if (mimeType === "image/webp") {
