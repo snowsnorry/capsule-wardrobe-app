@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "./config";
 import { getCachedJson, getCsrfHeader, request, requestJson } from "./request";
 import type { JsonObject } from "./request";
+import type { PersonalItemsReport } from "../app/appTypes";
 
 type PersonalItemSource = "uploaded" | "from_catalog";
 type UploadWardrobeProgress = {
@@ -45,6 +46,19 @@ type EventStreamLike = {
     options: Record<string, unknown>,
   ) => Promise<unknown>;
 };
+type PersonalItemsReportResponse = {
+  generatedAt?: string | null;
+  ok: true;
+  personalItemUrls?: string[];
+  report: PersonalItemsReport | null;
+  stale?: boolean;
+};
+type GeneratePersonalItemsReportResponse = {
+  generatedAt?: string | null;
+  ok: true;
+  personalItemUrls?: string[];
+  report: PersonalItemsReport;
+};
 
 let fetchEventSourcePromise: Promise<
   EventStreamLike["fetchEventSource"]
@@ -78,6 +92,10 @@ function getWardrobeItemsPdfUrl(options: PersonalItemsFetchOptions = {}) {
   }
   const query = params.toString();
   return `${API_BASE_URL}/wardrobe/items/pdf${query ? `?${query}` : ""}`;
+}
+
+function getPersonalItemsReportUrl() {
+  return `${API_BASE_URL}/wardrobe/items/report`;
 }
 
 function parseUploadEventPayload(data: string | undefined): JsonObject {
@@ -135,6 +153,87 @@ async function fetchPersonalItems(
     credentials: "include",
     force: options.force,
   });
+}
+
+async function fetchPersonalItemsReport(
+  options: {
+    force?: boolean;
+  } = {},
+): Promise<PersonalItemsReportResponse> {
+  const response = await getCachedJson(getPersonalItemsReportUrl(), {
+    credentials: "include",
+    force: options.force,
+  });
+
+  return response as PersonalItemsReportResponse;
+}
+
+async function generatePersonalItemsReport(): Promise<GeneratePersonalItemsReportResponse> {
+  const fetchEventSource = await loadFetchEventSource();
+  let completePayload: GeneratePersonalItemsReportResponse | null = null;
+
+  await fetchEventSource(getPersonalItemsReportUrl(), {
+    method: "POST",
+    credentials: "include",
+    headers: getCsrfHeader(),
+    openWhenHidden: true,
+    async onopen(
+      response: Pick<Response, "ok" | "status"> & {
+        headers: Pick<Headers, "get">;
+      },
+    ) {
+      const contentType = (
+        response.headers.get("content-type") || ""
+      ).toLowerCase();
+      if (response.ok && contentType.includes("text/event-stream")) {
+        return;
+      }
+
+      throw new Error(`request_failed_${response.status}`);
+    },
+    onmessage(event: { data?: string; event?: string }) {
+      const payload = parseUploadEventPayload(event.data);
+      if (event.event === "progress") {
+        return;
+      }
+
+      if (event.event === "complete") {
+        if (payload.ok !== true || !payload.report) {
+          throw new Error("invalid_event_payload");
+        }
+        completePayload = {
+          generatedAt:
+            typeof payload.generatedAt === "string"
+              ? payload.generatedAt
+              : null,
+          ok: true,
+          personalItemUrls: Array.isArray(payload.personalItemUrls)
+            ? payload.personalItemUrls.map((value) => String(value))
+            : [],
+          report: payload.report as PersonalItemsReport,
+        };
+        return;
+      }
+
+      if (event.event === "fatal") {
+        throw new Error(String(payload.error || "service_unavailable"));
+      }
+    },
+    onclose() {
+      if (!completePayload) {
+        throw new Error("event_stream_closed");
+      }
+    },
+    onerror(error: Error) {
+      throw error;
+    },
+  });
+
+  if (!completePayload) {
+    throw new Error("event_stream_closed");
+  }
+
+  return completePayload;
 }
 
 async function fetchUploadedWardrobeItemDetail(
@@ -287,6 +386,13 @@ async function deleteUploadedWardrobeItem(
   );
 }
 
+async function deletePersonalItemsReport(): Promise<JsonObject> {
+  return requestJson(getPersonalItemsReportUrl(), {
+    method: "DELETE",
+    credentials: "include",
+  });
+}
+
 async function downloadPersonalItemsPdf(
   options: PersonalItemsFetchOptions = {},
 ): Promise<void> {
@@ -323,10 +429,14 @@ async function downloadPersonalItemsPdf(
 }
 
 export {
+  deletePersonalItemsReport,
   deleteUploadedWardrobeItem,
   downloadPersonalItemsPdf,
   fetchPersonalItems,
+  fetchPersonalItemsReport,
   fetchUploadedWardrobeItemDetail,
+  generatePersonalItemsReport,
+  getPersonalItemsReportUrl,
   getWardrobeItemsPdfUrl,
   getWardrobeItemsUrl,
   removeCatalogItemFromPersonalItems,
@@ -336,5 +446,6 @@ export {
   uploadWardrobeUrls,
 };
 export type { PersonalItemSource };
+export type { PersonalItemsReportResponse };
 export type { UploadedWardrobeItemUpdatePayload };
 export type { UploadWardrobeProgress };

@@ -303,6 +303,8 @@ export type CapsuleReport = {
   confidence?: CapsuleReportConfidence;
 };
 
+export type { PersonalItemsReport } from "./personalItemsReportTypes";
+
 type CapsuleReportMeta = {
   stale?: boolean;
 };

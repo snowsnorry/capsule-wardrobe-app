@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-import type { ReactElement } from "react";
-import { Alert, Box, Stack } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
+import type { Dispatch, ReactElement, SetStateAction } from "react";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { type UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
 import { useI18n } from "../i18n/useI18n";
@@ -10,117 +9,113 @@ import {
   isLikedItem,
   patchLikedStateByUrl,
 } from "../utils/likedItemState";
+import { REPORT_INSPECTOR_LAYOUT_MEDIA } from "./mainScreen/MainScreenHelpers";
 import type {
   MainScreenItem,
   MobileCardColumns,
 } from "./mainScreen/MainScreenTypes";
-import WardrobeActionMenu from "./WardrobeActionMenu";
+import { getHighlightedPersonalItemsReportItemKeys } from "./PersonalItemsReportPanelUtils";
 import {
   readStoredWardrobeFilters,
   readStoredWardrobeMobileCardColumns,
   writeStoredWardrobeFilters,
   writeStoredWardrobeMobileCardColumns,
 } from "./WardrobeCardLayoutStorage";
-import WardrobeGrid from "./WardrobeGrid";
-import {
-  WardrobeProductMenu,
-  WardrobeRemoveConfirmDialog,
-} from "./WardrobeProductMenu";
-import CapsuleProductDetailDialog from "./mainScreen/CapsuleProductDetailDialog";
-import WardrobeUploadDialog from "./WardrobeUploadDialog";
-import WardrobeUrlUploadDialog from "./WardrobeUrlUploadDialog";
-import WardrobeToolbar, {
-  getSourceFilter,
-  type WardrobeFilter,
-} from "./WardrobeToolbar";
+import { getSourceFilter, type WardrobeFilter } from "./WardrobeToolbar";
 import { filterWardrobeItemsBySource } from "./wardrobeItemMappers";
-import { wardrobeContentSx, wardrobeScreenSx } from "./wardrobeScreenStyles";
+import { WardrobeScreenContent } from "./WardrobeScreenContent";
 import type { ProductDetailMode } from "./wardrobeScreenTypes";
+import { usePersonalItemsReport } from "./usePersonalItemsReport";
 import { useWardrobeItems } from "./useWardrobeItems";
 
 function WardrobeScreen(): ReactElement {
   const { t, locale } = useI18n();
   const isOverlay = useMediaQuery("(max-width: 1279.95px)");
+  const isReportInspectorLayout = useMediaQuery(REPORT_INSPECTOR_LAYOUT_MEDIA);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUrlUploadDialogOpen, setIsUrlUploadDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [reportError, setReportError] = useState("");
+  const [highlightedReportItemIds, setHighlightedReportItemIds] = useState<
+    string[]
+  >([]);
   const filters = useWardrobeScreenFilters(isOverlay);
-  const wardrobeItems = useWardrobeItems(filters.filter, refreshKey, t);
+  const personalItemsReport = usePersonalItemsReport({
+    setError: setReportError,
+    t,
+  });
+  const wardrobeItems = useWardrobeItems(filters.filter, refreshKey, t, {
+    onItemsChanged: (reason) => {
+      if (reason === "metadata") {
+        personalItemsReport.markStale();
+        return;
+      }
+      void personalItemsReport.refreshReport({ force: true });
+    },
+  });
   const productDetail = useWardrobeProductDetailState(wardrobeItems);
-  const completeUpload = (closeDialog: () => void) => {
-    handleUploadSuccess(filters.setFilter, filters.setLikedOnly);
-    setRefreshKey((current) => current + 1);
-    closeDialog();
-  };
-
-  const handleUploadImages = async (files: File[]) => {
-    const uploaded = await wardrobeItems.handleUploadImages(files);
-    if (uploaded) {
-      completeUpload(() => setIsUploadDialogOpen(false));
-    }
-  };
-  const handleUploadUrls = async (urls: string[]) => {
-    const uploaded = await wardrobeItems.handleUploadUrls(urls);
-    if (uploaded) {
-      completeUpload(() => setIsUrlUploadDialogOpen(false));
-    }
-  };
+  const reportLayout = useWardrobeReportLayout(
+    personalItemsReport,
+    isReportInspectorLayout,
+  );
+  const displayedItems = filters.displayedItems(wardrobeItems.items);
+  const highlightedReportItemKeys = useMemo(
+    () =>
+      getHighlightedPersonalItemsReportItemKeys(
+        wardrobeItems.items,
+        highlightedReportItemIds,
+      ),
+    [highlightedReportItemIds, wardrobeItems.items],
+  );
+  const isActionBusy =
+    wardrobeItems.isLoading ||
+    wardrobeItems.isDownloadingPdf ||
+    wardrobeItems.isUploading ||
+    personalItemsReport.isLoadingReport ||
+    personalItemsReport.isReportPending;
+  const uploadHandlers = useWardrobeUploadDialogHandlers({
+    filters,
+    setIsUploadDialogOpen,
+    setIsUrlUploadDialogOpen,
+    setRefreshKey,
+    wardrobeItems,
+  });
 
   return (
-    <Box data-testid="wardrobe-screen" sx={wardrobeScreenSx}>
-      <Stack
-        spacing={2.25}
-        data-testid="wardrobe-content"
-        sx={wardrobeContentSx}
-      >
-        <WardrobeToolbar
-          filter={filters.filter}
-          isMobile={isOverlay}
-          likedOnly={filters.likedOnly}
-          isLoading={wardrobeItems.isLoading || wardrobeItems.isUploading}
-          t={t}
-          onFilterChange={filters.setFilter}
-          onLikedOnlyChange={filters.setLikedOnly}
-          onOpenMenu={(event) => setMenuAnchor(event.currentTarget)}
-          onOpenUpload={() => setIsUploadDialogOpen(true)}
-          onOpenUrlUpload={() => setIsUrlUploadDialogOpen(true)}
-        />
-        <WardrobeScreenActionMenu
-          anchorEl={menuAnchor}
-          filters={filters}
-          isOverlay={isOverlay}
-          wardrobeItems={wardrobeItems}
-          onClose={() => setMenuAnchor(null)}
-        />
-        {wardrobeItems.error ? (
-          <Alert severity="error">{wardrobeItems.error}</Alert>
-        ) : null}
-        <WardrobeGrid
-          isLoading={wardrobeItems.isLoading}
-          isOverlay={isOverlay}
-          isFilteredEmpty={filters.likedOnly && wardrobeItems.items.length > 0}
-          items={filters.displayedItems(wardrobeItems.items)}
-          mobileColumns={filters.displayedColumns}
-          t={t}
-          onProductClick={productDetail.openProductDetail}
-          onProductMenuOpen={wardrobeItems.handleProductMenuOpen}
-        />
-        <WardrobeScreenDialogs
-          isOverlay={isOverlay}
-          isUploadDialogOpen={isUploadDialogOpen}
-          isUrlUploadDialogOpen={isUrlUploadDialogOpen}
-          locale={locale}
-          productDetail={productDetail}
-          t={t}
-          wardrobeItems={wardrobeItems}
-          onCloseUploadDialog={() => setIsUploadDialogOpen(false)}
-          onCloseUrlUploadDialog={() => setIsUrlUploadDialogOpen(false)}
-          onUploadImages={handleUploadImages}
-          onUploadUrls={handleUploadUrls}
-        />
-      </Stack>
-    </Box>
+    <WardrobeScreenContent
+      actions={{
+        onCloseUploadDialog: () => setIsUploadDialogOpen(false),
+        onCloseUrlUploadDialog: () => setIsUrlUploadDialogOpen(false),
+        onHighlightItemIds: setHighlightedReportItemIds,
+        onMenuClose: () => setMenuAnchor(null),
+        onOpenMenu: (event) => setMenuAnchor(event.currentTarget),
+        onOpenUpload: () => setIsUploadDialogOpen(true),
+        onOpenUrlUpload: () => setIsUrlUploadDialogOpen(true),
+        onUploadImages: uploadHandlers.handleUploadImages,
+        onUploadUrls: uploadHandlers.handleUploadUrls,
+      }}
+      model={{
+        displayedItems,
+        filters,
+        hasReportOrLoading: reportLayout.hasReportOrLoading,
+        highlightedReportItemKeys,
+        isActionBusy,
+        isOverlay,
+        isUploadDialogOpen,
+        isUrlUploadDialogOpen,
+        locale,
+        menuAnchor,
+        personalItemsReport,
+        productDetail,
+        report: reportLayout.report,
+        reportError,
+        showFloatingReportInspector: reportLayout.showFloatingReportInspector,
+        showInlineCompactReport: reportLayout.showInlineCompactReport,
+        t,
+        wardrobeItems,
+      }}
+    />
   );
 }
 
@@ -162,7 +157,66 @@ function useWardrobeScreenFilters(isOverlay: boolean) {
   };
 }
 
-type WardrobeItemsModel = ReturnType<typeof useWardrobeItems>;
+export type WardrobeItemsModel = ReturnType<typeof useWardrobeItems>;
+export type WardrobeFiltersModel = ReturnType<typeof useWardrobeScreenFilters>;
+export type PersonalItemsReportModel = ReturnType<
+  typeof usePersonalItemsReport
+>;
+export type WardrobeProductDetailModel = ReturnType<
+  typeof useWardrobeProductDetailState
+>;
+
+function useWardrobeReportLayout(
+  personalItemsReport: PersonalItemsReportModel,
+  isReportInspectorLayout: boolean,
+) {
+  const report = personalItemsReport.report;
+  const hasReportOrLoading =
+    Boolean(report) || personalItemsReport.isLoadingReport;
+  const showFloatingReportInspector = Boolean(
+    report && isReportInspectorLayout,
+  );
+  const showInlineCompactReport = Boolean(
+    report && !showFloatingReportInspector,
+  );
+
+  return {
+    hasReportOrLoading,
+    report,
+    showFloatingReportInspector,
+    showInlineCompactReport,
+  };
+}
+
+function useWardrobeUploadDialogHandlers({
+  filters,
+  setIsUploadDialogOpen,
+  setIsUrlUploadDialogOpen,
+  setRefreshKey,
+  wardrobeItems,
+}: {
+  filters: WardrobeFiltersModel;
+  setIsUploadDialogOpen: Dispatch<SetStateAction<boolean>>;
+  setIsUrlUploadDialogOpen: Dispatch<SetStateAction<boolean>>;
+  setRefreshKey: Dispatch<SetStateAction<number>>;
+  wardrobeItems: WardrobeItemsModel;
+}) {
+  const completeUpload = (closeDialog: () => void) => {
+    handleUploadSuccess(filters.setFilter, filters.setLikedOnly);
+    setRefreshKey((current) => current + 1);
+    closeDialog();
+  };
+  const handleUploadImages = async (files: File[]) => {
+    const uploaded = await wardrobeItems.handleUploadImages(files);
+    if (uploaded) completeUpload(() => setIsUploadDialogOpen(false));
+  };
+  const handleUploadUrls = async (urls: string[]) => {
+    const uploaded = await wardrobeItems.handleUploadUrls(urls);
+    if (uploaded) completeUpload(() => setIsUrlUploadDialogOpen(false));
+  };
+
+  return { handleUploadImages, handleUploadUrls };
+}
 
 function useWardrobeProductDetailState(wardrobeItems: WardrobeItemsModel) {
   const [productDetailItem, setProductDetailItem] =
@@ -227,125 +281,6 @@ function handleUploadSuccess(
 ) {
   setFilter("uploaded");
   setLikedOnly(false);
-}
-
-function WardrobeScreenActionMenu({
-  anchorEl,
-  filters,
-  isOverlay,
-  onClose,
-  wardrobeItems,
-}: {
-  anchorEl: HTMLElement | null;
-  filters: ReturnType<typeof useWardrobeScreenFilters>;
-  isOverlay: boolean;
-  onClose: () => void;
-  wardrobeItems: WardrobeItemsModel;
-}) {
-  return (
-    <WardrobeActionMenu
-      anchorEl={anchorEl}
-      disabled={
-        wardrobeItems.isLoading ||
-        wardrobeItems.isDownloadingPdf ||
-        wardrobeItems.isUploading
-      }
-      filter={filters.filter}
-      isOverlay={isOverlay}
-      likedOnly={filters.likedOnly}
-      mobileCardColumns={filters.mobileColumns}
-      onClose={onClose}
-      onDownloadPdf={wardrobeItems.handleDownloadPdf}
-      onFilterChange={filters.setFilter}
-      onLikedOnlyChange={filters.setLikedOnly}
-      onMobileCardColumnsChange={filters.updateColumns}
-    />
-  );
-}
-
-function WardrobeScreenDialogs({
-  isOverlay,
-  isUploadDialogOpen,
-  isUrlUploadDialogOpen,
-  locale,
-  onCloseUploadDialog,
-  onCloseUrlUploadDialog,
-  onUploadImages,
-  onUploadUrls,
-  productDetail,
-  t,
-  wardrobeItems,
-}: {
-  isOverlay: boolean;
-  isUploadDialogOpen: boolean;
-  isUrlUploadDialogOpen: boolean;
-  locale: string;
-  onCloseUploadDialog: () => void;
-  onCloseUrlUploadDialog: () => void;
-  onUploadImages: (files: File[]) => Promise<void>;
-  onUploadUrls: (urls: string[]) => Promise<void>;
-  productDetail: ReturnType<typeof useWardrobeProductDetailState>;
-  t: (key: string) => string;
-  wardrobeItems: WardrobeItemsModel;
-}) {
-  return (
-    <>
-      <WardrobeProductMenu
-        anchor={wardrobeItems.productMenu.anchor}
-        item={wardrobeItems.productMenu.item}
-        originRect={wardrobeItems.productMenu.originRect}
-        presentation={wardrobeItems.productMenu.presentation}
-        t={t}
-        onClose={wardrobeItems.closeProductMenu}
-        onRequestRemove={wardrobeItems.setRemoveConfirmItem}
-        onSetItemLike={wardrobeItems.handleSetItemLike}
-      />
-      <WardrobeRemoveConfirmDialog
-        item={wardrobeItems.removeConfirmItem}
-        isLoading={wardrobeItems.isMutating}
-        t={t}
-        onClose={() => wardrobeItems.setRemoveConfirmItem(null)}
-        onConfirm={wardrobeItems.handleConfirmRemove}
-      />
-      {productDetail.productDetailItem ? (
-        <CapsuleProductDetailDialog
-          item={productDetail.productDetailItem}
-          open={Boolean(productDetail.productDetailItem)}
-          mode={productDetail.productDetailMode}
-          isMobile={isOverlay}
-          locale={locale}
-          t={t}
-          onApply={productDetail.handleApplyUploadedProductDetail}
-          onClose={productDetail.closeProductDetail}
-          onEdit={(item) => {
-            productDetail.setProductDetailItem(item);
-            productDetail.setProductDetailMode("edit");
-          }}
-          onReadMode={() => productDetail.setProductDetailMode("read")}
-          onRemoveFromPersonalItems={wardrobeItems.handleConfirmRemove}
-          onSetItemLike={productDetail.handleSetProductDetailItemLike}
-        />
-      ) : null}
-      <WardrobeUploadDialog
-        open={isUploadDialogOpen}
-        isMobile={isOverlay}
-        isUploading={wardrobeItems.isUploading}
-        progress={wardrobeItems.uploadProgress}
-        t={t}
-        onClose={onCloseUploadDialog}
-        onUpload={onUploadImages}
-      />
-      <WardrobeUrlUploadDialog
-        open={isUrlUploadDialogOpen}
-        isMobile={isOverlay}
-        isUploading={wardrobeItems.isUploading}
-        progress={wardrobeItems.uploadProgress}
-        t={t}
-        onClose={onCloseUrlUploadDialog}
-        onUpload={onUploadUrls}
-      />
-    </>
-  );
 }
 
 export default WardrobeScreen;

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -14,8 +15,11 @@ import { WARDROBE_FILTERS_STORAGE_KEY } from "./WardrobeCardLayoutStorage";
 
 const api = vi.hoisted(() => ({
   deleteUploadedWardrobeItem: vi.fn(),
+  deletePersonalItemsReport: vi.fn(),
   downloadPersonalItemsPdf: vi.fn(),
   fetchPersonalItems: vi.fn(),
+  fetchPersonalItemsReport: vi.fn(),
+  generatePersonalItemsReport: vi.fn(),
   removeCatalogItemFromPersonalItems: vi.fn(),
   updateUploadedWardrobeItem: vi.fn(),
   uploadWardrobeImages: vi.fn(),
@@ -221,6 +225,7 @@ const translations: Record<string, string> = {
   "wardrobe.title": "Personal items",
   "wardrobe.subtitle": "Saved catalog pieces and uploaded items in one place.",
   "wardrobe.upload": "Upload item photo",
+  "wardrobe.analyzePersonalItems": "Analyze",
   "wardrobe.uploadMenu": "Choose upload method",
   "wardrobe.uploadMenuLabel": "Upload methods",
   "wardrobe.uploadPhoto": "Upload photo",
@@ -293,6 +298,16 @@ const translations: Record<string, string> = {
   "wardrobe.urlUploadDialog.invalidUrl":
     "Enter a URL that starts with http:// or https://.",
   "wardrobe.urlUploadDialog.upload": "Upload URLs",
+  "wardrobe.reportGenerateFailed": "Failed to analyze Personal items.",
+  "wardrobe.reportGenerating": "Analyzing Personal items",
+  "wardrobe.reportLoadFailed": "Failed to load Personal items report.",
+  "wardrobe.reportOpenMenu": "Open report actions",
+  "wardrobe.reportOutdated": "Report may be outdated",
+  "wardrobe.reportShowDetails": "Show details",
+  "wardrobe.reportTitle": "Personal items report",
+  "wardrobe.reportVerdict.good": "Good Personal items set",
+  "wardrobe.regenerateReport": "Regenerate report",
+  "actions.delete": "Delete",
   "capsule.exportPdf": "Export as PDF",
   "capsule.cardLayout": "Card layout",
   "capsule.cardColumnsOne": "1 column",
@@ -320,7 +335,29 @@ describe("WardrobeScreen", () => {
     api.downloadPersonalItemsPdf.mockResolvedValue(undefined);
     api.deleteUploadedWardrobeItem.mockReset();
     api.deleteUploadedWardrobeItem.mockResolvedValue({ ok: true });
+    api.deletePersonalItemsReport.mockReset();
+    api.deletePersonalItemsReport.mockResolvedValue({ ok: true });
     api.fetchPersonalItems.mockReset();
+    api.fetchPersonalItemsReport.mockReset();
+    api.fetchPersonalItemsReport.mockResolvedValue({
+      ok: true,
+      report: null,
+      stale: false,
+      generatedAt: null,
+    });
+    api.generatePersonalItemsReport.mockReset();
+    api.generatePersonalItemsReport.mockResolvedValue({
+      ok: true,
+      report: {
+        verdict: {
+          score: 0.76,
+          status: "good",
+          summary: "Solid Personal items foundation.",
+        },
+      },
+      stale: false,
+      generatedAt: "2026-06-19T10:00:00.000Z",
+    });
     api.removeCatalogItemFromPersonalItems.mockReset();
     api.removeCatalogItemFromPersonalItems.mockResolvedValue({ ok: true });
     api.updateUploadedWardrobeItem.mockReset();
@@ -392,6 +429,176 @@ describe("WardrobeScreen", () => {
     expect(api.fetchPersonalItems).toHaveBeenCalledWith({
       force: false,
     });
+    expect(api.fetchPersonalItemsReport).toHaveBeenCalledWith({
+      force: false,
+    });
+  });
+
+  test("generates a personal items report from the desktop toolbar", async () => {
+    let resolveReport: (value: unknown) => void = () => {};
+    api.generatePersonalItemsReport.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveReport = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    renderScreen();
+
+    const analyzeButton = await screen.findByRole("button", {
+      name: "Analyze",
+    });
+    await user.click(analyzeButton);
+
+    expect(api.generatePersonalItemsReport).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByLabelText("Analyzing Personal items"),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(analyzeButton).toBeDisabled());
+
+    await act(async () => {
+      resolveReport({
+        ok: true,
+        report: {
+          verdict: {
+            score: 0.76,
+            status: "good",
+            summary: "Solid Personal items foundation.",
+          },
+        },
+        stale: false,
+        generatedAt: "2026-06-19T10:00:00.000Z",
+      });
+    });
+
+    expect(
+      await screen.findByText("Personal items report"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Good Personal items set")).toBeInTheDocument();
+  });
+
+  test("regenerates and deletes a personal items report from the route report menu", async () => {
+    const user = userEvent.setup();
+    api.fetchPersonalItemsReport.mockResolvedValueOnce({
+      ok: true,
+      report: {
+        verdict: {
+          score: 0.68,
+          status: "good",
+          summary: "Initial route report.",
+        },
+      },
+      stale: false,
+      generatedAt: "2026-06-18T10:00:00.000Z",
+    });
+    api.generatePersonalItemsReport.mockResolvedValueOnce({
+      ok: true,
+      report: {
+        verdict: {
+          score: 0.81,
+          status: "good",
+          summary: "Updated route report.",
+        },
+      },
+      stale: false,
+      generatedAt: "2026-06-19T10:00:00.000Z",
+    });
+    renderScreen();
+
+    expect(
+      await screen.findByText("Initial route report."),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Open report actions" }),
+    );
+    await user.click(
+      screen.getByRole("menuitem", { name: "Regenerate report" }),
+    );
+
+    expect(api.generatePersonalItemsReport).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText("Updated route report."),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Open report actions" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    expect(api.deletePersonalItemsReport).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Personal items report"),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Analyze" })).toBeInTheDocument();
+  });
+
+  test("generates a personal items report from the mobile action menu", async () => {
+    useMediaQueryMock.mockReturnValue(true);
+    const user = userEvent.setup();
+    renderScreen();
+
+    await screen.findByTestId("wardrobe-card-wardrobe-1");
+    await user.click(
+      screen.getByRole("button", { name: "Open Personal items menu" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Analyze" }));
+
+    expect(api.generatePersonalItemsReport).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText("Solid Personal items foundation."),
+    ).toBeInTheDocument();
+  });
+
+  test("marks an existing personal items report stale after metadata edits", async () => {
+    const user = userEvent.setup();
+    api.fetchPersonalItems.mockResolvedValueOnce({
+      items: [
+        {
+          id: "wardrobe-uploaded",
+          name: "Uploaded shirt",
+          source: "uploaded",
+          imageUrl: "https://example.com/uploaded.jpg",
+          processingStatus: "ready",
+          audience: "all",
+          category: "top",
+          season: ["summer"],
+        },
+      ],
+    });
+    api.fetchPersonalItemsReport.mockResolvedValueOnce({
+      ok: true,
+      report: {
+        verdict: {
+          score: 0.76,
+          status: "good",
+          summary: "Solid Personal items foundation.",
+        },
+      },
+      stale: false,
+      generatedAt: "2026-06-19T10:00:00.000Z",
+    });
+    renderScreen();
+
+    await screen.findByText("Personal items report");
+    expect(
+      screen.queryByText("Report may be outdated"),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      await screen.findByTestId("wardrobe-card-wardrobe-uploaded"),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "edit uploaded product" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "apply uploaded product" }),
+    );
+
+    expect(
+      await screen.findByText("Report may be outdated"),
+    ).toBeInTheDocument();
+    expect(api.fetchPersonalItemsReport).toHaveBeenCalledTimes(1);
   });
 
   test("moves mobile source and liked filters into the action menu", async () => {

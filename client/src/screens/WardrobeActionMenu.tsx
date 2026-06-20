@@ -11,6 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import { useI18n } from "../i18n/useI18n";
 import CardLayoutMenuSection from "./mainScreen/CapsuleActionMenuLayout";
 import type { MobileCardColumns } from "./mainScreen/MainScreenTypes";
@@ -18,12 +19,15 @@ import type { WardrobeFilter } from "./WardrobeToolbar";
 
 type WardrobeActionMenuProps = {
   anchorEl: HTMLElement | null;
+  canAnalyze: boolean;
   disabled: boolean;
   filter: WardrobeFilter;
+  hasReport: boolean;
   isOverlay: boolean;
   likedOnly: boolean;
   mobileCardColumns: MobileCardColumns;
   onClose: () => void;
+  onAnalyze: () => void;
   onDownloadPdf: () => void;
   onFilterChange: (filter: WardrobeFilter) => void;
   onLikedOnlyChange: (likedOnly: boolean) => void;
@@ -34,12 +38,15 @@ const SOURCE_FILTERS: WardrobeFilter[] = ["all", "uploaded", "from_catalog"];
 
 function WardrobeActionMenu({
   anchorEl,
+  canAnalyze,
   disabled,
   filter,
+  hasReport,
   isOverlay,
   likedOnly,
   mobileCardColumns,
   onClose,
+  onAnalyze,
   onDownloadPdf,
   onFilterChange,
   onLikedOnlyChange,
@@ -50,9 +57,24 @@ function WardrobeActionMenu({
     onClose();
     onDownloadPdf();
   };
+  const handleAnalyze = () => {
+    onClose();
+    onAnalyze();
+  };
 
   return (
     <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={onClose}>
+      {isOverlay && !hasReport ? (
+        <>
+          <MenuItem disabled={disabled || !canAnalyze} onClick={handleAnalyze}>
+            <ListItemIcon>
+              <AutoAwesomeRoundedIcon fontSize="small" />
+            </ListItemIcon>
+            {t("wardrobe.analyzePersonalItems")}
+          </MenuItem>
+          <Divider />
+        </>
+      ) : null}
       <WardrobeFilterMenuSection
         show={isOverlay}
         disabled={disabled}

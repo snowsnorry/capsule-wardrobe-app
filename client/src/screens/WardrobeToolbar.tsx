@@ -1,10 +1,12 @@
 import type { MouseEvent } from "react";
 import {
+  Button,
   IconButton,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import type { PersonalItemSource } from "../api/personalItems";
 import WardrobeLikedOnlyToggle from "./WardrobeLikedOnlyToggle";
@@ -13,10 +15,13 @@ import WardrobeUploadSplitButton from "./WardrobeUploadSplitButton";
 type WardrobeFilter = "all" | PersonalItemSource;
 
 type WardrobeToolbarProps = {
+  canAnalyze: boolean;
   filter: WardrobeFilter;
+  hasReport: boolean;
   isMobile: boolean;
   likedOnly: boolean;
   isLoading: boolean;
+  onAnalyze: () => void;
   onFilterChange: (filter: WardrobeFilter) => void;
   onLikedOnlyChange: (likedOnly: boolean) => void;
   onOpenMenu: (event: MouseEvent<HTMLButtonElement>) => void;
@@ -75,9 +80,12 @@ function WardrobeMobileToolbar({
 }
 
 function WardrobeDesktopToolbar({
+  canAnalyze,
   filter,
+  hasReport,
   isLoading,
   likedOnly,
+  onAnalyze,
   onFilterChange,
   onLikedOnlyChange,
   onOpenMenu,
@@ -124,6 +132,17 @@ function WardrobeDesktopToolbar({
         />
       </Stack>
       <Stack direction="row" spacing={1} sx={toolbarActionsSx}>
+        {!hasReport ? (
+          <Button
+            variant="outlined"
+            startIcon={<AutoAwesomeRoundedIcon />}
+            disabled={isLoading || !canAnalyze}
+            onClick={onAnalyze}
+            sx={{ px: 1.5 }}
+          >
+            {t("wardrobe.analyzePersonalItems")}
+          </Button>
+        ) : null}
         <WardrobeUploadSplitButton
           disabled={isLoading}
           onOpenUpload={onOpenUpload}

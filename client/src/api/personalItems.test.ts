@@ -17,10 +17,14 @@ vi.mock("./config", () => ({
 }));
 
 import {
+  deletePersonalItemsReport,
   deleteUploadedWardrobeItem,
   downloadPersonalItemsPdf,
   fetchPersonalItems,
+  fetchPersonalItemsReport,
   fetchUploadedWardrobeItemDetail,
+  generatePersonalItemsReport,
+  getPersonalItemsReportUrl,
   getWardrobeItemsPdfUrl,
   getWardrobeItemsUrl,
   removeCatalogItemFromPersonalItems,
@@ -105,6 +109,9 @@ describe("personal items api", () => {
     expect(getWardrobeItemsPdfUrl({ source: "from_catalog" })).toBe(
       "https://api.example.test/wardrobe/items/pdf?source=from_catalog",
     );
+    expect(getPersonalItemsReportUrl()).toBe(
+      "https://api.example.test/wardrobe/items/report",
+    );
   });
 
   test("fetches personal items items", async () => {
@@ -130,6 +137,94 @@ describe("personal items api", () => {
         ttlMs: 60_000,
       },
     );
+  });
+
+  test("fetches personal items report", async () => {
+    requestApi.getCachedJson.mockResolvedValueOnce({
+      ok: true,
+      report: { verdict: { score: 0.8 } },
+      stale: true,
+      generatedAt: "2026-06-19T10:00:00.000Z",
+    });
+
+    await expect(fetchPersonalItemsReport({ force: true })).resolves.toEqual({
+      ok: true,
+      report: { verdict: { score: 0.8 } },
+      stale: true,
+      generatedAt: "2026-06-19T10:00:00.000Z",
+    });
+
+    expect(requestApi.getCachedJson).toHaveBeenCalledWith(
+      "https://api.example.test/wardrobe/items/report",
+      {
+        credentials: "include",
+        force: true,
+      },
+    );
+  });
+
+  test("generates personal items report as an event stream", async () => {
+    fetchEventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        await options.onopen({
+          ok: true,
+          status: 200,
+          headers: { get: () => "text/event-stream; charset=utf-8" },
+        });
+        options.onmessage({
+          event: "progress",
+          data: JSON.stringify({ status: "pending" }),
+        });
+        options.onmessage({
+          event: "complete",
+          data: JSON.stringify({
+            ok: true,
+            generatedAt: "2026-06-19T11:00:00.000Z",
+            personalItemUrls: ["wardrobe://1"],
+            report: {
+              schemaVersion: 1,
+              verdict: { status: "good", score: 0.82, summary: "Ready." },
+            },
+          }),
+        });
+        options.onclose();
+      },
+    );
+
+    await expect(generatePersonalItemsReport()).resolves.toEqual({
+      ok: true,
+      generatedAt: "2026-06-19T11:00:00.000Z",
+      personalItemUrls: ["wardrobe://1"],
+      report: {
+        schemaVersion: 1,
+        verdict: { status: "good", score: 0.82, summary: "Ready." },
+      },
+    });
+
+    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchEventSourceApi.fetchEventSource.mock.calls[0];
+    expect(url).toBe("https://api.example.test/wardrobe/items/report");
+    expect(options.method).toBe("POST");
+    expect(options.credentials).toBe("include");
+    expect(options.headers).toEqual({ "X-CSRF-Token": "csrf-token" });
+  });
+
+  test("personal items report generation surfaces fatal stream events", async () => {
+    fetchEventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        await options.onopen({
+          ok: true,
+          status: 200,
+          headers: { get: () => "text/event-stream; charset=utf-8" },
+        });
+        options.onmessage({
+          event: "fatal",
+          data: JSON.stringify({ error: "not_found" }),
+        });
+      },
+    );
+
+    await expect(generatePersonalItemsReport()).rejects.toThrow("not_found");
   });
 
   test("uploads wardrobe images as multipart form data", async () => {
@@ -340,6 +435,18 @@ describe("personal items api", () => {
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/wardrobe/items/uploaded/uploaded%201",
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
+  });
+
+  test("deletes personal items report", async () => {
+    await deletePersonalItemsReport();
+
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/wardrobe/items/report",
       {
         method: "DELETE",
         credentials: "include",

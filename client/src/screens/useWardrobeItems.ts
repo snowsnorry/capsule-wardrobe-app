@@ -10,6 +10,7 @@ import {
   useWardrobeRemoveAction,
   useWardrobeUploadedItemUpdateAction,
   useWardrobeUploadActions,
+  type WardrobeItemsChangedReason,
 } from "./wardrobeItemActions";
 import { getItemsFromResponse } from "./wardrobeResponse";
 
@@ -17,6 +18,9 @@ export function useWardrobeItems(
   filter: WardrobeFilter,
   refreshKey: number,
   t: (key: string) => string,
+  options: {
+    onItemsChanged?: (reason: WardrobeItemsChangedReason) => void;
+  } = {},
 ) {
   const source = useMemo(() => getSourceFilter(filter), [filter]);
   const { error, isLoading, items, setError, setItems } = useWardrobeItemsQuery(
@@ -32,14 +36,20 @@ export function useWardrobeItems(
     source,
     t,
   });
-  const uploadActions = useWardrobeUploadActions({ setError, t });
+  const uploadActions = useWardrobeUploadActions({
+    onItemsChanged: options.onItemsChanged,
+    setError,
+    t,
+  });
   const handleConfirmRemove = useWardrobeRemoveAction({
+    onItemsChanged: options.onItemsChanged,
     setError,
     setIsMutating,
     setItems,
     t,
   });
   const handleUpdateUploadedItem = useWardrobeUploadedItemUpdateAction({
+    onItemsChanged: options.onItemsChanged,
     setError,
     setIsMutating,
     setItems,

@@ -76,7 +76,10 @@ describe("useWardrobeItems", () => {
         },
       ],
     });
-    const { result } = renderHook(() => useWardrobeItems("uploaded", 0, t));
+    const onItemsChanged = vi.fn();
+    const { result } = renderHook(() =>
+      useWardrobeItems("uploaded", 0, t, { onItemsChanged }),
+    );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -96,6 +99,7 @@ describe("useWardrobeItems", () => {
       ["https://shop.test/a"],
       expect.objectContaining({ onProgress: expect.any(Function) }),
     );
+    expect(onItemsChanged).toHaveBeenNthCalledWith(1, "items");
 
     act(() => {
       result.current.handleProductMenuOpen(
@@ -132,11 +136,41 @@ describe("useWardrobeItems", () => {
     const uploadedItem = result.current.items.find(
       (item) => item.id === "uploaded-1",
     );
+    await act(async () => {
+      await result.current.handleUpdateUploadedItem(uploadedItem!, {
+        name: "Updated uploaded shirt",
+        description: null,
+        brand: null,
+        audience: "all",
+        category: "top",
+        season: ["summer"],
+        formalityLevel: [],
+        style: [],
+        occasions: [],
+        colorBase: [],
+        pattern: null,
+        finish: null,
+        composition: "linen",
+        silhouette: null,
+        fit: null,
+        closureType: [],
+      });
+    });
+    expect(api.updateUploadedWardrobeItem).toHaveBeenCalledWith(
+      "uploaded-1",
+      expect.objectContaining({
+        category: "top",
+        name: "Updated uploaded shirt",
+      }),
+    );
+    expect(onItemsChanged).toHaveBeenNthCalledWith(2, "metadata");
+
     personalItems.notifyPersonalItemsChanged.mockClear();
     await act(async () => {
       await result.current.handleConfirmRemove(uploadedItem!);
     });
     expect(api.deleteUploadedWardrobeItem).toHaveBeenCalledWith("uploaded-1");
+    expect(onItemsChanged).toHaveBeenNthCalledWith(3, "items");
 
     await act(async () => {
       await result.current.handleConfirmRemove({
@@ -148,6 +182,7 @@ describe("useWardrobeItems", () => {
       "https://example.com/catalog",
     );
     expect(personalItems.notifyPersonalItemsChanged).toHaveBeenCalledTimes(2);
+    expect(onItemsChanged).toHaveBeenNthCalledWith(4, "items");
   });
 
   test("handles empty and failing operations", async () => {

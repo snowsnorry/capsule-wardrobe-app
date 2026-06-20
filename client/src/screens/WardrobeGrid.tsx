@@ -8,6 +8,7 @@ import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 type WardrobeGridProps = {
+  highlightedKeys?: string[];
   isFilteredEmpty?: boolean;
   isLoading: boolean;
   isOverlay: boolean;
@@ -24,6 +25,7 @@ type WardrobeGridProps = {
 };
 
 function WardrobeGrid({
+  highlightedKeys = [],
   isFilteredEmpty = false,
   isLoading,
   isOverlay,
@@ -58,6 +60,8 @@ function WardrobeGrid({
     );
   }
 
+  const highlightedKeySet = new Set(highlightedKeys);
+
   return (
     <Box
       sx={{
@@ -72,19 +76,46 @@ function WardrobeGrid({
         },
       }}
     >
-      {items.map((item) => (
-        <ClothingCard
-          key={item.id || item.url}
-          item={item}
-          allowProductMenuWithoutUrl
-          isMobile={isOverlay}
-          mobileColumns={mobileColumns}
-          onProductClick={onProductClick}
-          onProductMenuOpen={onProductMenuOpen}
-        />
-      ))}
+      {items.map((item, index) => {
+        const itemKey = getWardrobeItemKey(item);
+        const highlighted = highlightedKeySet.has(itemKey);
+        return (
+          <Box
+            key={itemKey || `personal-item-${index}`}
+            data-testid={
+              highlighted ? "personal-items-report-item-highlighted" : undefined
+            }
+            sx={getReportHighlightSx(highlighted)}
+          >
+            <ClothingCard
+              item={item}
+              allowProductMenuWithoutUrl
+              isMobile={isOverlay}
+              mobileColumns={mobileColumns}
+              onProductClick={onProductClick}
+              onProductMenuOpen={onProductMenuOpen}
+            />
+          </Box>
+        );
+      })}
     </Box>
   );
+}
+
+function getWardrobeItemKey(item: MainScreenItem) {
+  return String(item?.id || item?.wardrobeId || "").trim();
+}
+
+function getReportHighlightSx(highlighted: boolean) {
+  return {
+    minWidth: 0,
+    borderRadius: "var(--cw-radius-card)",
+    outline: highlighted
+      ? "2px solid var(--cw-color-primary)"
+      : "2px solid transparent",
+    outlineOffset: 3,
+    transition: "outline-color 140ms ease, background-color 140ms ease",
+  } as const;
 }
 
 const emptyStateSx = {

@@ -30,6 +30,8 @@ import { EMPTY_UPLOAD_PROGRESS } from "./wardrobeUploadProgress";
 type SetItems = Dispatch<SetStateAction<MainScreenItem[]>>;
 type SetError = Dispatch<SetStateAction<string>>;
 type Translate = (key: string) => string;
+export type WardrobeItemsChangedReason = "items" | "metadata";
+type ItemsChangedCallback = (reason: WardrobeItemsChangedReason) => void;
 
 function useWardrobeProductMenuState() {
   const [productMenu, setProductMenu] = useState<WardrobeProductMenuState>({
@@ -65,11 +67,13 @@ function useWardrobeProductMenuState() {
 }
 
 function useWardrobeRemoveAction({
+  onItemsChanged,
   setError,
   setIsMutating,
   setItems,
   t,
 }: {
+  onItemsChanged?: ItemsChangedCallback;
   setError: SetError;
   setIsMutating: Dispatch<SetStateAction<boolean>>;
   setItems: SetItems;
@@ -93,6 +97,7 @@ function useWardrobeRemoveAction({
         ),
       );
       notifyPersonalItemsChanged();
+      onItemsChanged?.("items");
     } catch {
       setError(t("wardrobe.removeFailed"));
     } finally {
@@ -128,9 +133,11 @@ function useWardrobeDownloadPdfAction({
 }
 
 function useWardrobeUploadActions({
+  onItemsChanged,
   setError,
   t,
 }: {
+  onItemsChanged?: ItemsChangedCallback;
   setError: SetError;
   t: Translate;
 }) {
@@ -152,6 +159,7 @@ function useWardrobeUploadActions({
       await upload();
       setError("");
       notifyPersonalItemsChanged();
+      onItemsChanged?.("items");
       return true;
     } catch {
       setError(t(errorKey));
@@ -180,11 +188,13 @@ function useWardrobeUploadActions({
 }
 
 function useWardrobeUploadedItemUpdateAction({
+  onItemsChanged,
   setError,
   setIsMutating,
   setItems,
   t,
 }: {
+  onItemsChanged?: ItemsChangedCallback;
   setError: SetError;
   setIsMutating: Dispatch<SetStateAction<boolean>>;
   setItems: SetItems;
@@ -216,6 +226,7 @@ function useWardrobeUploadedItemUpdateAction({
           ),
         ),
       );
+      onItemsChanged?.("metadata");
       return updatedItem;
     } catch (error) {
       setError(t("wardrobe.updateFailed"));
