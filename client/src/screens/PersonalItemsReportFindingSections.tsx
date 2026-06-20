@@ -125,7 +125,7 @@ function IssueMessage({
   t: ReportContentProps["t"];
 }) {
   return (
-    <Typography variant="body2" sx={reportListTextSx}>
+    <Typography component="div" variant="body2" sx={reportListTextSx}>
       {issue.severity ? (
         <Chip
           size="small"
