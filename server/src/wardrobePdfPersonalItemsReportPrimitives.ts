@@ -33,9 +33,7 @@ const CHIP_HEIGHT = 17;
 const CHIP_HORIZONTAL_PADDING = 8;
 
 export const SUBSECTION_GAP = 7;
-export const REPORT_TEXT_SIZE = VALUE_FONT_SIZE;
 export const REPORT_LINE_HEIGHT = VALUE_LINE_HEIGHT;
-export const REPORT_BODY_X = BULLET_BODY_X;
 export const REPORT_BODY_WIDTH = BULLET_BODY_WIDTH;
 
 const PROSE_DETAIL_KEYS = new Set([
@@ -144,14 +142,6 @@ export function createItemResolver(products, locale) {
         (id) =>
           namesById.get(id) || t("wardrobe.reportUnnamedItem", { id }, locale),
       );
-}
-
-export function relatedItemsText(ids, resolveItems, locale) {
-  const labels = resolveItems(ids);
-  if (!labels.length) return "";
-  return `${t("wardrobe.reportRelatedItems", undefined, locale)} ${labels.join(
-    ", ",
-  )}`;
 }
 
 export function resolveRelatedItemLabels(ids, resolveItems) {
@@ -450,11 +440,7 @@ export function addBulletBottomGap(state) {
   return state;
 }
 
-export function drawBulletItems(
-  pdfDoc,
-  state,
-  { fonts, items, tone = "success" },
-) {
+function drawBulletItems(pdfDoc, state, { fonts, items, tone = "success" }) {
   for (const item of items.filter(Boolean)) {
     state = drawBulletText(pdfDoc, state, {
       fonts,
@@ -480,17 +466,5 @@ export function drawTextListSection(
   });
   state = drawBulletItems(pdfDoc, state, { fonts, items: values, tone });
   state.cursorY -= 12;
-  return state;
-}
-
-export function drawSubsectionBullets(
-  pdfDoc,
-  state,
-  { fonts, items, title, tone = "success" },
-) {
-  if (!items.length) return state;
-  state = drawSubsectionTitle(pdfDoc, state, { fonts, title });
-  state = drawBulletItems(pdfDoc, state, { fonts, items, tone });
-  state.cursorY -= SUBSECTION_GAP;
   return state;
 }

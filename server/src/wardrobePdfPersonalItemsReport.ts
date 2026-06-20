@@ -159,17 +159,6 @@ export function getPersonalItemsReportOverviewLines(report, locale) {
   ].filter(Boolean);
 }
 
-function getStrengthMessage(strength) {
-  const message = String(strength?.message || "").trim();
-  const dimension = String(strength?.dimension || "").trim();
-  if (!message) return "";
-  return dimension ? `${formatReportValue(dimension)}: ${message}` : message;
-}
-
-export function getPersonalItemsReportStrengths(report) {
-  return (report?.strengths || []).map(getStrengthMessage).filter(Boolean);
-}
-
 export function personalItemsReportNeedsUnicodeFallback(personalItems, locale) {
   if (locale === "ru") {
     return true;
