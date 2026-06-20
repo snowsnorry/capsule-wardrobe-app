@@ -234,6 +234,10 @@ type WardrobePdfBuildChildOptions = {
     report?: Record<string, unknown> | null;
     reportStale?: boolean;
   } | null;
+  personalItems?: {
+    report?: Record<string, unknown> | null;
+    reportStale?: boolean;
+  } | null;
 };
 
 export type {

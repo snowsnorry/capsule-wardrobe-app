@@ -162,4 +162,8 @@ function registerPersonalItemsReportRoutes(app, context) {
   );
 }
 
-export { registerPersonalItemsReportRoutes };
+export {
+  areEqualStringSets,
+  normalizeUrlSet,
+  registerPersonalItemsReportRoutes,
+};

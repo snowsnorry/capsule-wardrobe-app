@@ -905,6 +905,7 @@ test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {
   const calls: unknown[] = [];
   let pdfLocale = "";
   let pdfItems: unknown[] = [];
+  let pdfOptions: unknown;
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       listWardrobeItemsImpl: async (payload) => {
@@ -923,9 +924,10 @@ test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {
           },
         ];
       },
-      buildWardrobePdfInChildImpl: async (items, locale) => {
+      buildWardrobePdfInChildImpl: async (items, locale, options) => {
         pdfItems = items;
         pdfLocale = locale;
+        pdfOptions = options;
         return Buffer.from("pdf");
       },
     },
@@ -962,12 +964,121 @@ test("wardrobe routes export filtered wardrobe items as PDF", async (t) => {
       source: "uploaded",
     }),
   ]);
+  expect(pdfOptions).toBeUndefined();
   expect(calls).toEqual([
     {
       type: "list",
       payload: { email: "person@example.com", source: "uploaded" },
     },
   ]);
+});
+
+test("wardrobe routes include current personal items report in full PDF export", async (t) => {
+  let pdfOptions: unknown;
+  const report = {
+    schemaVersion: 1,
+    verdict: { status: "good", score: 0.82, summary: "Ready." },
+  };
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getPersonalItemsReportImpl: async () => ({
+        email: "person@example.com",
+        generatedAt: "2026-06-19T10:00:00.000Z",
+        personalItemUrls: ["wardrobe://1"],
+        report,
+      }),
+      listWardrobeItemsImpl: async () => [
+        { id: "1", url: "wardrobe://1", source: "uploaded" },
+        { id: "2", url: "https://example.com/2", source: "from_catalog" },
+      ],
+      buildWardrobePdfInChildImpl: async (_items, _locale, options) => {
+        pdfOptions = options;
+        return Buffer.from("pdf");
+      },
+    },
+  });
+
+  const pdf = await requestJson(baseUrl, "/wardrobe/items/pdf", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+
+  expect(pdf.response.status).toBe(200);
+  expect(pdfOptions).toEqual({
+    personalItems: {
+      report,
+      reportStale: true,
+    },
+  });
+});
+
+test("wardrobe routes mark matching personal items PDF reports fresh", async (t) => {
+  let pdfOptions: unknown;
+  const report = {
+    schemaVersion: 1,
+    verdict: { status: "good", score: 0.82, summary: "Ready." },
+  };
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getPersonalItemsReportImpl: async () => ({
+        email: "person@example.com",
+        generatedAt: "2026-06-19T10:00:00.000Z",
+        personalItemUrls: ["https://example.com/2", "wardrobe://1"],
+        report,
+      }),
+      listWardrobeItemsImpl: async () => [
+        { id: "1", url: "wardrobe://1", source: "uploaded" },
+        { id: "2", url: "https://example.com/2", source: "from_catalog" },
+      ],
+      buildWardrobePdfInChildImpl: async (_items, _locale, options) => {
+        pdfOptions = options;
+        return Buffer.from("pdf");
+      },
+    },
+  });
+
+  const pdf = await requestJson(baseUrl, "/wardrobe/items/pdf", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+
+  expect(pdf.response.status).toBe(200);
+  expect(pdfOptions).toEqual({
+    personalItems: {
+      report,
+      reportStale: false,
+    },
+  });
+});
+
+test("wardrobe routes omit personal items PDF options when no report exists", async (t) => {
+  let pdfOptions: unknown;
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      getPersonalItemsReportImpl: async () => null,
+      listWardrobeItemsImpl: async () => [
+        { id: "1", url: "wardrobe://1", source: "uploaded" },
+      ],
+      buildWardrobePdfInChildImpl: async (_items, _locale, options) => {
+        pdfOptions = options;
+        return Buffer.from("pdf");
+      },
+    },
+  });
+
+  const pdf = await requestJson(baseUrl, "/wardrobe/items/pdf", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+  });
+
+  expect(pdf.response.status).toBe(200);
+  expect(pdfOptions).toBeUndefined();
 });
 
 test("wardrobe upload route processes images and creates uploaded items", async (t) => {
@@ -2290,11 +2401,13 @@ test("wardrobe PDF route maps empty wardrobes and build failures", async (t) => 
   expect(emptyPdf.response.status).toBe(404);
   expect(emptyPdf.json).toEqual({ error: "not_found" });
 
+  const buildPdfFailure = vi.fn(async () => {
+    throw new Error("pdf_down");
+  });
   const failingServer = await startTestServer(t, {
     overrides: {
-      buildWardrobePdfInChildImpl: async () => {
-        throw new Error("pdf_down");
-      },
+      buildWardrobePdfInChildImpl: buildPdfFailure,
+      getPersonalItemsReportImpl: async () => null,
     },
   });
   const failingPdf = await requestJson(
@@ -2309,4 +2422,5 @@ test("wardrobe PDF route maps empty wardrobes and build failures", async (t) => 
   );
   expect(failingPdf.response.status).toBe(503);
   expect(failingPdf.json).toEqual({ error: "service_unavailable" });
+  expect(buildPdfFailure).toHaveBeenCalledTimes(1);
 });

@@ -3,7 +3,11 @@ import { normalizeWardrobeSourceParam } from "./wardrobeRouteParams.js";
 import { registerWardrobeUploadRoute } from "./wardrobeFileUploadRoute.js";
 import { registerUploadedWardrobeItemUpdateRoute } from "./wardrobeUploadedItemUpdateRoute.js";
 import { registerWardrobeUrlUploadRoute } from "./wardrobeUrlUploadRoute.js";
-import { registerPersonalItemsReportRoutes } from "./personalItemsReportRoutes.js";
+import {
+  areEqualStringSets,
+  normalizeUrlSet,
+  registerPersonalItemsReportRoutes,
+} from "./personalItemsReportRoutes.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
 
@@ -85,10 +89,19 @@ function registerWardrobePdfRoute(app, context) {
           return res.status(404).json({ error: "not_found" });
         }
 
-        const profile = await context.getProfileImpl(req.user.email);
+        const [profile, personalItems] = await Promise.all([
+          context.getProfileImpl(req.user.email),
+          getPersonalItemsPdfOptions({
+            context,
+            email: req.user.email,
+            items,
+            source,
+          }),
+        ]);
         const pdfBuffer = await context.buildWardrobePdfInChildImpl(
           items.map(normalizeWardrobeItemForPdf),
           String(profile?.locale || "en"),
+          personalItems ? { personalItems } : undefined,
         );
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader(
@@ -102,6 +115,29 @@ function registerWardrobePdfRoute(app, context) {
       }
     },
   );
+}
+
+async function getPersonalItemsPdfOptions({ context, email, items, source }) {
+  if (source !== null) {
+    return null;
+  }
+
+  const storedReport = await context.getPersonalItemsReportImpl(email);
+  if (!storedReport?.report) {
+    return null;
+  }
+
+  const currentUrls = normalizeUrlSet(Array.isArray(items) ? items : []);
+  const storedUrls = Array.isArray(storedReport.personalItemUrls)
+    ? [...storedReport.personalItemUrls].sort((left, right) =>
+        left.localeCompare(right),
+      )
+    : [];
+
+  return {
+    report: storedReport.report,
+    reportStale: !areEqualStringSets(storedUrls, currentUrls),
+  };
 }
 
 function registerWardrobeCatalogRoutes(app, context) {

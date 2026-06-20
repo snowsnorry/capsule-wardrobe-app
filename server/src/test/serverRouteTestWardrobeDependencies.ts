@@ -52,6 +52,7 @@ function createUploadedWardrobeCleanupResult() {
 
 function createWardrobeListDependencies() {
   return {
+    getPersonalItemsReportImpl: async () => null,
     listWardrobeItemsImpl: async () => [
       {
         id: "wardrobe-1",

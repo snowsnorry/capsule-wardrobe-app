@@ -337,6 +337,20 @@ export function createE2eDependencies(state = e2eState) {
     ...searchAndGenerationDependencies(state),
     ...createE2eWardrobeDependencies(state.wardrobeMemory),
     ...buildE2ePasskeyDependencies(),
+    deletePersonalItemsReportImpl: async () => true,
+    generatePersonalItemsReportImpl: async () => ({
+      generatedAt: "2026-06-20T00:00:00.000Z",
+      personalItemUrls: [],
+      report: {
+        schemaVersion: 1,
+        verdict: {
+          score: 0.8,
+          status: "good",
+          summary: "E2E personal items report.",
+        },
+      },
+    }),
+    getPersonalItemsReportImpl: async () => null,
     createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
     deleteR2ObjectsImpl: async (payload) => ({
       deleted: Array.isArray(payload?.keys) ? payload.keys.length : 0,

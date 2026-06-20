@@ -25,6 +25,20 @@ import {
   getCapsuleReportVerdictLabel,
   getCapsuleWeakOutfitOverviewRows,
 } from "./wardrobePdfCapsuleReport.js";
+import {
+  getPersonalItemsReportChipValues,
+  getPersonalItemsReportOverviewLines,
+  getPersonalItemsReportScoreRows,
+  getPersonalItemsReportTemperatureLabel,
+  getPersonalItemsReportVerdictLabel,
+  personalItemsReportNeedsUnicodeFallback,
+} from "./wardrobePdfPersonalItemsReport.js";
+import {
+  getCoverageBottleneckRows,
+  getPersonalItemsReportOverviewRowGroups,
+} from "./wardrobePdfPersonalItemsReportBasicSections.js";
+import { getSuggestionRows } from "./wardrobePdfPersonalItemsReportFindingSections.js";
+import { severityToReportTone } from "./wardrobePdfPersonalItemsReportPrimitives.js";
 
 async function withCachedImage(testContext, imageUrl, buffer) {
   const cachePath = buildLocalImageCachePath(imageUrl);
@@ -178,6 +192,170 @@ function buildCapsuleReport(overrides = {}) {
   };
 }
 
+function buildPersonalItemsReport(overrides = {}) {
+  return {
+    verdict: {
+      llmStatus: "good",
+      status: "good",
+      score: 0.82,
+      summary: "A useful set with a clear casual direction.",
+    },
+    scores: {
+      coverage: 0.7,
+      outfitReadiness: 0.62,
+      versatility: 0.75,
+      seasonality: 0.8,
+      styleClarity: 0.76,
+      colorHarmony: 0.88,
+      efficiency: 0.68,
+    },
+    personalItemsOverview: {
+      itemCount: 8,
+      personalItemsSize: "small",
+      detectedCategoryBalance: "tops heavy",
+      dominantStyles: ["minimalistic"],
+      dominantSeasons: ["spring"],
+      dominantFormalityLevels: ["casual"],
+      summaryTags: ["compact"],
+    },
+    coverage: {
+      overallScore: 0.7,
+      coreRoleCoverage: {
+        tops: "covered",
+        bottoms: "thin",
+        shoes: "missing",
+        layers: "covered",
+        dresses: "not_needed",
+        accessories: "weak",
+      },
+      missingCategories: ["shoes"],
+      weakCategories: ["accessories"],
+      overrepresentedCategories: ["tops"],
+      bottlenecks: [
+        {
+          category: "shoes",
+          severity: "warning",
+          message: "Shoes are the main bottleneck.",
+        },
+      ],
+      notes: "Coverage is usable but incomplete.",
+    },
+    outfitReadiness: {
+      overallScore: 0.62,
+      supportedFormulaTypes: ["top_bottom_shoes"],
+      estimatedOutfitRange: { min: 3, max: 6, confidence: "medium" },
+      mainBlockers: ["No versatile shoes."],
+      notes: "Ready for simple casual outfits.",
+    },
+    versatility: {
+      overallScore: 0.75,
+      mixAndMatchScore: 0.8,
+      repeatabilityScore: 0.65,
+      outfitVariety: "moderate",
+      primaryUseModes: ["everyday"],
+      limitingFactors: ["Small footwear range."],
+      notes: "Good repeatability for a compact set.",
+    },
+    styleProfile: {
+      overallScore: 0.76,
+      primaryStyles: ["minimalistic"],
+      fragmentation: "low",
+      styleClusters: [
+        {
+          label: "Minimal casual",
+          style: "minimalistic",
+          itemCount: 3,
+          representativeItemIds: ["1"],
+          notes: "Clean daily base.",
+        },
+      ],
+      notes: "Style direction is clear.",
+    },
+    seasonality: {
+      overallScore: 0.8,
+      seasonCoverage: {
+        spring: "covered",
+        summer: "covered",
+        autumn: "partial",
+        winter: "weak",
+      },
+      primarySeasons: ["spring"],
+      weakSeasons: ["winter"],
+      temperatureBandC: { min: 8, max: 22 },
+      layeringSupport: "light",
+      weatherSuitability: ["mild_weather"],
+      weatherLimitations: ["Cold rain."],
+      notes: "Best for mild weather.",
+    },
+    colorAnalysis: {
+      overallScore: 0.88,
+      paletteType: "neutral",
+      baseColors: ["black", "white"],
+      accentColors: ["blue"],
+      contrastLevel: "medium",
+      harmony: "cohesive",
+      colorGaps: ["warm accent"],
+      colorRisks: ["Too much black."],
+      notes: "Base palette is coherent.",
+    },
+    efficiency: {
+      overallScore: 0.68,
+      redundancyLevel: "medium",
+      orphanItemRisk: "low",
+      notableRedundancies: [
+        {
+          category: "tops",
+          itemIds: ["1"],
+          message: "Several tops fill the same casual role.",
+        },
+      ],
+      potentialOrphans: [
+        {
+          itemIds: ["1"],
+          reason: "Needs a matching shoe option.",
+        },
+      ],
+      underusedStrengths: ["Neutral palette."],
+      notes: "Efficiency is acceptable for a compact wardrobe.",
+    },
+    strengths: [
+      {
+        dimension: "style",
+        message: "Clear style base.",
+        supportingItemIds: ["1"],
+      },
+    ],
+    issues: [
+      {
+        code: "missing-shoes",
+        severity: "warning",
+        dimension: "coverage",
+        message: "Missing shoes block outfits.",
+        affectedItemIds: ["1"],
+        suggestion: "Add a simple shoe option.",
+      },
+    ],
+    suggestions: [
+      {
+        type: "add",
+        priority: "high",
+        message: "Add simple sneakers.",
+        expectedImpact: "More complete outfits.",
+        targetCategory: "shoes",
+        replacementCategory: "sneakers",
+        replacementDescription: "Low-profile neutral sneakers.",
+        targetItemIds: ["1"],
+      },
+    ],
+    confidence: {
+      overall: 0.72,
+      lowConfidenceAspects: ["weather metadata"],
+      assumptions: ["Metadata is current."],
+    },
+    ...overrides,
+  };
+}
+
 test("buildWardrobePdf consumes prepared image assets as pages are rendered", async (_t) => {
   const imageBuffer = await sharp({
     create: {
@@ -312,8 +490,8 @@ test("buildWardrobePdf prepends outfit image cover and appends stale report page
   const pdfBuffer = await buildWardrobePdf(
     [
       {
-        id: "top-1",
-        name: "Top",
+        id: "1",
+        name: "White Tee",
         category: "top",
         imageUrl: "",
       },
@@ -356,6 +534,28 @@ test("buildWardrobePdf appends capsule report pages after capsule products", asy
   expect(await getPdfPageCount(pdfBuffer)).toBe(3);
 });
 
+test("buildWardrobePdf appends personal items report pages after wardrobe items", async () => {
+  const pdfBuffer = await buildWardrobePdf(
+    [
+      {
+        id: "top-1",
+        name: "Top",
+        category: "top",
+        imageUrl: "",
+      },
+    ],
+    {
+      locale: "en",
+      personalItems: {
+        report: buildPersonalItemsReport(),
+        reportStale: true,
+      },
+    },
+  );
+
+  expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(1);
+});
+
 test("buildWardrobePdf supports image-only report-only and plain product PDFs", async (t) => {
   const imageUrl = "https://images.example.com/outfit-only.jpg";
   const imageBuffer = await sharp({
@@ -385,6 +585,10 @@ test("buildWardrobePdf supports image-only report-only and plain product PDFs", 
       report: buildCapsuleReport(),
     },
   });
+  const personalItemsReportOnly = await buildWardrobePdf([], {
+    locale: "en",
+    personalItems: { report: buildPersonalItemsReport() },
+  });
   const productOnly = await buildWardrobePdf(
     [{ id: "top-1", name: "Top", imageUrl: "" }],
     {
@@ -395,6 +599,7 @@ test("buildWardrobePdf supports image-only report-only and plain product PDFs", 
   expect(await getPdfPageCount(imageOnly)).toBe(1);
   expect(await getPdfPageCount(reportOnly)).toBe(1);
   expect(await getPdfPageCount(capsuleReportOnly)).toBeGreaterThan(0);
+  expect(await getPdfPageCount(personalItemsReportOnly)).toBeGreaterThan(0);
   expect(await getPdfPageCount(productOnly)).toBe(1);
 });
 
@@ -480,6 +685,115 @@ test("buildWardrobePdf paginates long capsule reports at the end", async () => {
   });
 
   expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(1);
+});
+
+test("buildWardrobePdf paginates long personal items reports at the end", async () => {
+  const longReport = buildPersonalItemsReport({
+    strengths: Array.from({ length: 90 }, (_, index) => ({
+      dimension: "style",
+      message: `Strength ${index + 1}: this personal items line intentionally has enough detail to wrap in the PDF report.`,
+      supportingItemIds: [],
+    })),
+  });
+
+  const pdfBuffer = await buildWardrobePdf([], {
+    locale: "en",
+    personalItems: { report: longReport },
+  });
+
+  expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(1);
+});
+
+test("buildWardrobePdf handles sparse personal items reports without optional sections", async () => {
+  const sparseReport = {
+    verdict: {},
+    personalItemsOverview: {},
+    scores: {},
+    coverage: {},
+    outfitReadiness: {},
+    versatility: {},
+    styleProfile: {},
+    seasonality: {},
+    colorAnalysis: {},
+    efficiency: {},
+    strengths: [],
+    issues: [{ message: "", suggestion: "" }],
+    suggestions: [{ message: "" }],
+    confidence: {
+      assumptions: ["Assumption without confidence score."],
+    },
+  };
+
+  const pdfBuffer = await buildWardrobePdf([], {
+    locale: "en",
+    personalItems: { report: sparseReport },
+  });
+
+  expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
+  expect(await getPdfPageCount(pdfBuffer)).toBe(1);
+});
+
+test("buildWardrobePdf renders partial personal items basic report sections", async () => {
+  const partialReport = {
+    verdict: {
+      summary: "Partial basic sections.",
+      score: 0.61,
+    },
+    coverage: {
+      bottlenecks: [
+        { category: "", message: "" },
+        { message: "One bottleneck without a category." },
+      ],
+    },
+    outfitReadiness: {
+      estimatedOutfitRange: { min: 2 },
+    },
+    versatility: {
+      primaryUseModes: ["travel"],
+    },
+  };
+
+  const pdfBuffer = await buildWardrobePdf([], {
+    locale: "en",
+    personalItems: { report: partialReport },
+  });
+
+  expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
+  expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(0);
+});
+
+test("buildWardrobePdf renders partial personal items profile report sections", async () => {
+  const partialReport = {
+    verdict: {
+      summary: "Partial profile sections.",
+      score: 0.64,
+    },
+    styleProfile: {
+      styleClusters: [
+        {
+          representativeItemIds: ["missing-item"],
+        },
+      ],
+    },
+    seasonality: {
+      temperatureBandC: { max: 24 },
+    },
+    colorAnalysis: {
+      colorRisks: ["One color risk."],
+    },
+    efficiency: {
+      notableRedundancies: [{ itemIds: ["missing-item"] }],
+      potentialOrphans: [{ reason: "Only reason." }],
+    },
+  };
+
+  const pdfBuffer = await buildWardrobePdf([], {
+    locale: "en",
+    personalItems: { report: partialReport },
+  });
+
+  expect(Buffer.isBuffer(pdfBuffer)).toBeTruthy();
+  expect(await getPdfPageCount(pdfBuffer)).toBeGreaterThan(0);
 });
 
 test("buildWardrobePdf wraps long capsule report chips", async () => {
@@ -731,4 +1045,157 @@ test("capsule pdf report helpers handle sparse reports", () => {
     ),
   ).toEqual(["daily", "Shoes are the main limiting role."]);
   expect(getCapsuleReportVerdictLabel({}, "en")).toBe("Good capsule");
+});
+
+test("personal items pdf report helpers mirror desktop report labels and percentages", () => {
+  const report = buildPersonalItemsReport();
+
+  expect(getPersonalItemsReportTemperatureLabel(report, "en")).toBe("8–22°C");
+  expect(
+    getPersonalItemsReportTemperatureLabel(
+      { seasonality: { temperatureBandC: { min: 12 } } },
+      "en",
+    ),
+  ).toBe("from 12°C");
+  expect(
+    getPersonalItemsReportTemperatureLabel(
+      { seasonality: { temperatureBandC: { max: 20 } } },
+      "en",
+    ),
+  ).toBe("up to 20°C");
+  expect(getPersonalItemsReportChipValues(report)).toEqual([
+    "spring",
+    "minimalistic",
+    "neutral",
+  ]);
+  expect(getPersonalItemsReportScoreRows(report, "en")).toEqual([
+    expect.objectContaining({ key: "coverage", percent: 70 }),
+    expect.objectContaining({ key: "outfit-readiness", percent: 62 }),
+    expect.objectContaining({ key: "versatility", percent: 75 }),
+    expect.objectContaining({ key: "seasonality", percent: 80 }),
+    expect.objectContaining({ key: "style-clarity", percent: 76 }),
+    expect.objectContaining({ key: "color-harmony", percent: 88 }),
+    expect.objectContaining({ key: "efficiency", percent: 68 }),
+  ]);
+  expect(getPersonalItemsReportOverviewLines(report, "en")).toEqual([
+    "8 items · small · tops heavy",
+    "Dominant styles: Minimalistic · Dominant seasons: Spring",
+    "Dominant formality levels: Casual · Summary tags: Compact",
+  ]);
+  expect(getPersonalItemsReportVerdictLabel(report, "en")).toBe(
+    "Good Personal items set",
+  );
+  expect(
+    getPersonalItemsReportVerdictLabel(
+      { verdict: { llmStatus: "unclear", score: 0.3 } },
+      "en",
+    ),
+  ).toBe("Unclear");
+  expect(personalItemsReportNeedsUnicodeFallback({}, "en")).toBe(false);
+  expect(
+    personalItemsReportNeedsUnicodeFallback(
+      { report: { verdict: { summary: "Личные вещи" } } },
+      "en",
+    ),
+  ).toBe(true);
+  expect(personalItemsReportNeedsUnicodeFallback({}, "ru")).toBe(true);
+});
+
+test("personal items pdf section helpers mirror UI row and severity models", () => {
+  const report = buildPersonalItemsReport({
+    coverage: {
+      bottlenecks: [
+        {
+          category: "shoes",
+          severity: "warning",
+          message: "Shoes are the main bottleneck.",
+        },
+        {
+          category: "layers",
+          severity: "info",
+          message: "Layering options are optional context.",
+        },
+      ],
+    },
+  });
+
+  expect(getPersonalItemsReportOverviewRowGroups(report, "en")).toEqual({
+    detailRows: [
+      expect.objectContaining({
+        key: "tags",
+        label: "Summary tags",
+        value: ["compact"],
+      }),
+    ],
+    rows: [
+      expect.objectContaining({
+        key: "balance",
+        label: "Detected category balance",
+        value: "tops heavy",
+      }),
+      expect.objectContaining({
+        key: "styles",
+        label: "Dominant styles",
+        value: ["minimalistic"],
+      }),
+      expect.objectContaining({
+        key: "seasons",
+        label: "Dominant seasons",
+        value: ["spring"],
+      }),
+      expect.objectContaining({
+        key: "formality",
+        label: "Dominant formality levels",
+        value: ["casual"],
+      }),
+    ],
+  });
+  expect(getCoverageBottleneckRows(report.coverage)).toEqual([
+    {
+      message: "Shoes are the main bottleneck.",
+      prefix: "Shoes:",
+      tone: "warning",
+    },
+    {
+      message: "Layering options are optional context.",
+      prefix: "Layers:",
+      tone: "neutral",
+    },
+  ]);
+  expect(getSuggestionRows(report.suggestions[0], "en")).toEqual([
+    expect.objectContaining({
+      key: "impact",
+      label: "Expected impact",
+      value: "More complete outfits.",
+    }),
+    expect.objectContaining({
+      key: "target",
+      label: "Target category",
+      value: "shoes",
+    }),
+    expect.objectContaining({
+      key: "replacement-category",
+      label: "Replacement category",
+      value: "sneakers",
+    }),
+    expect.objectContaining({
+      key: "replacement-description",
+      label: "Replacement description",
+      value: "Low-profile neutral sneakers.",
+    }),
+  ]);
+  expect(severityToReportTone("Critical")).toBe("error");
+  expect(severityToReportTone("warning")).toBe("warning");
+  expect(severityToReportTone("info")).toBe("neutral");
+  expect(severityToReportTone("")).toBe("neutral");
+});
+
+test("personal items pdf report helpers handle sparse reports", () => {
+  expect(getPersonalItemsReportTemperatureLabel({}, "en")).toBe(null);
+  expect(getPersonalItemsReportChipValues({})).toEqual([]);
+  expect(getPersonalItemsReportScoreRows({}, "en")).toEqual([]);
+  expect(getPersonalItemsReportOverviewLines({}, "en")).toEqual([]);
+  expect(getPersonalItemsReportVerdictLabel({}, "en")).toBe(
+    "Good Personal items set",
+  );
 });

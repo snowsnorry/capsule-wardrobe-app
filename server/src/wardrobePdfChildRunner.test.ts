@@ -15,6 +15,7 @@ test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv
     capsule?: unknown;
     outputFilePath?: string | null;
     outfit?: unknown;
+    personalItems?: unknown;
   };
 
   const capsule = {
@@ -23,9 +24,14 @@ test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv
     reportStale: true,
   };
   const outfit = { title: "Weekend", imageUrl: "https://example.com/look.jpg" };
+  const personalItems = {
+    report: { verdict: { summary: "Personal items are useful." } },
+    reportStale: true,
+  };
   const pdfBuffer = await buildWardrobePdfInChild([{ id: "top-1" }], "en", {
     capsule,
     outfit,
+    personalItems,
     forkImpl(modulePath, options) {
       forkPath = String(modulePath);
       forkOptions = options;
@@ -62,6 +68,7 @@ test("buildWardrobePdfInChild uses the runtime-matching child entry and execArgv
   );
   expect(sentMessage?.capsule).toEqual(capsule);
   expect(sentMessage?.outfit).toEqual(outfit);
+  expect(sentMessage?.personalItems).toEqual(personalItems);
   expect(String(pdfBuffer)).toBe("pdf");
 });
 

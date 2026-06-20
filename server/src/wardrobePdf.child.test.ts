@@ -57,6 +57,10 @@ test("wardrobePdf child writes built PDF and exits 0 on success", async () => {
       report: { verdict: { summary: "Ready." } },
       reportStale: true,
     },
+    personalItems: {
+      report: { verdict: { summary: "Personal items are useful." } },
+      reportStale: true,
+    },
     totalStartedAt: 123,
   });
 
@@ -81,6 +85,10 @@ test("wardrobePdf child writes built PDF and exits 0 on success", async () => {
           imageUrl: "https://example.com/outfit.jpg",
           imageStale: true,
           report: { verdict: { summary: "Ready." } },
+          reportStale: true,
+        },
+        personalItems: {
+          report: { verdict: { summary: "Personal items are useful." } },
           reportStale: true,
         },
         totalStartedAt: 123,
@@ -125,6 +133,7 @@ test("wardrobePdf child defaults locale and totalStartedAt for invalid input", a
     locale: "",
     capsule: "bad-capsule",
     outfit: "bad-outfit",
+    personalItems: "bad-personal-items",
     totalStartedAt: "bad-start",
   });
 
@@ -135,6 +144,7 @@ test("wardrobePdf child defaults locale and totalStartedAt for invalid input", a
         locale: "en",
         capsule: null,
         outfit: null,
+        personalItems: null,
         totalStartedAt: null,
       },
     },

@@ -35,6 +35,8 @@ import {
 } from "./wardrobePdfOutfit.js";
 import { capsuleReportNeedsUnicodeFallback } from "./wardrobePdfCapsuleReport.js";
 import { drawCapsuleReportPages } from "./wardrobePdfCapsuleReportPages.js";
+import { personalItemsReportNeedsUnicodeFallback } from "./wardrobePdfPersonalItemsReport.js";
+import { drawPersonalItemsReportPages } from "./wardrobePdfPersonalItemsReportPages.js";
 import { getSafeHttpUrl } from "../../shared/urlSecurity.js";
 import { translateOption } from "../../shared/i18n/helpers.js";
 import { buildProductDetailGroups } from "../../shared/productDetail.js";
@@ -256,12 +258,19 @@ async function drawProductImage(
   });
 }
 
-function shouldUseFallbackFonts({ capsule, locale, outfit, products }) {
+function shouldUseFallbackFonts({
+  capsule,
+  locale,
+  outfit,
+  personalItems,
+  products,
+}) {
   return (
     locale === "ru" ||
     products.some((product) => productNeedsUnicodeFallback(product, locale)) ||
     outfitNeedsUnicodeFallback(outfit, locale) ||
-    capsuleReportNeedsUnicodeFallback(capsule, locale)
+    capsuleReportNeedsUnicodeFallback(capsule, locale) ||
+    personalItemsReportNeedsUnicodeFallback(personalItems, locale)
   );
 }
 
@@ -272,6 +281,7 @@ export async function buildWardrobePdf(
     capsule = null,
     imageAssetsById = {},
     outfit = null,
+    personalItems = null,
     totalStartedAt = null,
   } = {},
 ) {
@@ -291,6 +301,7 @@ export async function buildWardrobePdf(
     capsule,
     locale,
     outfit,
+    personalItems,
     products,
   });
   const regularFontBytes = readFileSync(
@@ -334,6 +345,12 @@ export async function buildWardrobePdf(
     capsule,
     locale,
     fonts: { regularFont, boldFont },
+  });
+  drawPersonalItemsReportPages(pdfDoc, {
+    personalItems,
+    locale,
+    fonts: { regularFont, boldFont },
+    products,
   });
 
   const buffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
