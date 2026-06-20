@@ -1,6 +1,10 @@
 import { Alert, Box, Stack } from "@mui/material";
-import type { MouseEvent } from "react";
-import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
+import type { Dispatch, MouseEvent, SetStateAction } from "react";
+import type { UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
+import type {
+  MainScreenItem,
+  MobileCardColumns,
+} from "./mainScreen/MainScreenTypes";
 import CapsuleProductDetailDialog from "./mainScreen/CapsuleProductDetailDialog";
 import WardrobeActionMenu from "./WardrobeActionMenu";
 import WardrobeGrid from "./WardrobeGrid";
@@ -18,14 +22,43 @@ import {
   wardrobeWithFloatingReportSx,
 } from "./wardrobeScreenStyles";
 import WardrobeToolbar from "./WardrobeToolbar";
+import type { WardrobeFilter } from "./WardrobeToolbar";
 import WardrobeUploadDialog from "./WardrobeUploadDialog";
 import WardrobeUrlUploadDialog from "./WardrobeUrlUploadDialog";
-import type {
-  PersonalItemsReportModel,
-  WardrobeFiltersModel,
-  WardrobeItemsModel,
-  WardrobeProductDetailModel,
-} from "./WardrobeScreen";
+import type { ProductDetailMode } from "./wardrobeScreenTypes";
+import type { usePersonalItemsReport } from "./usePersonalItemsReport";
+import type { useWardrobeItems } from "./useWardrobeItems";
+
+type WardrobeItemsModel = ReturnType<typeof useWardrobeItems>;
+type PersonalItemsReportModel = ReturnType<typeof usePersonalItemsReport>;
+
+type WardrobeFiltersModel = {
+  displayedColumns: MobileCardColumns;
+  displayedItems: (items: MainScreenItem[]) => MainScreenItem[];
+  filter: WardrobeFilter;
+  likedOnly: boolean;
+  mobileColumns: MobileCardColumns;
+  setFilter: Dispatch<SetStateAction<WardrobeFilter>>;
+  setLikedOnly: Dispatch<SetStateAction<boolean>>;
+  updateColumns: (value: MobileCardColumns) => void;
+};
+
+type WardrobeProductDetailModel = {
+  closeProductDetail: () => void;
+  handleApplyUploadedProductDetail: (
+    item: MainScreenItem,
+    payload: UploadedWardrobeItemUpdatePayload,
+  ) => Promise<void>;
+  handleSetProductDetailItemLike: (
+    item: MainScreenItem,
+    isLiked: boolean,
+  ) => Promise<void>;
+  openProductDetail: (item: MainScreenItem) => void;
+  productDetailItem: MainScreenItem | null;
+  productDetailMode: ProductDetailMode;
+  setProductDetailItem: Dispatch<SetStateAction<MainScreenItem | null>>;
+  setProductDetailMode: Dispatch<SetStateAction<ProductDetailMode>>;
+};
 
 type WardrobeScreenContentModel = {
   displayedItems: MainScreenItem[];
@@ -344,5 +377,12 @@ function WardrobeProductDetailDialog({
   );
 }
 
-export type { WardrobeScreenContentActions, WardrobeScreenContentModel };
+export type {
+  PersonalItemsReportModel,
+  WardrobeFiltersModel,
+  WardrobeItemsModel,
+  WardrobeProductDetailModel,
+  WardrobeScreenContentActions,
+  WardrobeScreenContentModel,
+};
 export { WardrobeScreenContent };

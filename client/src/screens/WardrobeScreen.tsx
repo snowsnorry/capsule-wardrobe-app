@@ -23,7 +23,12 @@ import {
 } from "./WardrobeCardLayoutStorage";
 import { getSourceFilter, type WardrobeFilter } from "./WardrobeToolbar";
 import { filterWardrobeItemsBySource } from "./wardrobeItemMappers";
-import { WardrobeScreenContent } from "./WardrobeScreenContent";
+import {
+  WardrobeScreenContent,
+  type PersonalItemsReportModel,
+  type WardrobeFiltersModel,
+  type WardrobeItemsModel,
+} from "./WardrobeScreenContent";
 import type { ProductDetailMode } from "./wardrobeScreenTypes";
 import { usePersonalItemsReport } from "./usePersonalItemsReport";
 import { useWardrobeItems } from "./useWardrobeItems";
@@ -156,15 +161,6 @@ function useWardrobeScreenFilters(isOverlay: boolean) {
     updateColumns,
   };
 }
-
-export type WardrobeItemsModel = ReturnType<typeof useWardrobeItems>;
-export type WardrobeFiltersModel = ReturnType<typeof useWardrobeScreenFilters>;
-export type PersonalItemsReportModel = ReturnType<
-  typeof usePersonalItemsReport
->;
-export type WardrobeProductDetailModel = ReturnType<
-  typeof useWardrobeProductDetailState
->;
 
 function useWardrobeReportLayout(
   personalItemsReport: PersonalItemsReportModel,
