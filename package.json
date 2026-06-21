@@ -47,7 +47,7 @@
     "format:check": "prettier --check \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\" \"playwright.config.ts\" \"tests/e2e/**/*.{ts,tsx}\" \"scripts/**/*.{js,mjs,cjs}\"",
     "security:audit": "npm audit --audit-level=high",
     "quality:unused": "knip",
-    "quality:cycles": "madge client/src/**/*.{ts,tsx} server/src/**/*.ts shared/**/*.ts --extensions ts,tsx --circular"
+    "quality:cycles": "madge client/src server/src shared --extensions ts,tsx --circular"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
