@@ -11,6 +11,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import type { PersonalItemsReport } from "../app/appTypes";
 import PersonalItemsReportPanel from "./PersonalItemsReportPanel";
 import {
+  getPersonalItemsReportChipValues,
   getHighlightedPersonalItemsReportItemKeys,
   getPersonalItemsReportTemperatureLabel,
 } from "./PersonalItemsReportPanelUtils";
@@ -222,6 +223,46 @@ describe("PersonalItemsReportPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Hide details" }));
 
     expect(screen.queryByText("Scores")).not.toBeInTheDocument();
+  });
+
+  test("renders repeated mixed summary chips without duplicate key warnings", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const report: PersonalItemsReport = {
+      verdict: {
+        status: "good",
+        score: 0.82,
+        summary: "Several report dimensions are intentionally mixed.",
+      },
+      personalItemsOverview: {
+        dominantSeasons: ["mixed"],
+        dominantStyles: ["mixed", "street_style"],
+      },
+      colorAnalysis: {
+        paletteType: "mixed",
+      },
+    };
+
+    try {
+      renderPanel(report);
+
+      expect(
+        consoleError.mock.calls.some((call) =>
+          call.some((message) =>
+            String(message).includes(
+              "Encountered two children with the same key",
+            ),
+          ),
+        ),
+      ).toBe(false);
+      expect(getPersonalItemsReportChipValues(report)).toEqual([
+        "mixed",
+        "street_style",
+      ]);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   test("keeps report actions disabled while pending and disabled", () => {

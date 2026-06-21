@@ -144,11 +144,13 @@ function getPersonalItemsReportTemperatureLabel(
 }
 
 function getPersonalItemsReportChipValues(report: PersonalItemsReport) {
-  return [
+  const values = [
     ...(report.personalItemsOverview?.dominantSeasons || []),
     ...(report.personalItemsOverview?.dominantStyles || []).slice(0, 2),
     report.colorAnalysis?.paletteType,
   ].filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(values));
 }
 
 function getPersonalItemsReportScoreRows(
