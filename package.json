@@ -67,12 +67,12 @@
     "vitest": "^4.1.2"
   },
   "allowScripts": {
-    "@google/genai@2.7.0": true,
     "esbuild@0.28.1": true,
     "fsevents@2.3.3": true,
     "fsevents@2.3.2": true,
-    "koffi@2.16.2": true,
     "protobufjs@7.6.4": true,
-    "sharp@0.34.5": true
+    "sharp@0.34.5": true,
+    "@google/genai@2.9.0": true,
+    "koffi@3.0.2": true
   }
 }
