@@ -7,8 +7,10 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { CssBaseline } from "@mui/material";
+import { ThemeProvider } from "@mui/material/styles";
 import type { ComponentProps } from "react";
+import { createAppTheme } from "../theme";
 
 vi.mock("../i18n/useI18n", () => ({
   useI18n: () => ({
@@ -18,7 +20,7 @@ vi.mock("../i18n/useI18n", () => ({
 
 import ClothingCard from "./ClothingCard";
 
-const theme = createTheme();
+const theme = createAppTheme("light");
 
 const item: ComponentProps<typeof ClothingCard>["item"] = {
   id: "item-1",
@@ -32,9 +34,34 @@ const item: ComponentProps<typeof ClothingCard>["item"] = {
 function renderCard(props: Partial<ComponentProps<typeof ClothingCard>> = {}) {
   return render(
     <ThemeProvider theme={theme}>
+      <CssBaseline />
       <ClothingCard item={item} {...props} />
     </ThemeProvider>,
   );
+}
+
+function expectGeneratedCssDeclaration(
+  element: Element | null,
+  property: string,
+  value: string,
+) {
+  expect(element).not.toBeNull();
+  const classSelectors = Array.from(element!.classList).map(
+    (className) => `.${className}`,
+  );
+  const matchingCssText = Array.from(document.styleSheets)
+    .flatMap((sheet) => Array.from(sheet.cssRules))
+    .filter(
+      (rule): rule is CSSStyleRule =>
+        rule instanceof CSSStyleRule &&
+        classSelectors.some((selector) => rule.selectorText.includes(selector)),
+    )
+    .map((rule) => rule.style.cssText)
+    .join("\n")
+    .replace(/\s+/g, "");
+  const expectedDeclaration = `${property}:${value};`.replace(/\s+/g, "");
+
+  expect(matchingCssText).toContain(expectedDeclaration);
 }
 
 describe("ClothingCard", () => {
@@ -529,8 +556,12 @@ describe("ClothingCard", () => {
     expect(root).toHaveStyle({
       borderRadius: "0",
       boxShadow: "none",
-      border: "0.5px solid var(--cw-color-product-dense-border)",
     });
+    expectGeneratedCssDeclaration(
+      root,
+      "border",
+      "0.5px solid var(--cw-color-product-dense-border)",
+    );
     expect(details).toHaveStyle({ minHeight: "50px" });
     expect(title).toHaveStyle({
       fontSize: "13px",
@@ -554,11 +585,23 @@ describe("ClothingCard", () => {
     });
     const image = await screen.findByRole("img", { name: item.name ?? "" });
 
-    expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
-      borderRadius: "var(--cw-radius-card)",
-      boxShadow: "var(--cw-shadow-wardrobe-card)",
-      border: "1px solid var(--cw-color-product-border)",
-    });
+    const root = container.querySelector(".wardrobe-card-root");
+
+    expectGeneratedCssDeclaration(
+      root,
+      "border-radius",
+      "var(--cw-radius-card)",
+    );
+    expectGeneratedCssDeclaration(
+      root,
+      "box-shadow",
+      "var(--cw-shadow-wardrobe-card)",
+    );
+    expectGeneratedCssDeclaration(
+      root,
+      "border",
+      "1px solid var(--cw-color-product-border)",
+    );
     expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({
       minHeight: "64px",
     });
@@ -580,11 +623,17 @@ describe("ClothingCard", () => {
     });
     const image = await screen.findByRole("img", { name: item.name ?? "" });
 
-    expect(container.querySelector(".wardrobe-card-root")).toHaveStyle({
+    const root = container.querySelector(".wardrobe-card-root");
+
+    expect(root).toHaveStyle({
       borderRadius: "0",
       boxShadow: "none",
-      border: "0.5px solid var(--cw-color-product-dense-border)",
     });
+    expectGeneratedCssDeclaration(
+      root,
+      "border",
+      "0.5px solid var(--cw-color-product-dense-border)",
+    );
     expect(container.querySelector(".wardrobe-card-details")).toHaveStyle({
       minHeight: "42px",
     });
