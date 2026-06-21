@@ -1,12 +1,138 @@
 version: 2
+
 updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 8
+
     groups:
-      dev-dependencies:
-        dependency-type: "development"
-      production-dependencies:
+      react-ui:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+          - "@mui/*"
+          - "@emotion/*"
+          - "recharts"
+          - "lucide-react"
+
+      vite-build:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "vite-*"
+
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "jsdom"
+
+      playwright:
+        patterns:
+          - "@playwright/*"
+          - "playwright"
+
+      eslint:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "typescript-eslint"
+          - "eslint-*"
+          - "@typescript-eslint/*"
+          - "globals"
+
+      typescript:
+        patterns:
+          - "typescript"
+          - "ts-node"
+          - "tsx"
+
+      formatting:
+        patterns:
+          - "prettier"
+
+      quality-tooling:
+        patterns:
+          - "dependency-cruiser"
+          - "madge"
+          - "knip"
+
+      server-runtime:
         dependency-type: "production"
+        patterns:
+          - "express"
+          - "@types/express"
+          - "helmet"
+          - "cors"
+          - "cookie"
+          - "cookie-parser"
+          - "pg"
+          - "zod"
+          - "nanoid"
+          - "jsonwebtoken"
+          - "jose"
+          - "openid-client"
+          - "@simplewebauthn/*"
+
+      ai-and-storage:
+        dependency-type: "production"
+        patterns:
+          - "openai"
+          - "@aws-sdk/*"
+          - "sharp"
+          - "pdf-lib"
+
+      other-production:
+        dependency-type: "production"
+        exclude-patterns:
+          - "react"
+          - "react-dom"
+          - "@mui/*"
+          - "@emotion/*"
+          - "recharts"
+          - "lucide-react"
+          - "express"
+          - "helmet"
+          - "cors"
+          - "cookie"
+          - "cookie-parser"
+          - "pg"
+          - "zod"
+          - "nanoid"
+          - "jsonwebtoken"
+          - "jose"
+          - "openid-client"
+          - "@simplewebauthn/*"
+          - "openai"
+          - "@aws-sdk/*"
+          - "sharp"
+          - "pdf-lib"
+
+      other-development:
+        dependency-type: "development"
+        exclude-patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "vite-*"
+          - "vitest"
+          - "@vitest/*"
+          - "jsdom"
+          - "@playwright/*"
+          - "playwright"
+          - "eslint"
+          - "@eslint/*"
+          - "typescript-eslint"
+          - "eslint-*"
+          - "@typescript-eslint/*"
+          - "globals"
+          - "typescript"
+          - "ts-node"
+          - "tsx"
+          - "prettier"
+          - "dependency-cruiser"
+          - "madge"
+          - "knip"
