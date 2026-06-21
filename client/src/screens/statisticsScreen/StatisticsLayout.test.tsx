@@ -220,7 +220,7 @@ describe("StatisticsLayout", () => {
     expect(getComputedStyle(header!).paddingTop).toBe("12px");
     expect(getComputedStyle(header!).paddingBottom).toBe("8px");
     expect(getComputedStyle(header!).backgroundColor).toBe("rgb(21, 32, 31)");
-    expect(getComputedStyle(header!).borderBottomWidth).toBe("");
+    expect(getComputedStyle(header!).borderBottomStyle).toBe("none");
     expect(getComputedStyle(content!).backgroundColor).toBe("rgb(16, 24, 23)");
     expect(getComputedStyle(content!).overflowY).toBe("auto");
     expect(getComputedStyle(content!).paddingTop).toBe("8px");

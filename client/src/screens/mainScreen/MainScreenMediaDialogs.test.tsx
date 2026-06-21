@@ -194,7 +194,7 @@ describe("MainScreenMediaDialogs", () => {
     expect(getComputedStyle(header!).paddingBottom).toBe("8px");
     expect(getComputedStyle(header!).paddingLeft).toBe("16px");
     expect(getComputedStyle(header!).backgroundColor).toBe("rgb(21, 32, 31)");
-    expect(getComputedStyle(header!).borderBottomWidth).toBe("");
+    expect(getComputedStyle(header!).borderBottomStyle).toBe("none");
     expect(getComputedStyle(content!).backgroundColor).toBe("rgb(16, 24, 23)");
     expect(getComputedStyle(content!).paddingTop).toBe("8px");
     expect(getComputedStyle(footer!).backgroundColor).toBe("rgb(21, 32, 31)");
