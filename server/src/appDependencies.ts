@@ -154,16 +154,8 @@ import {
   processWardrobeUploadFilesInChild,
   processWardrobeUploadUrlsInChild,
 } from "./wardrobeUploadProcessingRunner.js";
-import {
-  analyzeWardrobeImageUrl,
-  analyzeWardrobeProductPageImage,
-} from "./wardrobeImageAnalysis.js";
+import { analyzeWardrobeImageUrl } from "./wardrobeImageAnalysis.js";
 import { cleanupUploadedWardrobeItemImage } from "./wardrobeImageCleanup.js";
-import {
-  buildRemoteWardrobeImageSourceKey,
-  downloadWardrobeProductPageImage,
-  fetchProductPageHtmlWithImpers,
-} from "./wardrobeProductPageImport.js";
 import { createUploadedWardrobeItemEmbedding } from "./wardrobeSemanticEmbedding.js";
 import { validateCapsuleAnchorItems } from "./capsuleAnchors.js";
 import { createMcpOAuthConfig } from "./mcp/oauthConfig.js";
@@ -195,15 +187,11 @@ function resolveGoogleAuthClient({
 function createWardrobeImageStorageDependencies() {
   return {
     analyzeWardrobeImageUrlImpl: analyzeWardrobeImageUrl,
-    analyzeWardrobeProductPageImageImpl: analyzeWardrobeProductPageImage,
-    buildRemoteWardrobeImageSourceKeyImpl: buildRemoteWardrobeImageSourceKey,
     cleanupUploadedWardrobeItemImageImpl: cleanupUploadedWardrobeItemImage,
     createUploadedWardrobeItemEmbeddingImpl:
       createUploadedWardrobeItemEmbedding,
     deleteR2ObjectsImpl: deleteObjectsFromR2,
     deleteUploadedWardrobeItemImpl: deleteUploadedWardrobeItemById,
-    downloadWardrobeProductPageImageImpl: downloadWardrobeProductPageImage,
-    fetchProductPageHtmlWithImpersImpl: fetchProductPageHtmlWithImpers,
     uploadWardrobeDerivativeImageToR2Impl: uploadWardrobeDerivativeImageToR2,
     uploadWardrobeImageToR2Impl: uploadWardrobeImageToR2,
   };

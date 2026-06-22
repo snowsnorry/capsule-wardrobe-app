@@ -1,8 +1,6 @@
 import { expect, test, vi } from "vitest";
 import {
-  analyzeWardrobeProductPageImage,
   analyzeWardrobeImageUrl,
-  buildWardrobeProductPageImageAnalysisPrompt,
   buildWardrobeImageAnalysisPrompt,
   calculateWardrobeImageIsNeutral,
   hasWardrobeImageAnalysisMetadata,
@@ -16,22 +14,6 @@ test("wardrobe image analysis prompt combines YAML system and user messages", ()
   expect(prompt).toContain("User:");
   expect(prompt).toContain("expert fashion image attribute extraction");
   expect(prompt).toContain("attached product image");
-});
-
-test("wardrobe product page image analysis prompt renders page URL and HTML", () => {
-  const prompt = buildWardrobeProductPageImageAnalysisPrompt({
-    productPageHtml:
-      "<html><head><title>Linen shirt</title></head><body>A&B</body></html>",
-    productPageUrl: "https://shop.example.com/products/linen-shirt",
-  });
-
-  expect(prompt).toContain("System:");
-  expect(prompt).toContain("User:");
-  expect(prompt).toContain("PRODUCT_PAGE_URL:");
-  expect(prompt).toContain("https://shop.example.com/products/linen-shirt");
-  expect(prompt).toContain("<title>Linen shirt</title>");
-  expect(prompt).toContain("A&B");
-  expect(prompt).not.toMatch(/\{\{product_page_/);
 });
 
 test("wardrobe image analysis normalizes recognized metadata fields", () => {
@@ -110,50 +92,6 @@ test("wardrobe image analysis calls fixed DeepInfra Gemma model and logs respons
   expect(logInfoImpl).toHaveBeenCalledWith(
     "[wardrobe-image-analysis][llm-response]",
     expect.stringContaining("https://images.example.com/item.webp"),
-  );
-});
-
-test("wardrobe product page image analysis sends buffered image and page evidence", async () => {
-  const generateJsonWithLlmImpl = vi.fn(async () => ({
-    response: { choices: [], output_text: '{"name":"Linen shirt"}' },
-    json: { name: "Linen shirt", color_base: ["white"] },
-  }));
-  const logInfoImpl = vi.fn();
-  const image = {
-    buffer: Buffer.from("image-bytes"),
-    filename: "product.jpg",
-    mimeType: "image/jpeg",
-  };
-
-  const result = await analyzeWardrobeProductPageImage({
-    image,
-    imageUrl: "https://cdn.example.com/product.jpg",
-    productPageHtml: "<html><h1>Linen shirt</h1></html>",
-    productPageUrl: "https://shop.example.com/products/linen-shirt",
-    generateJsonWithLlmImpl,
-    logInfoImpl,
-  });
-
-  expect(result.hasMetadata).toBe(true);
-  expect(result.metadata.name).toBe("Linen shirt");
-  expect(result.metadata.is_neutral).toBe(true);
-  expect(generateJsonWithLlmImpl).toHaveBeenCalledWith(
-    expect.stringContaining("https://shop.example.com/products/linen-shirt"),
-    expect.objectContaining({
-      images: [
-        expect.objectContaining({
-          buffer: Buffer.from("image-bytes"),
-          imageUrl: "https://cdn.example.com/product.jpg",
-          mimeType: "image/jpeg",
-        }),
-      ],
-      systemPrompt: " ",
-      userProfile: { llm: "deepinfra:google/gemma-4-31B-it" },
-    }),
-  );
-  expect(logInfoImpl).toHaveBeenCalledWith(
-    "[wardrobe-product-page-image-analysis][llm-response]",
-    expect.stringContaining("https://shop.example.com/products/linen-shirt"),
   );
 });
 

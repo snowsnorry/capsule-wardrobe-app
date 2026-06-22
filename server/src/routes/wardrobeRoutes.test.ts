@@ -1258,7 +1258,7 @@ test("wardrobe upload route processes images and creates uploaded items", async 
   ]);
 });
 
-test("wardrobe URL upload route imports product pages with og images", async (t) => {
+test("wardrobe URL upload route imports image URLs from worker results", async (t) => {
   const calls: unknown[] = [];
   const metadata = {
     name: "Linen shirt",
@@ -1289,16 +1289,16 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
         });
         const source = {
           imageUrl: "https://shop.example.com/images/linen.jpg",
-          kind: "product-page",
-          productPageUrl: "https://shop.example.com/products/linen-shirt",
+          kind: "direct-image",
+          productPageUrl: "https://shop.example.com/images/linen.jpg",
           rawImageUrl: "https://shop.example.com/images/linen.jpg",
           sourceImageKey: "wardrobe/profile/remote-source.webp",
-          sourceImageUrl: null,
+          sourceImageUrl: "https://shop.example.com/images/linen.jpg",
         };
         payload.onEvent?.({
           event: "source-uploaded",
           inputIndex: 0,
-          kind: "product-page",
+          kind: "direct-image",
           source,
           type: "event",
         });
@@ -1347,7 +1347,7 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
         calls.push({ type: "updateMetadata", payload });
         return {
           id: payload.id,
-          url: "https://shop.example.com/products/linen-shirt",
+          url: "https://shop.example.com/images/linen.jpg",
           imageUrl: payload.imageUrl,
           rawImageUrl: "https://shop.example.com/images/linen.jpg",
           source: "uploaded",
@@ -1359,7 +1359,7 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
   });
 
   const upload = await requestUploadUrls(baseUrl, [
-    "https://shop.example.com/products/linen-shirt",
+    "https://shop.example.com/images/linen.jpg",
   ]);
 
   expect(upload.response.status).toBe(200);
@@ -1385,7 +1385,7 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
       expect.objectContaining({
         id: "wardrobe-url-upload-1",
         name: "Linen shirt",
-        url: "https://shop.example.com/products/linen-shirt",
+        url: "https://shop.example.com/images/linen.jpg",
         imageUrl:
           "https://images.example.com/wardrobe/profile/remote-source_clean.png",
         rawImageUrl: "https://shop.example.com/images/linen.jpg",
@@ -1398,7 +1398,7 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
     {
       type: "processUrls",
       imageLlm: "openai:gpt-image-2",
-      urls: ["https://shop.example.com/products/linen-shirt"],
+      urls: ["https://shop.example.com/images/linen.jpg"],
     },
     {
       type: "saveUploaded",
@@ -1408,7 +1408,7 @@ test("wardrobe URL upload route imports product pages with og images", async (t)
           {
             imageUrl: "https://shop.example.com/images/linen.jpg",
             rawImageUrl: "https://shop.example.com/images/linen.jpg",
-            url: "https://shop.example.com/products/linen-shirt",
+            url: "https://shop.example.com/images/linen.jpg",
           },
         ],
       },
@@ -1457,9 +1457,6 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
     fit: "regular",
     closureType: ["button"],
   };
-  const analyzeProductPage = vi.fn(async () => {
-    throw new Error("should_not_analyze_product_page");
-  });
   const cleanup = vi.fn(async () => {
     throw new Error("should_not_cleanup_direct_image");
   });
@@ -1545,7 +1542,6 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
           },
         ];
       },
-      analyzeWardrobeProductPageImageImpl: analyzeProductPage,
       cleanupUploadedWardrobeItemImageImpl: cleanup,
       createUploadedWardrobeItemEmbeddingImpl: async (item) => {
         calls.push({ type: "embed", item });
@@ -1601,7 +1597,6 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
       }),
     ],
   });
-  expect(analyzeProductPage).not.toHaveBeenCalled();
   expect(cleanup).not.toHaveBeenCalled();
   expect(calls).toEqual([
     {
@@ -1643,26 +1638,26 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
   ]);
 });
 
-test("wardrobe URL upload route marks product pages without og images as failed", async (t) => {
+test("wardrobe URL upload route marks non-image URLs as failed", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       processWardrobeUploadUrlsInChildImpl: async () => [
         {
           inputIndex: 0,
-          message: "product_page_og_image_missing",
+          message: "image_url_invalid",
           ok: false,
           source: null,
         },
       ],
       saveUploadedWardrobeItemsImpl: async () => {
-        throw new Error("should_not_save_without_og_image");
+        throw new Error("should_not_save_non_image_url");
       },
     },
   });
 
   const upload = await requestUploadUrls(baseUrl, [
-    "https://shop.example.com/products/missing-image",
+    "https://shop.example.com/products/not-an-image",
   ]);
 
   expect(upload.response.status).toBe(200);
@@ -1694,26 +1689,26 @@ test("wardrobe URL upload route marks product pages without og images as failed"
   ]);
 });
 
-test("wardrobe URL upload route marks product pages with undownloadable og images as failed", async (t) => {
+test("wardrobe URL upload route marks undownloadable image URLs as failed", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       processWardrobeUploadUrlsInChildImpl: async () => [
         {
           inputIndex: 0,
-          message: "product_page_image_download_failed",
+          message: "image_url_fetch_failed_404",
           ok: false,
           source: null,
         },
       ],
       saveUploadedWardrobeItemsImpl: async () => {
-        throw new Error("should_not_save_without_downloaded_image");
+        throw new Error("should_not_save_without_downloaded_image_url");
       },
     },
   });
 
   const upload = await requestUploadUrls(baseUrl, [
-    "https://shop.example.com/products/missing-image-file",
+    "https://shop.example.com/products/missing-image-file.jpg",
   ]);
 
   expect(upload.response.status).toBe(200);
@@ -1755,11 +1750,11 @@ test("wardrobe URL upload route marks source save failures as failed", async (t)
           ok: true,
           source: {
             imageUrl: "https://shop.example.com/image.jpg",
-            kind: "product-page",
-            productPageUrl: "https://shop.example.com/product",
+            kind: "direct-image",
+            productPageUrl: "https://shop.example.com/image.jpg",
             rawImageUrl: "https://shop.example.com/image.jpg",
             sourceImageKey: "wardrobe/profile/source.webp",
-            sourceImageUrl: null,
+            sourceImageUrl: "https://shop.example.com/image.jpg",
           },
         },
       ],
@@ -1768,7 +1763,7 @@ test("wardrobe URL upload route marks source save failures as failed", async (t)
   });
 
   const upload = await requestUploadUrls(baseUrl, [
-    "https://shop.example.com/product",
+    "https://shop.example.com/image.jpg",
   ]);
 
   expect(upload.response.status).toBe(200);
@@ -1811,7 +1806,7 @@ test("wardrobe URL upload route emits fatal when worker fails", async (t) => {
   });
 
   const upload = await requestUploadUrls(baseUrl, [
-    "https://shop.example.com/product",
+    "https://shop.example.com/image.jpg",
   ]);
 
   expect(upload.response.status).toBe(200);
@@ -1826,11 +1821,11 @@ test("wardrobe URL upload route marks early saved sources failed when worker fai
   const calls: unknown[] = [];
   const source = {
     imageUrl: "https://shop.example.com/images/linen.jpg",
-    kind: "product-page",
-    productPageUrl: "https://shop.example.com/products/linen-shirt",
+    kind: "direct-image",
+    productPageUrl: "https://shop.example.com/images/linen.jpg",
     rawImageUrl: "https://shop.example.com/images/linen.jpg",
     sourceImageKey: "wardrobe/profile/remote-source.webp",
-    sourceImageUrl: null,
+    sourceImageUrl: "https://shop.example.com/images/linen.jpg",
   };
   const { baseUrl } = await startTestServer(t, {
     overrides: {
@@ -1838,7 +1833,7 @@ test("wardrobe URL upload route marks early saved sources failed when worker fai
         payload.onEvent?.({
           event: "source-uploaded",
           inputIndex: 0,
-          kind: "product-page",
+          kind: "direct-image",
           source,
           type: "event",
         });
@@ -1871,7 +1866,7 @@ test("wardrobe URL upload route marks early saved sources failed when worker fai
   });
 
   const upload = await requestUploadUrls(baseUrl, [
-    "https://shop.example.com/products/linen-shirt",
+    "https://shop.example.com/images/linen.jpg",
   ]);
 
   expect(upload.response.status).toBe(200);
@@ -1888,7 +1883,7 @@ test("wardrobe URL upload route marks early saved sources failed when worker fai
           {
             imageUrl: "https://shop.example.com/images/linen.jpg",
             rawImageUrl: "https://shop.example.com/images/linen.jpg",
-            url: "https://shop.example.com/products/linen-shirt",
+            url: "https://shop.example.com/images/linen.jpg",
           },
         ],
       },
@@ -1905,7 +1900,7 @@ test("wardrobe URL upload route marks early saved sources failed when worker fai
   ]);
 });
 
-test("wardrobe URL upload route continues after a single product page image failure", async (t) => {
+test("wardrobe URL upload route continues after a single image URL failure", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   const calls: unknown[] = [];
   const metadata = {
@@ -1934,7 +1929,7 @@ test("wardrobe URL upload route continues after a single product page image fail
         return [
           {
             inputIndex: 0,
-            message: "product_page_og_image_missing",
+            message: "image_url_invalid",
             ok: false,
             source: null,
           },
@@ -1956,11 +1951,11 @@ test("wardrobe URL upload route continues after a single product page image fail
             ok: true,
             source: {
               imageUrl: "https://shop.example.com/tee.jpg",
-              kind: "product-page",
-              productPageUrl: "https://shop.example.com/products/tee",
+              kind: "direct-image",
+              productPageUrl: "https://shop.example.com/tee.jpg",
               rawImageUrl: "https://shop.example.com/tee.jpg",
               sourceImageKey: "wardrobe/profile/tee-source.webp",
-              sourceImageUrl: null,
+              sourceImageUrl: "https://shop.example.com/tee.jpg",
             },
           },
         ];
@@ -1984,7 +1979,7 @@ test("wardrobe URL upload route continues after a single product page image fail
       createUploadedWardrobeItemEmbeddingImpl: async () => [0.2, 0.3],
       updateUploadedWardrobeItemMetadataImpl: async (payload) => ({
         id: payload.id,
-        url: "https://shop.example.com/products/tee",
+        url: "https://shop.example.com/tee.jpg",
         imageUrl: payload.imageUrl,
         rawImageUrl: "https://shop.example.com/tee.jpg",
         source: "uploaded",
@@ -1995,8 +1990,8 @@ test("wardrobe URL upload route continues after a single product page image fail
   });
 
   const upload = await requestUploadUrls(baseUrl, [
-    "https://shop.example.com/products/missing-image",
-    "https://shop.example.com/products/tee",
+    "https://shop.example.com/missing-image.jpg",
+    "https://shop.example.com/tee.jpg",
   ]);
 
   expect(upload.response.status).toBe(200);
@@ -2012,7 +2007,7 @@ test("wardrobe URL upload route continues after a single product page image fail
       expect.objectContaining({
         id: "wardrobe-url-upload-tee",
         name: "Cotton tee",
-        url: "https://shop.example.com/products/tee",
+        url: "https://shop.example.com/tee.jpg",
         imageUrl:
           "https://images.example.com/wardrobe/profile/tee-source_clean.png",
         rawImageUrl: "https://shop.example.com/tee.jpg",
@@ -2025,8 +2020,8 @@ test("wardrobe URL upload route continues after a single product page image fail
     {
       type: "processUrls",
       urls: [
-        "https://shop.example.com/products/missing-image",
-        "https://shop.example.com/products/tee",
+        "https://shop.example.com/missing-image.jpg",
+        "https://shop.example.com/tee.jpg",
       ],
     },
     {
@@ -2035,7 +2030,7 @@ test("wardrobe URL upload route continues after a single product page image fail
         {
           imageUrl: "https://shop.example.com/tee.jpg",
           rawImageUrl: "https://shop.example.com/tee.jpg",
-          url: "https://shop.example.com/products/tee",
+          url: "https://shop.example.com/tee.jpg",
         },
       ],
     },

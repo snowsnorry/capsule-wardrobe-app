@@ -136,23 +136,13 @@ function createWardrobeUrlUploadDependencies() {
         ok: true,
         source: {
           imageUrl: "https://cdn.example.com/product.jpg",
-          kind: "product-page",
+          kind: "direct-image",
           productPageUrl: String(url || "https://shop.example.com/product"),
           rawImageUrl: "https://cdn.example.com/product.jpg",
-          sourceImageKey: "wardrobe/profile/product-page-source.webp",
-          sourceImageUrl: null,
+          sourceImageKey: "wardrobe/profile/direct-image-source.webp",
+          sourceImageUrl: "https://cdn.example.com/product.jpg",
         },
       })),
-    downloadWardrobeProductPageImageImpl: async (payload) => ({
-      buffer: Buffer.from("product-page-image"),
-      imageUrl: String(payload?.imageUrl || ""),
-      mimeType: "image/jpeg",
-      originalName: "product-page-image.jpg",
-    }),
-    fetchProductPageHtmlWithImpersImpl: async (payload) => ({
-      html: '<html><head><meta property="og:image" content="https://cdn.example.com/product.jpg"></head></html>',
-      url: String(payload?.url || "https://shop.example.com/product"),
-    }),
   };
 }
 
@@ -177,13 +167,6 @@ function createWardrobeStorageDependencies() {
       metadata: createUploadedWardrobeMetadata(),
       rawResponse: "{}",
     }),
-    analyzeWardrobeProductPageImageImpl: async () => ({
-      hasMetadata: true,
-      metadata: createUploadedWardrobeMetadata(),
-      rawResponse: "{}",
-    }),
-    buildRemoteWardrobeImageSourceKeyImpl: () =>
-      "wardrobe/profile/product-page-source.webp",
     cleanupUploadedWardrobeItemImageImpl: async () =>
       createUploadedWardrobeCleanupResult(),
     uploadWardrobeDerivativeImageToR2Impl: async ({

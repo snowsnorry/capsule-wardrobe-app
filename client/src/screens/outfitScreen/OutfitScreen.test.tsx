@@ -1617,7 +1617,7 @@ describe("OutfitScreen", () => {
       items: [
         {
           id: 42,
-          url: "https://example.com/original-product-page",
+          url: "https://example.com/original-image-url",
           name: "Uploaded jacket",
           category: "outerwear",
           imageUrl,
@@ -1648,7 +1648,7 @@ describe("OutfitScreen", () => {
       items: [
         {
           id: 43,
-          url: "https://example.com/original-product-page",
+          url: "https://example.com/original-image-url",
           name: "Catalog-backed personal item",
           category: "outerwear",
           imageUrl,

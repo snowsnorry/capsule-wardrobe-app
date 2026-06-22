@@ -1,7 +1,7 @@
 import { logError } from "../logger.js";
 import { resolveImageLlmProvider } from "../ai/imageLlm.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
-import { normalizeWardrobeProductPageUploadUrls } from "../wardrobeProductPageImport.js";
+import { normalizeWardrobeImageUploadUrls } from "../wardrobeImageUrlImport.js";
 import {
   advanceWardrobeUploadProgress,
   createWardrobeUploadAbortState,
@@ -29,7 +29,7 @@ function resolveSourceSaveResult(result) {
   return result?.item || null;
 }
 
-async function saveWardrobeProductPageUploadedItem({ context, email, source }) {
+async function saveWardrobeImageUrlUploadedItem({ context, email, source }) {
   const items = await context.saveUploadedWardrobeItemsImpl({
     email,
     items: [
@@ -43,14 +43,14 @@ async function saveWardrobeProductPageUploadedItem({ context, email, source }) {
   return Array.isArray(items) ? items[0] || null : null;
 }
 
-async function saveWardrobeProductPageUploadedItemWithProgress({
+async function saveWardrobeImageUrlUploadedItemWithProgress({
   context,
   email,
   progress,
   res,
   source,
 }) {
-  const item = await saveWardrobeProductPageUploadedItem({
+  const item = await saveWardrobeImageUrlUploadedItem({
     context,
     email,
     source,
@@ -83,7 +83,7 @@ function scheduleWardrobeUrlSourceSave({
     return;
   }
 
-  const savePromise = saveWardrobeProductPageUploadedItemWithProgress({
+  const savePromise = saveWardrobeImageUrlUploadedItemWithProgress({
     context,
     email,
     progress,
@@ -113,7 +113,7 @@ async function getSavedWardrobeUrlSourceItem({
     return resolveSourceSaveResult(await savedResult);
   }
 
-  return saveWardrobeProductPageUploadedItemWithProgress({
+  return saveWardrobeImageUrlUploadedItemWithProgress({
     context,
     email,
     progress,
@@ -188,7 +188,7 @@ function registerWardrobeUrlUploadRoute(app, context) {
     context.requireAuth,
     context.requireCsrf,
     async (req, res) => {
-      const urls = normalizeWardrobeProductPageUploadUrls(req.body?.urls);
+      const urls = normalizeWardrobeImageUploadUrls(req.body?.urls);
       if (!urls) {
         return res.status(400).json({ error: "invalid_payload" });
       }

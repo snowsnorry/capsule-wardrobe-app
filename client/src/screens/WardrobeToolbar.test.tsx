@@ -18,7 +18,7 @@ const labels: Record<string, string> = {
   "wardrobe.uploadMenu": "Choose upload method",
   "wardrobe.uploadMenuLabel": "Upload methods",
   "wardrobe.uploadPhoto": "Upload photo",
-  "wardrobe.uploadUrl": "Upload URL",
+  "wardrobe.uploadUrl": "Upload image URL",
 };
 
 const t = (key: string) => labels[key] || key;

@@ -66,7 +66,7 @@ describe("outfit item mappers", () => {
       toSnapshot(
         {
           id: 7,
-          url: "https://example.com/uploaded-product-page",
+          url: "https://example.com/uploaded-image-url",
           name: "Uploaded",
           source: "uploaded",
         },
@@ -80,7 +80,7 @@ describe("outfit item mappers", () => {
       toSnapshot(
         {
           wardrobeId: 8,
-          url: "https://example.com/uploaded-product-page",
+          url: "https://example.com/uploaded-image-url",
           name: "Uploaded",
           source: "uploaded",
         },
@@ -93,14 +93,14 @@ describe("outfit item mappers", () => {
     expect(
       toSnapshot(
         {
-          url: "https://example.com/uploaded-product-page",
+          url: "https://example.com/uploaded-image-url",
           name: "Uploaded",
           source: "uploaded",
         },
         "personal",
       ),
     ).toMatchObject({
-      url: "https://example.com/uploaded-product-page",
+      url: "https://example.com/uploaded-image-url",
       source: "uploaded",
     });
     expect(

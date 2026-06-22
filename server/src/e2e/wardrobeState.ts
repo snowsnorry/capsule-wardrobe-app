@@ -125,30 +125,6 @@ function createE2eAnalysisDependencies() {
       ),
       rawResponse: "e2e-uploaded-wardrobe-metadata",
     }),
-    analyzeWardrobeProductPageImageImpl: async (payload) => ({
-      hasMetadata: true,
-      metadata: buildUploadedMetadata(
-        getUploadedIndexFromImageUrl(payload?.imageUrl),
-      ),
-      rawResponse: "e2e-uploaded-wardrobe-product-page-metadata",
-    }),
-  };
-}
-
-function createE2eProductPageDependencies() {
-  return {
-    buildRemoteWardrobeImageSourceKeyImpl: () =>
-      "wardrobe/e2e/product-page-source.webp",
-    downloadWardrobeProductPageImageImpl: async (payload) => ({
-      buffer: Buffer.from("e2e-product-page-image"),
-      imageUrl: String(payload?.imageUrl || ""),
-      mimeType: "image/jpeg",
-      originalName: "e2e-product-page-image.jpg",
-    }),
-    fetchProductPageHtmlWithImpersImpl: async (payload) => ({
-      html: '<html><head><meta property="og:image" content="https://images.example.com/uploaded-e2e-1.jpg"></head></html>',
-      url: String(payload?.url || "https://shop.example.com/product"),
-    }),
   };
 }
 
@@ -207,11 +183,11 @@ function buildE2eUrlProcessingResult(url: unknown, inputIndex: number) {
     analysis: {
       hasMetadata: true,
       metadata: buildUploadedMetadata(inputIndex + 1),
-      rawResponse: "e2e-uploaded-wardrobe-product-page-metadata",
+      rawResponse: "e2e-uploaded-wardrobe-image-url-metadata",
     },
     cleanup: {
       cleanImage: {
-        key: "wardrobe/e2e/product-page-source.webp.clean",
+        key: "wardrobe/e2e/image-url-source.webp.clean",
         url: "https://images.example.com/uploaded-e2e-1.jpg",
         digest: "e2e-clean-digest",
       },
@@ -221,11 +197,11 @@ function buildE2eUrlProcessingResult(url: unknown, inputIndex: number) {
     ok: true,
     source: {
       imageUrl: "https://images.example.com/uploaded-e2e-1.jpg",
-      kind: "product-page",
+      kind: "direct-image",
       productPageUrl: String(url || "https://shop.example.com/product"),
       rawImageUrl: "https://images.example.com/uploaded-e2e-1.jpg",
-      sourceImageKey: "wardrobe/e2e/product-page-source.webp",
-      sourceImageUrl: null,
+      sourceImageKey: "wardrobe/e2e/image-url-source.webp",
+      sourceImageUrl: "https://images.example.com/uploaded-e2e-1.jpg",
     },
   };
 }
@@ -254,7 +230,6 @@ function createE2eWardrobeDependencies(memory: E2eWardrobeMemory) {
   return {
     ...createE2eAnalysisDependencies(),
     ...createE2ePersistenceDependencies(memory),
-    ...createE2eProductPageDependencies(),
     ...createE2eUploadProcessingDependencies(memory),
     cleanupUploadedWardrobeItemImageImpl: async (payload) => ({
       cleanImage: {

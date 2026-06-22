@@ -44,7 +44,7 @@ type WardrobeUploadProcessingPayload = {
 
 type WardrobeUploadProcessingSource = {
   imageUrl: string;
-  kind: "file" | "direct-image" | "product-page";
+  kind: "file" | "direct-image";
   productPageUrl: string;
   rawImageUrl: string;
   sourceImageKey: string | null;
@@ -86,7 +86,7 @@ type WardrobeUploadProcessingEventName =
 type WardrobeUploadProcessingEvent = {
   event: WardrobeUploadProcessingEventName;
   inputIndex: number;
-  kind?: WardrobeUploadProcessingKind | "direct-image" | "product-page";
+  kind?: WardrobeUploadProcessingKind | "direct-image";
   message?: string | null;
   source?: WardrobeUploadProcessingSource | null;
   type: "event";

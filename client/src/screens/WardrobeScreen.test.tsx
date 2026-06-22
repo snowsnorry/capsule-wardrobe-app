@@ -229,7 +229,7 @@ const translations: Record<string, string> = {
   "wardrobe.uploadMenu": "Choose upload method",
   "wardrobe.uploadMenuLabel": "Upload methods",
   "wardrobe.uploadPhoto": "Upload photo",
-  "wardrobe.uploadUrl": "Upload URL",
+  "wardrobe.uploadUrl": "Upload image URL",
   "wardrobe.openMenu": "Open Personal items menu",
   "wardrobe.downloadFailed": "Failed to export Personal items PDF.",
   "wardrobe.filterLabel": "Personal item source",
@@ -237,7 +237,7 @@ const translations: Record<string, string> = {
   "wardrobe.removeFailed": "Failed to remove from Personal items.",
   "wardrobe.updateFailed": "Failed to update the item.",
   "wardrobe.uploadFailed": "Failed to upload personal item photos.",
-  "wardrobe.urlUploadFailed": "Failed to upload product URLs.",
+  "wardrobe.urlUploadFailed": "Failed to upload image URLs.",
   "wardrobe.failedUploadBadge": "Failed",
   "wardrobe.like": "Like",
   "wardrobe.likedBadge": "Liked",
@@ -297,7 +297,7 @@ const translations: Record<string, string> = {
     "Use a product image URL starting with http:// or https://.",
   "wardrobe.urlUploadDialog.invalidUrl":
     "Enter a URL that starts with http:// or https://.",
-  "wardrobe.urlUploadDialog.upload": "Upload URLs",
+  "wardrobe.urlUploadDialog.upload": "Upload image URLs",
   "wardrobe.reportGenerateFailed": "Failed to analyze Personal items.",
   "wardrobe.reportGenerating": "Analyzing Personal items",
   "wardrobe.reportLoadFailed": "Failed to load Personal items report.",
@@ -911,7 +911,9 @@ describe("WardrobeScreen", () => {
     await user.click(
       screen.getByRole("button", { name: "Choose upload method" }),
     );
-    await user.click(screen.getByRole("menuitem", { name: "Upload URL" }));
+    await user.click(
+      screen.getByRole("menuitem", { name: "Upload image URL" }),
+    );
 
     const dialog = screen.getByRole("dialog", {
       name: "Upload product image URLs",
@@ -1137,7 +1139,7 @@ describe("WardrobeScreen", () => {
     expect(screen.getByRole("button", { name: "Upload" })).toBeDisabled();
   });
 
-  test("uploads product URLs from the split upload menu", async () => {
+  test("uploads image URLs from the split upload menu", async () => {
     const user = userEvent.setup();
     renderScreen();
 
@@ -1145,13 +1147,15 @@ describe("WardrobeScreen", () => {
     await user.click(
       screen.getByRole("button", { name: "Choose upload method" }),
     );
-    await user.click(screen.getByRole("menuitem", { name: "Upload URL" }));
+    await user.click(
+      screen.getByRole("menuitem", { name: "Upload image URL" }),
+    );
 
     const dialog = screen.getByRole("dialog", {
       name: "Upload product image URLs",
     });
     const uploadButton = within(dialog).getByRole("button", {
-      name: "Upload URLs",
+      name: "Upload image URLs",
     });
     expect(uploadButton).toBeDisabled();
 

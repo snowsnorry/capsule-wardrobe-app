@@ -59,7 +59,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - liked-item API calls live in `client/src/api/likedItems.ts`
 - uploaded/catalog item actions are orchestrated through `client/src/app/wardrobeActions.ts`, `client/src/app/wardrobeItemActions.ts`, `client/src/app/wardrobeImageActions.ts`, `client/src/app/likedItemActions.ts`, and related wardrobe action modules
 - server HTTP behavior lives in `server/src/routes/wardrobeRoutes.ts`, `server/src/routes/wardrobeFileUploadRoute.ts`, `server/src/routes/wardrobeUrlUploadRoute.ts`, `server/src/routes/wardrobeUploadStream.ts`, and `server/src/routes/wardrobeUploadedItemUpdateRoute.ts`
-- upload normalization, product-page import, image analysis, embeddings, metadata updates, cleanup, PDF export, and child-process helpers live in root `server/src/wardrobe*.ts` modules
+- upload normalization, image URL import, image analysis, embeddings, metadata updates, cleanup, PDF export, and child-process helpers live in root `server/src/wardrobe*.ts` modules
 - uploaded/generated image persistence uses `server/src/r2Storage.ts` and `server/src/r2Delete.ts` when R2 is configured
 - uploaded wardrobe item API payloads and fixtures use camelCase image fields
 
@@ -188,7 +188,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 - `server/src/wardrobeItemDisplay.ts`
 - `server/src/wardrobeImageAnalysis.ts`
 - `server/src/wardrobeImageCleanup.ts`
-- `server/src/wardrobeProductPageImport.ts`
+- `server/src/wardrobeImageUrlImport.ts`
 - `server/src/wardrobeSemanticEmbedding.ts`
 - `server/src/wardrobeUploadImages*.ts`
 - `server/src/wardrobeUploadProcessing*.ts`

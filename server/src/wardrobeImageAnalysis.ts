@@ -1,20 +1,12 @@
 import {
   getPromptTemplateContent,
   loadPromptTemplate,
-  renderPromptTemplateContent,
 } from "./ai/promptTemplates.js";
 import { generateJsonWithLlm } from "./ai/deepinfra.js";
 import { logInfo } from "./logger.js";
-import type { ImageAssetLike } from "./ai/types.js";
 
 const IMAGE_ANALYSIS_PROMPT_TEMPLATE = loadPromptTemplate(
   new URL("./templates/prompt_image_analysis.yaml", import.meta.url),
-);
-const PRODUCT_PAGE_IMAGE_ANALYSIS_PROMPT_TEMPLATE = loadPromptTemplate(
-  new URL(
-    "./templates/prompt_product_page_image_analysis.yaml",
-    import.meta.url,
-  ),
 );
 const IMAGE_ANALYSIS_SYSTEM_PROMPT = getPromptTemplateContent(
   IMAGE_ANALYSIS_PROMPT_TEMPLATE,
@@ -22,14 +14,6 @@ const IMAGE_ANALYSIS_SYSTEM_PROMPT = getPromptTemplateContent(
 );
 const IMAGE_ANALYSIS_USER_PROMPT = getPromptTemplateContent(
   IMAGE_ANALYSIS_PROMPT_TEMPLATE,
-  "user",
-);
-const PRODUCT_PAGE_IMAGE_ANALYSIS_SYSTEM_PROMPT = getPromptTemplateContent(
-  PRODUCT_PAGE_IMAGE_ANALYSIS_PROMPT_TEMPLATE,
-  "system",
-);
-const PRODUCT_PAGE_IMAGE_ANALYSIS_USER_PROMPT = getPromptTemplateContent(
-  PRODUCT_PAGE_IMAGE_ANALYSIS_PROMPT_TEMPLATE,
   "user",
 );
 const IMAGE_ANALYSIS_MODEL = "google/gemma-4-31B-it";
@@ -182,28 +166,6 @@ function buildWardrobeImageAnalysisPrompt() {
   ].join("\n\n");
 }
 
-function buildWardrobeProductPageImageAnalysisPrompt({
-  productPageHtml,
-  productPageUrl,
-}: {
-  productPageHtml: string;
-  productPageUrl: string;
-}) {
-  const userPrompt = renderPromptTemplateContent(
-    PRODUCT_PAGE_IMAGE_ANALYSIS_USER_PROMPT,
-    {
-      product_page_html: productPageHtml,
-      product_page_url: productPageUrl,
-    },
-    "product page image analysis prompt",
-  );
-
-  return [
-    `System: ${PRODUCT_PAGE_IMAGE_ANALYSIS_SYSTEM_PROMPT}`,
-    `User: ${userPrompt}`,
-  ].join("\n\n");
-}
-
 function stringifyRawLlmResponse(response: unknown, json: unknown) {
   const outputText =
     response && typeof response === "object"
@@ -255,63 +217,8 @@ async function analyzeWardrobeImageUrl({
   };
 }
 
-async function analyzeWardrobeProductPageImage({
-  image,
-  imageUrl = null,
-  productPageHtml,
-  productPageUrl,
-  generateJsonWithLlmImpl = generateJsonWithLlm,
-  logInfoImpl = logInfo,
-}: {
-  image: ImageAssetLike;
-  imageUrl?: string | null;
-  productPageHtml: string;
-  productPageUrl: string;
-  generateJsonWithLlmImpl?: typeof generateJsonWithLlm;
-  logInfoImpl?: (...values: unknown[]) => void;
-}): Promise<WardrobeImageAnalysisResult> {
-  const { response, json } = await generateJsonWithLlmImpl(
-    buildWardrobeProductPageImageAnalysisPrompt({
-      productPageHtml,
-      productPageUrl,
-    }),
-    {
-      images: [
-        {
-          ...image,
-          imageUrl,
-        },
-      ],
-      systemPrompt: " ",
-      userProfile: { llm: `deepinfra:${IMAGE_ANALYSIS_MODEL}` },
-    },
-  );
-  const rawResponse = stringifyRawLlmResponse(response, json);
-  logInfoImpl(
-    "[wardrobe-product-page-image-analysis][llm-response]",
-    JSON.stringify({
-      imageUrl,
-      productPageUrl,
-      response: rawResponse,
-    }),
-  );
-  const metadata = normalizeWardrobeImageAnalysisMetadata(json);
-  const hasMetadata = hasWardrobeImageAnalysisMetadata(metadata);
-  metadata.is_neutral = hasMetadata
-    ? calculateWardrobeImageIsNeutral(metadata)
-    : null;
-
-  return {
-    hasMetadata,
-    metadata,
-    rawResponse,
-  };
-}
-
 export {
-  analyzeWardrobeProductPageImage,
   analyzeWardrobeImageUrl,
-  buildWardrobeProductPageImageAnalysisPrompt,
   buildWardrobeImageAnalysisPrompt,
   calculateWardrobeImageIsNeutral,
   hasRequiredUploadedWardrobeMetadata,

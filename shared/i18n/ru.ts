@@ -460,7 +460,7 @@ const ru = {
     uploadMenu: "Выбрать способ загрузки",
     uploadMenuLabel: "Способы загрузки",
     uploadPhoto: "Загрузить фото",
-    uploadUrl: "Загрузить URL",
+    uploadUrl: "Загрузить URL изображения",
     analyzePersonalItems: "Анализ",
     regenerateReport: "Создать отчет заново",
     openMenu: "Открыть меню личных вещей",
@@ -472,7 +472,8 @@ const ru = {
     downloadFailed:
       "Не удалось экспортировать личные вещи в PDF. Попробуйте еще раз.",
     uploadFailed: "Не удалось загрузить фото личных вещей. Попробуйте еще раз.",
-    urlUploadFailed: "Не удалось загрузить URL товаров. Попробуйте еще раз.",
+    urlUploadFailed:
+      "Не удалось загрузить URL изображений. Попробуйте еще раз.",
     saved: "Сохранено в личные вещи.",
     removed: "Удалено из личных вещей.",
     updated: "Личная вещь обновлена.",
@@ -635,7 +636,7 @@ const ru = {
       helperText:
         "Используйте URL изображения продукта, начинающийся с http:// или https://.",
       invalidUrl: "Введите URL, который начинается с http:// или https://.",
-      upload: "Загрузить URL",
+      upload: "Загрузить URL изображений",
     },
     imageVersionToggle: {
       label: "Версия изображения загруженной вещи",
