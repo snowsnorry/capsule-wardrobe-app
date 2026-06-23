@@ -115,6 +115,43 @@ test("render product grid normalizes scalar array-like attributes", async () => 
   });
 });
 
+test("render product grid drops unsafe action and image URLs", async () => {
+  const { server, tools } = createToolRegistry();
+  registerRenderProductGridTool(server);
+
+  const result = await tools.get("render_product_grid")?.handler({
+    items: [
+      {
+        ...createProductItem(),
+        url: "javascript:alert(1)",
+        image: "data:text/html,<script>alert(1)</script>",
+      },
+    ],
+  });
+
+  expect(result).toMatchObject({
+    structuredContent: {
+      items: [
+        {
+          url: "",
+          image: null,
+        },
+      ],
+    },
+    _meta: {
+      cards: [
+        {
+          image: null,
+        },
+      ],
+    },
+  });
+  const card = (
+    result as { _meta?: { cards?: Array<Record<string, unknown>> } }
+  )._meta?.cards?.[0];
+  expect(card).not.toHaveProperty("primaryAction");
+});
+
 test("render product detail returns fallback text", async () => {
   const { server, tools } = createToolRegistry();
   registerRenderProductDetailTool(server);
@@ -141,6 +178,44 @@ test("render product detail returns fallback text", async () => {
       items: [item],
     },
   });
+});
+
+test("render product detail drops unsafe action and image URLs", async () => {
+  const { server, tools } = createToolRegistry();
+  registerRenderProductDetailTool(server);
+
+  const result = await tools.get("render_product_detail")?.handler({
+    item: {
+      ...createProductItem(),
+      url: "javascript:alert(1)",
+      image: "data:image/svg+xml,<svg onload=alert(1)>",
+    },
+  });
+
+  expect(result).toMatchObject({
+    content: [
+      {
+        type: "text",
+        text: ["Fetched product:", "Black Blazer - Acme - 120 USD"].join("\n"),
+      },
+    ],
+    structuredContent: {
+      item: {
+        url: "",
+        image: null,
+      },
+      items: [
+        {
+          url: "",
+          image: null,
+        },
+      ],
+    },
+  });
+  const card = (
+    result as { _meta?: { cards?: Array<Record<string, unknown>> } }
+  )._meta?.cards?.[0];
+  expect(card).not.toHaveProperty("primaryAction");
 });
 
 test("render product detail normalizes scalar array-like attributes", async () => {

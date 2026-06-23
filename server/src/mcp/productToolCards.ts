@@ -1,3 +1,5 @@
+import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
+
 export type ProductToolCardItem = {
   id: string;
   name: string;
@@ -27,6 +29,16 @@ function markdownImageAlt(value: string): string {
 }
 
 function buildProductCard(item: ProductToolCardItem) {
+  const safeUrl = getSafeHttpUrl(item.url);
+  const safeImage = getSafeHttpUrl(item.image) || null;
+  const primaryAction = safeUrl
+    ? {
+        type: "open_external",
+        label: "Open product",
+        url: safeUrl,
+      }
+    : undefined;
+
   return {
     type: "product_card",
     itemId: item.id,
@@ -35,18 +47,23 @@ function buildProductCard(item: ProductToolCardItem) {
       compactStrings([item.brand, item.price.display]).join(" · ") ||
       item.category ||
       "",
-    image: item.image,
+    image: safeImage,
     badges: compactStrings([item.category, ...(item.attributes.season || [])]),
-    primaryAction: {
-      type: "open_external",
-      label: "Open product",
-      url: item.url,
-    },
+    ...(primaryAction ? { primaryAction } : {}),
   };
 }
 
 function buildProductItemsById(items: ProductToolCardItem[]) {
-  return Object.fromEntries(items.map((item) => [item.id, item]));
+  return Object.fromEntries(
+    items.map((item) => [
+      item.id,
+      {
+        ...item,
+        url: getSafeHttpUrl(item.url),
+        image: getSafeHttpUrl(item.image) || null,
+      },
+    ]),
+  );
 }
 
 export function buildProductGridMeta(items: ProductToolCardItem[]) {
@@ -80,16 +97,18 @@ export function formatProductSearchText(items: ProductToolCardItem[]) {
 
   const lines = [`Found ${items.length} products:`];
   items.slice(0, 10).forEach((item, index) => {
+    const safeImage = getSafeHttpUrl(item.image);
+    const safeUrl = getSafeHttpUrl(item.url);
     const summary =
       compactStrings([item.name, item.brand, item.price.display]).join(" - ") ||
       item.name ||
       item.id;
     lines.push(`${index + 1}. ${summary}`);
-    if (item.image) {
-      lines.push(`   ![${markdownImageAlt(item.name)}](${item.image})`);
+    if (safeImage) {
+      lines.push(`   ![${markdownImageAlt(item.name)}](${safeImage})`);
     }
-    if (item.url) {
-      lines.push(`   ${item.url}`);
+    if (safeUrl) {
+      lines.push(`   ${safeUrl}`);
     }
   });
 
@@ -101,11 +120,13 @@ export function formatProductFetchText(item: ProductToolCardItem) {
     compactStrings([item.name, item.brand, item.price.display]).join(" - ") ||
     item.name ||
     item.id;
+  const safeImage = getSafeHttpUrl(item.image);
+  const safeUrl = getSafeHttpUrl(item.url);
   return [
     "Fetched product:",
     summary,
-    item.image ? `![${markdownImageAlt(item.name)}](${item.image})` : null,
-    item.url,
+    safeImage ? `![${markdownImageAlt(item.name)}](${safeImage})` : null,
+    safeUrl,
   ]
     .filter(Boolean)
     .join("\n");

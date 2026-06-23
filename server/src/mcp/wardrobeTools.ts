@@ -1,4 +1,5 @@
 import { logError } from "../logger.js";
+import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
 import { buildMcpImageThumbnailUrl } from "./mcpImageThumbnails.js";
 import { WARDROBE_GRID_WIDGET_URI } from "./productGridWidget.js";
@@ -120,13 +121,11 @@ function markdownImageAlt(value: string): string {
   return value.replace(/[[\]\n\r]/g, " ").trim() || "Wardrobe item";
 }
 
-function isHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
+function normalizeWardrobeUrl(
+  value: unknown,
+  source: "uploaded" | "from_catalog" | null,
+): string {
+  return source === "uploaded" ? String(value || "") : getSafeHttpUrl(value);
 }
 
 function toWardrobeItemToolOutput(item: unknown) {
@@ -144,7 +143,7 @@ function toWardrobeItemToolOutput(item: unknown) {
     id: String(displayItem.id || ""),
     name: String(displayItem.name || ""),
     brand: nullableString(displayItem.brand),
-    url: String(displayItem.url || ""),
+    url: normalizeWardrobeUrl(displayItem.url, source),
     description: nullableString(displayItem.description),
     price: {
       amount,
@@ -195,6 +194,8 @@ function normalizeRenderWardrobeItem(
 ): NormalizedWardrobeItem {
   return {
     ...item,
+    url: normalizeWardrobeUrl(item.url, item.source),
+    image: getSafeHttpUrl(item.image) || null,
     attributes: {
       ...item.attributes,
       season: normalizeNullableStringArray(item.attributes.season),
@@ -210,12 +211,13 @@ function normalizeRenderWardrobeItem(
 }
 
 function buildWardrobeCard(item: NormalizedWardrobeItem) {
+  const safeUrl = getSafeHttpUrl(item.url);
   const primaryAction =
-    item.source === "from_catalog" && isHttpUrl(item.url)
+    item.source === "from_catalog" && safeUrl
       ? {
           type: "open_external",
           label: "Open product",
-          url: item.url,
+          url: safeUrl,
         }
       : undefined;
 
@@ -266,7 +268,7 @@ function formatWardrobeItemsText(items: NormalizedWardrobeItem[]) {
     if (item.image) {
       lines.push(`   ![${markdownImageAlt(item.name)}](${item.image})`);
     }
-    if (item.source === "from_catalog" && isHttpUrl(item.url)) {
+    if (item.source === "from_catalog" && getSafeHttpUrl(item.url)) {
       lines.push(`   ${item.url}`);
     }
   });

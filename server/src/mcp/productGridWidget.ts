@@ -152,6 +152,17 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
         return typeof item.imageUrl === "string" ? item.imageUrl : null;
       }
 
+      function safeHttpUrl(value) {
+        const raw = typeof value === "string" ? value.trim() : "";
+        if (!raw) return "";
+        try {
+          const url = new URL(raw);
+          return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : "";
+        } catch {
+          return "";
+        }
+      }
+
       function buildCardsFromItems(items) {
         return Array.isArray(items)
           ? items.map((item) => ({
@@ -174,18 +185,19 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
 
       function openCard(event, url) {
         const openai = window.openai || {};
-        if (!url || !openai.openExternal) return;
+        const href = safeHttpUrl(url);
+        if (!href || !openai.openExternal) return;
         event.preventDefault();
-        openai.openExternal({ href: url, redirectUrl: false });
+        openai.openExternal({ href, redirectUrl: false });
       }
 
       function renderCard(card) {
-        const href = card.primaryAction && card.primaryAction.url;
+        const href = safeHttpUrl(card.primaryAction && card.primaryAction.url);
         const element = document.createElement(href ? "a" : "article");
         element.className = "card";
         if (href) { element.href = href; element.target = "_blank"; element.rel = "noreferrer"; element.addEventListener("click", (event) => openCard(event, href)); }
         const image = document.createElement("img");
-        image.className = "image"; image.src = card.image || ""; image.alt = card.title || "Product"; image.loading = "lazy";
+        image.className = "image"; image.src = safeHttpUrl(card.image); image.alt = card.title || "Product"; image.loading = "lazy";
         const body = document.createElement("div");
         body.className = "body";
         const title = document.createElement("div");
@@ -282,6 +294,7 @@ const CARD_GRID_WIDGET_HTML = String.raw`<!doctype html>
       window.addEventListener(
         "message",
         (event) => {
+          if (event.source !== window.parent) return;
           const message = parseMessageData(event.data);
 
           if (resolvePendingRpc(message)) {

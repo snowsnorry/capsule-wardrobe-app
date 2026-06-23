@@ -1,3 +1,5 @@
+import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
+
 import { buildMcpImageThumbnailUrl } from "./mcpImageThumbnails.js";
 
 export type ProductRowLike = Record<string, unknown>;
@@ -43,7 +45,7 @@ export function toNormalizedProduct(item: ProductRowLike) {
     id: String(item.id || ""),
     name: String(item.name || ""),
     brand: nullableString(item.brand),
-    url: String(item.url || ""),
+    url: getSafeHttpUrl(item.url),
     description: nullableString(item.description),
     price: {
       amount,

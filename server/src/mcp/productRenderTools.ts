@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 import {
   PRODUCT_DETAIL_WIDGET_URI,
   PRODUCT_GRID_WIDGET_URI,
@@ -144,6 +145,8 @@ function normalizeRenderProductItem(
 ): NormalizedProductItem {
   return {
     ...item,
+    url: getSafeHttpUrl(item.url),
+    image: getSafeHttpUrl(item.image) || null,
     attributes: {
       ...item.attributes,
       season: normalizeNullableStringArray(item.attributes.season),

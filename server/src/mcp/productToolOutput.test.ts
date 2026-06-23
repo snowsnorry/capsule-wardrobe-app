@@ -98,3 +98,12 @@ test("formats numeric price without currency", () => {
     display: "45",
   });
 });
+
+test("drops unsafe product URLs during normalization", () => {
+  expect(
+    toNormalizedProduct({
+      id: "product-3",
+      url: "javascript:alert(1)",
+    }).url,
+  ).toBe("");
+});

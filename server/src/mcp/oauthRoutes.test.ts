@@ -1494,6 +1494,12 @@ test("mcp tools expose Apps widget resources", async (t) => {
   expect(content?.text).toContain("toolResponseMetadata");
   expect(content?.text).toContain("openai:set_globals");
   expect(content?.text).toContain("window.parent.postMessage");
+  expect(content?.text).toContain("function safeHttpUrl");
+  expect(content?.text).toContain("event.source !== window.parent");
+  expect(content?.text).toContain(
+    "openai.openExternal({ href, redirectUrl: false })",
+  );
+  expect(content?.text).toContain("image.src = safeHttpUrl(card.image)");
   expect(content?.text).toContain("ui/initialize");
   expect(content?.text).toContain("ui/notifications/initialized");
   expect(content?.text).toContain("ui/notifications/tool-result");

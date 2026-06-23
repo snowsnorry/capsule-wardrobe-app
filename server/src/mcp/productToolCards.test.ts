@@ -90,3 +90,28 @@ test("builds product cards with sanitized markdown image alt text", () => {
   });
   expect(buildProductDetailMeta(item).cards).toHaveLength(1);
 });
+
+test("omits product card primary actions for unsafe URLs", () => {
+  const item = product({
+    url: "javascript:alert(1)",
+    image: "data:text/html,<script>alert(1)</script>",
+  });
+
+  const gridMeta = buildProductGridMeta([item]);
+  const detailMeta = buildProductDetailMeta(item);
+
+  expect(gridMeta.cards[0]).toMatchObject({ image: null });
+  expect(gridMeta.cards[0]).not.toHaveProperty("primaryAction");
+  expect(gridMeta.itemsById["product-1"]).toMatchObject({
+    url: "",
+    image: null,
+  });
+  expect(detailMeta.cards[0]).toMatchObject({ image: null });
+  expect(detailMeta.cards[0]).not.toHaveProperty("primaryAction");
+  expect(formatProductSearchText([item])).toBe(
+    ["Found 1 products:", "1. Blue [Coat]"].join("\n"),
+  );
+  expect(formatProductFetchText(item)).toBe(
+    ["Fetched product:", "Blue [Coat]"].join("\n"),
+  );
+});
