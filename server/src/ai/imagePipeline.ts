@@ -11,6 +11,10 @@ const IMAGE_WORK_MAX_CONCURRENCY = parsePositiveInteger(
   process.env.IMAGE_WORK_MAX_CONCURRENCY,
   1,
 );
+const IMAGE_WORK_MAX_PENDING = parsePositiveInteger(
+  process.env.IMAGE_WORK_MAX_PENDING,
+  50,
+);
 
 let activeImageWork = 0;
 const imageWorkQueue: Array<() => void> = [];
@@ -19,6 +23,10 @@ function acquireImageWorkSlot() {
   if (activeImageWork < IMAGE_WORK_MAX_CONCURRENCY) {
     activeImageWork += 1;
     return Promise.resolve();
+  }
+
+  if (imageWorkQueue.length >= IMAGE_WORK_MAX_PENDING) {
+    return Promise.reject(new Error("image_work_queue_full"));
   }
 
   return new Promise<void>((resolve) => {
@@ -81,6 +89,7 @@ function sumImageAssetBytesById(
 
 export {
   IMAGE_DOWNLOAD_CONCURRENCY,
+  IMAGE_WORK_MAX_PENDING,
   getProcessMemoryUsage,
   runWithImageWorkSlot,
   sumCategoryBytes,

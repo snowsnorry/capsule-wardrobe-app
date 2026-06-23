@@ -1,4 +1,5 @@
 import { test, expect, vi } from "vitest";
+import type { TestContext } from "vitest";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -6,13 +7,13 @@ import {
   buildPromptDebugImages,
   buildPromptDebugImagesForCategory,
 } from "./promptImageCollage.js";
+import { setPromptImageDownloadBufferImplForTests } from "./promptImageDownloads.js";
 import {
   GRID_HEIGHT,
   GRID_WIDTH,
   HEADER_HEIGHT,
   TILE_SIZE,
 } from "./promptImagesShared.js";
-import { createBinaryResponse } from "../test/testDoubles.js";
 import {
   assertCategoryHasBufferProperty,
   createFixtureBuffer,
@@ -20,22 +21,43 @@ import {
   withCachedImage,
   withTempDir,
 } from "../test/promptImageFixtures.js";
+import type { ServerImageDownloadBufferImpl } from "../serverImageDownload.js";
+
+function createImageDownloadResult(
+  buffer: Buffer,
+  {
+    status = 200,
+    url = "https://example.com/image.png",
+  }: { status?: number; url?: string } = {},
+) {
+  return {
+    buffer,
+    headers: new Headers({ "content-type": "image/png" }),
+    status,
+    url,
+  };
+}
+
+function usePromptImageDownloader(
+  testContext: TestContext,
+  impl: ServerImageDownloadBufferImpl,
+) {
+  setPromptImageDownloadBufferImplForTests(impl);
+  testContext.onTestFinished(() => {
+    setPromptImageDownloadBufferImplForTests(null);
+  });
+}
 
 test("buildPromptDebugImages writes category images with expected geometry and manifest", async (t) => {
   const outputDir = await withTempDir(t);
   const greenBuffer = await createFixtureBuffer("#00aa00");
   const blueBuffer = await createFixtureBuffer("#0044cc");
-  const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async (url) => {
-    if (String(url).includes("top-1")) {
-      return createBinaryResponse(greenBuffer, { status: 200 });
+  usePromptImageDownloader(t, async ({ url }) => {
+    if (url.includes("top-1")) {
+      return createImageDownloadResult(greenBuffer, { url });
     }
-    return createBinaryResponse(blueBuffer, { status: 200 });
-  };
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
+    return createImageDownloadResult(blueBuffer, { url });
   });
 
   const result = await buildPromptDebugImages({
@@ -84,14 +106,10 @@ test("buildPromptDebugImages writes category images with expected geometry and m
 
 test("buildPromptDebugImagesForCategory can compact category height to populated rows", async (t) => {
   const greenBuffer = await createFixtureBuffer("#00aa00");
-  const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async () =>
-    createBinaryResponse(greenBuffer, { status: 200 });
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
-  });
+  usePromptImageDownloader(t, async ({ url }) =>
+    createImageDownloadResult(greenBuffer, { url }),
+  );
 
   const defaultResult = await buildPromptDebugImagesForCategory({
     category: "Current Outfit",
@@ -131,14 +149,10 @@ test("buildPromptDebugImagesForCategory can compact category height to populated
 test("buildPromptDebugImages keeps collages in memory when debug saving is disabled", async (t) => {
   const outputDir = await withTempDir(t);
   const redBuffer = await createFixtureBuffer("#cc0000");
-  const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async () =>
-    createBinaryResponse(redBuffer, { status: 200 });
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
-  });
+  usePromptImageDownloader(t, async ({ url }) =>
+    createImageDownloadResult(redBuffer, { url }),
+  );
 
   const result = await buildPromptDebugImages({
     normalizedItems: createItems("top", 2),
@@ -162,7 +176,6 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
 test("buildPromptDebugImages skips failed downloads and still produces outputs", async (t) => {
   const outputDir = await withTempDir(t);
   const redBuffer = await createFixtureBuffer("#cc0000");
-  const originalFetch = globalThis.fetch;
   const originalWarn = console.warn;
   vi.spyOn(console, "warn").mockImplementation((...args) => {
     if (args[0] === "[prompt-images][asset-download-failed]") {
@@ -171,15 +184,14 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
     originalWarn(...args);
   });
 
-  globalThis.fetch = async (url) => {
-    if (String(url).includes("bad")) {
+  usePromptImageDownloader(t, async ({ url }) => {
+    if (url.includes("bad")) {
       throw new Error("socket_hang_up");
     }
-    return createBinaryResponse(redBuffer, { status: 200 });
-  };
+    return createImageDownloadResult(redBuffer, { url });
+  });
 
   t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
     vi.restoreAllMocks();
   });
 
@@ -233,14 +245,8 @@ test("buildPromptDebugImages uses local cached image before remote fetch", async
   const imageUrl =
     "https://static.zara.net/image.jpg?ts=1773310573314&w={width}";
   await withCachedImage(t, imageUrl, cachedJpeg);
-  const originalFetch = globalThis.fetch;
-
-  globalThis.fetch = async () => {
+  usePromptImageDownloader(t, async () => {
     throw new Error("fetch_should_not_be_called");
-  };
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
   });
 
   const result = await buildPromptDebugImages({
@@ -267,14 +273,10 @@ test("buildPromptDebugImages uses local cached image before remote fetch", async
 
 test("buildPromptDebugImages does not return a normalized image map", async (t) => {
   const redBuffer = await createFixtureBuffer("#cc0000");
-  const originalFetch = globalThis.fetch;
 
-  globalThis.fetch = async () =>
-    createBinaryResponse(redBuffer, { status: 200 });
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
-  });
+  usePromptImageDownloader(t, async ({ url }) =>
+    createImageDownloadResult(redBuffer, { url }),
+  );
 
   const result = await buildPromptDebugImages({
     normalizedItems: createItems("top", 1),

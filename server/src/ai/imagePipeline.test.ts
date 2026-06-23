@@ -1,5 +1,6 @@
 import { test, expect } from "vitest";
 import {
+  IMAGE_WORK_MAX_PENDING,
   getProcessMemoryUsage,
   runWithImageWorkSlot,
   sumCategoryBytes,
@@ -51,4 +52,35 @@ test("runWithImageWorkSlot releases slots after failures and byte helpers sum bu
   const memory = getProcessMemoryUsage();
   expect(typeof memory.rssBytes).toBe("number");
   expect(typeof memory.heapUsedBytes).toBe("number");
+});
+
+test("runWithImageWorkSlot rejects when the pending queue is full and drains accepted work", async () => {
+  let releaseActiveSlot: (() => void) | null = null;
+  const activeStarted = new Promise<void>((resolve) => {
+    const activeWork = runWithImageWorkSlot("active-job", async () => {
+      resolve();
+      await new Promise<void>((release) => {
+        releaseActiveSlot = release;
+      });
+    });
+    activeWork.catch(() => undefined);
+  });
+  await activeStarted;
+
+  const completedJobs: number[] = [];
+  const queuedJobs = Array.from(
+    { length: IMAGE_WORK_MAX_PENDING },
+    (_, index) =>
+      runWithImageWorkSlot(`queued-job-${index}`, async () => {
+        completedJobs.push(index);
+      }),
+  );
+
+  await expect(
+    runWithImageWorkSlot("overflow-job", async () => undefined),
+  ).rejects.toThrow("image_work_queue_full");
+
+  releaseActiveSlot?.();
+  await Promise.all(queuedJobs);
+  expect(completedJobs).toHaveLength(IMAGE_WORK_MAX_PENDING);
 });

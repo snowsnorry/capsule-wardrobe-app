@@ -6,6 +6,10 @@ import {
   getSafeServerFetchUrl,
   isUnsafeServerFetchAddress,
 } from "./serverUrlSecurity.js";
+import {
+  assertContentLengthUnderLimit,
+  createByteLimitedCollector,
+} from "./wardrobeUploadByteLimits.js";
 
 type GuardedDnsLookupResult = Array<{ address: string; family: number }>;
 
@@ -177,6 +181,22 @@ function requestUrlWithPinnedAddress({
   url,
 }: GuardedNodeRequestInput): Promise<GuardedNodeRequestResult> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    function resolveOnce(result: GuardedNodeRequestResult) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(result);
+    }
+    function rejectOnce(error: Error) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      reject(error);
+    }
+
     const requestImpl =
       url.protocol === "https:" ? https.request : http.request;
     const request = requestImpl(
@@ -198,36 +218,48 @@ function requestUrlWithPinnedAddress({
         const location = getHeader(headers, "location");
         if (isRedirectStatus(status) && location) {
           response.resume();
-          resolve({ headers, location, redirect: true, status });
+          resolveOnce({ headers, location, redirect: true, status });
           return;
         }
 
-        const chunks: Buffer[] = [];
-        let totalBytes = 0;
+        try {
+          assertContentLengthUnderLimit({ errorCode, headers, maxBytes });
+        } catch (error) {
+          rejectOnce(error instanceof Error ? error : new Error(errorCode));
+          response.resume();
+          request.destroy(error instanceof Error ? error : undefined);
+          return;
+        }
+
+        const collector = createByteLimitedCollector(maxBytes, errorCode);
         response.on("data", (chunk: Buffer | string) => {
-          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-          totalBytes += buffer.length;
-          if (totalBytes > maxBytes) {
-            request.destroy(new Error(errorCode));
-            return;
+          try {
+            collector.append(
+              Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk),
+            );
+          } catch (error) {
+            rejectOnce(error instanceof Error ? error : new Error(errorCode));
+            request.destroy(
+              error instanceof Error ? error : new Error(errorCode),
+            );
           }
-          chunks.push(buffer);
         });
         response.on("end", () => {
-          resolve({
-            buffer: Buffer.concat(chunks),
+          resolveOnce({
+            buffer: collector.getBuffer(),
             headers,
             redirect: false,
             status,
           });
         });
+        response.on("error", rejectOnce);
       },
     );
 
     request.on("timeout", () => {
       request.destroy(new Error("server_fetch_timeout"));
     });
-    request.on("error", reject);
+    request.on("error", rejectOnce);
     request.end();
   });
 }

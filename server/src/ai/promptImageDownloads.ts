@@ -1,6 +1,10 @@
 import sharp from "sharp";
 import { IMAGE_DOWNLOAD_CONCURRENCY } from "./imagePipeline.js";
 import { logWarn } from "../logger.js";
+import {
+  downloadServerImageBuffer,
+  type ServerImageDownloadBufferImpl,
+} from "../serverImageDownload.js";
 import type {
   PromptImageDownloadResult,
   PromptImageItemLike,
@@ -12,13 +16,15 @@ import {
   getErrorMessage,
   getMetadataDimensions,
   getOriginalImageUrl,
-  getRequestSignal,
   mapWithConcurrency,
   normalizeDownloadedImage,
   nowMs,
   readImageFromLocalCache,
   resolveSourceImageUrl,
 } from "./promptImagesShared.js";
+
+const PROMPT_IMAGE_DOWNLOAD_TIMEOUT_MS = 15000;
+let downloadImageBufferImpl: ServerImageDownloadBufferImpl | null = null;
 
 type DownloadIdentity = Pick<
   PromptImageDownloadResult,
@@ -148,11 +154,13 @@ async function buildCachedPromptDownloadResult(
 }
 
 async function fetchImageResponse(imageUrl) {
-  const response = await fetch(imageUrl, {
-    signal: getRequestSignal(),
+  const response = await downloadServerImageBuffer({
+    fetchBufferImpl: downloadImageBufferImpl || undefined,
+    timeoutMs: PROMPT_IMAGE_DOWNLOAD_TIMEOUT_MS,
+    url: imageUrl,
   });
 
-  if (!response.ok) {
+  if (response.status < 200 || response.status >= 300) {
     throw new Error(`http_${response.status}`);
   }
 
@@ -160,7 +168,8 @@ async function fetchImageResponse(imageUrl) {
 }
 
 function getDownloadFailureReason(error) {
-  return error instanceof Error && error.name === "TimeoutError"
+  return error instanceof Error &&
+    (error.name === "TimeoutError" || error.message === "server_fetch_timeout")
     ? "timeout"
     : getErrorMessage(error, "download_failed");
 }
@@ -196,7 +205,7 @@ async function downloadProductImageAsset(
     const mimeType =
       String(response.headers.get("content-type") || "").toLowerCase() ||
       "application/octet-stream";
-    const sourceBuffer = Buffer.from(await response.arrayBuffer());
+    const sourceBuffer = response.buffer;
     const normalized = await normalizeDownloadedImage(sourceBuffer);
 
     return {
@@ -256,7 +265,7 @@ async function downloadPromptImageAsset(
       const response = await fetchImageResponse(candidate.imageUrl);
       addTiming(timings, "networkFetchMs", fetchStartedAt);
 
-      const sourceBuffer = Buffer.from(await response.arrayBuffer());
+      const sourceBuffer = response.buffer;
       const inspectStartedAt = nowMs();
       const { width, height } = await inspectPromptImageMetadata(sourceBuffer);
       addTiming(timings, "sourceInspectMs", inspectStartedAt);
@@ -311,4 +320,14 @@ async function downloadProductImageAssets(items: PromptImageItemLike[] = []) {
   );
 }
 
-export { downloadPromptImageAsset, downloadProductImageAssets };
+function setPromptImageDownloadBufferImplForTests(
+  impl: ServerImageDownloadBufferImpl | null,
+) {
+  downloadImageBufferImpl = impl;
+}
+
+export {
+  downloadPromptImageAsset,
+  downloadProductImageAssets,
+  setPromptImageDownloadBufferImplForTests,
+};

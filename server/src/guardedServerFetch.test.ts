@@ -270,3 +270,45 @@ test("guarded server fetch node request wrapper handles redirects, byte caps, an
     }),
   ).rejects.toThrow("server_fetch_timeout");
 });
+
+test("guarded server fetch rejects over-limit content-length before buffering", async () => {
+  let emittedData = false;
+  vi.spyOn(http, "request").mockImplementationOnce(((
+    _url,
+    _options,
+    callback,
+  ) => {
+    const request = new EventEmitter() as http.ClientRequest;
+    const response = new EventEmitter() as http.IncomingMessage;
+    response.statusCode = 200;
+    response.headers = { "content-length": "11" };
+    response.resume = vi.fn() as http.IncomingMessage["resume"];
+    request.destroy = vi.fn((error?: Error) => {
+      if (error) {
+        request.emit("error", error);
+      }
+      return request;
+    }) as http.ClientRequest["destroy"];
+    request.end = vi.fn(() => {
+      callback?.(response);
+      setImmediate(() => {
+        emittedData = true;
+        response.emit("data", Buffer.from("too large"));
+        response.emit("end");
+      });
+      return request;
+    }) as http.ClientRequest["end"];
+    return request;
+  }) as typeof http.request);
+
+  await expect(
+    guardedServerFetchBuffer({
+      errorCode: "image_url_too_large",
+      lookupImpl: publicLookup(),
+      maxBytes: 10,
+      timeoutMs: 1000,
+      url: "http://cdn.example.com/large.png",
+    }),
+  ).rejects.toThrow("image_url_too_large");
+  expect(emittedData).toBe(false);
+});

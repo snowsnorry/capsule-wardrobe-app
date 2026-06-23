@@ -15,6 +15,7 @@ import {
   productNeedsUnicodeFallback,
   resolveFontPath,
   resolveWardrobePdfChildExecArgv,
+  setPdfImageDownloadBufferImplForTests,
 } from "./wardrobePdfCore.js";
 
 async function createPngBuffer() {
@@ -159,21 +160,16 @@ test("image byte helpers normalize nulls, mime types, resizing, and asset fallba
 
 test("loadImageBytes downloads external images and tracks failures without throwing", async (t) => {
   const pngBuffer = await createPngBuffer();
-  const originalFetch = globalThis.fetch;
   const stats = { cachedCount: 0, downloadedCount: 0 };
 
-  globalThis.fetch = async () =>
-    ({
-      ok: true,
-      headers: new Headers({ "content-type": "image/png" }),
-      arrayBuffer: async () =>
-        pngBuffer.buffer.slice(
-          pngBuffer.byteOffset,
-          pngBuffer.byteOffset + pngBuffer.byteLength,
-        ),
-    }) as Response;
+  setPdfImageDownloadBufferImplForTests(async ({ url }) => ({
+    buffer: pngBuffer,
+    headers: new Headers({ "content-type": "image/png" }),
+    status: 200,
+    url,
+  }));
   t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
+    setPdfImageDownloadBufferImplForTests(null);
     vi.restoreAllMocks();
   });
 
@@ -186,13 +182,12 @@ test("loadImageBytes downloads external images and tracks failures without throw
   expect(downloaded?.kind).toBe("png");
   expect(stats).toEqual({ cachedCount: 0, downloadedCount: 1 });
 
-  globalThis.fetch = async () =>
-    ({
-      ok: false,
-      status: 500,
-      headers: new Headers(),
-      arrayBuffer: async () => new ArrayBuffer(0),
-    }) as Response;
+  setPdfImageDownloadBufferImplForTests(async ({ url }) => ({
+    buffer: Buffer.alloc(0),
+    headers: new Headers(),
+    status: 500,
+    url,
+  }));
   const originalError = console.error;
   vi.spyOn(console, "error").mockImplementation((...args) => {
     if (args[0] === "[wardrobe-pdf][image]") {
@@ -204,4 +199,28 @@ test("loadImageBytes downloads external images and tracks failures without throw
     await loadImageBytes("https://example.com/fail.png", null, null, stats),
   ).toBe(null);
   expect(stats).toEqual({ cachedCount: 0, downloadedCount: 2 });
+});
+
+test("loadImageBytes treats over-limit downloads as unavailable images", async (t) => {
+  const stats = { cachedCount: 0, downloadedCount: 0 };
+  setPdfImageDownloadBufferImplForTests(async () => {
+    throw new Error("image_download_too_large");
+  });
+  t.onTestFinished(() => {
+    setPdfImageDownloadBufferImplForTests(null);
+    vi.restoreAllMocks();
+  });
+
+  const originalError = console.error;
+  vi.spyOn(console, "error").mockImplementation((...args) => {
+    if (args[0] === "[wardrobe-pdf][image]") {
+      return;
+    }
+    originalError(...args);
+  });
+
+  await expect(
+    loadImageBytes("https://example.com/large.png", null, null, stats),
+  ).resolves.toBe(null);
+  expect(stats).toEqual({ cachedCount: 0, downloadedCount: 1 });
 });

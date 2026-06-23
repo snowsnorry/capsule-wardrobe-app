@@ -4,13 +4,44 @@ import sharp from "sharp";
 import {
   downloadProductImageAssets,
   downloadPromptImageAsset,
+  setPromptImageDownloadBufferImplForTests,
 } from "./promptImageDownloads.js";
-import { createBinaryResponse } from "../test/testDoubles.js";
 import {
   createFixtureBuffer,
   createItems,
   withCachedImage,
 } from "../test/promptImageFixtures.js";
+import type { ServerImageDownloadBufferImpl } from "../serverImageDownload.js";
+
+function createImageDownloadResult(
+  buffer: Buffer,
+  {
+    headers = {},
+    status = 200,
+    url = "https://images.example.com/item.jpg",
+  }: {
+    headers?: HeadersInit;
+    status?: number;
+    url?: string;
+  } = {},
+) {
+  return {
+    buffer,
+    headers: new Headers(headers),
+    status,
+    url,
+  };
+}
+
+function usePromptImageDownloader(
+  testContext: TestContext,
+  impl: ServerImageDownloadBufferImpl,
+) {
+  setPromptImageDownloadBufferImplForTests(impl);
+  testContext.onTestFinished(() => {
+    setPromptImageDownloadBufferImplForTests(null);
+  });
+}
 
 function mutePromptImageWarnings(testContext: TestContext) {
   const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -30,19 +61,12 @@ test("downloadProductImageAssets normalizes downloaded files to jpeg", async (t)
   })
     .png()
     .toBuffer();
-  const originalFetch = globalThis.fetch;
-
-  globalThis.fetch = async () =>
-    createBinaryResponse(transparentBuffer, {
-      status: 200,
-      headers: {
-        "content-type": "image/png",
-      },
-    });
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
-  });
+  usePromptImageDownloader(t, async ({ url }) =>
+    createImageDownloadResult(transparentBuffer, {
+      headers: { "content-type": "image/png" },
+      url,
+    }),
+  );
 
   const assets = await downloadProductImageAssets(createItems("top", 1));
   const asset = assets["top-1"];
@@ -69,14 +93,8 @@ test("downloadProductImageAssets uses local cached jpeg before remote fetch", as
     .jpeg({ quality: 80 })
     .toBuffer();
   await withCachedImage(t, imageUrl, cachedJpeg);
-  const originalFetch = globalThis.fetch;
-
-  globalThis.fetch = async () => {
+  usePromptImageDownloader(t, async () => {
     throw new Error("fetch_should_not_be_called");
-  };
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
   });
 
   const assets = await downloadProductImageAssets([
@@ -97,16 +115,11 @@ test("downloadProductImageAssets uses local cached jpeg before remote fetch", as
 
 test("downloadProductImageAssets replaces width placeholder in image url before fetch", async (t) => {
   const fixtureBuffer = await createFixtureBuffer("#228833");
-  const originalFetch = globalThis.fetch;
   const requestedUrls: string[] = [];
 
-  globalThis.fetch = async (url) => {
-    requestedUrls.push(String(url));
-    return createBinaryResponse(fixtureBuffer, { status: 200 });
-  };
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
+  usePromptImageDownloader(t, async ({ url }) => {
+    requestedUrls.push(url);
+    return createImageDownloadResult(fixtureBuffer, { url });
   });
 
   await downloadProductImageAssets([
@@ -125,16 +138,11 @@ test("downloadProductImageAssets replaces width placeholder in image url before 
 
 test("downloadPromptImageAsset uses thumbnail before original image", async (t) => {
   const fixtureBuffer = await createFixtureBuffer("#22aa66");
-  const originalFetch = globalThis.fetch;
   const requestedUrls: string[] = [];
 
-  globalThis.fetch = async (url) => {
-    requestedUrls.push(String(url));
-    return createBinaryResponse(fixtureBuffer, { status: 200 });
-  };
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
+  usePromptImageDownloader(t, async ({ url }) => {
+    requestedUrls.push(url);
+    return createImageDownloadResult(fixtureBuffer, { url });
   });
 
   const asset = await downloadPromptImageAsset({
@@ -153,20 +161,18 @@ test("downloadPromptImageAsset uses thumbnail before original image", async (t) 
 test("downloadPromptImageAsset falls back to original after thumbnail 404", async (t) => {
   mutePromptImageWarnings(t);
   const fixtureBuffer = await createFixtureBuffer("#3355cc");
-  const originalFetch = globalThis.fetch;
   const requestedUrls: string[] = [];
 
-  globalThis.fetch = async (url) => {
-    const requestedUrl = String(url);
+  usePromptImageDownloader(t, async ({ url }) => {
+    const requestedUrl = url;
     requestedUrls.push(requestedUrl);
     if (requestedUrl.endsWith("_320.webp")) {
-      return createBinaryResponse(Buffer.from("missing"), { status: 404 });
+      return createImageDownloadResult(Buffer.from("missing"), {
+        status: 404,
+        url,
+      });
     }
-    return createBinaryResponse(fixtureBuffer, { status: 200 });
-  };
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
+    return createImageDownloadResult(fixtureBuffer, { url });
   });
 
   const asset = await downloadPromptImageAsset({
@@ -198,20 +204,15 @@ test("downloadPromptImageAsset falls back to original after thumbnail pixel limi
     .jpeg()
     .toBuffer();
   const fixtureBuffer = await createFixtureBuffer("#aa5533");
-  const originalFetch = globalThis.fetch;
   const requestedUrls: string[] = [];
 
-  globalThis.fetch = async (url) => {
-    const requestedUrl = String(url);
+  usePromptImageDownloader(t, async ({ url }) => {
+    const requestedUrl = url;
     requestedUrls.push(requestedUrl);
     if (requestedUrl.endsWith("_320.webp")) {
-      return createBinaryResponse(oversizedThumbnail, { status: 200 });
+      return createImageDownloadResult(oversizedThumbnail, { url });
     }
-    return createBinaryResponse(fixtureBuffer, { status: 200 });
-  };
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
+    return createImageDownloadResult(fixtureBuffer, { url });
   });
 
   const asset = await downloadPromptImageAsset({
@@ -231,20 +232,18 @@ test("downloadPromptImageAsset falls back to original after thumbnail pixel limi
 
 test("downloadPromptImageAsset skips item after thumbnail and original fail", async (t) => {
   mutePromptImageWarnings(t);
-  const originalFetch = globalThis.fetch;
   const requestedUrls: string[] = [];
 
-  globalThis.fetch = async (url) => {
-    const requestedUrl = String(url);
+  usePromptImageDownloader(t, async ({ url }) => {
+    const requestedUrl = url;
     requestedUrls.push(requestedUrl);
     if (requestedUrl.endsWith("_320.webp")) {
       throw new Error("socket_hang_up");
     }
-    return createBinaryResponse(Buffer.from("unavailable"), { status: 503 });
-  };
-
-  t.onTestFinished(() => {
-    globalThis.fetch = originalFetch;
+    return createImageDownloadResult(Buffer.from("unavailable"), {
+      status: 503,
+      url,
+    });
   });
 
   const asset = await downloadPromptImageAsset({
@@ -263,5 +262,60 @@ test("downloadPromptImageAsset skips item after thumbnail and original fail", as
     reason: "http_503",
     imageUrl: "https://images.example.com/item.jpg",
     originalImageUrl: "https://images.example.com/item.jpg",
+  });
+});
+
+test("downloadPromptImageAsset falls back to original after thumbnail byte cap", async (t) => {
+  mutePromptImageWarnings(t);
+  const fixtureBuffer = await createFixtureBuffer("#33aa77");
+  const requestedUrls: string[] = [];
+
+  usePromptImageDownloader(t, async ({ url }) => {
+    requestedUrls.push(url);
+    if (url.endsWith("_320.webp")) {
+      throw new Error("image_download_too_large");
+    }
+    return createImageDownloadResult(fixtureBuffer, { url });
+  });
+
+  const asset = await downloadPromptImageAsset({
+    id: "item-1",
+    category: "top",
+    imageUrl: "https://images.example.com/item.jpg",
+    thumbnailUrl: "https://images.example.com/item_320.webp",
+  });
+
+  expect(requestedUrls).toEqual([
+    "https://images.example.com/item_320.webp",
+    "https://images.example.com/item.jpg",
+  ]);
+  expect(asset.status).toBe("downloaded");
+  expect(asset.imageUrl).toBe("https://images.example.com/item.jpg");
+});
+
+test("downloadPromptImageAsset skips item after thumbnail and original byte caps", async (t) => {
+  mutePromptImageWarnings(t);
+  const requestedUrls: string[] = [];
+
+  usePromptImageDownloader(t, async ({ url }) => {
+    requestedUrls.push(url);
+    throw new Error("image_download_too_large");
+  });
+
+  const asset = await downloadPromptImageAsset({
+    id: "item-1",
+    category: "top",
+    imageUrl: "https://images.example.com/item.jpg",
+    thumbnailUrl: "https://images.example.com/item_320.webp",
+  });
+
+  expect(requestedUrls).toEqual([
+    "https://images.example.com/item_320.webp",
+    "https://images.example.com/item.jpg",
+  ]);
+  expect(asset).toMatchObject({
+    status: "skipped",
+    reason: "image_download_too_large",
+    imageUrl: "https://images.example.com/item.jpg",
   });
 });

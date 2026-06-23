@@ -8,6 +8,10 @@ import {
   readImageFromLocalCache,
   resolveSourceImageUrl,
 } from "./ai/promptImages.js";
+import {
+  downloadServerImageBuffer,
+  type ServerImageDownloadBufferImpl,
+} from "./serverImageDownload.js";
 import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 import {
   isSupportedLocale,
@@ -49,6 +53,8 @@ export const PDF_JOB_TTL_MS = 5 * 60 * 1000;
 export const WARDROBE_PDF_CHILD_TIMEOUT_MS =
   Number.parseInt(process.env.WARDROBE_PDF_CHILD_TIMEOUT_MS || "", 10) ||
   180000;
+const WARDROBE_PDF_IMAGE_DOWNLOAD_TIMEOUT_MS = 10000;
+let downloadPdfImageBufferImpl: ServerImageDownloadBufferImpl | null = null;
 
 export type PdfImageBytes = {
   kind: "jpg" | "png";
@@ -355,18 +361,26 @@ async function getDownloadedPdfImageBytes(
   resolvedImageUrl: string,
   targetSize: PdfTargetSize | null,
 ): Promise<PdfImageBytes | null> {
-  const response = await fetch(resolvedImageUrl, {
-    signal: AbortSignal.timeout(10000),
+  const response = await downloadServerImageBuffer({
+    fetchBufferImpl: downloadPdfImageBufferImpl || undefined,
+    timeoutMs: WARDROBE_PDF_IMAGE_DOWNLOAD_TIMEOUT_MS,
+    url: resolvedImageUrl,
   });
-  if (!response.ok) {
+  if (response.status < 200 || response.status >= 300) {
     throw new Error(`image_fetch_failed_${response.status}`);
   }
 
   const contentType = String(
     response.headers.get("content-type") || "",
   ).toLowerCase();
-  const sourceBuffer = Buffer.from(await response.arrayBuffer());
+  const sourceBuffer = response.buffer;
   return targetSize
     ? preparePdfImageBytes(sourceBuffer, contentType, targetSize)
     : normalizeImageBytes(sourceBuffer, contentType);
+}
+
+export function setPdfImageDownloadBufferImplForTests(
+  impl: ServerImageDownloadBufferImpl | null,
+) {
+  downloadPdfImageBufferImpl = impl;
 }
