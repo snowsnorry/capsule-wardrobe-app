@@ -8,6 +8,7 @@ import { createMcpAuthMiddleware } from "./mcpAuth.js";
 import { registerProductGridWidgetResource } from "./productGridWidget.js";
 import { registerProductTools } from "./productTools.js";
 import { registerWardrobeTools } from "./wardrobeTools.js";
+import type { McpReadScope } from "./types.js";
 
 const MCP_SERVER_NAME = "capsule-wardrobe-mcp";
 const PING_DESCRIPTION =
@@ -28,6 +29,7 @@ const PING_OUTPUT_SCHEMA = z.object({
 const MCP_SESSION_TTL_MS = 30 * 60 * 1000;
 type McpHttpSession = {
   clientId: string;
+  scopes: McpReadScope[];
   server: McpServer;
   subject: string;
   timeout: ReturnType<typeof setTimeout> | null;
@@ -43,6 +45,18 @@ function pingResponse(req) {
     subject: req.mcpAuth.subject,
     scopes: req.mcpAuth.scopes,
   };
+}
+
+function hasScope(req, scope: McpReadScope): boolean {
+  return req.mcpAuth.scopes.includes(scope);
+}
+
+function includesSessionScopes(
+  requestScopes: readonly McpReadScope[],
+  sessionScopes: readonly McpReadScope[],
+): boolean {
+  const requestScopeSet = new Set(requestScopes);
+  return sessionScopes.every((scope) => requestScopeSet.has(scope));
 }
 
 async function createMcpServer(req, context) {
@@ -75,18 +89,23 @@ async function createMcpServer(req, context) {
     },
   );
 
-  await registerProductTools(server, {
-    profileEmail: req.mcpAuth.subject,
-    runSearchImpl: context.runMcpProductSearchImpl,
-    getSearchStatsImpl: context.getSearchStatsImpl,
-    getSearchOptionsImpl: context.getSearchOptionsImpl,
-    getProductByIdImpl: context.getProductByIdForEmailImpl,
-    getProductByUrlImpl: context.getProductByUrlForEmailImpl,
-  });
-  registerWardrobeTools(server, {
-    profileEmail: req.mcpAuth.subject,
-    listWardrobeItemsImpl: context.listWardrobeItemsImpl,
-  });
+  if (hasScope(req, "catalog:read")) {
+    await registerProductTools(server, {
+      profileEmail: req.mcpAuth.subject,
+      runSearchImpl: context.runMcpProductSearchImpl,
+      getSearchStatsImpl: context.getSearchStatsImpl,
+      getSearchOptionsImpl: context.getSearchOptionsImpl,
+      getProductByIdImpl: context.getProductByIdForEmailImpl,
+      getProductByUrlImpl: context.getProductByUrlForEmailImpl,
+    });
+  }
+
+  if (hasScope(req, "personal-items:read")) {
+    registerWardrobeTools(server, {
+      profileEmail: req.mcpAuth.subject,
+      listWardrobeItemsImpl: context.listWardrobeItemsImpl,
+    });
+  }
 
   return server;
 }
@@ -171,7 +190,8 @@ function getMcpSession(req, res) {
 
   if (
     session.subject !== req.mcpAuth.subject ||
-    session.clientId !== req.mcpAuth.clientId
+    session.clientId !== req.mcpAuth.clientId ||
+    !includesSessionScopes(req.mcpAuth.scopes, session.scopes)
   ) {
     res.status(404).json({ error: "session_not_found" });
     return null;
@@ -198,6 +218,7 @@ async function handleStatefulMcpInitialize(req, res, context) {
   });
   const session: McpHttpSession = {
     clientId: req.mcpAuth.clientId,
+    scopes: req.mcpAuth.scopes,
     server,
     subject: req.mcpAuth.subject,
     timeout: null,

@@ -310,7 +310,7 @@ The API is implemented in [server/src/index.ts](server/src/index.ts).
 
 ## MCP connector
 
-The optional MCP connector is implemented entirely on the server in [server/src/mcp](server/src/mcp). When `MCP_OAUTH_ENABLED=true`, `/mcp` requires bearer tokens issued by the local OAuth PKCE flow and validates `mcp:read`, issuer, audience, expiry, token use, and supported read scopes.
+The optional MCP connector is implemented entirely on the server in [server/src/mcp](server/src/mcp). When `MCP_OAUTH_ENABLED=true`, `/mcp` requires bearer tokens issued by the local OAuth PKCE flow and validates issuer, audience, expiry, token use, mandatory `mcp:read` transport access, and supported read scopes. Product catalog tools require `catalog:read`; personal item tools require `personal-items:read`.
 
 MCP consent reuses the normal app session. If an external client starts authorization before the user is signed in, the server redirects to `/?oauthReturnTo=...`; after email, Google, or passkey sign-in, [client/src/app/oauthReturn.ts](client/src/app/oauthReturn.ts) resumes only safe same-origin `/oauth/authorize` paths.
 

@@ -1,10 +1,11 @@
 import { readString } from "./oauthRequestHelpers.js";
 import { hasValidRedirect } from "./oauthRedirects.js";
-import { parseScopes } from "./oauthScopes.js";
+import { isScopeSubset, parseScopes, scopesToKey } from "./oauthScopes.js";
 import type {
   McpAuthorizationRequest,
   McpOAuthClientMetadata,
   McpOAuthConfig,
+  McpReadScope,
   McpRegisteredClientRow,
 } from "./types.js";
 
@@ -64,6 +65,36 @@ function isAllowedMetadataClientId(
   } catch {
     return false;
   }
+}
+
+function registeredClientAllowsScopes(
+  resolvedClient: ResolvedOAuthClient,
+  requestedScopes: string,
+): boolean {
+  return (
+    resolvedClient.kind !== "registered" ||
+    !resolvedClient.registeredClient?.scope ||
+    isScopeSubset(requestedScopes, resolvedClient.registeredClient.scope)
+  );
+}
+
+function validateRequestedScopes({
+  config,
+  rawScope,
+  resolvedClient,
+}: {
+  config: McpOAuthConfig;
+  rawScope: string;
+  resolvedClient: ResolvedOAuthClient;
+}): McpReadScope[] | null {
+  const scopes = parseScopes(config, rawScope);
+  if (!scopes) {
+    return null;
+  }
+
+  return registeredClientAllowsScopes(resolvedClient, scopesToKey(scopes))
+    ? scopes
+    : null;
 }
 
 async function fetchClientMetadata(
@@ -178,7 +209,11 @@ export async function validateAuthorizationRequest(
     return { error: "invalid_redirect_uri" };
   }
 
-  const scopes = parseScopes(config, request.scope);
+  const scopes = validateRequestedScopes({
+    config,
+    rawScope: request.scope,
+    resolvedClient,
+  });
   if (!scopes) {
     return { error: "invalid_scope" };
   }

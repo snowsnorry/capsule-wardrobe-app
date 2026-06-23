@@ -76,7 +76,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 
 ### 7. MCP connector flow
 - `/mcp` is a Streamable HTTP MCP endpoint implemented in `server/src/mcp/mcpRoutes.ts`
-- MCP access requires a bearer access token validated by `server/src/mcp/mcpAuth.ts`; token issuer, audience, expiry, token use, and supported read scopes must match the `MCP_*` config
+- MCP access requires a bearer access token validated by `server/src/mcp/mcpAuth.ts`; token issuer, audience, expiry, token use, mandatory `mcp:read`, and supported read scopes must match the `MCP_*` config
 - OAuth discovery, dynamic client registration, PKCE authorization, consent HTML, access tokens, refresh tokens, and refresh-token rotation live in `server/src/mcp/oauthRoutes.ts`
 - MCP OAuth config is built by `server/src/mcp/oauthConfig.ts` from `server/src/appConfig.ts`; it is enabled by default outside production and disabled by default in production
 - MCP OAuth state persists through `server/src/db/mcpOAuth.ts`, `server/src/db/mcpOAuthRefreshTokens.ts`, and SQL schema assets `080` through `087` under `server/src/db/sql/schema/`
@@ -270,7 +270,7 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 - Default e2e runs should not require a real database, email provider, LLM provider, embedding provider, or remote image host
 - Passkey challenges are single-use and stored separately from normal app sessions
 - Passkey API responses must never expose stored credential public keys
-- MCP connector access is read-only and must require valid bearer tokens with `mcp:read`, matching issuer/audience, unexpired access-token claims, and supported read scopes
+- MCP connector access is read-only and must require valid bearer tokens with `mcp:read`, matching issuer/audience, unexpired access-token claims, and per-tool read scopes such as `catalog:read` and `personal-items:read`
 - MCP OAuth production enablement must keep explicit issuer, resource URL, JWT secret, and redirect allowlist configuration
 - MCP OAuth authorization codes and refresh tokens are hashed before persistence and must remain single-use
 - Account removal must clear profile-scoped DB records, active sessions, MCP OAuth refresh tokens/grants/unconsumed authorization codes, transient generation/image/PDF jobs, passkey challenge cookies, and uploaded image objects from R2 when configured

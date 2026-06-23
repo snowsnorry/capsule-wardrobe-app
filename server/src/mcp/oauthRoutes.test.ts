@@ -47,6 +47,38 @@ const EXPECTED_READ_ONLY_TOOL_ANNOTATIONS = {
   idempotentHint: true,
   openWorldHint: false,
 };
+const PING_TOOL_NAMES = ["ping"] as const;
+const CATALOG_TOOL_NAMES = [
+  "ping",
+  "get_search_options",
+  "search",
+  "render_product_grid",
+  "stats",
+  "fetch",
+  "render_product_detail",
+] as const;
+const PERSONAL_ITEMS_TOOL_NAMES = [
+  "ping",
+  "wardrobe_items",
+  "render_wardrobe_grid",
+] as const;
+const ALL_MCP_TOOL_NAMES = [
+  "ping",
+  "get_search_options",
+  "search",
+  "render_product_grid",
+  "stats",
+  "fetch",
+  "render_product_detail",
+  "wardrobe_items",
+  "render_wardrobe_grid",
+] as const;
+const FULL_MCP_SCOPE_KEY = "catalog:read mcp:read personal-items:read";
+const FULL_MCP_SCOPE_LIST = [
+  "catalog:read",
+  "mcp:read",
+  "personal-items:read",
+] as const;
 const EXPECTED_SEARCH_ENUMS = {
   category: ["top", "outerwear"],
   season: ["autumn", "winter"],
@@ -196,12 +228,7 @@ function createTestMcpConfig(
     jwtSecret: JWT_SECRET,
     refreshTokenTtlSeconds: 2592000,
     resourceUrl: RESOURCE,
-    scopesSupported: [
-      "mcp:read",
-      "profile:read",
-      "wardrobe:read",
-      "capsules:read",
-    ],
+    scopesSupported: ["mcp:read", "catalog:read", "personal-items:read"],
     ...overrides,
   };
 }
@@ -213,7 +240,7 @@ function authorizePath(overrides: Record<string, string> = {}) {
     redirect_uri: REDIRECT_URI,
     code_challenge: CODE_CHALLENGE,
     code_challenge_method: "S256",
-    scope: "mcp:read wardrobe:read",
+    scope: FULL_MCP_SCOPE_KEY,
     state: "state-1",
     resource: RESOURCE,
     ...overrides,
@@ -257,7 +284,7 @@ async function registerDynamicClient(
       token_endpoint_auth_method: "none",
       grant_types: ["authorization_code"],
       response_types: ["code"],
-      scope: "mcp:read wardrobe:read",
+      scope: FULL_MCP_SCOPE_KEY,
       ...body,
     },
   });
@@ -273,7 +300,7 @@ function consentBody(
     redirect_uri: REDIRECT_URI,
     code_challenge: CODE_CHALLENGE,
     code_challenge_method: "S256",
-    scope: "mcp:read wardrobe:read",
+    scope: FULL_MCP_SCOPE_KEY,
     state: "state-1",
     resource: RESOURCE,
     csrfToken: createConsentCsrfToken(SESSION_ID, CSRF_TOKEN),
@@ -439,17 +466,12 @@ function getMcpResource(response, uri: string) {
   );
 }
 
-function expectMcpToolNames(response) {
+function expectMcpToolNames(
+  response,
+  expected: readonly string[] = ALL_MCP_TOOL_NAMES,
+) {
   expect(mcpResult(response).tools?.map((tool) => tool.name)).toEqual([
-    "ping",
-    "get_search_options",
-    "search",
-    "render_product_grid",
-    "stats",
-    "fetch",
-    "render_product_detail",
-    "wardrobe_items",
-    "render_wardrobe_grid",
+    ...expected,
   ]);
 }
 
@@ -609,13 +631,11 @@ test("mcp oauth metadata endpoints return discoverable JSON", async (t) => {
     resource: RESOURCE,
     authorization_servers: [ISSUER],
     bearer_methods_supported: ["header"],
-    scopes_supported: [
-      "mcp:read",
-      "profile:read",
-      "wardrobe:read",
-      "capsules:read",
-    ],
+    scopes_supported: ["mcp:read", "catalog:read", "personal-items:read"],
   });
+  expect(resource.json.scopes_supported).not.toEqual(
+    expect.arrayContaining(["profile:read", "capsules:read", "wardrobe:read"]),
+  );
 
   const server = await requestJson(
     baseUrl,
@@ -660,7 +680,7 @@ test("oauth dynamic client registration stores public clients", async (t) => {
     token_endpoint_auth_method: "none",
     grant_types: ["authorization_code"],
     response_types: ["code"],
-    scope: "mcp:read wardrobe:read",
+    scope: FULL_MCP_SCOPE_KEY,
   });
   expect(typeof registration.json.client_id_issued_at).toBe("number");
 });
@@ -724,6 +744,41 @@ test("oauth dynamic client registration rejects invalid metadata", async (t) => 
   });
   expect(unsupportedScope.response.status).toBe(400);
   expect(unsupportedScope.json.error).toBe("invalid_scope");
+
+  for (const removedScope of [
+    "profile:read",
+    "capsules:read",
+    "wardrobe:read",
+  ]) {
+    const removed = await registerDynamicClient(baseUrl, {
+      scope: `mcp:read ${removedScope}`,
+    });
+    expect(removed.response.status).toBe(400);
+    expect(removed.json.error).toBe("invalid_scope");
+  }
+});
+
+test("oauth authorize rejects scopes wider than a registered client's scope", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t, {
+    allowedRedirectOrigins: new Set(["http://127.0.0.1"]),
+    allowedRedirectUris: new Set(),
+  });
+  const registration = await registerDynamicClient(baseUrl, {
+    scope: "mcp:read catalog:read",
+  });
+  const clientId = String(registration.json.client_id || "");
+
+  const expanded = await requestJson(
+    baseUrl,
+    authorizePath({
+      client_id: clientId,
+      redirect_uri: DYNAMIC_REDIRECT_URI,
+      scope: "mcp:read catalog:read personal-items:read",
+    }),
+  );
+
+  expect(expanded.response.status).toBe(400);
+  expect(expanded.json.error).toBe("invalid_scope");
 });
 
 test("oauth authorize rejects invalid parameters and invalid redirect uri", async (t) => {
@@ -871,7 +926,7 @@ test("oauth consent page renders and denial redirects to the client", async (t) 
   expect(page.status).toBe(200);
   expect(html).toContain("Capsule Wardrobe MCP");
   expect(html).toContain("person@example.com");
-  expect(html).toContain("mcp:read wardrobe:read");
+  expect(html).toContain(FULL_MCP_SCOPE_KEY);
 
   const denied = await fetchManual(`${baseUrl}/oauth/authorize`, {
     method: "POST",
@@ -1130,7 +1185,7 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
         service: "capsule-wardrobe-mcp",
         authenticated: true,
         subject: "person@example.com",
-        scopes: ["mcp:read", "wardrobe:read"],
+        scopes: [...FULL_MCP_SCOPE_LIST],
       },
     },
   });
@@ -1144,9 +1199,43 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
   expect(unknown.json).toMatchObject({ error: { code: -32601 } });
 });
 
+test("mcp scope gates tools by granted read scope", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const mcpOnlyToken = bearerToken({ scope: "mcp:read" });
+  const catalogToken = bearerToken({ scope: "mcp:read catalog:read" });
+  const personalItemsToken = bearerToken({
+    scope: "mcp:read personal-items:read",
+  });
+
+  const mcpOnlyTools = await listMcpTools(baseUrl, mcpOnlyToken);
+  expect(mcpOnlyTools.response.status).toBe(200);
+  expectMcpToolNames(mcpOnlyTools, PING_TOOL_NAMES);
+
+  const ping = await callMcpTool(baseUrl, mcpOnlyToken, "ping", {});
+  expect(ping.response.status).toBe(200);
+  expect(mcpResult(ping).structuredContent).toMatchObject({
+    ok: true,
+    scopes: ["mcp:read"],
+  });
+
+  const blockedSearch = await callMcpTool(baseUrl, mcpOnlyToken, "search", {});
+  expect(blockedSearch.response.status).toBe(200);
+  expect(mcpResult(blockedSearch).isError).toBe(true);
+
+  const catalogTools = await listMcpTools(baseUrl, catalogToken);
+  expect(catalogTools.response.status).toBe(200);
+  expectMcpToolNames(catalogTools, CATALOG_TOOL_NAMES);
+
+  const personalItemsTools = await listMcpTools(baseUrl, personalItemsToken);
+  expect(personalItemsTools.response.status).toBe(200);
+  expectMcpToolNames(personalItemsTools, PERSONAL_ITEMS_TOOL_NAMES);
+});
+
 test("mcp streamable http session supports GET SSE", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const initialize = await requestJson(baseUrl, "/mcp", {
     method: "POST",
@@ -1183,6 +1272,18 @@ test("mcp streamable http session supports GET SSE", async (t) => {
   expect(stream.headers.get("content-type")).toContain("text/event-stream");
   await stream.body?.cancel();
 
+  const narrowedToken = bearerToken({ scope: "mcp:read" });
+  const narrowedSession = await fetch(`${baseUrl}/mcp`, {
+    method: "GET",
+    headers: {
+      ...mcpHeaders(narrowedToken),
+      "mcp-protocol-version": "2025-03-26",
+      "mcp-session-id": sessionId,
+    },
+  });
+  expect(narrowedSession.status).toBe(404);
+  expect(await narrowedSession.json()).toEqual({ error: "session_not_found" });
+
   const closed = await fetch(`${baseUrl}/mcp`, {
     method: "DELETE",
     headers: {
@@ -1205,7 +1306,7 @@ test("oauth refresh token grant issues rotated tokens accepted by mcp", async (t
   expect(String(refreshed.json.access_token || "")).toBeTruthy();
   expect(String(refreshed.json.refresh_token || "")).toBeTruthy();
   expect(refreshed.json.refresh_token).not.toBe(refreshToken);
-  expect(refreshed.json.scope).toBe("mcp:read wardrobe:read");
+  expect(refreshed.json.scope).toBe(FULL_MCP_SCOPE_KEY);
 
   const tools = await listMcpTools(
     baseUrl,
@@ -1253,7 +1354,7 @@ test("oauth refresh token grant rejects wrong client and scope expansion", async
   expect(wrongClient.json.error).toBe("invalid_grant");
 
   const expandedScope = await refreshAccessToken(baseUrl, refreshToken, {
-    scope: "mcp:read wardrobe:read capsules:read",
+    scope: "mcp:read catalog:read personal-items:read wardrobe:read",
   });
   expect(expandedScope.response.status).toBe(400);
   expect(expandedScope.json.error).toBe("invalid_scope");
@@ -1263,11 +1364,20 @@ test("oauth refresh token grant rejects wrong client and scope expansion", async
   });
   expect(narrowed.response.status).toBe(200);
   expect(narrowed.json.scope).toBe("mcp:read");
+
+  const narrowedTools = await listMcpTools(
+    baseUrl,
+    String(narrowed.json.access_token),
+  );
+  expect(narrowedTools.response.status).toBe(200);
+  expectMcpToolNames(narrowedTools, PING_TOOL_NAMES);
 });
 
 test("mcp get_search_options matches search options endpoint", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const httpOptions = await requestJson(baseUrl, "/search/options", {
     cookie: AUTH_COOKIE,
@@ -1286,7 +1396,9 @@ test("mcp get_search_options matches search options endpoint", async (t) => {
 
 test("mcp tools expose Apps widget resources", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const resources = await listMcpResources(baseUrl, token);
   const productGridWidget = await readMcpResource(
@@ -1400,7 +1512,9 @@ test("mcp tools expose Apps widget resources", async (t) => {
 
 test("mcp stats matches search stats endpoint without price buckets", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
   const payload = { category: ["top"] };
 
   const httpStats = await requestJson(baseUrl, "/search/stats", {
@@ -1449,7 +1563,9 @@ test("mcp stats returns tool error on invalid payload", async (t) => {
       throw error;
     },
   });
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const result = await callMcpTool(baseUrl, token, "stats", {
     brand: ["not-allowed"],
@@ -1469,7 +1585,9 @@ test("mcp stats returns tool error on service failure", async (t) => {
       throw new Error("stats_down");
     },
   });
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const result = await callMcpTool(baseUrl, token, "stats", {});
 
@@ -1523,7 +1641,9 @@ test("mcp wardrobe_items returns thumbnail image urls and filters by source", as
       ];
     },
   });
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const httpItems = await requestJson(baseUrl, "/wardrobe/items", {
     cookie: AUTH_COOKIE,
@@ -1711,7 +1831,9 @@ test("mcp wardrobe_items returns tool error on service failure", async (t) => {
       throw new Error("wardrobe_down");
     },
   });
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const result = await callMcpTool(baseUrl, token, "wardrobe_items", {});
 
@@ -1735,7 +1857,7 @@ test("mcp search schema uses cached dynamic search options", async (t) => {
     },
   });
   const token = bearerToken({
-    scope: "mcp:read wardrobe:read",
+    scope: "mcp:read catalog:read personal-items:read",
     sub: "schema-cache@example.com",
   });
 
@@ -1768,7 +1890,7 @@ test("mcp search schema falls back when search options are unavailable", async (
     },
   });
   const token = bearerToken({
-    scope: "mcp:read wardrobe:read",
+    scope: "mcp:read catalog:read personal-items:read",
     sub: "schema-fallback@example.com",
   });
 
@@ -1781,7 +1903,9 @@ test("mcp search schema falls back when search options are unavailable", async (
 
 test("mcp product search accepts empty, query, filters, and pagination inputs", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const empty = await callMcpTool(baseUrl, token, "search", {});
   expect(empty.response.status).toBe(200);
@@ -1835,7 +1959,9 @@ test("mcp product search accepts empty, query, filters, and pagination inputs", 
 
 test("mcp product search returns sanitized preview items", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const search = await callMcpTool(baseUrl, token, "search", {
     query: "black blazer",
@@ -1974,7 +2100,9 @@ test("mcp product search returns sanitized preview items", async (t) => {
 
 test("mcp product fetch returns sanitized detail by id and url", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const byId = await callMcpTool(baseUrl, token, "fetch", {
     id: "product-1",
@@ -2068,7 +2196,9 @@ test("mcp product fetch returns sanitized detail by id and url", async (t) => {
 
 test("mcp product fetch rejects missing or conflicting identifiers", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
-  const token = bearerToken({ scope: "mcp:read wardrobe:read" });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read personal-items:read",
+  });
 
   const neither = await callMcpTool(baseUrl, token, "fetch", {});
   expect(neither.response.status).toBe(200);
@@ -2184,7 +2314,7 @@ test("oauth dynamic client without refresh grant does not receive or use refresh
             tokenHash,
             userEmail: "person@example.com",
             clientId: registeredClientId,
-            scopes: "mcp:read wardrobe:read",
+            scopes: "mcp:read catalog:read personal-items:read",
             resource: RESOURCE,
             expiresAt: "2099-01-01T00:00:00.000Z",
             revokedAt: null,
@@ -2356,7 +2486,7 @@ test("mcp rejects missing, malformed, wrong audience, wrong scope, and expired t
 
   const wrongScope = await requestJson(baseUrl, "/mcp", {
     headers: {
-      authorization: `Bearer ${bearerToken({ scope: "wardrobe:read" })}`,
+      authorization: `Bearer ${bearerToken({ scope: "personal-items:read" })}`,
     },
   });
   expect(wrongScope.response.status).toBe(401);
