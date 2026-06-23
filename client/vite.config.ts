@@ -69,8 +69,9 @@ export default defineConfig(() => {
       },
     },
     test: {
-      name: 'client',
+      name: "client",
       environment: "jsdom",
+      include: ["src/**/*.{test,spec}.{ts,tsx,js,jsx}"],
       setupFiles: "./src/test/setup.ts",
       css: true,
       coverage: {
@@ -85,34 +86,34 @@ export default defineConfig(() => {
           "src/**/index.ts",
           "src/**/index.tsx",
           "src/main.tsx",
-          "src/vite-env.d.ts"
+          "src/vite-env.d.ts",
         ],
         thresholds: {
           perFile: true,
           lines: 70,
           functions: 70,
           branches: 60,
-          statements: 70
-        }
-      }
+          statements: 70,
+        },
+      },
     },
     server: {
       watch: {
         // Ignore env files to avoid endless Vite restarts in local dev.
-        ignored: ["**/.env", "**/.env.*"]
+        ignored: ["**/.env", "**/.env.*"],
       },
       proxy: {
         "/api": {
           target: "http://localhost:3000",
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, "")
+          rewrite: (path) => path.replace(/^\/api/, ""),
         },
         "/auth": "http://localhost:3000",
         "/profile": "http://localhost:3000",
         "/wardrobe/filters": "http://localhost:3000",
         "/wardrobe/items": "http://localhost:3000",
-        "/health": "http://localhost:3000"
-      }
-    }
+        "/health": "http://localhost:3000",
+      },
+    },
   };
 });

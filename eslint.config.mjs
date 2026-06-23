@@ -22,6 +22,7 @@ export default tseslint.config(
   {
     files: [
       "client/render-server.js",
+      "client/render-server.test.js",
       "*.config.js",
       "*.config.mjs",
       "*.config.cjs",
