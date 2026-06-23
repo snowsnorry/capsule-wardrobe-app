@@ -1,16 +1,19 @@
 import { getResultRows, getSqlClient } from "./core.js";
 import { toWardrobeUiItem } from "./wardrobeMapper.js";
 import type { UserWardrobeRow } from "./wardrobeTypes.js";
+import { normalizeOwnedWardrobeR2Keys } from "../wardrobeR2Keys.js";
 import { getSafeHttpUrl } from "../../../shared/urlSecurity.js";
 
 type UploadedWardrobeItemInput = {
   imageUrl?: string | null;
+  ownedR2ImageKeys?: unknown[] | null;
   rawImageUrl?: string | null;
   url?: string | null;
 };
 
 type NormalizedUploadedWardrobeItem = {
   imageUrl: string;
+  ownedR2ImageKeys: string[];
   rawImageUrl: string;
   url: string | null;
 };
@@ -25,11 +28,18 @@ async function saveUploadedWardrobeItemsByEmail({
   items?: UploadedWardrobeItemInput[];
 }): Promise<Array<Record<string, unknown>>> {
   const normalizedItems = normalizeUploadedWardrobeItems({ imageUrls, items });
-  if (normalizedItems.length === 0) {
+  const ownedItems = normalizedItems.map((item) => ({
+    ...item,
+    ownedR2ImageKeys: normalizeOwnedWardrobeR2Keys({
+      email,
+      keys: item.ownedR2ImageKeys,
+    }),
+  }));
+  if (ownedItems.length === 0) {
     return [];
   }
 
-  const insertedIds = await insertUploadedWardrobeRows(email, normalizedItems);
+  const insertedIds = await insertUploadedWardrobeRows(email, ownedItems);
   if (insertedIds.length === 0) {
     return [];
   }
@@ -49,6 +59,14 @@ async function insertUploadedWardrobeRows(
     with uploaded as (
       select
         value ->> 'imageUrl' as image_url,
+        coalesce(
+          array(
+            select jsonb_array_elements_text(
+              coalesce(value -> 'ownedR2ImageKeys', '[]'::jsonb)
+            )
+          ),
+          '{}'::text[]
+        ) as owned_r2_image_keys,
         value ->> 'rawImageUrl' as raw_image_url,
         nullif(trim(value ->> 'url'), '') as url
       from jsonb_array_elements(${JSON.stringify(normalizedItems)}::jsonb)
@@ -56,6 +74,7 @@ async function insertUploadedWardrobeRows(
     insert into wardrobe (
       profile_email,
       image_url,
+      owned_r2_image_keys,
       url,
       source,
       raw_image_url,
@@ -64,6 +83,7 @@ async function insertUploadedWardrobeRows(
     select
       ${email},
       uploaded.image_url,
+      uploaded.owned_r2_image_keys,
       uploaded.url,
       'uploaded',
       uploaded.raw_image_url,
@@ -97,6 +117,7 @@ async function listUploadedWardrobeRowsByIds(insertedIds: string[]) {
         wardrobe.currency,
         wardrobe.availability,
         wardrobe.image_url as "imageUrl",
+        wardrobe.owned_r2_image_keys as "ownedR2ImageKeys",
         wardrobe.audience,
         wardrobe.category,
         wardrobe.season,
@@ -146,6 +167,9 @@ function normalizeUploadedWardrobeItems({
       return imageUrl && rawImageUrl
         ? {
             imageUrl,
+            ownedR2ImageKeys: Array.isArray(item?.ownedR2ImageKeys)
+              ? item.ownedR2ImageKeys
+              : [],
             rawImageUrl,
             url,
           }

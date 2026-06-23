@@ -131,7 +131,14 @@ function resolveSourceSaveResult(result) {
 async function saveUploadedFileSource({ context, email, source }) {
   const items = await context.saveUploadedWardrobeItemsImpl({
     email,
-    imageUrls: [source.imageUrl],
+    items: [
+      {
+        imageUrl: source.imageUrl,
+        ownedR2ImageKeys: [source.sourceImageKey],
+        rawImageUrl: source.rawImageUrl,
+        url: source.productPageUrl,
+      },
+    ],
   });
   return Array.isArray(items) ? items[0] || null : null;
 }

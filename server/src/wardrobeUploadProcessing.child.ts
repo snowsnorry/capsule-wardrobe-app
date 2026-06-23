@@ -48,7 +48,6 @@ async function processUploadItem({
       })
     : processUrlUploadItem({
         email,
-        imageLlm,
         input: item,
         sendImpl,
       });

@@ -26,6 +26,7 @@ create table if not exists wardrobe (
   closure_type text[] null default '{}'::text[],
   embedding vector null,
   source text not null check (source in ('uploaded', 'from_catalog')),
+  owned_r2_image_keys text[] not null default '{}'::text[],
   raw_image_url text
     constraint user_wardrobe_items_raw_image_url_http_check
     check (raw_image_url is null or raw_image_url ~* '^https?://'),

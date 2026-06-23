@@ -1,5 +1,5 @@
 import { logError } from "../logger.js";
-import { getR2KeyFromPublicUrl } from "../r2Storage.js";
+import { getOwnedWardrobeR2KeysFromItem } from "../wardrobeR2Keys.js";
 import { normalizeUploadedWardrobeItemDetails } from "../wardrobeUploadedItemUpdate.js";
 
 function registerUploadedWardrobeItemUpdateRoute(app, context, filterItem) {
@@ -84,56 +84,6 @@ function registerUploadedWardrobeItemDetailRoute(app, context, filterItem) {
   );
 }
 
-function replaceImageUrlSuffix(imageUrl: string, suffix: string) {
-  try {
-    const url = new URL(imageUrl);
-    const pathSegments = url.pathname.split("/");
-    const filename = pathSegments.pop() || "";
-    const lastDotIndex = filename.lastIndexOf(".");
-    const basename =
-      lastDotIndex > 0 ? filename.slice(0, lastDotIndex) : filename;
-    if (!basename) {
-      return "";
-    }
-
-    pathSegments.push(`${basename}${suffix}.webp`);
-    url.pathname = pathSegments.join("/");
-    url.search = "";
-    url.hash = "";
-    return url.toString();
-  } catch {
-    return "";
-  }
-}
-
-function buildUploadedWardrobeItemImageKeys(item) {
-  const originalUrl = String(item?.rawImageUrl || "").trim();
-  const imageUrl = String(item?.imageUrl || "").trim();
-  const shouldIncludeOriginal =
-    !imageUrl || getUrlOrigin(originalUrl) === getUrlOrigin(imageUrl);
-  const thumbnailUrls = imageUrl
-    ? ["_320", "_480", "_640"].map((suffix) =>
-        replaceImageUrlSuffix(imageUrl, suffix),
-      )
-    : [];
-
-  return Array.from(
-    new Set(
-      [shouldIncludeOriginal ? originalUrl : "", imageUrl, ...thumbnailUrls]
-        .map(getR2KeyFromPublicUrl)
-        .filter(Boolean),
-    ),
-  );
-}
-
-function getUrlOrigin(value: string) {
-  try {
-    return new URL(value).origin;
-  } catch {
-    return "";
-  }
-}
-
 function registerUploadedWardrobeItemDeleteRoute(app, context) {
   app.delete(
     "/wardrobe/items/uploaded/:id",
@@ -155,7 +105,7 @@ function registerUploadedWardrobeItemDeleteRoute(app, context) {
           return res.json({ ok: true, removed: false });
         }
 
-        const keys = buildUploadedWardrobeItemImageKeys(item);
+        const keys = getOwnedWardrobeR2KeysFromItem(item, req.user.email);
         if (keys.length > 0) {
           await context.deleteR2ObjectsImpl({ keys }).catch((error) => {
             logError("[delete wardrobe/items/uploaded/:id][r2]", error);
@@ -171,7 +121,4 @@ function registerUploadedWardrobeItemDeleteRoute(app, context) {
   );
 }
 
-export {
-  buildUploadedWardrobeItemImageKeys,
-  registerUploadedWardrobeItemUpdateRoute,
-};
+export { registerUploadedWardrobeItemUpdateRoute };

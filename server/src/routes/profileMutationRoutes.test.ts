@@ -6,29 +6,6 @@ import {
   requestJson,
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
-import { buildAccountWardrobeImageKeys } from "./profileMutationHandlers.js";
-
-test("account wardrobe image cleanup keys cover uploaded originals and derivatives only", () => {
-  expect(
-    buildAccountWardrobeImageKeys([
-      {
-        source: "uploaded",
-        imageUrl: "https://images.example.com/wardrobe/profile/item_clean.png",
-        rawImageUrl: "https://images.example.com/wardrobe/profile/item.webp",
-      },
-      {
-        source: "from_catalog",
-        imageUrl: "https://images.example.com/catalog/item.jpg",
-      },
-    ]),
-  ).toEqual([
-    "wardrobe/profile/item.webp",
-    "wardrobe/profile/item_clean.png",
-    "wardrobe/profile/item_clean_320.webp",
-    "wardrobe/profile/item_clean_480.webp",
-    "wardrobe/profile/item_clean_640.webp",
-  ]);
-});
 
 test("profile initialize route maps validation, conflict, and success branches", async (t) => {
   const invalidServer = await startTestServer(t);
@@ -248,22 +225,14 @@ test("profile delete clears auth cookies and cleans uploaded wardrobe images bes
         calls.push({ type: "deleteR2", payload });
         throw new Error("r2_failed");
       },
-      listWardrobeItemsImpl: async (payload) => {
-        calls.push({ type: "listWardrobe", payload });
+      listUploadedWardrobeR2KeysImpl: async (payload) => {
+        calls.push({ type: "listUploadedR2Keys", payload });
         return [
-          {
-            id: "uploaded-1",
-            source: "uploaded",
-            imageUrl:
-              "https://images.example.com/wardrobe/profile/image_clean.png",
-            rawImageUrl:
-              "https://images.example.com/wardrobe/profile/image.webp",
-          },
-          {
-            id: "catalog-1",
-            source: "from_catalog",
-            imageUrl: "https://catalog.example.com/item.jpg",
-          },
+          "wardrobe/542d240129883c01/image.webp",
+          "wardrobe/542d240129883c01/image_clean.png",
+          "wardrobe/542d240129883c01/image_clean_320.webp",
+          "wardrobe/542d240129883c01/image_clean_480.webp",
+          "wardrobe/542d240129883c01/image_clean_640.webp",
         ];
       },
     },
@@ -286,8 +255,8 @@ test("profile delete clears auth cookies and cleans uploaded wardrobe images bes
   );
   expect(calls).toEqual([
     {
-      type: "listWardrobe",
-      payload: { email: "person@example.com", source: "uploaded" },
+      type: "listUploadedR2Keys",
+      payload: { email: "person@example.com" },
     },
     { type: "deleteProfile", payload: "person@example.com" },
     { type: "clearTransient", payload: "person@example.com" },
@@ -295,11 +264,11 @@ test("profile delete clears auth cookies and cleans uploaded wardrobe images bes
       type: "deleteR2",
       payload: {
         keys: [
-          "wardrobe/profile/image.webp",
-          "wardrobe/profile/image_clean.png",
-          "wardrobe/profile/image_clean_320.webp",
-          "wardrobe/profile/image_clean_480.webp",
-          "wardrobe/profile/image_clean_640.webp",
+          "wardrobe/542d240129883c01/image.webp",
+          "wardrobe/542d240129883c01/image_clean.png",
+          "wardrobe/542d240129883c01/image_clean_320.webp",
+          "wardrobe/542d240129883c01/image_clean_480.webp",
+          "wardrobe/542d240129883c01/image_clean_640.webp",
         ],
       },
     },

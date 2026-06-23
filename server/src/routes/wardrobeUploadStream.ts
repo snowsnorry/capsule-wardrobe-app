@@ -123,6 +123,7 @@ async function updateUploadedItemWithReviewableMetadata({
   id,
   imageUrl,
   metadata,
+  ownedR2ImageKeys = [],
 }) {
   if (!hasRequiredUploadedWardrobeMetadata(metadata)) {
     const updated = await context.updateUploadedWardrobeItemMetadataImpl({
@@ -131,6 +132,7 @@ async function updateUploadedItemWithReviewableMetadata({
       id,
       imageUrl,
       metadata,
+      ownedR2ImageKeys,
       processingStatus: "needs_review",
     });
     return { processingStatus: "needs_review", updated };
@@ -155,6 +157,7 @@ async function updateUploadedItemWithReviewableMetadata({
     id,
     imageUrl,
     metadata,
+    ownedR2ImageKeys,
     processingStatus,
   });
   return { processingStatus, updated };
@@ -223,6 +226,12 @@ async function processUploadedWardrobeItemMetadata({
     if (!cleanImageUrl) {
       throw new Error("wardrobe_image_cleanup_missing_url");
     }
+    const ownedR2ImageKeys = [
+      cleanup?.cleanImage?.key,
+      ...(Array.isArray(cleanup?.thumbnails)
+        ? cleanup.thumbnails.map((thumbnail) => thumbnail?.key)
+        : []),
+    ];
     const { processingStatus, updated } =
       await updateUploadedItemWithReviewableMetadata({
         context,
@@ -230,6 +239,7 @@ async function processUploadedWardrobeItemMetadata({
         id,
         imageUrl: cleanImageUrl,
         metadata,
+        ownedR2ImageKeys,
       });
 
     advanceWardrobeUploadProgress(progress, {

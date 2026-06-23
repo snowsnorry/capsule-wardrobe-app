@@ -11,7 +11,7 @@ export function registerProfileMutationRoutes(app, context) {
     clearAccountTransientStateImpl,
     deleteR2ObjectsImpl,
     deleteProfileImpl,
-    listWardrobeItemsImpl,
+    listUploadedWardrobeR2KeysImpl,
     normalizeProfileSettingsPayload,
     nodeEnv,
     requireAuth,
@@ -62,7 +62,7 @@ export function registerProfileMutationRoutes(app, context) {
       clearAccountTransientStateImpl,
       deleteProfileImpl,
       deleteR2ObjectsImpl,
-      listWardrobeItemsImpl,
+      listUploadedWardrobeR2KeysImpl,
       nodeEnv,
     }),
   );

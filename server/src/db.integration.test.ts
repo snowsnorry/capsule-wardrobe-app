@@ -23,6 +23,7 @@ import {
   listWardrobeItemsByIdsForEmail,
   listWardrobeItemsByUrlsForEmail,
   listWardrobeItemsByEmail,
+  listUploadedWardrobeR2KeysByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
   updateUploadedWardrobeItemDetailsById,
@@ -926,6 +927,7 @@ test("db integration saves uploaded wardrobe items", async () => {
     JSON.stringify([
       {
         imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+        ownedR2ImageKeys: [],
         rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
         url: null,
       },
@@ -966,6 +968,7 @@ test("db integration saves uploaded wardrobe URL import items with product URLs"
     items: [
       {
         imageUrl: "https://cdn.example.com/product.jpg",
+        ownedR2ImageKeys: [],
         rawImageUrl: "https://cdn.example.com/product.jpg",
         url: "https://shop.example.com/product",
       },
@@ -985,6 +988,7 @@ test("db integration saves uploaded wardrobe URL import items with product URLs"
     JSON.stringify([
       {
         imageUrl: "https://cdn.example.com/product.jpg",
+        ownedR2ImageKeys: [],
         rawImageUrl: "https://cdn.example.com/product.jpg",
         url: "https://shop.example.com/product",
       },
@@ -1069,6 +1073,40 @@ test("db integration skips uploaded wardrobe delete for blank ids", async () => 
   expect(calls).toEqual([]);
 });
 
+test("db integration lists uploaded wardrobe R2 keys for account cleanup", async () => {
+  const { sql, calls } = createSqlMock([
+    [
+      {
+        ownedR2ImageKeys: [
+          "wardrobe/542d240129883c01/item.webp",
+          "wardrobe/542d240129883c01/item_clean.png",
+          "wardrobe/other-profile/item.webp",
+          "https://assets.example.com/wardrobe/542d240129883c01/item.webp",
+        ],
+      },
+      {
+        ownedR2ImageKeys: [
+          "wardrobe/542d240129883c01/item_clean.png",
+          "wardrobe/542d240129883c01/item_clean_320.webp",
+        ],
+      },
+    ],
+  ]);
+  setSqlClientOverride(sql);
+
+  const keys = await listUploadedWardrobeR2KeysByEmail({
+    email: "person@example.com",
+  });
+
+  expect(keys).toEqual([
+    "wardrobe/542d240129883c01/item.webp",
+    "wardrobe/542d240129883c01/item_clean.png",
+    "wardrobe/542d240129883c01/item_clean_320.webp",
+  ]);
+  expect(calls[0].text).toMatch(/select owned_r2_image_keys/i);
+  expect(calls[0].values).toEqual(["person@example.com"]);
+});
+
 test("db integration updates uploaded wardrobe item metadata status", async () => {
   const updatedRow: WardrobeRow = {
     id: "wardrobe-upload-1",
@@ -1141,6 +1179,8 @@ test("db integration updates uploaded wardrobe item metadata status", async () =
     ["button"],
     "[0.1,0.2]",
     null,
+    [],
+    [],
     "metadata_processed",
     "user@example.com",
     "wardrobe-upload-1",

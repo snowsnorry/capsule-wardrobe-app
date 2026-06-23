@@ -185,6 +185,13 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   ).toBeTruthy();
   expect(
     statements.some((statement) =>
+      statement.includes(
+        "owned_r2_image_keys text[] not null default '{}'::text[]",
+      ),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
       statement.includes("wardrobe_url_scheme_check"),
     ),
   ).toBeTruthy();

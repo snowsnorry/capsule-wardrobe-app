@@ -16,6 +16,7 @@ export type UserWardrobeRow = ProductRow &
     id: string;
     profileEmail: string;
     productId: string | null;
+    ownedR2ImageKeys?: string[] | null;
     source: UserWardrobeSource;
     rawImageUrl: string | null;
     processingStatus: UserWardrobeProcessingStatus;

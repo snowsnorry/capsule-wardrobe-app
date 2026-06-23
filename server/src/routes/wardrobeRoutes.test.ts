@@ -6,7 +6,6 @@ import {
   requestJson,
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
-import { buildUploadedWardrobeItemImageKeys } from "./wardrobeUploadedItemUpdateRoute.js";
 
 const tinyPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/atcw3kAAAAASUVORK5CYII=",
@@ -112,49 +111,6 @@ function buildUploadForm(
   }
   return form;
 }
-
-test("uploaded wardrobe image key builder handles camel fields invalid URLs and duplicates", () => {
-  expect(
-    buildUploadedWardrobeItemImageKeys({
-      imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
-      rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-    }),
-  ).toEqual([
-    "wardrobe/profile/image.webp",
-    "wardrobe/profile/image_clean.png",
-    "wardrobe/profile/image_clean_320.webp",
-    "wardrobe/profile/image_clean_480.webp",
-    "wardrobe/profile/image_clean_640.webp",
-  ]);
-  expect(
-    buildUploadedWardrobeItemImageKeys({
-      imageUrl: "not a url",
-      rawImageUrl: "not a url",
-    }),
-  ).toEqual([]);
-  expect(
-    buildUploadedWardrobeItemImageKeys({
-      imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-      rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-    }),
-  ).toEqual([
-    "wardrobe/profile/image.webp",
-    "wardrobe/profile/image_320.webp",
-    "wardrobe/profile/image_480.webp",
-    "wardrobe/profile/image_640.webp",
-  ]);
-  expect(
-    buildUploadedWardrobeItemImageKeys({
-      imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
-      rawImageUrl: "https://cdn.shop.example.com/products/item.jpg",
-    }),
-  ).toEqual([
-    "wardrobe/profile/image_clean.png",
-    "wardrobe/profile/image_clean_320.webp",
-    "wardrobe/profile/image_clean_480.webp",
-    "wardrobe/profile/image_clean_640.webp",
-  ]);
-});
 
 test("wardrobe routes list and save user wardrobe items", async (t) => {
   const calls: unknown[] = [];
@@ -786,9 +742,15 @@ test("wardrobe routes delete uploaded items and best-effort cleanup R2 images", 
         calls.push({ type: "deleteUploaded", payload });
         return {
           id: payload.id,
-          imageUrl:
-            "https://images.example.com/wardrobe/profile/image_clean.png",
-          rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+          imageUrl: "https://attacker.example.com/wardrobe/other/image.png",
+          ownedR2ImageKeys: [
+            "wardrobe/542d240129883c01/image.webp",
+            "wardrobe/542d240129883c01/image_clean.png",
+            "wardrobe/542d240129883c01/image_clean_320.webp",
+            "wardrobe/542d240129883c01/image_clean_480.webp",
+            "wardrobe/542d240129883c01/image_clean_640.webp",
+          ],
+          rawImageUrl: "https://attacker.example.com/wardrobe/other/raw.png",
           source: "uploaded",
         };
       },
@@ -849,11 +811,11 @@ test("wardrobe routes delete uploaded items and best-effort cleanup R2 images", 
       type: "deleteR2",
       payload: {
         keys: [
-          "wardrobe/profile/image.webp",
-          "wardrobe/profile/image_clean.png",
-          "wardrobe/profile/image_clean_320.webp",
-          "wardrobe/profile/image_clean_480.webp",
-          "wardrobe/profile/image_clean_640.webp",
+          "wardrobe/542d240129883c01/image.webp",
+          "wardrobe/542d240129883c01/image_clean.png",
+          "wardrobe/542d240129883c01/image_clean_320.webp",
+          "wardrobe/542d240129883c01/image_clean_480.webp",
+          "wardrobe/542d240129883c01/image_clean_640.webp",
         ],
       },
     },
@@ -865,11 +827,11 @@ test("wardrobe routes delete uploaded items and best-effort cleanup R2 images", 
       type: "deleteR2",
       payload: {
         keys: [
-          "wardrobe/profile/image.webp",
-          "wardrobe/profile/image_clean.png",
-          "wardrobe/profile/image_clean_320.webp",
-          "wardrobe/profile/image_clean_480.webp",
-          "wardrobe/profile/image_clean_640.webp",
+          "wardrobe/542d240129883c01/image.webp",
+          "wardrobe/542d240129883c01/image_clean.png",
+          "wardrobe/542d240129883c01/image_clean_320.webp",
+          "wardrobe/542d240129883c01/image_clean_480.webp",
+          "wardrobe/542d240129883c01/image_clean_640.webp",
         ],
       },
     },
@@ -1115,14 +1077,16 @@ test("wardrobe upload route processes images and creates uploaded items", async 
           imageLlm: payload.imageLlm,
         });
         const source = {
-          imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+          imageUrl:
+            "https://images.example.com/wardrobe/542d240129883c01/image.webp",
           kind: "file",
           productPageUrl:
-            "https://images.example.com/wardrobe/profile/image.webp",
-          rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-          sourceImageKey: "wardrobe/profile/image.webp",
+            "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+          rawImageUrl:
+            "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+          sourceImageKey: "wardrobe/542d240129883c01/image.webp",
           sourceImageUrl:
-            "https://images.example.com/wardrobe/profile/image.webp",
+            "https://images.example.com/wardrobe/542d240129883c01/image.webp",
         };
         payload.onEvent?.({
           event: "source-uploaded",
@@ -1140,8 +1104,8 @@ test("wardrobe upload route processes images and creates uploaded items", async 
             },
             cleanup: {
               cleanImage: {
-                key: "wardrobe/profile/image_clean.png",
-                url: "https://images.example.com/wardrobe/profile/image_clean.png",
+                key: "wardrobe/542d240129883c01/image_clean.png",
+                url: "https://images.example.com/wardrobe/542d240129883c01/image_clean.png",
                 digest: "clean-digest",
               },
               thumbnails: [],
@@ -1158,8 +1122,8 @@ test("wardrobe upload route processes images and creates uploaded items", async 
           {
             id: "wardrobe-upload-1",
             profileEmail: "person@example.com",
-            imageUrl: payload.imageUrls[0],
-            rawImageUrl: payload.imageUrls[0],
+            imageUrl: payload.items[0].imageUrl,
+            rawImageUrl: payload.items[0].rawImageUrl,
             source: "uploaded",
             processingStatus: "uploaded",
             createdAt: "2026-05-01T00:00:00.000Z",
@@ -1176,7 +1140,8 @@ test("wardrobe upload route processes images and creates uploaded items", async 
         return {
           id: payload.id,
           imageUrl: payload.imageUrl,
-          rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+          rawImageUrl:
+            "https://images.example.com/wardrobe/542d240129883c01/image.webp",
           source: "uploaded",
           processingStatus: payload.processingStatus,
           ...payload.metadata,
@@ -1214,8 +1179,10 @@ test("wardrobe upload route processes images and creates uploaded items", async 
       expect.objectContaining({
         id: "wardrobe-upload-1",
         name: "Linen shirt",
-        imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
-        rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+        imageUrl:
+          "https://images.example.com/wardrobe/542d240129883c01/image_clean.png",
+        rawImageUrl:
+          "https://images.example.com/wardrobe/542d240129883c01/image.webp",
         source: "uploaded",
         processingStatus: "ready",
       }),
@@ -1237,7 +1204,16 @@ test("wardrobe upload route processes images and creates uploaded items", async 
       type: "saveUploaded",
       payload: {
         email: "person@example.com",
-        imageUrls: ["https://images.example.com/wardrobe/profile/image.webp"],
+        items: [
+          {
+            imageUrl:
+              "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+            ownedR2ImageKeys: ["wardrobe/542d240129883c01/image.webp"],
+            rawImageUrl:
+              "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+            url: "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+          },
+        ],
       },
     },
     {
@@ -1250,8 +1226,10 @@ test("wardrobe upload route processes images and creates uploaded items", async 
         email: "person@example.com",
         embedding: [0.7, 0.8],
         id: "wardrobe-upload-1",
-        imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
+        imageUrl:
+          "https://images.example.com/wardrobe/542d240129883c01/image_clean.png",
         metadata,
+        ownedR2ImageKeys: ["wardrobe/542d240129883c01/image_clean.png"],
         processingStatus: "ready",
       },
     },
@@ -1292,7 +1270,7 @@ test("wardrobe URL upload route imports image URLs from worker results", async (
           kind: "direct-image",
           productPageUrl: "https://shop.example.com/images/linen.jpg",
           rawImageUrl: "https://shop.example.com/images/linen.jpg",
-          sourceImageKey: "wardrobe/profile/remote-source.webp",
+          sourceImageKey: "wardrobe/542d240129883c01/remote-source.webp",
           sourceImageUrl: "https://shop.example.com/images/linen.jpg",
         };
         payload.onEvent?.({
@@ -1311,8 +1289,8 @@ test("wardrobe URL upload route imports image URLs from worker results", async (
             },
             cleanup: {
               cleanImage: {
-                key: "wardrobe/profile/remote-source_clean.png",
-                url: "https://images.example.com/wardrobe/profile/remote-source_clean.png",
+                key: "wardrobe/542d240129883c01/remote-source_clean.png",
+                url: "https://images.example.com/wardrobe/542d240129883c01/remote-source_clean.png",
                 digest: "clean-digest",
               },
               thumbnails: [],
@@ -1387,7 +1365,7 @@ test("wardrobe URL upload route imports image URLs from worker results", async (
         name: "Linen shirt",
         url: "https://shop.example.com/images/linen.jpg",
         imageUrl:
-          "https://images.example.com/wardrobe/profile/remote-source_clean.png",
+          "https://images.example.com/wardrobe/542d240129883c01/remote-source_clean.png",
         rawImageUrl: "https://shop.example.com/images/linen.jpg",
         source: "uploaded",
         processingStatus: "ready",
@@ -1407,6 +1385,7 @@ test("wardrobe URL upload route imports image URLs from worker results", async (
         items: [
           {
             imageUrl: "https://shop.example.com/images/linen.jpg",
+            ownedR2ImageKeys: ["wardrobe/542d240129883c01/remote-source.webp"],
             rawImageUrl: "https://shop.example.com/images/linen.jpg",
             url: "https://shop.example.com/images/linen.jpg",
           },
@@ -1424,8 +1403,9 @@ test("wardrobe URL upload route imports image URLs from worker results", async (
         embedding: [0.7, 0.8],
         id: "wardrobe-url-upload-1",
         imageUrl:
-          "https://images.example.com/wardrobe/profile/remote-source_clean.png",
+          "https://images.example.com/wardrobe/542d240129883c01/remote-source_clean.png",
         metadata,
+        ownedR2ImageKeys: ["wardrobe/542d240129883c01/remote-source_clean.png"],
         processingStatus: "ready",
       },
     },
@@ -1470,14 +1450,14 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
         });
         const source = {
           imageUrl:
-            "https://images.example.com/wardrobe/profile/direct-image.webp",
+            "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
           kind: "direct-image",
           productPageUrl: "https://cdn.example.com/products/linen-shirt.jpg",
           rawImageUrl:
-            "https://images.example.com/wardrobe/profile/direct-image.webp",
-          sourceImageKey: "wardrobe/profile/direct-image.webp",
+            "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
+          sourceImageKey: "wardrobe/542d240129883c01/direct-image.webp",
           sourceImageUrl:
-            "https://images.example.com/wardrobe/profile/direct-image.webp",
+            "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
         };
         payload.onEvent?.({
           event: "source-uploaded",
@@ -1495,26 +1475,26 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
             },
             cleanup: {
               cleanImage: {
-                key: "wardrobe/profile/direct-image.webp",
-                url: "https://images.example.com/wardrobe/profile/direct-image.webp",
+                key: "wardrobe/542d240129883c01/direct-image.webp",
+                url: "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
                 digest: "direct-digest",
               },
               thumbnails: [
                 {
-                  key: "wardrobe/profile/direct-image_320.webp",
-                  url: "https://images.example.com/wardrobe/profile/direct-image_320.webp",
+                  key: "wardrobe/542d240129883c01/direct-image_320.webp",
+                  url: "https://images.example.com/wardrobe/542d240129883c01/direct-image_320.webp",
                   digest: "thumb-320",
                   width: 320,
                 },
                 {
-                  key: "wardrobe/profile/direct-image_480.webp",
-                  url: "https://images.example.com/wardrobe/profile/direct-image_480.webp",
+                  key: "wardrobe/542d240129883c01/direct-image_480.webp",
+                  url: "https://images.example.com/wardrobe/542d240129883c01/direct-image_480.webp",
                   digest: "thumb-480",
                   width: 480,
                 },
                 {
-                  key: "wardrobe/profile/direct-image_640.webp",
-                  url: "https://images.example.com/wardrobe/profile/direct-image_640.webp",
+                  key: "wardrobe/542d240129883c01/direct-image_640.webp",
+                  url: "https://images.example.com/wardrobe/542d240129883c01/direct-image_640.webp",
                   digest: "thumb-640",
                   width: 640,
                 },
@@ -1554,7 +1534,7 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
           url: "https://cdn.example.com/products/linen-shirt.jpg",
           imageUrl: payload.imageUrl,
           rawImageUrl:
-            "https://images.example.com/wardrobe/profile/direct-image.webp",
+            "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
           source: "uploaded",
           processingStatus: payload.processingStatus,
           ...payload.metadata,
@@ -1589,9 +1569,9 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
         name: "Linen shirt",
         url: "https://cdn.example.com/products/linen-shirt.jpg",
         imageUrl:
-          "https://images.example.com/wardrobe/profile/direct-image.webp",
+          "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
         rawImageUrl:
-          "https://images.example.com/wardrobe/profile/direct-image.webp",
+          "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
         source: "uploaded",
         processingStatus: "ready",
       }),
@@ -1611,9 +1591,10 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
         items: [
           {
             imageUrl:
-              "https://images.example.com/wardrobe/profile/direct-image.webp",
+              "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
+            ownedR2ImageKeys: ["wardrobe/542d240129883c01/direct-image.webp"],
             rawImageUrl:
-              "https://images.example.com/wardrobe/profile/direct-image.webp",
+              "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
             url: "https://cdn.example.com/products/linen-shirt.jpg",
           },
         ],
@@ -1630,8 +1611,14 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
         embedding: [0.7, 0.8],
         id: "wardrobe-direct-image-1",
         imageUrl:
-          "https://images.example.com/wardrobe/profile/direct-image.webp",
+          "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
         metadata,
+        ownedR2ImageKeys: [
+          "wardrobe/542d240129883c01/direct-image.webp",
+          "wardrobe/542d240129883c01/direct-image_320.webp",
+          "wardrobe/542d240129883c01/direct-image_480.webp",
+          "wardrobe/542d240129883c01/direct-image_640.webp",
+        ],
         processingStatus: "ready",
       },
     },
@@ -1753,7 +1740,7 @@ test("wardrobe URL upload route marks source save failures as failed", async (t)
             kind: "direct-image",
             productPageUrl: "https://shop.example.com/image.jpg",
             rawImageUrl: "https://shop.example.com/image.jpg",
-            sourceImageKey: "wardrobe/profile/source.webp",
+            sourceImageKey: "wardrobe/542d240129883c01/source.webp",
             sourceImageUrl: "https://shop.example.com/image.jpg",
           },
         },
@@ -1824,7 +1811,7 @@ test("wardrobe URL upload route marks early saved sources failed when worker fai
     kind: "direct-image",
     productPageUrl: "https://shop.example.com/images/linen.jpg",
     rawImageUrl: "https://shop.example.com/images/linen.jpg",
-    sourceImageKey: "wardrobe/profile/remote-source.webp",
+    sourceImageKey: "wardrobe/542d240129883c01/remote-source.webp",
     sourceImageUrl: "https://shop.example.com/images/linen.jpg",
   };
   const { baseUrl } = await startTestServer(t, {
@@ -1882,6 +1869,7 @@ test("wardrobe URL upload route marks early saved sources failed when worker fai
         items: [
           {
             imageUrl: "https://shop.example.com/images/linen.jpg",
+            ownedR2ImageKeys: ["wardrobe/542d240129883c01/remote-source.webp"],
             rawImageUrl: "https://shop.example.com/images/linen.jpg",
             url: "https://shop.example.com/images/linen.jpg",
           },
@@ -1941,8 +1929,8 @@ test("wardrobe URL upload route continues after a single image URL failure", asy
             },
             cleanup: {
               cleanImage: {
-                key: "wardrobe/profile/tee-source_clean.png",
-                url: "https://images.example.com/wardrobe/profile/tee-source_clean.png",
+                key: "wardrobe/542d240129883c01/tee-source_clean.png",
+                url: "https://images.example.com/wardrobe/542d240129883c01/tee-source_clean.png",
                 digest: "clean-digest",
               },
               thumbnails: [],
@@ -1954,7 +1942,7 @@ test("wardrobe URL upload route continues after a single image URL failure", asy
               kind: "direct-image",
               productPageUrl: "https://shop.example.com/tee.jpg",
               rawImageUrl: "https://shop.example.com/tee.jpg",
-              sourceImageKey: "wardrobe/profile/tee-source.webp",
+              sourceImageKey: "wardrobe/542d240129883c01/tee-source.webp",
               sourceImageUrl: "https://shop.example.com/tee.jpg",
             },
           },
@@ -2009,7 +1997,7 @@ test("wardrobe URL upload route continues after a single image URL failure", asy
         name: "Cotton tee",
         url: "https://shop.example.com/tee.jpg",
         imageUrl:
-          "https://images.example.com/wardrobe/profile/tee-source_clean.png",
+          "https://images.example.com/wardrobe/542d240129883c01/tee-source_clean.png",
         rawImageUrl: "https://shop.example.com/tee.jpg",
         source: "uploaded",
         processingStatus: "ready",
@@ -2029,6 +2017,7 @@ test("wardrobe URL upload route continues after a single image URL failure", asy
       items: [
         {
           imageUrl: "https://shop.example.com/tee.jpg",
+          ownedR2ImageKeys: ["wardrobe/542d240129883c01/tee-source.webp"],
           rawImageUrl: "https://shop.example.com/tee.jpg",
           url: "https://shop.example.com/tee.jpg",
         },
@@ -2156,12 +2145,15 @@ test("wardrobe file upload route marks early saved sources failed when worker fa
   vi.spyOn(console, "error").mockImplementation(() => {});
   const calls: unknown[] = [];
   const source = {
-    imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+    imageUrl: "https://images.example.com/wardrobe/542d240129883c01/image.webp",
     kind: "file",
-    productPageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-    rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-    sourceImageKey: "wardrobe/profile/image.webp",
-    sourceImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+    productPageUrl:
+      "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+    rawImageUrl:
+      "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+    sourceImageKey: "wardrobe/542d240129883c01/image.webp",
+    sourceImageUrl:
+      "https://images.example.com/wardrobe/542d240129883c01/image.webp",
   };
   const { baseUrl } = await startTestServer(t, {
     overrides: {
@@ -2181,8 +2173,8 @@ test("wardrobe file upload route marks early saved sources failed when worker fa
           {
             id: "wardrobe-file-orphan",
             profileEmail: "person@example.com",
-            imageUrl: payload.imageUrls[0],
-            rawImageUrl: payload.imageUrls[0],
+            imageUrl: payload.items[0].imageUrl,
+            rawImageUrl: payload.items[0].rawImageUrl,
             source: "uploaded",
             processingStatus: "uploaded",
             createdAt: "2026-05-01T00:00:00.000Z",
@@ -2216,7 +2208,16 @@ test("wardrobe file upload route marks early saved sources failed when worker fa
       type: "saveUploaded",
       payload: {
         email: "person@example.com",
-        imageUrls: ["https://images.example.com/wardrobe/profile/image.webp"],
+        items: [
+          {
+            imageUrl:
+              "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+            ownedR2ImageKeys: ["wardrobe/542d240129883c01/image.webp"],
+            rawImageUrl:
+              "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+            url: "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+          },
+        ],
       },
     },
     {

@@ -61,6 +61,7 @@ test("wardrobe upload stream processes successful metadata", async () => {
     })),
     cleanupUploadedWardrobeItemImageImpl: vi.fn(async () => ({
       cleanImage: {
+        key: "wardrobe/542d240129883c01/item_clean.png",
         url: "https://images.example.com/item_clean.png",
       },
     })),
@@ -95,7 +96,7 @@ test("wardrobe upload stream processes successful metadata", async () => {
       mimeType: "image/webp",
       originalName: "item.webp",
     },
-    sourceImageKey: "wardrobe/profile/item.webp",
+    sourceImageKey: "wardrobe/542d240129883c01/item.webp",
     progress,
     res,
   });
@@ -119,7 +120,7 @@ test("wardrobe upload stream processes successful metadata", async () => {
     imageUrl: "https://images.example.com/item.webp",
     sourceBuffer: Buffer.from("source"),
     sourceFilename: "item.webp",
-    sourceKey: "wardrobe/profile/item.webp",
+    sourceKey: "wardrobe/542d240129883c01/item.webp",
     sourceMimeType: "image/webp",
   });
   expect(context.updateUploadedWardrobeItemMetadataImpl).toHaveBeenCalledWith({
@@ -128,6 +129,7 @@ test("wardrobe upload stream processes successful metadata", async () => {
     id: "item-1",
     imageUrl: "https://images.example.com/item_clean.png",
     metadata,
+    ownedR2ImageKeys: ["wardrobe/542d240129883c01/item_clean.png"],
     processingStatus: "ready",
   });
   expect(context.createUploadedWardrobeItemEmbeddingImpl).toHaveBeenCalledWith(
@@ -163,6 +165,7 @@ test("wardrobe upload stream saves failed status when embedding fails", async ()
     })),
     cleanupUploadedWardrobeItemImageImpl: vi.fn(async () => ({
       cleanImage: {
+        key: "wardrobe/542d240129883c01/item_clean.png",
         url: "https://images.example.com/item_clean.png",
       },
     })),
@@ -218,6 +221,7 @@ test("wardrobe upload stream saves failed status when embedding fails", async ()
     id: "item-1",
     imageUrl: "https://images.example.com/item_clean.png",
     metadata,
+    ownedR2ImageKeys: ["wardrobe/542d240129883c01/item_clean.png"],
     processingStatus: "failed",
   });
   consoleError.mockRestore();
@@ -251,6 +255,7 @@ test("wardrobe upload stream marks incomplete metadata needs review without embe
     })),
     cleanupUploadedWardrobeItemImageImpl: vi.fn(async () => ({
       cleanImage: {
+        key: "wardrobe/542d240129883c01/item_clean.png",
         url: "https://images.example.com/item_clean.png",
       },
     })),
@@ -306,6 +311,7 @@ test("wardrobe upload stream marks incomplete metadata needs review without embe
     id: "item-1",
     imageUrl: "https://images.example.com/item_clean.png",
     metadata,
+    ownedR2ImageKeys: ["wardrobe/542d240129883c01/item_clean.png"],
     processingStatus: "needs_review",
   });
 });
@@ -383,6 +389,7 @@ test("wardrobe upload stream marks empty metadata needs review after cleanup", a
     })),
     cleanupUploadedWardrobeItemImageImpl: vi.fn(async () => ({
       cleanImage: {
+        key: "wardrobe/542d240129883c01/item_clean.png",
         url: "https://images.example.com/item_clean.png",
       },
     })),
@@ -451,6 +458,7 @@ test("wardrobe upload stream marks empty metadata needs review after cleanup", a
       fit: null,
       closure_type: [],
     },
+    ownedR2ImageKeys: ["wardrobe/542d240129883c01/item_clean.png"],
     processingStatus: "needs_review",
   });
   expect(getWrittenText(res)).toContain(

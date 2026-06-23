@@ -71,7 +71,10 @@ export {
   listLikedItemUrlsByEmail,
   upsertLikedItemByUrl,
 } from "./db/likedItems.js";
-export { deleteUploadedWardrobeItemById } from "./db/wardrobeDelete.js";
+export {
+  deleteUploadedWardrobeItemById,
+  listUploadedWardrobeR2KeysByEmail,
+} from "./db/wardrobeDelete.js";
 export {
   updateUploadedWardrobeItemDetailsById,
   updateUploadedWardrobeItemMetadataById,

@@ -1,6 +1,7 @@
 import { getFirstRow, getSqlClient } from "./core.js";
 import { toWardrobeUiItem } from "./wardrobeMapper.js";
 import type { UserWardrobeRow } from "./wardrobeTypes.js";
+import { normalizeOwnedWardrobeR2Keys } from "../wardrobeR2Keys.js";
 import {
   calculateWardrobeImageIsNeutral,
   type WardrobeImageAnalysisMetadata,
@@ -13,6 +14,7 @@ type UploadedWardrobeMetadataUpdate = {
   id: string;
   metadata?: WardrobeImageAnalysisMetadata | null;
   imageUrl?: string | null;
+  ownedR2ImageKeys?: unknown[] | null;
   processingStatus: "metadata_processed" | "needs_review" | "ready" | "failed";
 };
 
@@ -60,6 +62,7 @@ async function markUploadedWardrobeItemFailed(email: string, id: string) {
         fit,
         closure_type as "closureType",
         embedding,
+        owned_r2_image_keys as "ownedR2ImageKeys",
         source,
         raw_image_url as "rawImageUrl",
         processing_status as "processingStatus",
@@ -70,12 +73,15 @@ async function markUploadedWardrobeItemFailed(email: string, id: string) {
   return row ? toWardrobeUiItem(row) : null;
 }
 
+// The SQL statement intentionally stays together so metadata and owned R2 keys update atomically.
+// eslint-disable-next-line max-lines-per-function
 async function markUploadedWardrobeItemMetadataProcessed({
   email,
   embedding = null,
   id,
   imageUrl = null,
   metadata,
+  ownedR2ImageKeys = [],
   processingStatus = "metadata_processed",
 }: {
   email: string;
@@ -83,10 +89,15 @@ async function markUploadedWardrobeItemMetadataProcessed({
   id: string;
   imageUrl?: string | null;
   metadata: WardrobeImageAnalysisMetadata;
+  ownedR2ImageKeys?: unknown[] | null;
   processingStatus?: "metadata_processed" | "needs_review" | "ready" | "failed";
 }) {
   const sql = getSqlClient();
   const normalizedImageUrl = String(imageUrl || "").trim() || null;
+  const normalizedOwnedR2ImageKeys = normalizeOwnedWardrobeR2Keys({
+    email,
+    keys: ownedR2ImageKeys,
+  });
   const embeddingVector = formatEmbeddingVector(embedding);
   const row = getFirstRow(
     await sql<UserWardrobeRow>`
@@ -111,6 +122,20 @@ async function markUploadedWardrobeItemMetadataProcessed({
       closure_type = ${metadata.closure_type},
       embedding = ${embeddingVector}::vector,
       image_url = coalesce(${normalizedImageUrl}, image_url),
+      owned_r2_image_keys = case
+        when cardinality(${normalizedOwnedR2ImageKeys}::text[]) > 0 then (
+          select coalesce(array_agg(key order by first_position), '{}'::text[])
+          from (
+            select key, min(position) as first_position
+            from unnest(
+              wardrobe.owned_r2_image_keys || ${normalizedOwnedR2ImageKeys}::text[]
+            ) with ordinality as keys(key, position)
+            where nullif(trim(key), '') is not null
+            group by key
+          ) deduped
+        )
+        else owned_r2_image_keys
+      end,
       processing_status = ${processingStatus},
       updated_at = now()
     where profile_email = ${email}
@@ -143,6 +168,7 @@ async function markUploadedWardrobeItemMetadataProcessed({
       fit,
       closure_type as "closureType",
       embedding,
+      owned_r2_image_keys as "ownedR2ImageKeys",
       source,
       raw_image_url as "rawImageUrl",
       processing_status as "processingStatus",
@@ -160,6 +186,7 @@ async function updateUploadedWardrobeItemMetadataById({
   id,
   imageUrl = null,
   metadata,
+  ownedR2ImageKeys = [],
   processingStatus,
 }: UploadedWardrobeMetadataUpdate): Promise<Record<string, unknown> | null> {
   const normalizedId = String(id || "").trim();
@@ -177,6 +204,7 @@ async function updateUploadedWardrobeItemMetadataById({
     imageUrl,
     id: normalizedId,
     metadata,
+    ownedR2ImageKeys,
     processingStatus,
   });
 }
@@ -259,6 +287,7 @@ async function updateUploadedWardrobeItemDetailsById({
         fit,
         closure_type as "closureType",
         embedding,
+        owned_r2_image_keys as "ownedR2ImageKeys",
         source,
         raw_image_url as "rawImageUrl",
         processing_status as "processingStatus",

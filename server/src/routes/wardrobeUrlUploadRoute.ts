@@ -35,6 +35,7 @@ async function saveWardrobeImageUrlUploadedItem({ context, email, source }) {
     items: [
       {
         imageUrl: source.imageUrl,
+        ownedR2ImageKeys: [source.sourceImageKey],
         rawImageUrl: source.rawImageUrl,
         url: source.productPageUrl,
       },

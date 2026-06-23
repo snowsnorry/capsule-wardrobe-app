@@ -23,27 +23,27 @@ function createUploadedWardrobeMetadata() {
 function createUploadedWardrobeCleanupResult() {
   return {
     cleanImage: {
-      key: "wardrobe/profile/image_clean.png",
-      url: "https://images.example.com/wardrobe/profile/image_clean.png",
+      key: "wardrobe/542d240129883c01/image_clean.png",
+      url: "https://images.example.com/wardrobe/542d240129883c01/image_clean.png",
       digest: "clean-digest",
     },
     thumbnails: [
       {
         width: 320,
-        key: "wardrobe/profile/image_clean_320.webp",
-        url: "https://images.example.com/wardrobe/profile/image_clean_320.webp",
+        key: "wardrobe/542d240129883c01/image_clean_320.webp",
+        url: "https://images.example.com/wardrobe/542d240129883c01/image_clean_320.webp",
         digest: "thumb-320",
       },
       {
         width: 480,
-        key: "wardrobe/profile/image_clean_480.webp",
-        url: "https://images.example.com/wardrobe/profile/image_clean_480.webp",
+        key: "wardrobe/542d240129883c01/image_clean_480.webp",
+        url: "https://images.example.com/wardrobe/542d240129883c01/image_clean_480.webp",
         digest: "thumb-480",
       },
       {
         width: 640,
-        key: "wardrobe/profile/image_clean_640.webp",
-        url: "https://images.example.com/wardrobe/profile/image_clean_640.webp",
+        key: "wardrobe/542d240129883c01/image_clean_640.webp",
+        url: "https://images.example.com/wardrobe/542d240129883c01/image_clean_640.webp",
         digest: "thumb-640",
       },
     ],
@@ -68,14 +68,21 @@ function createWardrobeListDependencies() {
         id,
         name: `Uploaded shirt ${id}`,
         url: `wardrobe://${id}`,
-        imageUrl: `https://images.example.com/wardrobe/profile/${id}.webp`,
-        rawImageUrl: `https://images.example.com/wardrobe/profile/${id}.webp`,
+        imageUrl: `https://images.example.com/wardrobe/542d240129883c01/${id}.webp`,
+        rawImageUrl: `https://images.example.com/wardrobe/542d240129883c01/${id}.webp`,
         source: "uploaded",
         processingStatus: "ready",
         audience: "all",
         category: "top",
         season: ["summer"],
       })),
+    listUploadedWardrobeR2KeysImpl: async () => [
+      "wardrobe/542d240129883c01/image.webp",
+      "wardrobe/542d240129883c01/image_clean.png",
+      "wardrobe/542d240129883c01/image_clean_320.webp",
+      "wardrobe/542d240129883c01/image_clean_480.webp",
+      "wardrobe/542d240129883c01/image_clean_640.webp",
+    ],
     saveWardrobeItemFromCatalogImpl: async (_payload) => ({
       id: "wardrobe-1",
       name: "Saved shirt",
@@ -109,14 +116,16 @@ function createWardrobeFileUploadDependencies() {
         inputIndex,
         ok: true,
         source: {
-          imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+          imageUrl:
+            "https://images.example.com/wardrobe/542d240129883c01/image.webp",
           kind: "file",
           productPageUrl:
-            "https://images.example.com/wardrobe/profile/image.webp",
-          rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-          sourceImageKey: "wardrobe/profile/image.webp",
+            "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+          rawImageUrl:
+            "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+          sourceImageKey: "wardrobe/542d240129883c01/image.webp",
           sourceImageUrl:
-            "https://images.example.com/wardrobe/profile/image.webp",
+            "https://images.example.com/wardrobe/542d240129883c01/image.webp",
         },
       })),
   };
@@ -139,7 +148,7 @@ function createWardrobeUrlUploadDependencies() {
           kind: "direct-image",
           productPageUrl: String(url || "https://shop.example.com/product"),
           rawImageUrl: "https://cdn.example.com/product.jpg",
-          sourceImageKey: "wardrobe/profile/direct-image-source.webp",
+          sourceImageKey: "wardrobe/542d240129883c01/direct-image-source.webp",
           sourceImageUrl: "https://cdn.example.com/product.jpg",
         },
       })),
@@ -149,15 +158,17 @@ function createWardrobeUrlUploadDependencies() {
 function createWardrobeStorageDependencies() {
   return {
     uploadWardrobeImageToR2Impl: async (_payload) => ({
-      key: "wardrobe/profile/image.webp",
-      url: "https://images.example.com/wardrobe/profile/image.webp",
+      key: "wardrobe/542d240129883c01/image.webp",
+      url: "https://images.example.com/wardrobe/542d240129883c01/image.webp",
       digest: "digest",
     }),
     saveUploadedWardrobeItemsImpl: async (_payload) => [
       {
         id: "wardrobe-upload-1",
-        imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-        rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+        imageUrl:
+          "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+        rawImageUrl:
+          "https://images.example.com/wardrobe/542d240129883c01/image.webp",
         source: "uploaded",
         processingStatus: "uploaded",
       },
@@ -189,8 +200,9 @@ function createWardrobeMetadataDependencies() {
       embedding: payload.embedding,
       imageUrl:
         payload.imageUrl ||
-        "https://images.example.com/wardrobe/profile/image.webp",
-      rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+        "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+      rawImageUrl:
+        "https://images.example.com/wardrobe/542d240129883c01/image.webp",
       source: "uploaded",
       processingStatus: payload.processingStatus,
       ...(payload.metadata || {}),
@@ -198,8 +210,10 @@ function createWardrobeMetadataDependencies() {
     updateUploadedWardrobeItemDetailsImpl: async (payload) => ({
       id: payload.id,
       embedding: payload.embedding,
-      imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-      rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+      imageUrl:
+        "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+      rawImageUrl:
+        "https://images.example.com/wardrobe/542d240129883c01/image.webp",
       source: "uploaded",
       processingStatus: payload.processingStatus,
       ...payload.details,
@@ -209,8 +223,10 @@ function createWardrobeMetadataDependencies() {
       profileEmail: payload.email,
       name: "Uploaded shirt",
       url: `wardrobe://${payload.id}`,
-      imageUrl: "https://images.example.com/wardrobe/profile/image.webp",
-      rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+      imageUrl:
+        "https://images.example.com/wardrobe/542d240129883c01/image.webp",
+      rawImageUrl:
+        "https://images.example.com/wardrobe/542d240129883c01/image.webp",
       source: "uploaded",
       processingStatus: "ready",
       audience: "all",
@@ -225,8 +241,17 @@ function createWardrobeDeleteDependencies() {
   return {
     deleteUploadedWardrobeItemImpl: async () => ({
       id: "wardrobe-upload-1",
-      imageUrl: "https://images.example.com/wardrobe/profile/image_clean.png",
-      rawImageUrl: "https://images.example.com/wardrobe/profile/image.webp",
+      imageUrl:
+        "https://images.example.com/wardrobe/542d240129883c01/image_clean.png",
+      ownedR2ImageKeys: [
+        "wardrobe/542d240129883c01/image.webp",
+        "wardrobe/542d240129883c01/image_clean.png",
+        "wardrobe/542d240129883c01/image_clean_320.webp",
+        "wardrobe/542d240129883c01/image_clean_480.webp",
+        "wardrobe/542d240129883c01/image_clean_640.webp",
+      ],
+      rawImageUrl:
+        "https://images.example.com/wardrobe/542d240129883c01/image.webp",
       source: "uploaded",
       processingStatus: "ready",
     }),
