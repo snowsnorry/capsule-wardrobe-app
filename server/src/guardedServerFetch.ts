@@ -172,6 +172,30 @@ async function guardedServerFetchBuffer({
   throw new Error("server_fetch_too_many_redirects");
 }
 
+function createPinnedAddressLookup({
+  address,
+  family,
+}: {
+  address: string;
+  family: number;
+}) {
+  return (_hostname: string, options: unknown, callback?: unknown) => {
+    const done = (typeof options === "function" ? options : callback) as (
+      ...args: unknown[]
+    ) => void;
+    if (
+      typeof options === "object" &&
+      options !== null &&
+      "all" in options &&
+      options.all === true
+    ) {
+      done(null, [{ address, family }]);
+      return;
+    }
+    done(null, address, family);
+  };
+}
+
 function requestUrlWithPinnedAddress({
   address,
   errorCode,
@@ -206,9 +230,7 @@ function requestUrlWithPinnedAddress({
           accept: "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8",
           "user-agent": "capsule-wardrobe-image-fetch/1.0",
         },
-        lookup: (_hostname, _options, callback) => {
-          callback(null, address, family);
-        },
+        lookup: createPinnedAddressLookup({ address, family }),
         method: "GET",
         timeout: timeoutMs,
       },

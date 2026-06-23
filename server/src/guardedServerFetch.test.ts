@@ -123,6 +123,7 @@ test("guarded server fetch rejects malformed redirect responses", async () => {
 
 test("guarded server fetch node request wrapper buffers responses", async () => {
   const pinnedAddresses: Array<{ address: string; family: number }> = [];
+  const pinnedAllAddresses: Array<{ address: string; family: number }> = [];
   vi.spyOn(http, "request").mockImplementation(((url, options, callback) => {
     const request = new EventEmitter() as http.ClientRequest;
     const response = new EventEmitter() as http.IncomingMessage;
@@ -145,16 +146,26 @@ test("guarded server fetch node request wrapper buffers responses", async () => 
           lookup: (
             hostname: string,
             options: unknown,
-            callback: (
-              error: Error | null,
-              address: string,
-              family: number,
-            ) => void,
+            callback: (...args: unknown[]) => void,
           ) => void;
         }
       ).lookup("cdn.example.com", {}, (error, address, family) => {
         expect(error).toBeNull();
         pinnedAddresses.push({ address: String(address), family });
+      });
+      (
+        options as http.RequestOptions & {
+          lookup: (
+            hostname: string,
+            options: unknown,
+            callback: (...args: unknown[]) => void,
+          ) => void;
+        }
+      ).lookup("cdn.example.com", { all: true }, (error, addresses) => {
+        expect(error).toBeNull();
+        pinnedAllAddresses.push(
+          ...((addresses as Array<{ address: string; family: number }>) || []),
+        );
       });
       callback?.(response);
       setImmediate(() => {
@@ -178,6 +189,7 @@ test("guarded server fetch node request wrapper buffers responses", async () => 
   expect(result.buffer).toEqual(Buffer.from("hello world"));
   expect(result.headers.get("content-type")).toBe("text/plain");
   expect(pinnedAddresses).toEqual([{ address: "93.184.216.34", family: 4 }]);
+  expect(pinnedAllAddresses).toEqual([{ address: "93.184.216.34", family: 4 }]);
 });
 
 test("guarded server fetch node request wrapper handles redirects, byte caps, and timeouts", async () => {
