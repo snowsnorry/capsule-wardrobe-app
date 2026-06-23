@@ -1,6 +1,11 @@
 import { Buffer } from "node:buffer";
-import type { FilePayload, Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./test";
+
+type FilePayload = Extract<
+  Parameters<Locator["setInputFiles"]>[0],
+  { name: string }
+>;
 
 const TINY_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/atcw3kAAAAASUVORK5CYII=",
