@@ -76,4 +76,3 @@ export {
   assertContentLengthUnderLimit,
   createByteLimitedCollector,
 };
-export type { HeaderLike };

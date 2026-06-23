@@ -233,8 +233,4 @@ function requestUrlWithPinnedAddress({
 }
 
 export { guardedServerFetchBuffer };
-export type {
-  GuardedDnsLookup,
-  GuardedNodeRequest,
-  GuardedServerFetchResponse,
-};
+export type { GuardedDnsLookup, GuardedNodeRequest };
