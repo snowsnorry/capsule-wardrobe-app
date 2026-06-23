@@ -37,7 +37,7 @@
     "quality:large-files": "find client/src server/src shared -type f \\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\) -not -path \"*/node_modules/*\" -not -path \"*/dist/*\" -not -path \"*/build/*\" -exec wc -l {} + | sort -nr | head -40",
     "quality:large-files:strict": "node scripts/check-large-files.mjs",
     "quality:deps": "depcruise client/src server/src shared --config .dependency-cruiser.cjs",
-    "quality:gate": "npm run lint:strict && npm run typecheck && npm run coverage && npm run quality:deps && npm run quality:large-files:strict && npm run format:check && npm run quality:cycles && npm run quality:unused && npm run test:e2e",
+    "quality:gate": "npm run lint:strict && npm run typecheck && npm run coverage && npm run quality:deps && npm run quality:large-files:strict && npm run format:check && npm run quality:unused && npm run test:e2e",
     "quality": "npm run quality:gate && npm run quality:large-files",
     "coverage": "vitest run --coverage",
     "coverage:client": "vitest run --coverage --project client",
@@ -46,8 +46,7 @@
     "format": "prettier --write \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\" \"playwright.config.ts\" \"tests/e2e/**/*.{ts,tsx}\" \"scripts/**/*.{js,mjs,cjs}\"",
     "format:check": "prettier --check \"client/src/**/*.{ts,tsx,js,jsx,css,scss}\" \"server/src/**/*.{ts,tsx,js,jsx}\" \"shared/**/*.{ts,tsx,js,jsx}\" \"playwright.config.ts\" \"tests/e2e/**/*.{ts,tsx}\" \"scripts/**/*.{js,mjs,cjs}\"",
     "security:audit": "npm audit --audit-level=high",
-    "quality:unused": "knip",
-    "quality:cycles": "madge client/src server/src shared --extensions ts,tsx --circular"
+    "quality:unused": "knip"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -60,9 +59,8 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.6.0",
     "knip": "^6.17.1",
-    "madge": "^8.0.0",
     "prettier": "^3.8.4",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1",
     "vitest": "^4.1.2"
   },

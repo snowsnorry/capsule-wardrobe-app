@@ -1,4 +1,4 @@
-import "@fontsource-variable/onest";
+import "@fontsource-variable/onest/index.css";
 import "./index.css";
 
 import React from "react";
