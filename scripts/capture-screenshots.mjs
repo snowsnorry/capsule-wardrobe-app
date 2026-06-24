@@ -12,6 +12,7 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 const SCREENSHOT_IMAGE_URL =
   process.env.SCREENSHOT_IMAGE_URL ||
   "https://assets.capsule-wardrobe.org/wardrobe/f2641a1885a7ae72/10aabb25-57ee-44f8-9bef-dace449e7d7f-6debe3c08665582a3ebf78dca471bf8f663f769f195379a252d4060bc66a8018_clean_640.webp";
+const E2E_CAPSULE_PATH = "/capsule/capsule-e2e";
 const DESKTOP_VIEWPORT = { width: 1440, height: 960 };
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
 const HEALTH_TIMEOUT_MS = 120_000;
@@ -214,7 +215,7 @@ async function screenshot(page, theme, filename) {
 }
 
 async function captureCapsule(context, theme) {
-  const page = await openPage(context, "/", "with-profile");
+  const page = await openPage(context, E2E_CAPSULE_PATH, "with-profile");
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
@@ -227,7 +228,9 @@ async function captureCapsule(context, theme) {
 
 async function uploadWardrobeFiles(page, imageAsset) {
   await page.getByRole("button", { name: "Upload item photo" }).click();
-  const dialog = page.getByRole("dialog", { name: "Upload wardrobe photos" });
+  const dialog = page.getByRole("dialog", {
+    name: "Upload personal item photos",
+  });
   await expect(dialog).toBeVisible();
   await page.locator('input[type="file"]').setInputFiles([
     {
@@ -303,7 +306,7 @@ async function captureStatistics(context, theme) {
 }
 
 async function captureProductDetail(context, theme) {
-  const page = await openPage(context, "/", "with-profile");
+  const page = await openPage(context, E2E_CAPSULE_PATH, "with-profile");
   const shirtCard = page.getByRole("button", {
     name: "Navy relaxed shirt",
     exact: true,
@@ -319,7 +322,7 @@ async function captureProductDetail(context, theme) {
 }
 
 async function captureSettings(context, theme) {
-  const page = await openPage(context, "/", "with-profile");
+  const page = await openPage(context, E2E_CAPSULE_PATH, "with-profile");
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
@@ -352,7 +355,12 @@ async function captureMobileFilterDialog(
     MOBILE_VIEWPORT,
     imageAsset,
   );
-  const page = await openPage(context, "/", "with-profile", MOBILE_VIEWPORT);
+  const page = await openPage(
+    context,
+    E2E_CAPSULE_PATH,
+    "with-profile",
+    MOBILE_VIEWPORT,
+  );
   await expect(
     page.getByRole("button", { name: "Regenerate all" }),
   ).toBeVisible();
