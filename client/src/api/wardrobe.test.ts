@@ -64,6 +64,27 @@ function createResponse({
   };
 }
 
+function createJobResponse(kind = "capsuleGenerate") {
+  return {
+    ok: true,
+    job: {
+      id: "job-1",
+      kind,
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "capsule", id: "capsule-1" },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
+}
+
 describe("wardrobe api", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -184,7 +205,11 @@ describe("wardrobe api", () => {
   });
 
   test("regenerateCapsuleWardrobe posts to the capsule-centric route", async () => {
-    await regenerateCapsuleWardrobe({ capsuleId: "capsule-1" });
+    requestApi.requestJson.mockResolvedValueOnce(createJobResponse());
+
+    await expect(
+      regenerateCapsuleWardrobe({ capsuleId: "capsule-1" }),
+    ).resolves.toEqual(createJobResponse());
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/capsules/capsule-1/regenerate",
@@ -253,20 +278,16 @@ describe("wardrobe api", () => {
   });
 
   test("regenerateSelectedWardrobeItems posts once and returns payload", async () => {
-    requestApi.requestJson.mockResolvedValueOnce({
-      items: [{ id: "item-2" }],
-      rawSelectionText: "updated",
-    });
+    requestApi.requestJson.mockResolvedValueOnce(
+      createJobResponse("capsuleRegenerateSelected"),
+    );
 
     await expect(
       regenerateSelectedWardrobeItems({
         itemUrls: ["https://example.com/item-1"],
         capsuleId: "capsule-1",
       }),
-    ).resolves.toEqual({
-      items: [{ id: "item-2" }],
-      rawSelectionText: "updated",
-    });
+    ).resolves.toEqual(createJobResponse("capsuleRegenerateSelected"));
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,

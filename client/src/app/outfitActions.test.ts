@@ -64,8 +64,33 @@ vi.mock("../api/outfits", () => ({
   updateOutfitItems: vi.fn(),
 }));
 
+vi.mock("../api/jobs", () => ({
+  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
+}));
+
 function mockCalls(fn: unknown) {
   return (fn as Mock).mock.calls;
+}
+
+function createJobResponse(id = "job-1") {
+  return {
+    ok: true,
+    job: {
+      id,
+      kind: "outfitReportGenerate",
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "outfit", id: "outfit-1" },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
 }
 
 const outfit = {
@@ -441,8 +466,7 @@ describe("outfitActions", () => {
 
   test("generates and deletes outfit reports with pending state and errors", async () => {
     vi.mocked(generateOutfitReport).mockResolvedValueOnce({
-      ok: true,
-      report: { verdict: { score: 0.9 } },
+      ...createJobResponse(),
     });
     vi.mocked(deleteOutfitReport).mockResolvedValueOnce({
       outfit: { ...outfit, effective: { items: [], report: null } },

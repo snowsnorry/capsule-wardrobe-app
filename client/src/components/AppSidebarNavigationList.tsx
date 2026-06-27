@@ -15,6 +15,7 @@ function SidebarPersonalItemsRow({
   return (
     <PersonalItemsRow
       activeApp={model.activeApp}
+      activeJobEntityKeys={model.activeJobEntityKeys}
       desktopSidebarRailWidth={model.desktopSidebarRailWidth}
       handleNavigateApp={model.handleNavigateApp}
       isCollapsedDesktop={model.isCollapsedDesktop}
@@ -33,6 +34,7 @@ function SidebarOutfitsSection({
   return (
     <OutfitsSection
       activeApp={model.activeApp}
+      activeJobEntityKeys={model.activeJobEntityKeys}
       activeOutfit={model.activeOutfit}
       activeOutfitId={model.activeOutfitId}
       desktopSidebarRailWidth={model.desktopSidebarRailWidth}
@@ -63,6 +65,7 @@ function SidebarCapsuleSection({
   return (
     <CapsuleSection
       activeApp={model.activeApp}
+      activeJobEntityKeys={model.activeJobEntityKeys}
       activeCapsule={model.activeCapsule}
       activeCapsuleId={model.activeCapsuleId}
       capsuleHasUnsavedChanges={model.capsuleHasUnsavedChanges}

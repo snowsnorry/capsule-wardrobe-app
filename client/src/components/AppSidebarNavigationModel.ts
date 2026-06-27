@@ -89,6 +89,7 @@ export function useAppSidebarNavigationModel(props: AppSidebarNavigationProps) {
     ...props,
     activeCapsuleId: valueOr(props.activeCapsuleId, ""),
     activeCapsule: valueOr(props.activeCapsule, null),
+    activeJobEntityKeys: props.activeJobEntityKeys || [],
     activeOutfitId: valueOr(props.activeOutfitId, ""),
     activeOutfit: valueOr(props.activeOutfit, null),
     capsuleHasUnsavedChanges: valueOr(

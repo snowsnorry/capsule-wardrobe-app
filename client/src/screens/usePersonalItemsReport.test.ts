@@ -9,8 +9,32 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock("../api/personalItems", () => api);
+vi.mock("../api/jobs", () => ({
+  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
+}));
 
 const t = (key: string) => key;
+
+function createJobResponse() {
+  return {
+    ok: true,
+    job: {
+      id: "job-1",
+      kind: "personalItemsReportGenerate",
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "wardrobe", id: null },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -21,22 +45,26 @@ beforeEach(() => {
     generatedAt: null,
   });
   api.generatePersonalItemsReport.mockResolvedValue({
-    ok: true,
-    report: { verdict: { score: 0.82 } },
-    stale: false,
-    generatedAt: "2026-06-19T10:00:00.000Z",
+    ...createJobResponse(),
   });
   api.deletePersonalItemsReport.mockResolvedValue({ ok: true, removed: true });
 });
 
 describe("usePersonalItemsReport", () => {
   test("loads, generates, refreshes, and deletes personal items reports", async () => {
-    api.fetchPersonalItemsReport.mockResolvedValueOnce({
-      ok: true,
-      report: { verdict: { score: 0.7 } },
-      stale: true,
-      generatedAt: "2026-06-19T09:00:00.000Z",
-    });
+    api.fetchPersonalItemsReport
+      .mockResolvedValueOnce({
+        ok: true,
+        report: { verdict: { score: 0.7 } },
+        stale: true,
+        generatedAt: "2026-06-19T09:00:00.000Z",
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        report: { verdict: { score: 0.82 } },
+        stale: false,
+        generatedAt: "2026-06-19T10:00:00.000Z",
+      });
     const setError = vi.fn();
     const { result } = renderHook(() =>
       usePersonalItemsReport({ setError, t }),
@@ -51,6 +79,11 @@ describe("usePersonalItemsReport", () => {
     await act(async () => {
       await result.current.generateReport();
     });
+    await waitFor(() =>
+      expect(api.fetchPersonalItemsReport).toHaveBeenLastCalledWith({
+        force: true,
+      }),
+    );
     expect(api.generatePersonalItemsReport).toHaveBeenCalledTimes(1);
     expect(result.current.report).toEqual({ verdict: { score: 0.82 } });
     expect(result.current.stale).toBe(false);

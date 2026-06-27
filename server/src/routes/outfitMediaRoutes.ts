@@ -1,4 +1,5 @@
 import { logError } from "../logger.js";
+import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
 import { hashCapsuleContent } from "../db.js";
 import { getEffectiveOutfitSnapshot } from "../outfitStore.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
@@ -18,38 +19,6 @@ function getOutfitReportErrorStatus(error) {
   }
 }
 
-function isResponseWritable(res) {
-  return !res.destroyed && !res.writableEnded;
-}
-
-function openOutfitReportEventStream(res) {
-  res.status(200);
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
-}
-
-function writeOutfitReportEvent(res, event, data) {
-  if (!isResponseWritable(res)) {
-    return false;
-  }
-
-  try {
-    res.write(`event: ${event}\n`);
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function endOutfitReportEventStream(res) {
-  if (isResponseWritable(res)) {
-    res.end();
-  }
-}
-
 function registerOutfitReportRoute(app, context) {
   const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
 
@@ -59,27 +28,33 @@ function registerOutfitReportRoute(app, context) {
     requireAuth,
     requireCsrf,
     async (req, res) => {
-      openOutfitReportEventStream(res);
-      writeOutfitReportEvent(res, "progress", { status: "pending" });
-
       try {
-        const report = await context.generateOutfitReportImpl(
+        const outfit = await context.getOutfitImpl(
           req.user.email,
           req.params.id,
         );
-        writeOutfitReportEvent(res, "complete", { ok: true, report });
+        if (!outfit) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const job = await enqueueRouteJob(context, {
+          kind: "outfitReportGenerate",
+          profileEmail: req.user.email,
+          entity: { type: "outfit", id: String(req.params.id || "") },
+          dedupeKey: `outfitReport:${req.params.id}`,
+          phase: "queued",
+          payload: { outfitId: req.params.id },
+          progressLabel: "Generating outfit report",
+        });
+        return sendQueuedJob(res, job);
       } catch (error) {
         const status = getOutfitReportErrorStatus(error);
         if (status === 503) {
           logError("[outfits/report]", error);
         }
-        writeOutfitReportEvent(res, "fatal", {
-          error: status === 503 ? "service_unavailable" : error.code,
-        });
-      } finally {
-        endOutfitReportEventStream(res);
+        return res
+          .status(status)
+          .json({ error: status === 503 ? "service_unavailable" : error.code });
       }
-      return undefined;
     },
   );
 

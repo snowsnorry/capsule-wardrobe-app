@@ -77,6 +77,27 @@ function createResponse({
   };
 }
 
+function createJobResponse(id = "job-1") {
+  return {
+    ok: true,
+    job: {
+      id,
+      kind: "outfitReportGenerate",
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "outfit", id: "outfit-1" },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
+}
+
 describe("outfits api", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -266,34 +287,17 @@ describe("outfits api", () => {
   });
 
   test("generates and deletes saved outfit images and reports", async () => {
-    eventSourceApi.fetchEventSource.mockImplementationOnce(
-      async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream; charset=utf-8" },
-        });
-        options.onmessage({
-          event: "progress",
-          data: JSON.stringify({ status: "pending" }),
-        });
-        options.onmessage({
-          event: "complete",
-          data: JSON.stringify({
-            ok: true,
-            report: { verdict: { score: 0.9 } },
-          }),
-        });
-        options.onclose();
-      },
-    );
+    requestApi.requestJson
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce(createJobResponse())
+      .mockResolvedValueOnce({});
 
     await generateOutfitImage("outfit-1");
     await deleteOutfitImage("outfit-1");
-    await expect(generateOutfitReport("outfit-1")).resolves.toEqual({
-      ok: true,
-      report: { verdict: { score: 0.9 } },
-    });
+    await expect(generateOutfitReport("outfit-1")).resolves.toEqual(
+      createJobResponse(),
+    );
     await deleteOutfitReport("outfit-1");
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
@@ -309,45 +313,22 @@ describe("outfits api", () => {
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       3,
       "https://api.example.test/outfits/outfit-1/report",
-      { method: "DELETE", credentials: "include" },
+      { method: "POST", credentials: "include" },
     );
-    expect(eventSourceApi.fetchEventSource).toHaveBeenCalledWith(
+    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
+      4,
       "https://api.example.test/outfits/outfit-1/report",
-      expect.objectContaining({
-        credentials: "include",
-        headers: { "X-CSRF-Token": "csrf-token" },
-        method: "POST",
-      }),
+      { method: "DELETE", credentials: "include" },
     );
   });
 
-  test("rejects saved outfit report streams on fatal or premature close", async () => {
-    eventSourceApi.fetchEventSource
-      .mockImplementationOnce(async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream" },
-        });
-        options.onmessage({
-          event: "fatal",
-          data: JSON.stringify({ error: "service_unavailable" }),
-        });
-      })
-      .mockImplementationOnce(async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream" },
-        });
-        options.onclose();
-      });
+  test("rejects saved outfit report enqueue failures", async () => {
+    requestApi.requestJson.mockRejectedValueOnce(
+      new Error("service_unavailable"),
+    );
 
     await expect(generateOutfitReport("outfit-1")).rejects.toThrow(
       "service_unavailable",
-    );
-    await expect(generateOutfitReport("outfit-1")).rejects.toThrow(
-      "event_stream_closed",
     );
   });
 

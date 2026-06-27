@@ -29,6 +29,7 @@ type AppSidebarNavigationProps = {
   isSidebarCollapsed: boolean;
   desktopSidebarRailWidth: number;
   isInteractionDisabled?: boolean;
+  activeJobEntityKeys?: string[];
   personalItemsCount?: number | null;
   capsuleList?: CapsuleNavItem[];
   capsulePagination?: CapsuleNavPagination;

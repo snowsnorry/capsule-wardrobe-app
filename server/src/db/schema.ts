@@ -68,6 +68,18 @@ const MCP_OAUTH_SCHEMA_FILES = [
   "087_create_mcp_oauth_refresh_tokens_active_index.sql",
 ] as const;
 
+const JOB_SCHEMA_FILES = [
+  "001_create_pgcrypto_extension.sql",
+  "100_create_job_runs_table.sql",
+  "101_create_job_events_table.sql",
+  "102_create_job_runs_profile_created_index.sql",
+  "103_create_job_runs_profile_kind_status_index.sql",
+  "104_create_job_runs_entity_status_index.sql",
+  "105_create_job_runs_active_dedupe_index.sql",
+  "106_create_job_events_job_id_index.sql",
+  "107_create_job_runs_expires_at_index.sql",
+] as const;
+
 export async function checkDatabaseConnection(): Promise<DatabaseConnectionRow | null> {
   const sql = getSqlClient();
   const row = getFirstRow(
@@ -125,6 +137,11 @@ export async function ensureMcpOAuthTables(): Promise<void> {
   await executeSchemaSqlFiles(sql, MCP_OAUTH_SCHEMA_FILES);
 }
 
+export async function ensureJobTables(): Promise<void> {
+  const sql = getSqlClient();
+  await executeSchemaSqlFiles(sql, JOB_SCHEMA_FILES);
+}
+
 export async function ensureTables(): Promise<void> {
   await ensureAuthTables();
   await ensureProfilesTable();
@@ -135,5 +152,6 @@ export async function ensureTables(): Promise<void> {
   await ensureSharedCapsulesTable();
   await ensureWardrobeTable();
   await ensureMcpOAuthTables();
+  await ensureJobTables();
   await ensureSearchTable();
 }

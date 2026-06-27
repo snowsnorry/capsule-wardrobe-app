@@ -1,6 +1,10 @@
+import { EventEmitter } from "node:events";
 import { expect, test, vi } from "vitest";
 import {
+  createWardrobeUploadAbortState,
+  markSavedWardrobeUploadSourcesFailed,
   openWardrobeUploadEventStream,
+  processPreparedUploadedWardrobeItemMetadata,
   processUploadedWardrobeItemMetadata,
   writeWardrobeUploadEvent,
 } from "./wardrobeUploadStream.js";
@@ -31,6 +35,82 @@ test("wardrobe upload stream opens and writes SSE events", () => {
   );
   expect(res.flushHeaders).toHaveBeenCalled();
   expect(getWrittenText(res)).toBe('event: progress\ndata: {"uploaded":1}\n\n');
+});
+
+test("wardrobe upload stream does not write to closed or throwing responses", () => {
+  expect(
+    writeWardrobeUploadEvent(
+      { destroyed: true, writableEnded: false, write: vi.fn() },
+      "progress",
+      {},
+    ),
+  ).toBe(false);
+  expect(
+    writeWardrobeUploadEvent(
+      {
+        destroyed: false,
+        writableEnded: false,
+        write: vi.fn(() => {
+          throw new Error("closed");
+        }),
+      },
+      "progress",
+      {},
+    ),
+  ).toBe(false);
+});
+
+test("wardrobe upload stream abort state reacts to request aborts and disposes listeners", () => {
+  const req = new EventEmitter();
+  const res = new EventEmitter() as EventEmitter & { writableEnded?: boolean };
+  res.writableEnded = false;
+  const state = createWardrobeUploadAbortState(req, res);
+
+  req.emit("aborted");
+  expect(state.signal.aborted).toBe(true);
+
+  state.dispose();
+  expect(req.listenerCount("aborted")).toBe(0);
+  expect(res.listenerCount("close")).toBe(0);
+
+  const second = createWardrobeUploadAbortState(req, res);
+  res.writableEnded = true;
+  res.emit("close");
+  expect(second.signal.aborted).toBe(false);
+  second.dispose();
+});
+
+test("wardrobe upload stream marks already saved sources failed after queued processor errors", async () => {
+  const context = {
+    updateUploadedWardrobeItemMetadataImpl: vi.fn(async () => ({
+      id: "item-1",
+      processingStatus: "failed",
+    })),
+  };
+  const sourceSaves = new Map([
+    ["saved", Promise.resolve({ error: null, item: { id: "item-1" } })],
+    ["empty", Promise.resolve({ error: null, item: { id: "" } })],
+    [
+      "failed",
+      Promise.resolve({ error: new Error("save_failed"), item: null }),
+    ],
+  ]);
+
+  await markSavedWardrobeUploadSourcesFailed({
+    context,
+    email: "person@example.com",
+    sourceSaves,
+  });
+
+  expect(context.updateUploadedWardrobeItemMetadataImpl).toHaveBeenCalledTimes(
+    1,
+  );
+  expect(context.updateUploadedWardrobeItemMetadataImpl).toHaveBeenCalledWith({
+    email: "person@example.com",
+    id: "item-1",
+    metadata: null,
+    processingStatus: "failed",
+  });
 });
 
 test("wardrobe upload stream processes successful metadata", async () => {
@@ -584,4 +664,79 @@ test("wardrobe upload stream handles invalid uploaded items without db update", 
   expect(context.updateUploadedWardrobeItemMetadataImpl).not.toHaveBeenCalled();
   expect(context.cleanupUploadedWardrobeItemImageImpl).not.toHaveBeenCalled();
   expect(progress.failed).toBe(1);
+});
+
+test("wardrobe upload stream processes prepared child metadata and cleanup results", async () => {
+  const res = createResponse();
+  const metadata = {
+    name: "Prepared shirt",
+    description: null,
+    brand: null,
+    audience: "all",
+    category: "top",
+    season: ["summer"],
+    formalityLevel: [],
+    style: [],
+    occasions: [],
+    colorBase: [],
+    isNeutral: false,
+    pattern: null,
+    finish: null,
+    composition: null,
+    silhouette: null,
+    fit: null,
+    closureType: [],
+  };
+  const context = {
+    createUploadedWardrobeItemEmbeddingImpl: vi.fn(async () => [0.4]),
+    updateUploadedWardrobeItemMetadataImpl: vi.fn(async () => ({
+      id: "item-1",
+      name: "Prepared shirt",
+      processingStatus: "ready",
+    })),
+  };
+  const progress = {
+    total: 1,
+    uploaded: 1,
+    completedSteps: 1,
+    metadataProcessed: 0,
+    imageProcessed: 0,
+    failed: 0,
+  };
+
+  await expect(
+    processPreparedUploadedWardrobeItemMetadata({
+      context,
+      email: "person@example.com",
+      filterItem: (value) => value,
+      item: {
+        id: "item-1",
+        imageUrl: "https://images.example.com/item.webp",
+      },
+      processingResult: {
+        analysis: { hasMetadata: true, metadata },
+        cleanup: {
+          cleanImage: {
+            key: "clean/item.png",
+            url: "https://cdn.example.test/clean/item.png",
+          },
+          thumbnails: [{ key: "thumb/item.png" }],
+        },
+        inputIndex: 0,
+        ok: true,
+      },
+      progress,
+      res,
+    }),
+  ).resolves.toMatchObject({
+    id: "item-1",
+    processingStatus: "ready",
+  });
+  expect(context.updateUploadedWardrobeItemMetadataImpl).toHaveBeenCalledWith(
+    expect.objectContaining({
+      imageUrl: "https://cdn.example.test/clean/item.png",
+      ownedR2ImageKeys: ["clean/item.png", "thumb/item.png"],
+      processingStatus: "ready",
+    }),
+  );
 });

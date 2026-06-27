@@ -3,6 +3,7 @@ import {
   fetchCapsule,
   generateCapsuleReport,
 } from "../api/capsules";
+import { waitForJob } from "../api/jobs";
 import { fromContext, type AppActionContext } from "./actionContext";
 import { refreshCapsuleList } from "./capsuleListActions";
 import type { CapsuleMeta, CapsuleMutationResponse } from "./appTypes";
@@ -38,8 +39,35 @@ async function generateCurrentCapsuleReport(
   if (!capsuleId) return;
   setCapsuleReportPending(context, true);
   try {
-    await generateCapsuleReport(capsuleId);
-    await refreshActiveCapsuleReport(context, capsuleId);
+    const { job } = await generateCapsuleReport(capsuleId);
+    void waitForJob(job.id)
+      .then(async (finishedJob) => {
+        if (finishedJob.status === "completed") {
+          await refreshActiveCapsuleReport(context, capsuleId);
+          return;
+        }
+        throw new Error(finishedJob.error?.code || "service_unavailable");
+      })
+      .catch(() => {
+        if (
+          fromContext<{ current: boolean }>(context, "isMountedRef").current
+        ) {
+          reportStatusError(
+            context,
+            fromContext<(key: string) => string>(
+              context,
+              "t",
+            )("errors.capsuleReportGenerateFailed"),
+          );
+        }
+      })
+      .finally(() => {
+        if (
+          fromContext<{ current: boolean }>(context, "isMountedRef").current
+        ) {
+          setCapsuleReportPending(context, false);
+        }
+      });
   } catch {
     if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
       reportStatusError(
@@ -49,9 +77,6 @@ async function generateCurrentCapsuleReport(
           "t",
         )("errors.capsuleReportGenerateFailed"),
       );
-    }
-  } finally {
-    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
       setCapsuleReportPending(context, false);
     }
   }

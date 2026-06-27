@@ -354,6 +354,34 @@ describe("AppSidebarNavigation", () => {
     expect(injectedStyles).toContain("pointer-events:auto;}");
   });
 
+  test("busy capsule rows show progress instead of unsaved/actions controls while navigation stays enabled", async () => {
+    const user = userEvent.setup();
+    const onOpenCapsule = vi.fn();
+    const onSetCapsulePin = vi.fn();
+    renderNavigation({
+      activeJobEntityKeys: ["capsule:capsule-1"],
+      onOpenCapsule,
+      onSetCapsulePin,
+    });
+
+    const capsuleRow = screen.getByRole("button", { name: "Capsule 1" });
+
+    expect(capsuleRow).toBeEnabled();
+    expect(capsuleRow.querySelector(".capsule-row-unsaved-dot")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Capsule actions Capsule 1" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Job in progress")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: "Pin capsule" })[0],
+    ).toBeDisabled();
+
+    await user.click(capsuleRow);
+
+    expect(onOpenCapsule).toHaveBeenCalledWith("capsule-1");
+    expect(onSetCapsulePin).not.toHaveBeenCalled();
+  });
+
   test("keeps capsule actions visible in the overlay sidebar", () => {
     renderNavigation({ isOverlaySidebar: true });
 

@@ -37,6 +37,27 @@ import {
   updateCapsuleRejectedUrls,
 } from "./capsules";
 
+function createJobResponse(id = "job-1") {
+  return {
+    ok: true,
+    job: {
+      id,
+      kind: "capsuleReportGenerate",
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "capsule", id: "capsule-1" },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
+}
+
 describe("capsules api", () => {
   beforeEach(() => {
     requestApi.request.mockReset();
@@ -312,75 +333,33 @@ describe("capsules api", () => {
   });
 
   test("generates and deletes capsule reports", async () => {
-    eventSourceApi.fetchEventSource.mockImplementationOnce(
-      async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream; charset=utf-8" },
-        });
-        options.onmessage({
-          event: "progress",
-          data: JSON.stringify({ status: "pending" }),
-        });
-        options.onmessage({
-          event: "complete",
-          data: JSON.stringify({
-            ok: true,
-            report: { verdict: { score: 0.9 } },
-          }),
-        });
-        options.onclose();
-      },
-    );
+    requestApi.requestJson.mockResolvedValueOnce(createJobResponse());
 
-    await expect(generateCapsuleReport("capsule-1")).resolves.toEqual({
-      ok: true,
-      report: { verdict: { score: 0.9 } },
-    });
+    await expect(generateCapsuleReport("capsule-1")).resolves.toEqual(
+      createJobResponse(),
+    );
     await deleteCapsuleReport("capsule-1");
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/capsules/capsule-1/report",
-      { method: "DELETE", credentials: "include" },
-    );
-    expect(eventSourceApi.fetchEventSource).toHaveBeenCalledWith(
-      "https://api.example.test/capsules/capsule-1/report",
       expect.objectContaining({
         credentials: "include",
-        headers: { "X-CSRF-Token": "csrf-token" },
         method: "POST",
       }),
     );
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/report",
+      { method: "DELETE", credentials: "include" },
+    );
   });
 
-  test("rejects capsule report streams on fatal or premature close", async () => {
-    eventSourceApi.fetchEventSource
-      .mockImplementationOnce(async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream" },
-        });
-        options.onmessage({
-          event: "fatal",
-          data: JSON.stringify({ error: "service_unavailable" }),
-        });
-      })
-      .mockImplementationOnce(async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream" },
-        });
-        options.onclose();
-      });
+  test("rejects capsule report enqueue failures", async () => {
+    requestApi.requestJson.mockRejectedValueOnce(
+      new Error("service_unavailable"),
+    );
 
     await expect(generateCapsuleReport("capsule-1")).rejects.toThrow(
       "service_unavailable",
-    );
-    await expect(generateCapsuleReport("capsule-1")).rejects.toThrow(
-      "event_stream_closed",
     );
   });
 

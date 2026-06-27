@@ -74,6 +74,27 @@ function createResponse({
   };
 }
 
+function createJobResponse(kind = "personalItemsReportGenerate") {
+  return {
+    ok: true,
+    job: {
+      id: "job-1",
+      kind,
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "wardrobe", id: null },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
+}
+
 describe("personal items api", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -163,66 +184,24 @@ describe("personal items api", () => {
     );
   });
 
-  test("generates personal items report as an event stream", async () => {
-    fetchEventSourceApi.fetchEventSource.mockImplementation(
-      async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream; charset=utf-8" },
-        });
-        options.onmessage({
-          event: "progress",
-          data: JSON.stringify({ status: "pending" }),
-        });
-        options.onmessage({
-          event: "complete",
-          data: JSON.stringify({
-            ok: true,
-            generatedAt: "2026-06-19T11:00:00.000Z",
-            personalItemUrls: ["wardrobe://1"],
-            report: {
-              schemaVersion: 1,
-              verdict: { status: "good", score: 0.82, summary: "Ready." },
-            },
-          }),
-        });
-        options.onclose();
-      },
+  test("generates personal items report as a queued job", async () => {
+    requestApi.requestJson.mockResolvedValueOnce(createJobResponse());
+
+    await expect(generatePersonalItemsReport()).resolves.toEqual(
+      createJobResponse(),
     );
 
-    await expect(generatePersonalItemsReport()).resolves.toEqual({
-      ok: true,
-      generatedAt: "2026-06-19T11:00:00.000Z",
-      personalItemUrls: ["wardrobe://1"],
-      report: {
-        schemaVersion: 1,
-        verdict: { status: "good", score: 0.82, summary: "Ready." },
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/wardrobe/items/report",
+      {
+        method: "POST",
+        credentials: "include",
       },
-    });
-
-    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledTimes(1);
-    const [url, options] = fetchEventSourceApi.fetchEventSource.mock.calls[0];
-    expect(url).toBe("https://api.example.test/wardrobe/items/report");
-    expect(options.method).toBe("POST");
-    expect(options.credentials).toBe("include");
-    expect(options.headers).toEqual({ "X-CSRF-Token": "csrf-token" });
+    );
   });
 
-  test("personal items report generation surfaces fatal stream events", async () => {
-    fetchEventSourceApi.fetchEventSource.mockImplementation(
-      async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream; charset=utf-8" },
-        });
-        options.onmessage({
-          event: "fatal",
-          data: JSON.stringify({ error: "not_found" }),
-        });
-      },
-    );
+  test("personal items report generation surfaces enqueue failures", async () => {
+    requestApi.requestJson.mockRejectedValueOnce(new Error("not_found"));
 
     await expect(generatePersonalItemsReport()).rejects.toThrow("not_found");
   });
@@ -230,45 +209,14 @@ describe("personal items api", () => {
   test("uploads wardrobe images as multipart form data", async () => {
     const file = new File(["image"], "shirt.png", { type: "image/png" });
     const onProgress = vi.fn();
-    fetchEventSourceApi.fetchEventSource.mockImplementation(
-      async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream; charset=utf-8" },
-        });
-        options.onmessage({
-          event: "progress",
-          data: JSON.stringify({
-            total: 1,
-            uploaded: 1,
-            completedSteps: 1,
-            metadataProcessed: 0,
-            imageProcessed: 0,
-            failed: 0,
-          }),
-        });
-        options.onmessage({
-          event: "complete",
-          data: JSON.stringify({
-            ok: true,
-            total: 1,
-            uploaded: 1,
-            completedSteps: 3,
-            metadataProcessed: 1,
-            imageProcessed: 1,
-            failed: 0,
-            items: [{ id: "uploaded-1" }],
-          }),
-        });
-        options.onclose();
-      },
+    requestApi.requestJson.mockResolvedValueOnce(
+      createJobResponse("personalItemUploadFiles"),
     );
 
     const result = await uploadWardrobeImages([file], { onProgress });
 
-    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledTimes(1);
-    const [url, options] = fetchEventSourceApi.fetchEventSource.mock.calls[0];
+    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
+    const [url, options] = requestApi.requestJson.mock.calls[0];
     expect(url).toBe("https://api.example.test/wardrobe/items/upload");
     expect(options.method).toBe("POST");
     expect(options.credentials).toBe("include");
@@ -276,60 +224,20 @@ describe("personal items api", () => {
     expect((options.body as FormData).getAll("images")).toEqual([file]);
     expect(onProgress).toHaveBeenLastCalledWith({
       total: 1,
-      uploaded: 1,
-      completedSteps: 3,
-      metadataProcessed: 1,
-      imageProcessed: 1,
+      uploaded: 0,
+      completedSteps: 0,
+      metadataProcessed: 0,
+      imageProcessed: 0,
       failed: 0,
     });
-    expect(result).toEqual({
-      ok: true,
-      total: 1,
-      uploaded: 1,
-      completedSteps: 3,
-      metadataProcessed: 1,
-      imageProcessed: 1,
-      failed: 0,
-      items: [{ id: "uploaded-1" }],
-    });
+    expect(result).toEqual(createJobResponse("personalItemUploadFiles"));
   });
 
-  test("uploads wardrobe URLs as JSON event stream", async () => {
+  test("uploads wardrobe URLs as a queued job", async () => {
     vi.spyOn(document, "cookie", "get").mockReturnValue("csrf=csrf-token");
     const onProgress = vi.fn();
-    fetchEventSourceApi.fetchEventSource.mockImplementation(
-      async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream; charset=utf-8" },
-        });
-        options.onmessage({
-          event: "progress",
-          data: JSON.stringify({
-            total: 1,
-            uploaded: 1,
-            completedSteps: 1,
-            metadataProcessed: 0,
-            imageProcessed: 0,
-            failed: 0,
-          }),
-        });
-        options.onmessage({
-          event: "complete",
-          data: JSON.stringify({
-            ok: true,
-            total: 1,
-            uploaded: 1,
-            completedSteps: 3,
-            metadataProcessed: 1,
-            imageProcessed: 1,
-            failed: 0,
-            items: [{ id: "uploaded-url-1" }],
-          }),
-        });
-        options.onclose();
-      },
+    requestApi.requestJson.mockResolvedValueOnce(
+      createJobResponse("personalItemUploadUrls"),
     );
 
     const result = await uploadWardrobeUrls(
@@ -337,36 +245,26 @@ describe("personal items api", () => {
       { onProgress },
     );
 
-    expect(fetchEventSourceApi.fetchEventSource).toHaveBeenCalledTimes(1);
-    const [url, options] = fetchEventSourceApi.fetchEventSource.mock.calls[0];
+    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
+    const [url, options] = requestApi.requestJson.mock.calls[0];
     expect(url).toBe("https://api.example.test/wardrobe/items/upload-url");
     expect(options.method).toBe("POST");
     expect(options.credentials).toBe("include");
     expect(options.headers).toEqual({
       "Content-Type": "application/json",
-      "X-CSRF-Token": "csrf-token",
     });
     expect(options.body).toBe(
       JSON.stringify({ urls: ["https://shop.example.com/product"] }),
     );
     expect(onProgress).toHaveBeenLastCalledWith({
       total: 1,
-      uploaded: 1,
-      completedSteps: 3,
-      metadataProcessed: 1,
-      imageProcessed: 1,
+      uploaded: 0,
+      completedSteps: 0,
+      metadataProcessed: 0,
+      imageProcessed: 0,
       failed: 0,
     });
-    expect(result).toEqual({
-      ok: true,
-      total: 1,
-      uploaded: 1,
-      completedSteps: 3,
-      metadataProcessed: 1,
-      imageProcessed: 1,
-      failed: 0,
-      items: [{ id: "uploaded-url-1" }],
-    });
+    expect(result).toEqual(createJobResponse("personalItemUploadUrls"));
   });
 
   test("saves catalog items to personal items", async () => {

@@ -63,16 +63,18 @@ async function requestEventStream(
   };
 }
 
-function parseEventStream(text: string) {
-  return text
-    .trim()
-    .split("\n\n")
-    .filter(Boolean)
-    .map((entry) => {
-      const event = entry.match(/^event: (.+)$/m)?.[1] || "message";
-      const data = entry.match(/^data: (.+)$/m)?.[1] || "{}";
-      return { event, data: JSON.parse(data) };
-    });
+function expectQueuedJob(result, kind, entity) {
+  const json = result.json || JSON.parse(result.text || "{}");
+  expect(result.response.status).toBe(202);
+  expect(json).toMatchObject({
+    ok: true,
+    job: {
+      kind,
+      status: "queued",
+      entity,
+    },
+  });
+  expect(typeof json.job.id).toBe("string");
 }
 
 test("outfit read routes return paginated, searched, and annotated outfits", async (t) => {
@@ -672,6 +674,7 @@ test("outfit report route delegates to generator and maps report errors", async 
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       generateOutfitReportImpl,
+      getOutfitImpl: async (_email, id) => ({ ...outfit, id }),
       updateOutfitReportImpl,
       getProductsByUrlsForEmailImpl: async () => [],
       listLikedItemUrlsImpl: async () => [],
@@ -684,28 +687,11 @@ test("outfit report route delegates to generator and maps report errors", async 
     "/outfits/outfit-1/report",
     authenticatedMutationOptions(),
   );
-  expect(generated.response.status).toBe(200);
-  expect(generated.response.headers.get("content-type")).toContain(
-    "text/event-stream",
-  );
-  expect(parseEventStream(generated.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    {
-      event: "complete",
-      data: {
-        ok: true,
-        report: {
-          schemaVersion: 1,
-          itemsHash: "items-hash",
-          verdict: { status: "valid", score: 0.9, summary: "Ready." },
-        },
-      },
-    },
-  ]);
-  expect(generateOutfitReportImpl).toHaveBeenCalledWith(
-    "person@example.com",
-    "outfit-1",
-  );
+  expectQueuedJob(generated, "outfitReportGenerate", {
+    type: "outfit",
+    id: "outfit-1",
+  });
+  expect(generateOutfitReportImpl).not.toHaveBeenCalled();
 
   const missingCsrf = await requestJson(baseUrl, "/outfits/outfit-1/report", {
     method: "POST",
@@ -714,38 +700,17 @@ test("outfit report route delegates to generator and maps report errors", async 
   });
   expect(missingCsrf.response.status).toBe(403);
 
-  const missing = await requestEventStream(
-    baseUrl,
-    "/outfits/missing/report",
-    authenticatedMutationOptions(),
-  );
-  expect(missing.response.status).toBe(200);
-  expect(parseEventStream(missing.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    { event: "fatal", data: { error: "not_found" } },
-  ]);
-
-  const empty = await requestEventStream(
-    baseUrl,
-    "/outfits/empty/report",
-    authenticatedMutationOptions(),
-  );
-  expect(empty.response.status).toBe(200);
-  expect(parseEventStream(empty.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    { event: "fatal", data: { error: "invalid_payload" } },
-  ]);
-
-  const failed = await requestEventStream(
-    baseUrl,
-    "/outfits/llm-failed/report",
-    authenticatedMutationOptions(),
-  );
-  expect(failed.response.status).toBe(200);
-  expect(parseEventStream(failed.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    { event: "fatal", data: { error: "service_unavailable" } },
-  ]);
+  for (const outfitId of ["missing", "empty", "llm-failed"]) {
+    const queued = await requestEventStream(
+      baseUrl,
+      `/outfits/${outfitId}/report`,
+      authenticatedMutationOptions(),
+    );
+    expectQueuedJob(queued, "outfitReportGenerate", {
+      type: "outfit",
+      id: outfitId,
+    });
+  }
 
   const deleted = await requestJson(baseUrl, "/outfits/outfit-1/report", {
     method: "DELETE",

@@ -1,5 +1,6 @@
 import {
   Box,
+  CircularProgress,
   Divider,
   IconButton,
   ListItemButton,
@@ -145,6 +146,22 @@ function CapsuleActionsButton({
   );
 }
 
+function CapsuleJobProgress() {
+  return (
+    <Box
+      className="capsule-row-actions-slot"
+      sx={{ alignItems: "center", display: "flex", justifyContent: "center" }}
+    >
+      <CircularProgress
+        aria-label="Job in progress"
+        size={16}
+        thickness={5}
+        sx={{ color: "primary.main" }}
+      />
+    </Box>
+  );
+}
+
 function CapsuleRowText({
   capsuleName,
   isActive,
@@ -260,6 +277,7 @@ export function CapsuleRow({
   isInteractionDisabled,
   isOverlaySidebar,
   capsuleHasUnsavedChanges,
+  isJobActive = false,
   onOpenCapsule,
   onOpenCapsuleActions,
   onSetCapsulePin,
@@ -274,7 +292,7 @@ export function CapsuleRow({
   const showInlinePin = !isOverlaySidebar;
   const mobileContextMenu = useCapsuleRowMobileContextMenu({
     capsule,
-    isInteractionDisabled,
+    isInteractionDisabled: isInteractionDisabled || isJobActive,
     isOverlaySidebar,
     onOpenCapsuleActions,
   });
@@ -307,7 +325,7 @@ export function CapsuleRow({
       {showInlinePin ? (
         <CapsulePinButton
           capsuleId={capsuleId}
-          isInteractionDisabled={isInteractionDisabled}
+          isInteractionDisabled={isInteractionDisabled || isJobActive}
           isPinned={isPinned}
           label={pinLabel}
           onSetPin={onSetCapsulePin}
@@ -316,18 +334,24 @@ export function CapsuleRow({
         <CapsulePinnedIndicator isPinned={isPinned} />
       )}
       <CapsuleRowText capsuleName={capsuleName} isActive={isActive} />
-      <CapsuleUnsavedDot
-        isVisible={capsuleHasUnsavedChanges(capsule)}
-        label={t("capsule.notSaved")}
-      />
-      <CapsuleActionsButton
-        capsule={capsule}
-        capsuleName={capsuleName}
-        isInteractionDisabled={isInteractionDisabled}
-        onOpenCapsuleActions={onOpenCapsuleActions}
-        pinCopyPrefix={pinCopyPrefix}
-        t={t}
-      />
+      {isJobActive ? (
+        <CapsuleJobProgress />
+      ) : (
+        <>
+          <CapsuleUnsavedDot
+            isVisible={capsuleHasUnsavedChanges(capsule)}
+            label={t("capsule.notSaved")}
+          />
+          <CapsuleActionsButton
+            capsule={capsule}
+            capsuleName={capsuleName}
+            isInteractionDisabled={isInteractionDisabled}
+            onOpenCapsuleActions={onOpenCapsuleActions}
+            pinCopyPrefix={pinCopyPrefix}
+            t={t}
+          />
+        </>
+      )}
     </ListItemButton>
   );
 }
@@ -386,6 +410,7 @@ export function ActiveCapsuleAppend({
   activeCapsuleId,
   capsuleHasUnsavedChanges,
   isInteractionDisabled,
+  isJobActive,
   isOverlaySidebar,
   onOpenCapsule,
   onOpenCapsuleActions,
@@ -406,6 +431,7 @@ export function ActiveCapsuleAppend({
         capsule={activeCapsule}
         activeCapsuleId={activeCapsuleId}
         isInteractionDisabled={isInteractionDisabled}
+        isJobActive={isJobActive}
         isOverlaySidebar={isOverlaySidebar}
         capsuleHasUnsavedChanges={capsuleHasUnsavedChanges}
         onOpenCapsule={onOpenCapsule}

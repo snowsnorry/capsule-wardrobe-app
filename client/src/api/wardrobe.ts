@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "./config";
 import { requestJson } from "./request";
+import { parseJobResponse, type JobResponse } from "./jobs";
 import type { JsonObject } from "./request";
 
 class RetriableError extends Error {}
@@ -125,30 +126,34 @@ async function subscribeCapsuleEvents({
 
 async function regenerateCapsuleWardrobe({
   capsuleId,
-}: WardrobeMutationInput): Promise<WardrobeResponse> {
-  return requestJson(
-    `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate`,
-    {
-      method: "POST",
-      credentials: "include",
-    },
+}: WardrobeMutationInput): Promise<JobResponse> {
+  return parseJobResponse(
+    await requestJson(
+      `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate`,
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    ),
   );
 }
 
 async function regenerateSelectedWardrobeItems({
   itemUrls,
   capsuleId,
-}: SelectedWardrobeMutationInput): Promise<WardrobeResponse> {
-  return requestJson(
-    `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate-selected`,
-    {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
+}: SelectedWardrobeMutationInput): Promise<JobResponse> {
+  return parseJobResponse(
+    await requestJson(
+      `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate-selected`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ itemUrls }),
       },
-      body: JSON.stringify({ itemUrls }),
-    },
+    ),
   );
 }
 

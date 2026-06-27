@@ -12,6 +12,7 @@ import {
   type PersonalItemSource,
   type UploadedWardrobeItemUpdatePayload,
 } from "../api/personalItems";
+import { waitForJob, type JobResponse } from "../api/jobs";
 import { notifyPersonalItemsChanged } from "../app/personalItemsCount";
 import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import {
@@ -30,7 +31,7 @@ import { EMPTY_UPLOAD_PROGRESS } from "./wardrobeUploadProgress";
 type SetItems = Dispatch<SetStateAction<MainScreenItem[]>>;
 type SetError = Dispatch<SetStateAction<string>>;
 type Translate = (key: string) => string;
-export type WardrobeItemsChangedReason = "items" | "metadata";
+export type WardrobeItemsChangedReason = "items" | "metadata" | "upload";
 type ItemsChangedCallback = (reason: WardrobeItemsChangedReason) => void;
 
 function useWardrobeProductMenuState() {
@@ -146,7 +147,7 @@ function useWardrobeUploadActions({
 
   const runUpload = async (
     count: number,
-    upload: () => Promise<unknown>,
+    upload: () => Promise<JobResponse>,
     errorKey: string,
   ) => {
     if (count === 0) {
@@ -156,16 +157,27 @@ function useWardrobeUploadActions({
     setIsUploading(true);
     setUploadProgress({ ...EMPTY_UPLOAD_PROGRESS, total: count });
     try {
-      await upload();
+      const { job } = await upload();
       setError("");
-      notifyPersonalItemsChanged();
-      onItemsChanged?.("items");
+      void waitForJob(job.id)
+        .then((finishedJob) => {
+          if (finishedJob.status !== "completed") {
+            throw new Error(finishedJob.error?.code || "service_unavailable");
+          }
+          notifyPersonalItemsChanged();
+          onItemsChanged?.("upload");
+        })
+        .catch(() => {
+          setError(t(errorKey));
+        })
+        .finally(() => {
+          setIsUploading(false);
+        });
       return true;
     } catch {
       setError(t(errorKey));
-      return false;
-    } finally {
       setIsUploading(false);
+      return false;
     }
   };
 

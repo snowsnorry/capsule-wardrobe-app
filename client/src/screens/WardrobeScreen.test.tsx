@@ -34,6 +34,9 @@ const useMediaQueryMock = vi.hoisted(() => vi.fn((_query?: string) => false));
 
 vi.mock("../api/personalItems", () => api);
 vi.mock("../api/likedItems", () => likedApi);
+vi.mock("../api/jobs", () => ({
+  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
+}));
 vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock,
 }));
@@ -221,6 +224,45 @@ vi.mock("../components/ClothingGridPlaceholder", () => ({
 }));
 
 const theme = createTheme();
+
+function createJobResponse(kind = "personalItemsReportGenerate") {
+  return {
+    ok: true,
+    job: {
+      id: "job-1",
+      kind,
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "wardrobe", id: null },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
+}
+
+function personalItemsReportResponse(
+  summary = "Solid Personal items foundation.",
+) {
+  return {
+    ok: true,
+    report: {
+      verdict: {
+        score: 0.76,
+        status: "good",
+        summary,
+      },
+    },
+    stale: false,
+    generatedAt: "2026-06-19T10:00:00.000Z",
+  };
+}
+
 const translations: Record<string, string> = {
   "wardrobe.title": "Personal items",
   "wardrobe.subtitle": "Saved catalog pieces and uploaded items in one place.",
@@ -346,18 +388,9 @@ describe("WardrobeScreen", () => {
       generatedAt: null,
     });
     api.generatePersonalItemsReport.mockReset();
-    api.generatePersonalItemsReport.mockResolvedValue({
-      ok: true,
-      report: {
-        verdict: {
-          score: 0.76,
-          status: "good",
-          summary: "Solid Personal items foundation.",
-        },
-      },
-      stale: false,
-      generatedAt: "2026-06-19T10:00:00.000Z",
-    });
+    api.generatePersonalItemsReport.mockResolvedValue(
+      createJobResponse("personalItemsReportGenerate"),
+    );
     api.removeCatalogItemFromPersonalItems.mockReset();
     api.removeCatalogItemFromPersonalItems.mockResolvedValue({ ok: true });
     api.updateUploadedWardrobeItem.mockReset();
@@ -369,9 +402,13 @@ describe("WardrobeScreen", () => {
       },
     });
     api.uploadWardrobeImages.mockReset();
-    api.uploadWardrobeImages.mockResolvedValue({ ok: true, items: [] });
+    api.uploadWardrobeImages.mockResolvedValue(
+      createJobResponse("personalItemUploadFiles"),
+    );
     api.uploadWardrobeUrls.mockReset();
-    api.uploadWardrobeUrls.mockResolvedValue({ ok: true, items: [] });
+    api.uploadWardrobeUrls.mockResolvedValue(
+      createJobResponse("personalItemUploadUrls"),
+    );
     likedApi.likeItem.mockReset();
     likedApi.likeItem.mockResolvedValue({ ok: true });
     likedApi.removeItemLike.mockReset();
@@ -436,6 +473,14 @@ describe("WardrobeScreen", () => {
 
   test("generates a personal items report from the desktop toolbar", async () => {
     let resolveReport: (value: unknown) => void = () => {};
+    api.fetchPersonalItemsReport
+      .mockResolvedValueOnce({
+        ok: true,
+        report: null,
+        stale: false,
+        generatedAt: null,
+      })
+      .mockResolvedValueOnce(personalItemsReportResponse());
     api.generatePersonalItemsReport.mockReturnValueOnce(
       new Promise((resolve) => {
         resolveReport = resolve;
@@ -456,18 +501,7 @@ describe("WardrobeScreen", () => {
     await waitFor(() => expect(analyzeButton).toBeDisabled());
 
     await act(async () => {
-      resolveReport({
-        ok: true,
-        report: {
-          verdict: {
-            score: 0.76,
-            status: "good",
-            summary: "Solid Personal items foundation.",
-          },
-        },
-        stale: false,
-        generatedAt: "2026-06-19T10:00:00.000Z",
-      });
+      resolveReport(createJobResponse("personalItemsReportGenerate"));
     });
 
     expect(
@@ -478,29 +512,24 @@ describe("WardrobeScreen", () => {
 
   test("regenerates and deletes a personal items report from the route report menu", async () => {
     const user = userEvent.setup();
-    api.fetchPersonalItemsReport.mockResolvedValueOnce({
-      ok: true,
-      report: {
-        verdict: {
-          score: 0.68,
-          status: "good",
-          summary: "Initial route report.",
+    api.fetchPersonalItemsReport
+      .mockResolvedValueOnce({
+        ok: true,
+        report: {
+          verdict: {
+            score: 0.68,
+            status: "good",
+            summary: "Initial route report.",
+          },
         },
-      },
-      stale: false,
-      generatedAt: "2026-06-18T10:00:00.000Z",
-    });
+        stale: false,
+        generatedAt: "2026-06-18T10:00:00.000Z",
+      })
+      .mockResolvedValueOnce(
+        personalItemsReportResponse("Updated route report."),
+      );
     api.generatePersonalItemsReport.mockResolvedValueOnce({
-      ok: true,
-      report: {
-        verdict: {
-          score: 0.81,
-          status: "good",
-          summary: "Updated route report.",
-        },
-      },
-      stale: false,
-      generatedAt: "2026-06-19T10:00:00.000Z",
+      ...createJobResponse("personalItemsReportGenerate"),
     });
     renderScreen();
 
@@ -536,6 +565,14 @@ describe("WardrobeScreen", () => {
   test("generates a personal items report from the mobile action menu", async () => {
     useMediaQueryMock.mockReturnValue(true);
     const user = userEvent.setup();
+    api.fetchPersonalItemsReport
+      .mockResolvedValueOnce({
+        ok: true,
+        report: null,
+        stale: false,
+        generatedAt: null,
+      })
+      .mockResolvedValueOnce(personalItemsReportResponse());
     renderScreen();
 
     await screen.findByTestId("wardrobe-card-wardrobe-1");
@@ -1072,7 +1109,7 @@ describe("WardrobeScreen", () => {
     expect(screen.getByText("Images processed: 0")).toBeInTheDocument();
     expect(screen.getByText("Failed: 0")).toBeInTheDocument();
 
-    resolveUpload({ ok: true, items: [] });
+    resolveUpload(createJobResponse("personalItemUploadFiles"));
     await waitFor(() => {
       expect(
         screen.queryByText("Upload personal item photos"),

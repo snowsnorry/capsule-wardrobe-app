@@ -8,6 +8,7 @@ import { createProfileDependencies } from "./serverRouteTestProfileDependencies.
 import { createSearchAndGenerationDependencies } from "./serverRouteTestSearchDependencies.js";
 import type { DependencyOverrides } from "./serverRouteTestTypes.js";
 import { createWardrobeDependencies } from "./serverRouteTestWardrobeDependencies.js";
+import { createInMemoryJobService } from "../jobs/inMemoryJobService.js";
 
 export function createDependencies(overrides: DependencyOverrides = {}) {
   return {
@@ -18,6 +19,8 @@ export function createDependencies(overrides: DependencyOverrides = {}) {
     ...createSearchAndGenerationDependencies(),
     ...createMcpOAuthDependencies(),
     ...createWardrobeDependencies(),
+    ...createInMemoryJobService(),
+    clearAccountTransientStateImpl: async () => undefined,
     ...overrides,
   };
 }

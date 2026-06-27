@@ -1,4 +1,5 @@
 import { logError } from "../logger.js";
+import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
 import { registerCapsuleLifecycleRoutes } from "./capsuleLifecycleRoutes.js";
 import { registerCapsulePdfRoute } from "./capsulePdfRoute.js";
 import {
@@ -165,38 +166,6 @@ function getCapsuleReportErrorStatus(error) {
   }
 }
 
-function isResponseWritable(res) {
-  return !res.destroyed && !res.writableEnded;
-}
-
-function openCapsuleReportEventStream(res) {
-  res.status(200);
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
-}
-
-function writeCapsuleReportEvent(res, event, data) {
-  if (!isResponseWritable(res)) {
-    return false;
-  }
-
-  try {
-    res.write(`event: ${event}\n`);
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function endCapsuleReportEventStream(res) {
-  if (isResponseWritable(res)) {
-    res.end();
-  }
-}
-
 function registerCapsuleReportRoutes(app, context) {
   const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
 
@@ -206,27 +175,33 @@ function registerCapsuleReportRoutes(app, context) {
     requireAuth,
     requireCsrf,
     async (req, res) => {
-      openCapsuleReportEventStream(res);
-      writeCapsuleReportEvent(res, "progress", { status: "pending" });
-
       try {
-        const report = await context.generateCapsuleReportImpl(
+        const capsule = await context.getCapsuleImpl(
           req.user.email,
           req.params.id,
         );
-        writeCapsuleReportEvent(res, "complete", { ok: true, report });
+        if (!capsule) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const job = await enqueueRouteJob(context, {
+          kind: "capsuleReportGenerate",
+          profileEmail: req.user.email,
+          entity: { type: "capsule", id: String(req.params.id || "") },
+          dedupeKey: `capsuleReport:${req.params.id}`,
+          phase: "queued",
+          payload: { capsuleId: req.params.id },
+          progressLabel: "Generating capsule report",
+        });
+        return sendQueuedJob(res, job);
       } catch (error) {
         const status = getCapsuleReportErrorStatus(error);
         if (status === 503) {
           logError("[capsules/report]", error);
         }
-        writeCapsuleReportEvent(res, "fatal", {
-          error: status === 503 ? "service_unavailable" : error.code,
-        });
-      } finally {
-        endCapsuleReportEventStream(res);
+        return res
+          .status(status)
+          .json({ error: status === 503 ? "service_unavailable" : error.code });
       }
-      return undefined;
     },
   );
 

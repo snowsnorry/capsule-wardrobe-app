@@ -133,3 +133,17 @@ export {
   revokeMcpRefreshToken,
   rotateMcpRefreshToken,
 } from "./db/mcpOAuthRefreshTokens.js";
+export {
+  appendJobEvent,
+  clearJobRunsForEmail,
+  createJobRun,
+  getJobRunById,
+  getJobRunByIdForEmail,
+  listJobEventsAfter,
+  listJobRunsForEmail,
+  markJobRunCompleted,
+  markJobRunFailed,
+  markJobRunStarted,
+  setJobRunProviderJobId,
+  updateJobRunProgress,
+} from "./db/jobs.js";

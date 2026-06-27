@@ -207,6 +207,8 @@ function resolveStartServerOptions(app, options = {}) {
     injectSharedCapsuleMetaTagsImpl: injectSharedCapsuleMetaTags,
     isApiPathImpl: isApiPath,
     logInfoImpl: logInfo,
+    startJobWorkersImpl: app.locals?.appDependencies?.startJobWorkersImpl,
+    stopJobWorkersImpl: app.locals?.appDependencies?.stopJobWorkersImpl,
     ...options,
   };
 }
@@ -229,27 +231,43 @@ export function createStartServer(app) {
       injectSharedCapsuleMetaTagsImpl,
       isApiPathImpl,
       logInfoImpl,
+      startJobWorkersImpl,
+      stopJobWorkersImpl,
     } = resolveStartServerOptions(app, options);
 
-    await ensureTablesImpl();
+    let server;
+    try {
+      await ensureTablesImpl();
 
-    await configureClientApp({
-      appInstance,
-      clientDistPath,
-      clientOrigin,
-      clientRoot,
-      createViteServerImpl,
-      existsSyncImpl,
-      expressStaticImpl,
-      getSharedCapsuleOgMetadataImpl,
-      injectSharedCapsuleMetaTagsImpl,
-      isApiPathImpl,
-      nodeEnv,
-      readFileImpl,
-    });
+      await configureClientApp({
+        appInstance,
+        clientDistPath,
+        clientOrigin,
+        clientRoot,
+        createViteServerImpl,
+        existsSyncImpl,
+        expressStaticImpl,
+        getSharedCapsuleOgMetadataImpl,
+        injectSharedCapsuleMetaTagsImpl,
+        isApiPathImpl,
+        nodeEnv,
+        readFileImpl,
+      });
 
-    return appInstance.listen(port, () => {
-      logInfoImpl(`Server listening on http://localhost:${port}`);
-    });
+      server = appInstance.listen(port, () => {
+        logInfoImpl(`Server listening on http://localhost:${port}`);
+      });
+      if (typeof server.on === "function") {
+        server.on("close", () => {
+          void stopJobWorkersImpl?.();
+        });
+      }
+      await startJobWorkersImpl?.();
+    } catch (error) {
+      await stopJobWorkersImpl?.();
+      server?.close?.();
+      throw error;
+    }
+    return server;
   };
 }

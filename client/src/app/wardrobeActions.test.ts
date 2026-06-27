@@ -45,6 +45,27 @@ vi.mock("../api/wardrobe", () => ({
   subscribeCapsuleEvents: vi.fn(),
 }));
 
+function createJobResponse(id = "job-1") {
+  return {
+    ok: true,
+    job: {
+      id,
+      kind: "capsuleGenerate",
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "capsule", id: "capsule-1" },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
+}
+
 function mockCalls(fn: unknown) {
   return (fn as Mock).mock.calls;
 }
@@ -103,7 +124,7 @@ describe("wardrobeActions", () => {
 
   test("regenerateSelectedItems sends selected urls and subscribes to capsule events when pending", async () => {
     vi.mocked(regenerateSelectedWardrobeItems).mockResolvedValue({
-      status: "pending",
+      ...createJobResponse(),
     });
     const context = createActionContext({
       profileItems: [
@@ -132,7 +153,7 @@ describe("wardrobeActions", () => {
     );
   });
 
-  test("regenerateSelectedItems handles guards, immediate responses, and errors", async () => {
+  test("regenerateSelectedItems handles guards, queued responses, and errors", async () => {
     const guardedContext = createActionContext({
       selectedRegenerationUrls: [],
       isPartialRegenerationLoading: false,
@@ -141,16 +162,22 @@ describe("wardrobeActions", () => {
     expect(regenerateSelectedWardrobeItems).not.toHaveBeenCalled();
 
     vi.mocked(regenerateSelectedWardrobeItems).mockResolvedValueOnce({
-      status: "ready",
+      ...createJobResponse(),
     });
     const readyContext = createActionContext({
       selectedRegenerationUrls: ["https://example.com/top-1"],
       profileItems: [{ id: "top-1", url: "https://example.com/top-1" }],
     });
     await regenerateSelectedItems(readyContext);
-    expect(
-      readyContext.setIsPartialRegenerationLoading,
-    ).toHaveBeenLastCalledWith(false);
+    expect(readyContext.setIsPartialRegenerationLoading).toHaveBeenCalledWith(
+      true,
+    );
+    expect(readyContext.startPendingNotificationFlow).toHaveBeenCalledWith(
+      "partial",
+    );
+    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ capsuleId: "capsule-1" }),
+    );
 
     vi.mocked(regenerateSelectedWardrobeItems).mockRejectedValueOnce(
       new Error("invalid_payload"),
@@ -597,7 +624,7 @@ describe("wardrobeActions", () => {
 
   test("refreshWardrobe starts pending streams or reports failures", async () => {
     vi.mocked(regenerateCapsuleWardrobe).mockResolvedValueOnce({
-      status: "pending",
+      ...createJobResponse(),
     });
     const context = createActionContext();
 
@@ -623,10 +650,9 @@ describe("wardrobeActions", () => {
     expect(updater({ error: "" })).toEqual({ error: "boom" });
   });
 
-  test("refreshWardrobe applies immediate ready responses", async () => {
+  test("refreshWardrobe no longer applies immediate ready responses", async () => {
     vi.mocked(regenerateCapsuleWardrobe).mockResolvedValueOnce({
-      status: "ready",
-      items: [{ id: "ready-top" }],
+      ...createJobResponse(),
     });
     const context = createActionContext();
 
@@ -634,9 +660,9 @@ describe("wardrobeActions", () => {
 
     expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
     expect(context.setIsLoadingItems).toHaveBeenCalledWith(true);
-    expect(context.applyWardrobeSnapshot).toHaveBeenCalledWith(
-      { status: "ready", items: [{ id: "ready-top" }] },
-      "capsule-1",
+    expect(context.applyWardrobeSnapshot).not.toHaveBeenCalled();
+    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ capsuleId: "capsule-1" }),
     );
   });
 

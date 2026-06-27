@@ -29,6 +29,7 @@ type CapsuleRowsProps = {
   capsuleList: CapsuleNavItem[];
   hasMore: boolean;
   isInteractionDisabled: boolean;
+  activeJobEntityKeys?: string[];
   isOverlaySidebar: boolean;
   isLoadingMore: boolean;
   onLoadMoreCapsules?: () => Promise<void> | void;
@@ -47,6 +48,7 @@ export function CapsuleRows({
   capsuleList,
   hasMore,
   isInteractionDisabled,
+  activeJobEntityKeys = [],
   isOverlaySidebar,
   isLoadingMore,
   onLoadMoreCapsules,
@@ -58,6 +60,9 @@ export function CapsuleRows({
   totalCount,
 }: CapsuleRowsProps) {
   const visibleCapsuleIds = new Set(capsuleList.map(getCapsuleId));
+  const activeJobKeys = new Set(activeJobEntityKeys);
+  const getJobKey = (capsuleId: string) =>
+    pinCopyPrefix === "outfit" ? `outfit:${capsuleId}` : `capsule:${capsuleId}`;
   const shouldAppendActiveCapsule =
     Boolean(activeCapsuleId) &&
     Boolean(activeCapsule) &&
@@ -76,6 +81,7 @@ export function CapsuleRows({
           capsule={capsule}
           activeCapsuleId={activeCapsuleId}
           isInteractionDisabled={isInteractionDisabled}
+          isJobActive={activeJobKeys.has(getJobKey(getCapsuleId(capsule)))}
           isOverlaySidebar={isOverlaySidebar}
           capsuleHasUnsavedChanges={capsuleHasUnsavedChanges}
           onOpenCapsule={onOpenCapsule}
@@ -90,6 +96,7 @@ export function CapsuleRows({
           activeCapsule={activeCapsule}
           activeCapsuleId={activeCapsuleId}
           capsuleHasUnsavedChanges={capsuleHasUnsavedChanges}
+          isJobActive={activeJobKeys.has(getJobKey(activeCapsuleId))}
           isInteractionDisabled={isInteractionDisabled}
           isOverlaySidebar={isOverlaySidebar}
           onOpenCapsule={onOpenCapsule}
@@ -122,6 +129,7 @@ export function OutfitRows({
   outfitList,
   hasMore,
   isInteractionDisabled,
+  activeJobEntityKeys = [],
   isOverlaySidebar,
   isLoadingMore,
   onLoadMoreOutfits,
@@ -137,6 +145,7 @@ export function OutfitRows({
   outfitList: OutfitNavItem[];
   hasMore: boolean;
   isInteractionDisabled: boolean;
+  activeJobEntityKeys?: string[];
   isOverlaySidebar: boolean;
   isLoadingMore: boolean;
   onLoadMoreOutfits?: () => Promise<void> | void;
@@ -154,6 +163,7 @@ export function OutfitRows({
       capsuleList={outfitList}
       hasMore={hasMore}
       isInteractionDisabled={isInteractionDisabled}
+      activeJobEntityKeys={activeJobEntityKeys}
       isOverlaySidebar={isOverlaySidebar}
       isLoadingMore={isLoadingMore}
       onLoadMoreCapsules={onLoadMoreOutfits}

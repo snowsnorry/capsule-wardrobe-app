@@ -4,6 +4,7 @@ import {
   GOOGLE_CLIENT_ID,
 } from "./appConstants";
 import { importMainScreen } from "./mainScreenLoader";
+import { useActiveSidebarJobs } from "./useActiveSidebarJobs";
 import type { AppRouteContentProps } from "./AppRouteContentTypes";
 const MainScreen = lazy(importMainScreen);
 const WardrobeScreen = lazy(() => import("../screens/WardrobeScreen"));
@@ -150,7 +151,30 @@ function MainRoute(props: AppRouteContentProps) {
     />
   );
 }
+
+function useCurrentEntityJobState(props: AppRouteContentProps) {
+  const activeJobs = useActiveSidebarJobs(props.user?.email || "");
+  const activeKeys = activeJobs.activeJobEntityKeys;
+  return {
+    isCapsuleJobActive: Boolean(
+      props.appRoute === "capsule" &&
+      props.activeCapsuleMeta?.id &&
+      activeKeys.includes(`capsule:${props.activeCapsuleMeta.id}`),
+    ),
+    isOutfitJobActive: Boolean(
+      props.appRoute === "outfit" &&
+      props.activeOutfitMeta?.id &&
+      activeKeys.includes(`outfit:${props.activeOutfitMeta.id}`),
+    ),
+    isWardrobeJobActive: Boolean(
+      props.appRoute === "wardrobe" && activeKeys.includes("wardrobe"),
+    ),
+  };
+}
+
+// eslint-disable-next-line complexity
 export default function AppRouteContent(props: AppRouteContentProps) {
+  const currentEntityJobs = useCurrentEntityJobState(props);
   if (props.isCheckingSession || !props.sessionInitialized) {
     return null;
   }
@@ -185,7 +209,9 @@ export default function AppRouteContent(props: AppRouteContentProps) {
       );
     }
     if (props.appRoute === "wardrobe") {
-      return <WardrobeScreen />;
+      return (
+        <WardrobeScreen isJobActive={currentEntityJobs.isWardrobeJobActive} />
+      );
     }
     if (props.appRoute === "statistics") {
       return <StatisticsScreen onNavigateApp={props.onNavigateApp} />;
@@ -194,9 +220,13 @@ export default function AppRouteContent(props: AppRouteContentProps) {
       return (
         <OutfitScreen
           activeOutfit={props.activeOutfitMeta}
-          isContentBusy={props.isContentBusy}
+          isContentBusy={
+            props.isContentBusy || currentEntityJobs.isOutfitJobActive
+          }
           isImagePending={props.isOutfitImagePending}
-          isReportPending={props.isOutfitReportPending}
+          isReportPending={
+            props.isOutfitReportPending || currentEntityJobs.isOutfitJobActive
+          }
           onDeleteOutfit={props.onDeleteOutfit}
           onDeleteOutfitImage={props.onDeleteOutfitImage}
           onDeleteOutfitReport={props.onDeleteOutfitReport}
@@ -219,7 +249,15 @@ export default function AppRouteContent(props: AppRouteContentProps) {
     return props.currentView === "profile" ? (
       <ProfileRoute {...props} />
     ) : (
-      <MainRoute {...props} />
+      <MainRoute
+        {...props}
+        isContentBusy={
+          props.isContentBusy || currentEntityJobs.isCapsuleJobActive
+        }
+        isLoadingItems={
+          props.isLoadingItems || currentEntityJobs.isCapsuleJobActive
+        }
+      />
     );
   }
   return null;

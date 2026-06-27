@@ -6,6 +6,7 @@ import {
   generatePersonalItemsReport,
   type PersonalItemsReportResponse,
 } from "../api/personalItems";
+import { waitForJob } from "../api/jobs";
 import type { PersonalItemsReport } from "../app/appTypes";
 
 type UsePersonalItemsReportOptions = {
@@ -103,12 +104,23 @@ function usePersonalItemsReport({
   const generateReport = async () => {
     setIsReportPending(true);
     try {
-      const response = await generatePersonalItemsReport();
-      applyReportResponse(response, setters);
+      const { job } = await generatePersonalItemsReport();
+      void waitForJob(job.id)
+        .then(async (finishedJob) => {
+          if (finishedJob.status !== "completed") {
+            throw new Error(finishedJob.error?.code || "service_unavailable");
+          }
+          await refreshReport({ force: true });
+        })
+        .catch(() => {
+          setError(t("wardrobe.reportGenerateFailed"));
+        })
+        .finally(() => {
+          setIsReportPending(false);
+        });
       setError("");
     } catch {
       setError(t("wardrobe.reportGenerateFailed"));
-    } finally {
       setIsReportPending(false);
     }
   };

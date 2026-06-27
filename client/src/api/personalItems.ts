@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "./config";
-import { getCachedJson, getCsrfHeader, request, requestJson } from "./request";
+import { getCachedJson, request, requestJson } from "./request";
 import type { JsonObject } from "./request";
+import { parseJobResponse, type JobResponse } from "./jobs";
 import type { PersonalItemsReport } from "../app/appTypes";
 
 type PersonalItemSource = "uploaded" | "from_catalog";
@@ -14,6 +15,14 @@ type UploadWardrobeProgress = {
 };
 type UploadWardrobeImagesOptions = {
   onProgress?: (progress: UploadWardrobeProgress) => void;
+};
+const EMPTY_UPLOAD_PROGRESS: UploadWardrobeProgress = {
+  completedSteps: 0,
+  failed: 0,
+  imageProcessed: 0,
+  metadataProcessed: 0,
+  total: 0,
+  uploaded: 0,
 };
 type PersonalItemsFetchOptions = {
   force?: boolean;
@@ -40,12 +49,6 @@ type UploadedWardrobeItemUpdatePayload = {
 type RequestErrorWithStatus = Error & {
   status: number;
 };
-type EventStreamLike = {
-  fetchEventSource: (
-    url: string,
-    options: Record<string, unknown>,
-  ) => Promise<unknown>;
-};
 type PersonalItemsReportResponse = {
   generatedAt?: string | null;
   ok: true;
@@ -53,27 +56,6 @@ type PersonalItemsReportResponse = {
   report: PersonalItemsReport | null;
   stale?: boolean;
 };
-type GeneratePersonalItemsReportResponse = {
-  generatedAt?: string | null;
-  ok: true;
-  personalItemUrls?: string[];
-  report: PersonalItemsReport;
-};
-
-let fetchEventSourcePromise: Promise<
-  EventStreamLike["fetchEventSource"]
-> | null = null;
-
-function loadFetchEventSource(): Promise<EventStreamLike["fetchEventSource"]> {
-  if (!fetchEventSourcePromise) {
-    fetchEventSourcePromise = import("@microsoft/fetch-event-source").then(
-      (module) => module.fetchEventSource,
-    );
-  }
-
-  return fetchEventSourcePromise;
-}
-
 function getWardrobeItemsUrl({
   source = null,
 }: PersonalItemsFetchOptions = {}) {
@@ -96,32 +78,6 @@ function getWardrobeItemsPdfUrl(options: PersonalItemsFetchOptions = {}) {
 
 function getPersonalItemsReportUrl() {
   return `${API_BASE_URL}/wardrobe/items/report`;
-}
-
-function parseUploadEventPayload(data: string | undefined): JsonObject {
-  if (typeof data !== "string" || data.trim().length === 0) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(data);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed
-      : {};
-  } catch {
-    throw new Error("invalid_event_payload");
-  }
-}
-
-function toUploadProgress(payload: JsonObject): UploadWardrobeProgress {
-  return {
-    total: Number(payload.total) || 0,
-    uploaded: Number(payload.uploaded) || 0,
-    completedSteps: Number(payload.completedSteps) || 0,
-    metadataProcessed: Number(payload.metadataProcessed) || 0,
-    imageProcessed: Number(payload.imageProcessed) || 0,
-    failed: Number(payload.failed) || 0,
-  };
 }
 
 function getDownloadFilenameFromDisposition(
@@ -168,72 +124,13 @@ async function fetchPersonalItemsReport(
   return response as PersonalItemsReportResponse;
 }
 
-async function generatePersonalItemsReport(): Promise<GeneratePersonalItemsReportResponse> {
-  const fetchEventSource = await loadFetchEventSource();
-  let completePayload: GeneratePersonalItemsReportResponse | null = null;
-
-  await fetchEventSource(getPersonalItemsReportUrl(), {
-    method: "POST",
-    credentials: "include",
-    headers: getCsrfHeader(),
-    openWhenHidden: true,
-    async onopen(
-      response: Pick<Response, "ok" | "status"> & {
-        headers: Pick<Headers, "get">;
-      },
-    ) {
-      const contentType = (
-        response.headers.get("content-type") || ""
-      ).toLowerCase();
-      if (response.ok && contentType.includes("text/event-stream")) {
-        return;
-      }
-
-      throw new Error(`request_failed_${response.status}`);
-    },
-    onmessage(event: { data?: string; event?: string }) {
-      const payload = parseUploadEventPayload(event.data);
-      if (event.event === "progress") {
-        return;
-      }
-
-      if (event.event === "complete") {
-        if (payload.ok !== true || !payload.report) {
-          throw new Error("invalid_event_payload");
-        }
-        completePayload = {
-          generatedAt:
-            typeof payload.generatedAt === "string"
-              ? payload.generatedAt
-              : null,
-          ok: true,
-          personalItemUrls: Array.isArray(payload.personalItemUrls)
-            ? payload.personalItemUrls.map((value) => String(value))
-            : [],
-          report: payload.report as PersonalItemsReport,
-        };
-        return;
-      }
-
-      if (event.event === "fatal") {
-        throw new Error(String(payload.error || "service_unavailable"));
-      }
-    },
-    onclose() {
-      if (!completePayload) {
-        throw new Error("event_stream_closed");
-      }
-    },
-    onerror(error: Error) {
-      throw error;
-    },
-  });
-
-  if (!completePayload) {
-    throw new Error("event_stream_closed");
-  }
-
-  return completePayload;
+async function generatePersonalItemsReport(): Promise<JobResponse> {
+  return parseJobResponse(
+    await requestJson(getPersonalItemsReportUrl(), {
+      method: "POST",
+      credentials: "include",
+    }),
+  );
 }
 
 async function fetchUploadedWardrobeItemDetail(
@@ -251,90 +148,43 @@ async function fetchUploadedWardrobeItemDetail(
 async function uploadWardrobeImages(
   files: File[],
   options: UploadWardrobeImagesOptions = {},
-): Promise<JsonObject> {
+): Promise<JobResponse> {
   const formData = new FormData();
   files.forEach((file) => {
     formData.append("images", file);
   });
 
-  return uploadWardrobeEventStream(
-    `${API_BASE_URL}/wardrobe/items/upload`,
-    {
+  options.onProgress?.({
+    ...EMPTY_UPLOAD_PROGRESS,
+    total: files.length,
+  });
+  return parseJobResponse(
+    await requestJson(`${API_BASE_URL}/wardrobe/items/upload`, {
+      method: "POST",
+      credentials: "include",
       body: formData,
-      headers: getCsrfHeader(),
-    },
-    options,
+    }),
   );
 }
 
 async function uploadWardrobeUrls(
   urls: string[],
   options: UploadWardrobeImagesOptions = {},
-): Promise<JsonObject> {
-  return uploadWardrobeEventStream(
-    `${API_BASE_URL}/wardrobe/items/upload-url`,
-    {
-      body: JSON.stringify({ urls }),
+): Promise<JobResponse> {
+  options.onProgress?.({
+    ...EMPTY_UPLOAD_PROGRESS,
+    total: urls.length,
+  });
+  return parseJobResponse(
+    await requestJson(`${API_BASE_URL}/wardrobe/items/upload-url`, {
+      method: "POST",
+      credentials: "include",
       headers: {
-        ...getCsrfHeader(),
         "Content-Type": "application/json",
       },
-    },
-    options,
+      body: JSON.stringify({ urls }),
+    }),
   );
-}
-
-async function uploadWardrobeEventStream(
-  url: string,
-  requestOptions: { body: BodyInit; headers: Record<string, string> },
-  options: UploadWardrobeImagesOptions = {},
-): Promise<JsonObject> {
-  const fetchEventSource = await loadFetchEventSource();
-  let completePayload: JsonObject | null = null;
-  await fetchEventSource(url, {
-    method: "POST",
-    credentials: "include",
-    headers: requestOptions.headers,
-    body: requestOptions.body,
-    openWhenHidden: true,
-    async onopen(response) {
-      const contentType = (
-        response.headers.get("content-type") || ""
-      ).toLowerCase();
-      if (response.ok && contentType.includes("text/event-stream")) {
-        return;
-      }
-
-      throw new Error(`request_failed_${response.status}`);
-    },
-    onmessage(event) {
-      const payload = parseUploadEventPayload(event.data);
-      if (event.event === "progress") {
-        options.onProgress?.(toUploadProgress(payload));
-        return;
-      }
-
-      if (event.event === "complete") {
-        options.onProgress?.(toUploadProgress(payload));
-        completePayload = payload;
-        return;
-      }
-
-      if (event.event === "fatal") {
-        throw new Error(String(payload.error || "service_unavailable"));
-      }
-    },
-    onclose() {
-      if (!completePayload) {
-        throw new Error("event_stream_closed");
-      }
-    },
-    onerror(error) {
-      throw error;
-    },
-  });
-
-  return completePayload || {};
 }
 
 async function saveCatalogItemToPersonalItems(

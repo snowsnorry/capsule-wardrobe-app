@@ -98,7 +98,7 @@ export function createDeleteProfileHandler({
       if (!deleted) {
         return res.status(404).json({ error: "not_found" });
       }
-      clearAccountTransientStateImpl?.(req.user.email);
+      await clearAccountTransientStateImpl?.(req.user.email);
       if (imageKeys.length > 0) {
         await deleteR2ObjectsImpl({ keys: imageKeys }).catch((error) => {
           logError("[profile/delete][r2]", error);

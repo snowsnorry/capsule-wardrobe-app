@@ -47,16 +47,18 @@ async function requestEventStream(
   };
 }
 
-function parseEventStream(text: string) {
-  return text
-    .trim()
-    .split("\n\n")
-    .filter(Boolean)
-    .map((entry) => {
-      const event = entry.match(/^event: (.+)$/m)?.[1] || "message";
-      const data = entry.match(/^data: (.+)$/m)?.[1] || "{}";
-      return { event, data: JSON.parse(data) };
-    });
+function expectQueuedJob(result, kind, entity) {
+  const json = result.json || JSON.parse(result.text || "{}");
+  expect(result.response.status).toBe(202);
+  expect(json).toMatchObject({
+    ok: true,
+    job: {
+      kind,
+      status: "queued",
+      entity,
+    },
+  });
+  expect(typeof json.job.id).toBe("string");
 }
 
 test("capsule action routes cover wardrobe handlers and pdf download", async (t) => {
@@ -108,7 +110,15 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
     },
   );
   expect(fullRegenerate.response.status).toBe(202);
-  expect(fullRegenerateCalled).toBe(true);
+  expect(fullRegenerate.json).toMatchObject({
+    ok: true,
+    job: {
+      kind: "capsuleGenerate",
+      status: "queued",
+      entity: { type: "capsule", id: "capsule-1" },
+    },
+  });
+  expect(fullRegenerateCalled).toBe(false);
 
   const regenerate = await requestJson(
     baseUrl,
@@ -121,8 +131,11 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
       body: { itemUrls: ["https://example.com/1"] },
     },
   );
-  expect(regenerate.response.status).toBe(200);
-  expect(regenerateCalled).toBe(true);
+  expectQueuedJob(regenerate, "capsuleRegenerateSelected", {
+    type: "capsule",
+    id: "capsule-1",
+  });
+  expect(regenerateCalled).toBe(false);
 
   const outfitSetImage = await requestJson(
     baseUrl,
@@ -216,33 +229,11 @@ test("capsule report route delegates to generator and maps report errors", async
     "/capsules/capsule-1/report",
     authenticatedMutationOptions(),
   );
-  expect(generated.response.status).toBe(200);
-  expect(generated.response.headers.get("content-type")).toContain(
-    "text/event-stream",
-  );
-  expect(parseEventStream(generated.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    {
-      event: "complete",
-      data: {
-        ok: true,
-        report: {
-          schemaVersion: 1,
-          itemsHash: "capsule-report-hash",
-          verdict: {
-            llmScore: 0.9,
-            score: 0.9,
-            status: "good",
-            summary: "Ready.",
-          },
-        },
-      },
-    },
-  ]);
-  expect(generateCapsuleReportImpl).toHaveBeenCalledWith(
-    "person@example.com",
-    "capsule-1",
-  );
+  expectQueuedJob(generated, "capsuleReportGenerate", {
+    type: "capsule",
+    id: "capsule-1",
+  });
+  expect(generateCapsuleReportImpl).not.toHaveBeenCalled();
 
   const missingCsrf = await requestJson(baseUrl, "/capsules/capsule-1/report", {
     method: "POST",
@@ -251,35 +242,17 @@ test("capsule report route delegates to generator and maps report errors", async
   });
   expect(missingCsrf.response.status).toBe(403);
 
-  const missing = await requestEventStream(
-    baseUrl,
-    "/capsules/missing/report",
-    authenticatedMutationOptions(),
-  );
-  expect(parseEventStream(missing.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    { event: "fatal", data: { error: "not_found" } },
-  ]);
-
-  const empty = await requestEventStream(
-    baseUrl,
-    "/capsules/empty/report",
-    authenticatedMutationOptions(),
-  );
-  expect(parseEventStream(empty.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    { event: "fatal", data: { error: "invalid_payload" } },
-  ]);
-
-  const failed = await requestEventStream(
-    baseUrl,
-    "/capsules/llm-failed/report",
-    authenticatedMutationOptions(),
-  );
-  expect(parseEventStream(failed.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    { event: "fatal", data: { error: "service_unavailable" } },
-  ]);
+  for (const capsuleId of ["missing", "empty", "llm-failed"]) {
+    const queued = await requestEventStream(
+      baseUrl,
+      `/capsules/${capsuleId}/report`,
+      authenticatedMutationOptions(),
+    );
+    expectQueuedJob(queued, "capsuleReportGenerate", {
+      type: "capsule",
+      id: capsuleId,
+    });
+  }
 
   const deleted = await requestJson(baseUrl, "/capsules/capsule-1/report", {
     method: "DELETE",

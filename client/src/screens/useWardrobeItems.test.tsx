@@ -22,8 +22,32 @@ const personalItems = vi.hoisted(() => ({
 vi.mock("../api/personalItems", () => api);
 vi.mock("../api/likedItems", () => likedApi);
 vi.mock("../app/personalItemsCount", () => personalItems);
+vi.mock("../api/jobs", () => ({
+  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
+}));
 
 const t = (key: string) => key;
+
+function createJobResponse(kind = "personalItemUploadUrls") {
+  return {
+    ok: true,
+    job: {
+      id: "job-1",
+      kind,
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "wardrobe", id: null },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,8 +56,12 @@ beforeEach(() => {
   api.downloadPersonalItemsPdf.mockResolvedValue(undefined);
   api.removeCatalogItemFromPersonalItems.mockResolvedValue({ ok: true });
   api.updateUploadedWardrobeItem.mockResolvedValue({ item: null });
-  api.uploadWardrobeImages.mockResolvedValue({ ok: true });
-  api.uploadWardrobeUrls.mockResolvedValue({ ok: true });
+  api.uploadWardrobeImages.mockResolvedValue(
+    createJobResponse("personalItemUploadFiles"),
+  );
+  api.uploadWardrobeUrls.mockResolvedValue(
+    createJobResponse("personalItemUploadUrls"),
+  );
   likedApi.likeItem.mockResolvedValue({ ok: true });
   likedApi.removeItemLike.mockResolvedValue({ ok: true });
 });
@@ -99,7 +127,9 @@ describe("useWardrobeItems", () => {
       ["https://shop.test/a"],
       expect.objectContaining({ onProgress: expect.any(Function) }),
     );
-    expect(onItemsChanged).toHaveBeenNthCalledWith(1, "items");
+    await waitFor(() =>
+      expect(onItemsChanged).toHaveBeenNthCalledWith(1, "upload"),
+    );
 
     act(() => {
       result.current.handleProductMenuOpen(

@@ -9,6 +9,7 @@ import { registerHealthImageRoutes } from "./routes/healthImageRoutes.js";
 import { registerSessionAuthRoutes } from "./routes/sessionAuthRoutes.js";
 import { registerWardrobeRoutes } from "./routes/wardrobeRoutes.js";
 import { registerLikedItemsRoutes } from "./routes/likedItemsRoutes.js";
+import { registerJobRoutes } from "./routes/jobRoutes.js";
 import { registerMcpOAuthRoutes } from "./mcp/oauthRoutes.js";
 import { registerMcpRoutes } from "./mcp/mcpRoutes.js";
 
@@ -21,6 +22,7 @@ function registerDomainRoutes(app, routeContext) {
   registerMcpOAuthRoutes(app, routeContext);
   registerMcpRoutes(app, routeContext);
   registerProfileReadRoutes(app, routeContext);
+  registerJobRoutes(app, routeContext);
   registerLikedItemsRoutes(app, routeContext);
   registerWardrobeRoutes(app, routeContext);
   registerCapsuleReadRoutes(app, routeContext);

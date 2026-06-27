@@ -1,4 +1,5 @@
 import { logError } from "../logger.js";
+import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
 
 function getPersonalItemsReportErrorStatus(error) {
   switch (error?.code) {
@@ -26,38 +27,6 @@ function areEqualStringSets(left: string[] = [], right: string[] = []) {
     return false;
   }
   return left.every((value, index) => value === right[index]);
-}
-
-function isResponseWritable(res) {
-  return !res.destroyed && !res.writableEnded;
-}
-
-function openPersonalItemsReportEventStream(res) {
-  res.status(200);
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
-}
-
-function writePersonalItemsReportEvent(res, event, data) {
-  if (!isResponseWritable(res)) {
-    return false;
-  }
-
-  try {
-    res.write(`event: ${event}\n`);
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function endPersonalItemsReportEventStream(res) {
-  if (isResponseWritable(res)) {
-    res.end();
-  }
 }
 
 function getRequestContext(body) {
@@ -108,38 +77,31 @@ function registerPersonalItemsReportRoutes(app, context) {
     context.requireAuth,
     context.requireCsrf,
     async (req, res) => {
-      openPersonalItemsReportEventStream(res);
-      writePersonalItemsReportEvent(res, "progress", { status: "pending" });
-
       try {
         const requestContext = getRequestContext(req.body);
         if (!requestContext.ok) {
-          writePersonalItemsReportEvent(res, "fatal", {
-            error: "invalid_payload",
-          });
-          return undefined;
+          return res.status(400).json({ error: "invalid_payload" });
         }
 
-        const result = await context.generatePersonalItemsReportImpl(
-          req.user.email,
-          requestContext.context,
-        );
-        writePersonalItemsReportEvent(res, "complete", {
-          ok: true,
-          ...result,
+        const job = await enqueueRouteJob(context, {
+          kind: "personalItemsReportGenerate",
+          profileEmail: req.user.email,
+          entity: { type: "wardrobe", id: null },
+          dedupeKey: `personalItemsReport:${requestContext.context || ""}`,
+          phase: "queued",
+          payload: { context: requestContext.context },
+          progressLabel: "Analyzing Personal items",
         });
+        return sendQueuedJob(res, job);
       } catch (error) {
         const status = getPersonalItemsReportErrorStatus(error);
         if (status === 503) {
           logError("[wardrobe/items/report][generate]", error);
         }
-        writePersonalItemsReportEvent(res, "fatal", {
-          error: status === 503 ? "service_unavailable" : error.code,
-        });
-      } finally {
-        endPersonalItemsReportEventStream(res);
+        return res
+          .status(status)
+          .json({ error: status === 503 ? "service_unavailable" : error.code });
       }
-      return undefined;
     },
   );
 

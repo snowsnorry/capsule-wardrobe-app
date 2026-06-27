@@ -26,6 +26,7 @@ function createExpressApp(deps) {
 export function createApp(options = {}) {
   const deps = createAppDependencies(options);
   const app = createExpressApp(deps);
+  app.locals.appDependencies = deps;
   const routeContext = createAppRouteContext(deps);
   registerAppRoutes(app, routeContext);
 

@@ -1,6 +1,7 @@
 import { type ReactElement } from "react";
 import {
   Box,
+  CircularProgress,
   ListItemButton,
   ListItemText,
   Stack,
@@ -52,6 +53,7 @@ function TopLevelRowContent({
   label,
   icon,
   isActive,
+  isJobActive,
   isCollapsedDesktop,
   desktopSidebarRailWidth,
   countBadge,
@@ -60,12 +62,13 @@ function TopLevelRowContent({
   label: string;
   icon: ReactElement;
   isActive: boolean;
+  isJobActive: boolean;
   isCollapsedDesktop: boolean;
   desktopSidebarRailWidth: number;
   countBadge?: number | null;
   ariaExpanded?: boolean;
 }) {
-  const countBadgeLabel = getCountBadgeLabel(countBadge);
+  const countBadgeLabel = isJobActive ? null : getCountBadgeLabel(countBadge);
 
   return (
     <>
@@ -101,6 +104,14 @@ function TopLevelRowContent({
       </Box>
       {!isCollapsedDesktop && countBadgeLabel ? (
         <TopLevelCountBadge count={countBadgeLabel} isActive={isActive} />
+      ) : null}
+      {!isCollapsedDesktop && isJobActive ? (
+        <CircularProgress
+          aria-label={`${label} is busy`}
+          size={16}
+          thickness={5}
+          sx={{ color: "primary.main", flexShrink: 0, ml: 1 }}
+        />
       ) : null}
     </>
   );
@@ -141,6 +152,7 @@ function TopLevelStaticRow({
         label={label}
         icon={icon}
         isActive={isActive}
+        isJobActive={false}
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
         countBadge={countBadge}
@@ -160,6 +172,7 @@ type TopLevelRowProps = {
   onClick?: () => void;
   actions?: ReactElement;
   countBadge?: number | null;
+  isJobActive?: boolean;
   suppressHoverBackground?: boolean;
   showActiveBackground?: boolean;
 };
@@ -175,10 +188,11 @@ export function TopLevelRow({
   onClick,
   actions,
   countBadge,
+  isJobActive = false,
   suppressHoverBackground = false,
   showActiveBackground = false,
 }: TopLevelRowProps) {
-  const countBadgeLabel = getCountBadgeLabel(countBadge);
+  const countBadgeLabel = isJobActive ? null : getCountBadgeLabel(countBadge);
   const accessibleLabel = countBadgeLabel
     ? `${label}, ${countBadgeLabel}`
     : label;
@@ -211,6 +225,7 @@ export function TopLevelRow({
         label={label}
         icon={icon}
         isActive={isActive}
+        isJobActive={isJobActive}
         isCollapsedDesktop={isCollapsedDesktop}
         desktopSidebarRailWidth={desktopSidebarRailWidth}
         countBadge={countBadge}
@@ -224,7 +239,7 @@ export function TopLevelRow({
       isActive={isActive}
       isCollapsedDesktop={isCollapsedDesktop}
       desktopSidebarRailWidth={desktopSidebarRailWidth}
-      countBadge={countBadge}
+      countBadge={isJobActive ? null : countBadge}
       showActiveBackground={showActiveBackground}
     />
   );

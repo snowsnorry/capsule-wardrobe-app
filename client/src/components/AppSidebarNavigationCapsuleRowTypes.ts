@@ -17,6 +17,7 @@ export type CapsuleRowProps = {
   isInteractionDisabled: boolean;
   isOverlaySidebar: boolean;
   capsuleHasUnsavedChanges: (capsule: CapsuleNavItem) => boolean;
+  isJobActive?: boolean;
   onOpenCapsule?: (capsuleId: string) => void;
   onOpenCapsuleActions?: AppSidebarNavigationProps["onOpenCapsuleActions"];
   onSetCapsulePin?: SetCapsulePinHandler;

@@ -1,6 +1,7 @@
 import type { ErrorWithCode } from "../ai/types.js";
 import { logError } from "../logger.js";
 import { buildWardrobeFilters } from "./wardrobeFilters.js";
+import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
 
 export function registerCapsuleReadRoutes(app, context) {
   registerCapsuleBootstrapRoutes(app, context);
@@ -282,12 +283,11 @@ function sendCapsuleShareErrorResponse(res, error) {
   return null;
 }
 
+// eslint-disable-next-line max-lines-per-function
 function registerCapsuleActionRoutes(app, context) {
   const {
     deleteOutfitSetImageHandler,
     generateOutfitSetImageHandler,
-    regenerateCapsuleWardrobeHandler,
-    regenerateSelectedCapsuleItemsHandler,
     requireAuth,
     requireCsrf,
     requireTrustedOrigin,
@@ -298,7 +298,30 @@ function registerCapsuleActionRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
-    regenerateCapsuleWardrobeHandler,
+    async (req, res) => {
+      try {
+        const capsule = await context.getCapsuleImpl(
+          req.user.email,
+          req.params.id,
+        );
+        if (!capsule) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const job = await enqueueRouteJob(context, {
+          kind: "capsuleGenerate",
+          profileEmail: req.user.email,
+          entity: { type: "capsule", id: String(req.params.id || "") },
+          dedupeKey: `capsuleGenerate:${req.params.id}`,
+          phase: "queued",
+          payload: { capsuleId: req.params.id },
+          progressLabel: "Building capsule",
+        });
+        return sendQueuedJob(res, job);
+      } catch (error) {
+        logError("[capsules/regenerate][enqueue]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
   );
 
   app.post(
@@ -306,7 +329,39 @@ function registerCapsuleActionRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
-    regenerateSelectedCapsuleItemsHandler,
+    async (req, res) => {
+      const itemUrls = Array.isArray(req.body?.itemUrls)
+        ? req.body.itemUrls
+            .map((itemUrl) => String(itemUrl || "").trim())
+            .filter(Boolean)
+        : [];
+      if (itemUrls.length === 0) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
+
+      try {
+        const capsule = await context.getCapsuleImpl(
+          req.user.email,
+          req.params.id,
+        );
+        if (!capsule) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const job = await enqueueRouteJob(context, {
+          kind: "capsuleRegenerateSelected",
+          profileEmail: req.user.email,
+          entity: { type: "capsule", id: String(req.params.id || "") },
+          dedupeKey: `capsuleRegenerateSelected:${req.params.id}:${itemUrls.join("|")}`,
+          phase: "queued",
+          payload: { capsuleId: req.params.id, itemUrls },
+          progressLabel: "Regenerating selected items",
+        });
+        return sendQueuedJob(res, job);
+      } catch (error) {
+        logError("[capsules/regenerate-selected][enqueue]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
   );
 
   app.post(

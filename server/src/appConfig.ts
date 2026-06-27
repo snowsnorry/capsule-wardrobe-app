@@ -17,6 +17,9 @@ export const AUTH_TEST_MODE =
   ["1", "true", "yes"].includes(
     String(process.env.AUTH_TEST_MODE || "").toLowerCase(),
   );
+export const E2E_SERVER = ["1", "true", "yes"].includes(
+  String(process.env.E2E_SERVER || "").toLowerCase(),
+);
 export const SUPPORTED_LOCALES = new Set(["en", "ru"]);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -86,3 +89,21 @@ export const MCP_ALLOWED_REDIRECT_URIS =
   process.env.MCP_ALLOWED_REDIRECT_URIS || "";
 export const MCP_ALLOWED_REDIRECT_ORIGINS =
   process.env.MCP_ALLOWED_REDIRECT_ORIGINS || "";
+
+function readPositiveIntegerEnv(
+  value: string | undefined,
+  defaultValue: number,
+): number {
+  const parsed = Number.parseInt(String(value || ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
+}
+
+export const JOB_QUEUE_BACKEND = process.env.JOB_QUEUE_BACKEND || "pg_boss";
+export const JOB_WORKER_CONCURRENCY = readPositiveIntegerEnv(
+  process.env.JOB_WORKER_CONCURRENCY,
+  1,
+);
+export const JOB_WORKER_ENABLED = readBooleanEnv(
+  process.env.JOB_WORKER_ENABLED,
+  NODE_ENV !== "test" && !E2E_SERVER,
+);

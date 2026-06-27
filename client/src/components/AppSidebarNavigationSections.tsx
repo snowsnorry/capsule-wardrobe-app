@@ -93,6 +93,7 @@ export function useOutfitNavigationState({
 
 export function PersonalItemsRow({
   activeApp,
+  activeJobEntityKeys,
   desktopSidebarRailWidth,
   handleNavigateApp,
   isCollapsedDesktop,
@@ -101,6 +102,7 @@ export function PersonalItemsRow({
   t,
 }: {
   activeApp: AppId;
+  activeJobEntityKeys?: string[];
   desktopSidebarRailWidth: number;
   handleNavigateApp: (nextApp: AppId) => void;
   isCollapsedDesktop: boolean;
@@ -118,6 +120,7 @@ export function PersonalItemsRow({
       desktopSidebarRailWidth={desktopSidebarRailWidth}
       onClick={() => handleNavigateApp("wardrobe")}
       countBadge={personalItemsCount}
+      isJobActive={activeJobEntityKeys?.includes("wardrobe") === true}
       showActiveBackground
     />
   );
@@ -171,6 +174,7 @@ function OutfitsRow({
 }
 
 export function OutfitsSection({
+  activeJobEntityKeys,
   activeApp,
   activeOutfit,
   activeOutfitId,
@@ -201,6 +205,7 @@ export function OutfitsSection({
   | "onSearchOutfits"
   | "onSetOutfitPin"
 > & {
+  activeJobEntityKeys?: string[];
   activeApp: AppId;
   desktopSidebarRailWidth: number;
   handleLoadMoreOutfits: () => Promise<void>;
@@ -230,6 +235,7 @@ export function OutfitsSection({
         <OutfitRows
           activeOutfit={activeOutfit}
           activeOutfitId={activeApp === "outfit" ? activeOutfitId || "" : ""}
+          activeJobEntityKeys={activeJobEntityKeys}
           outfitHasUnsavedChanges={outfitHasUnsavedChanges || (() => false)}
           outfitList={navState.sortedOutfits}
           hasMore={navState.hasMoreOutfits}
@@ -248,7 +254,9 @@ export function OutfitsSection({
   );
 }
 
+// eslint-disable-next-line max-lines-per-function
 export function CapsuleSection({
+  activeJobEntityKeys,
   activeApp,
   activeCapsule,
   activeCapsuleId,
@@ -279,6 +287,7 @@ export function CapsuleSection({
   | "onSearchCapsules"
   | "onSetCapsulePin"
 > & {
+  activeJobEntityKeys?: string[];
   activeApp: AppId;
   desktopSidebarRailWidth: number;
   handleLoadMoreCapsules: () => Promise<void>;
@@ -319,6 +328,7 @@ export function CapsuleSection({
         <CapsuleRows
           activeCapsule={activeCapsule}
           activeCapsuleId={activeCapsuleId || ""}
+          activeJobEntityKeys={activeJobEntityKeys}
           capsuleHasUnsavedChanges={capsuleHasUnsavedChanges || (() => false)}
           capsuleList={navState.sortedCapsules}
           hasMore={navState.hasMoreCapsules}

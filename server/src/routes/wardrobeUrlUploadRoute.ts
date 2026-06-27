@@ -4,12 +4,11 @@ import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
 import { normalizeWardrobeImageUploadUrls } from "../wardrobeImageUrlImport.js";
 import {
   advanceWardrobeUploadProgress,
-  createWardrobeUploadAbortState,
   markSavedWardrobeUploadSourcesFailed,
-  openWardrobeUploadEventStream,
   processPreparedUploadedWardrobeItemMetadata,
   writeWardrobeUploadEvent,
 } from "./wardrobeUploadStream.js";
+import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
 
 function createWardrobeUploadProgress(total) {
   return {
@@ -174,14 +173,6 @@ async function processWardrobeUploadUrlResult({
   }
 }
 
-async function markSavedUrlUploadSourcesFailed(context, req, sourceSaves) {
-  await markSavedWardrobeUploadSourcesFailed({
-    context,
-    email: req.user.email,
-    sourceSaves,
-  });
-}
-
 function registerWardrobeUrlUploadRoute(app, context) {
   app.post(
     "/wardrobe/items/upload-url",
@@ -194,84 +185,96 @@ function registerWardrobeUrlUploadRoute(app, context) {
         return res.status(400).json({ error: "invalid_payload" });
       }
 
-      const abortState = createWardrobeUploadAbortState(req, res);
-      const sourceSaves = new Map();
       try {
-        openWardrobeUploadEventStream(res);
-        const progress = createWardrobeUploadProgress(urls.length);
-        const imageLlm = await getWardrobeUploadImageLlm(
-          context,
-          req.user.email,
-        );
-        const processingResults =
-          await context.processWardrobeUploadUrlsInChildImpl({
-            email: req.user.email,
-            imageLlm,
-            onEvent: (event) => {
-              if (!abortState.isAborted()) {
-                scheduleWardrobeUrlSourceSave({
-                  context,
-                  email: req.user.email,
-                  event,
-                  progress,
-                  res,
-                  sourceSaves,
-                });
-              }
-            },
-            signal: abortState.signal,
-            urls,
-          });
-        if (abortState.isAborted()) {
-          await markSavedUrlUploadSourcesFailed(context, req, sourceSaves);
-          return;
-        }
-        const processedItems = [];
-
-        for (const processingResult of processingResults) {
-          if (abortState.isAborted()) {
-            await markSavedUrlUploadSourcesFailed(context, req, sourceSaves);
-            return;
-          }
-          const item = await processWardrobeUploadUrlResult({
-            context,
-            email: req.user.email,
-            progress,
-            processingResult,
-            res,
-            sourceSaves,
-          });
-          if (item) {
-            processedItems.push(item);
-          }
-        }
-
-        const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
-        writeWardrobeUploadEvent(res, "complete", {
-          ok: true,
-          ...progress,
-          items: context.annotateLikedItems(processedItems, likedUrls),
+        const job = await enqueueRouteJob(context, {
+          kind: "personalItemUploadUrls",
+          profileEmail: req.user.email,
+          entity: { type: "wardrobe", id: null },
+          dedupeKey: `personalItemUploadUrls:${urls.join("|")}`,
+          phase: "queued",
+          payload: { urls },
+          progressLabel: "Uploading Personal items",
+          progressTotal: urls.length,
         });
-        return res.end();
+        return sendQueuedJob(res, job);
       } catch (error) {
-        if (abortState.isAborted()) {
-          await markSavedUrlUploadSourcesFailed(context, req, sourceSaves);
-          return;
-        }
         logError("[wardrobe/items/upload-url]", error);
-        await markSavedUrlUploadSourcesFailed(context, req, sourceSaves);
-        if (res.headersSent) {
-          writeWardrobeUploadEvent(res, "fatal", {
-            error: "service_unavailable",
-          });
-          return res.end();
-        }
         return res.status(503).json({ error: "service_unavailable" });
-      } finally {
-        abortState.dispose();
       }
     },
   );
 }
 
-export { registerWardrobeUrlUploadRoute };
+async function processQueuedWardrobeUrlUpload({
+  context,
+  email,
+  urls,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context: any;
+  email: string;
+  urls: string[];
+}) {
+  const sourceSaves = new Map();
+  const progress = createWardrobeUploadProgress(urls.length);
+  const res = createQueuedUploadResponseSink();
+  try {
+    const imageLlm = await getWardrobeUploadImageLlm(context, email);
+    const processingResults =
+      await context.processWardrobeUploadUrlsInChildImpl({
+        email,
+        imageLlm,
+        onEvent: (event) => {
+          scheduleWardrobeUrlSourceSave({
+            context,
+            email,
+            event,
+            progress,
+            res,
+            sourceSaves,
+          });
+        },
+        signal: undefined,
+        urls,
+      });
+    const processedItems = [];
+
+    for (const processingResult of processingResults) {
+      const item = await processWardrobeUploadUrlResult({
+        context,
+        email,
+        progress,
+        processingResult,
+        res,
+        sourceSaves,
+      });
+      if (item) {
+        processedItems.push(item);
+      }
+    }
+
+    const likedUrls = await context.listLikedItemUrlsImpl(email);
+    return {
+      ok: true,
+      ...progress,
+      items: context.annotateLikedItems(processedItems, likedUrls),
+    };
+  } catch (error) {
+    await markSavedWardrobeUploadSourcesFailed({
+      context,
+      email,
+      sourceSaves,
+    });
+    throw error;
+  }
+}
+
+function createQueuedUploadResponseSink() {
+  return {
+    destroyed: false,
+    writableEnded: false,
+    write: () => true,
+  };
+}
+
+export { processQueuedWardrobeUrlUpload, registerWardrobeUrlUploadRoute };

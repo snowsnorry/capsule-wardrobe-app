@@ -60,33 +60,30 @@ async function requestReportStream(baseUrl, body = {}) {
     },
     body: JSON.stringify(body),
   });
+  const text = await response.text();
   return {
     response,
-    text: await response.text(),
+    json: text && text.startsWith("{") ? JSON.parse(text) : null,
+    text,
   };
 }
 
-function parseSseEvents(text: string) {
-  return text
-    .trim()
-    .split(/\n\n+/)
-    .filter(Boolean)
-    .map((chunk) => {
-      const event =
-        chunk
-          .split("\n")
-          .find((line) => line.startsWith("event: "))
-          ?.slice("event: ".length) || "message";
-      const data = chunk
-        .split("\n")
-        .filter((line) => line.startsWith("data: "))
-        .map((line) => line.slice("data: ".length))
-        .join("\n");
-      return {
-        event,
-        data: data ? JSON.parse(data) : {},
-      };
-    });
+function expectQueuedJob(
+  result,
+  kind,
+  entity = { type: "wardrobe", id: null },
+) {
+  const json = result.json || JSON.parse(result.text || "{}");
+  expect(result.response.status).toBe(202);
+  expect(json).toMatchObject({
+    ok: true,
+    job: {
+      kind,
+      status: "queued",
+      entity,
+    },
+  });
+  expect(typeof json.job.id).toBe("string");
 }
 
 function buildUploadForm(
@@ -281,22 +278,7 @@ test("personal items report routes read stale state generate and delete reports"
   expect(missingCsrf.response.status).toBe(403);
 
   const generated = await requestReportStream(baseUrl, { context: "office" });
-  expect(generated.response.status).toBe(200);
-  expect(parseSseEvents(generated.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    {
-      event: "complete",
-      data: {
-        ok: true,
-        generatedAt: "2026-06-19T11:00:00.000Z",
-        personalItemUrls: ["https://example.com/2", "wardrobe://1"],
-        report: {
-          schemaVersion: 1,
-          verdict: { status: "excellent", score: 0.92, summary: "Ready." },
-        },
-      },
-    },
-  ]);
+  expectQueuedJob(generated, "personalItemsReportGenerate");
 
   const deleted = await requestJson(baseUrl, "/wardrobe/items/report", {
     method: "DELETE",
@@ -306,10 +288,9 @@ test("personal items report routes read stale state generate and delete reports"
   });
   expect(deleted.response.status).toBe(200);
   expect(deleted.json).toEqual({ ok: true, removed: true });
-  expect(calls).toContainEqual({
-    type: "generateReport",
-    payload: { email: "person@example.com", context: "office" },
-  });
+  expect(calls).not.toContainEqual(
+    expect.objectContaining({ type: "generateReport" }),
+  );
   expect(calls).toContainEqual({
     type: "deleteReport",
     payload: "person@example.com",
@@ -342,55 +323,26 @@ test("personal items report route returns current URL snapshot when no report ex
   });
 });
 
-test("personal items report routes map generation failures to SSE fatal events", async (t) => {
+test("personal items report route validates payloads before enqueue", async (t) => {
+  const generatePersonalItemsReportImpl = vi.fn();
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      generatePersonalItemsReportImpl: async (_email, context) => {
-        if (context === "bad payload") {
-          throw Object.assign(new Error("bad payload"), {
-            code: "invalid_payload",
-          });
-        }
-        if (context === "missing items") {
-          throw Object.assign(new Error("missing items"), {
-            code: "not_found",
-          });
-        }
-        throw new Error("llm unavailable");
-      },
+      generatePersonalItemsReportImpl,
     },
   });
 
   await expect(
     requestReportStream(baseUrl, { context: 42 }),
   ).resolves.toMatchObject({
-    response: { status: 200 },
-    text: expect.stringContaining("invalid_payload"),
+    response: { status: 400 },
+    text: JSON.stringify({ error: "invalid_payload" }),
   });
 
   const invalid = await requestReportStream(baseUrl, {
     context: "bad payload",
   });
-  expect(parseSseEvents(invalid.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    { event: "fatal", data: { error: "invalid_payload" } },
-  ]);
-
-  const missing = await requestReportStream(baseUrl, {
-    context: "missing items",
-  });
-  expect(parseSseEvents(missing.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    { event: "fatal", data: { error: "not_found" } },
-  ]);
-
-  const unavailable = await requestReportStream(baseUrl, {
-    context: "service outage",
-  });
-  expect(parseSseEvents(unavailable.text)).toEqual([
-    { event: "progress", data: { status: "pending" } },
-    { event: "fatal", data: { error: "service_unavailable" } },
-  ]);
+  expectQueuedJob(invalid, "personalItemsReportGenerate");
+  expect(generatePersonalItemsReportImpl).not.toHaveBeenCalled();
 });
 
 test("personal items report routes return service unavailable for read and delete failures", async (t) => {
@@ -1156,84 +1108,8 @@ test("wardrobe upload route processes images and creates uploaded items", async 
     buildUploadForm([{ bytes: tinyPng, name: "shirt.png", type: "image/png" }]),
   );
 
-  expect(upload.response.status).toBe(200);
-  expect(upload.response.headers.get("content-type")).toMatch(
-    /text\/event-stream/,
-  );
-  const events = parseSseEvents(upload.text);
-  expect(events.map((event) => event.event)).toEqual([
-    "progress",
-    "progress",
-    "progress",
-    "complete",
-  ]);
-  expect(events.at(-1)?.data).toEqual({
-    ok: true,
-    total: 1,
-    uploaded: 1,
-    completedSteps: 3,
-    metadataProcessed: 1,
-    imageProcessed: 1,
-    failed: 0,
-    items: [
-      expect.objectContaining({
-        id: "wardrobe-upload-1",
-        name: "Linen shirt",
-        imageUrl:
-          "https://images.example.com/wardrobe/542d240129883c01/image_clean.png",
-        rawImageUrl:
-          "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-        source: "uploaded",
-        processingStatus: "ready",
-      }),
-    ],
-  });
-  expect(calls).toEqual([
-    {
-      type: "processFiles",
-      files: [
-        {
-          hasFilePath: true,
-          mimeType: "image/png",
-          originalName: "shirt.png",
-        },
-      ],
-      imageLlm: "openai:gpt-image-2",
-    },
-    {
-      type: "saveUploaded",
-      payload: {
-        email: "person@example.com",
-        items: [
-          {
-            imageUrl:
-              "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-            ownedR2ImageKeys: ["wardrobe/542d240129883c01/image.webp"],
-            rawImageUrl:
-              "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-            url: "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-          },
-        ],
-      },
-    },
-    {
-      type: "embed",
-      item: metadata,
-    },
-    {
-      type: "updateMetadata",
-      payload: {
-        email: "person@example.com",
-        embedding: [0.7, 0.8],
-        id: "wardrobe-upload-1",
-        imageUrl:
-          "https://images.example.com/wardrobe/542d240129883c01/image_clean.png",
-        metadata,
-        ownedR2ImageKeys: ["wardrobe/542d240129883c01/image_clean.png"],
-        processingStatus: "ready",
-      },
-    },
-  ]);
+  expectQueuedJob(upload, "personalItemUploadFiles");
+  expect(calls).toEqual([]);
 });
 
 test("wardrobe URL upload route imports image URLs from worker results", async (t) => {
@@ -1340,76 +1216,8 @@ test("wardrobe URL upload route imports image URLs from worker results", async (
     "https://shop.example.com/images/linen.jpg",
   ]);
 
-  expect(upload.response.status).toBe(200);
-  expect(upload.response.headers.get("content-type")).toMatch(
-    /text\/event-stream/,
-  );
-  const events = parseSseEvents(upload.text);
-  expect(events.map((event) => event.event)).toEqual([
-    "progress",
-    "progress",
-    "progress",
-    "complete",
-  ]);
-  expect(events.at(-1)?.data).toEqual({
-    ok: true,
-    total: 1,
-    uploaded: 1,
-    completedSteps: 3,
-    metadataProcessed: 1,
-    imageProcessed: 1,
-    failed: 0,
-    items: [
-      expect.objectContaining({
-        id: "wardrobe-url-upload-1",
-        name: "Linen shirt",
-        url: "https://shop.example.com/images/linen.jpg",
-        imageUrl:
-          "https://images.example.com/wardrobe/542d240129883c01/remote-source_clean.png",
-        rawImageUrl: "https://shop.example.com/images/linen.jpg",
-        source: "uploaded",
-        processingStatus: "ready",
-      }),
-    ],
-  });
-  expect(calls).toEqual([
-    {
-      type: "processUrls",
-      imageLlm: "openai:gpt-image-2",
-      urls: ["https://shop.example.com/images/linen.jpg"],
-    },
-    {
-      type: "saveUploaded",
-      payload: {
-        email: "person@example.com",
-        items: [
-          {
-            imageUrl: "https://shop.example.com/images/linen.jpg",
-            ownedR2ImageKeys: ["wardrobe/542d240129883c01/remote-source.webp"],
-            rawImageUrl: "https://shop.example.com/images/linen.jpg",
-            url: "https://shop.example.com/images/linen.jpg",
-          },
-        ],
-      },
-    },
-    {
-      type: "embed",
-      item: metadata,
-    },
-    {
-      type: "updateMetadata",
-      payload: {
-        email: "person@example.com",
-        embedding: [0.7, 0.8],
-        id: "wardrobe-url-upload-1",
-        imageUrl:
-          "https://images.example.com/wardrobe/542d240129883c01/remote-source_clean.png",
-        metadata,
-        ownedR2ImageKeys: ["wardrobe/542d240129883c01/remote-source_clean.png"],
-        processingStatus: "ready",
-      },
-    },
-  ]);
+  expectQueuedJob(upload, "personalItemUploadUrls");
+  expect(calls).toEqual([]);
 });
 
 test("wardrobe URL upload route imports direct image URLs without cleanup generation", async (t) => {
@@ -1547,99 +1355,21 @@ test("wardrobe URL upload route imports direct image URLs without cleanup genera
     "https://cdn.example.com/products/linen-shirt.jpg",
   ]);
 
-  expect(upload.response.status).toBe(200);
-  const events = parseSseEvents(upload.text);
-  expect(events.map((event) => event.event)).toEqual([
-    "progress",
-    "progress",
-    "progress",
-    "complete",
-  ]);
-  expect(events.at(-1)?.data).toEqual({
-    ok: true,
-    total: 1,
-    uploaded: 1,
-    completedSteps: 3,
-    metadataProcessed: 1,
-    imageProcessed: 1,
-    failed: 0,
-    items: [
-      expect.objectContaining({
-        id: "wardrobe-direct-image-1",
-        name: "Linen shirt",
-        url: "https://cdn.example.com/products/linen-shirt.jpg",
-        imageUrl:
-          "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
-        rawImageUrl:
-          "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
-        source: "uploaded",
-        processingStatus: "ready",
-      }),
-    ],
-  });
+  expectQueuedJob(upload, "personalItemUploadUrls");
   expect(cleanup).not.toHaveBeenCalled();
-  expect(calls).toEqual([
-    {
-      type: "processUrls",
-      imageLlm: "openai:gpt-image-2",
-      urls: ["https://cdn.example.com/products/linen-shirt.jpg"],
-    },
-    {
-      type: "saveUploaded",
-      payload: {
-        email: "person@example.com",
-        items: [
-          {
-            imageUrl:
-              "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
-            ownedR2ImageKeys: ["wardrobe/542d240129883c01/direct-image.webp"],
-            rawImageUrl:
-              "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
-            url: "https://cdn.example.com/products/linen-shirt.jpg",
-          },
-        ],
-      },
-    },
-    {
-      type: "embed",
-      item: metadata,
-    },
-    {
-      type: "updateMetadata",
-      payload: {
-        email: "person@example.com",
-        embedding: [0.7, 0.8],
-        id: "wardrobe-direct-image-1",
-        imageUrl:
-          "https://images.example.com/wardrobe/542d240129883c01/direct-image.webp",
-        metadata,
-        ownedR2ImageKeys: [
-          "wardrobe/542d240129883c01/direct-image.webp",
-          "wardrobe/542d240129883c01/direct-image_320.webp",
-          "wardrobe/542d240129883c01/direct-image_480.webp",
-          "wardrobe/542d240129883c01/direct-image_640.webp",
-        ],
-        processingStatus: "ready",
-      },
-    },
-  ]);
+  expect(calls).toEqual([]);
 });
 
-test("wardrobe URL upload route marks non-image URLs as failed", async (t) => {
+test("wardrobe URL upload route enqueues jobs before URL classification", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
+  const processUrls = vi.fn(async () => []);
+  const saveUploaded = vi.fn(async () => {
+    throw new Error("should_not_save_non_image_url");
+  });
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      processWardrobeUploadUrlsInChildImpl: async () => [
-        {
-          inputIndex: 0,
-          message: "image_url_invalid",
-          ok: false,
-          source: null,
-        },
-      ],
-      saveUploadedWardrobeItemsImpl: async () => {
-        throw new Error("should_not_save_non_image_url");
-      },
+      processWardrobeUploadUrlsInChildImpl: processUrls,
+      saveUploadedWardrobeItemsImpl: saveUploaded,
     },
   });
 
@@ -1647,50 +1377,21 @@ test("wardrobe URL upload route marks non-image URLs as failed", async (t) => {
     "https://shop.example.com/products/not-an-image",
   ]);
 
-  expect(upload.response.status).toBe(200);
-  expect(parseSseEvents(upload.text)).toEqual([
-    {
-      event: "progress",
-      data: {
-        total: 1,
-        uploaded: 0,
-        completedSteps: 3,
-        metadataProcessed: 0,
-        imageProcessed: 0,
-        failed: 1,
-      },
-    },
-    {
-      event: "complete",
-      data: {
-        ok: true,
-        total: 1,
-        uploaded: 0,
-        completedSteps: 3,
-        metadataProcessed: 0,
-        imageProcessed: 0,
-        failed: 1,
-        items: [],
-      },
-    },
-  ]);
+  expectQueuedJob(upload, "personalItemUploadUrls");
+  expect(processUrls).not.toHaveBeenCalled();
+  expect(saveUploaded).not.toHaveBeenCalled();
 });
 
-test("wardrobe URL upload route marks undownloadable image URLs as failed", async (t) => {
+test("wardrobe URL upload route enqueues jobs before image fetching", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
+  const processUrls = vi.fn(async () => []);
+  const saveUploaded = vi.fn(async () => {
+    throw new Error("should_not_save_without_downloaded_image_url");
+  });
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      processWardrobeUploadUrlsInChildImpl: async () => [
-        {
-          inputIndex: 0,
-          message: "image_url_fetch_failed_404",
-          ok: false,
-          source: null,
-        },
-      ],
-      saveUploadedWardrobeItemsImpl: async () => {
-        throw new Error("should_not_save_without_downloaded_image_url");
-      },
+      processWardrobeUploadUrlsInChildImpl: processUrls,
+      saveUploadedWardrobeItemsImpl: saveUploaded,
     },
   });
 
@@ -1698,54 +1399,19 @@ test("wardrobe URL upload route marks undownloadable image URLs as failed", asyn
     "https://shop.example.com/products/missing-image-file.jpg",
   ]);
 
-  expect(upload.response.status).toBe(200);
-  expect(parseSseEvents(upload.text)).toEqual([
-    {
-      event: "progress",
-      data: {
-        total: 1,
-        uploaded: 0,
-        completedSteps: 3,
-        metadataProcessed: 0,
-        imageProcessed: 0,
-        failed: 1,
-      },
-    },
-    {
-      event: "complete",
-      data: {
-        ok: true,
-        total: 1,
-        uploaded: 0,
-        completedSteps: 3,
-        metadataProcessed: 0,
-        imageProcessed: 0,
-        failed: 1,
-        items: [],
-      },
-    },
-  ]);
+  expectQueuedJob(upload, "personalItemUploadUrls");
+  expect(processUrls).not.toHaveBeenCalled();
+  expect(saveUploaded).not.toHaveBeenCalled();
 });
 
-test("wardrobe URL upload route marks source save failures as failed", async (t) => {
+test("wardrobe URL upload route enqueues jobs before persistence work", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
+  const processUrls = vi.fn(async () => []);
+  const saveUploaded = vi.fn(async () => []);
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      processWardrobeUploadUrlsInChildImpl: async () => [
-        {
-          inputIndex: 0,
-          ok: true,
-          source: {
-            imageUrl: "https://shop.example.com/image.jpg",
-            kind: "direct-image",
-            productPageUrl: "https://shop.example.com/image.jpg",
-            rawImageUrl: "https://shop.example.com/image.jpg",
-            sourceImageKey: "wardrobe/542d240129883c01/source.webp",
-            sourceImageUrl: "https://shop.example.com/image.jpg",
-          },
-        },
-      ],
-      saveUploadedWardrobeItemsImpl: async () => [],
+      processWardrobeUploadUrlsInChildImpl: processUrls,
+      saveUploadedWardrobeItemsImpl: saveUploaded,
     },
   });
 
@@ -1753,77 +1419,36 @@ test("wardrobe URL upload route marks source save failures as failed", async (t)
     "https://shop.example.com/image.jpg",
   ]);
 
-  expect(upload.response.status).toBe(200);
-  expect(parseSseEvents(upload.text)).toEqual([
-    {
-      event: "progress",
-      data: {
-        total: 1,
-        uploaded: 0,
-        completedSteps: 3,
-        metadataProcessed: 0,
-        imageProcessed: 0,
-        failed: 1,
-      },
-    },
-    {
-      event: "complete",
-      data: {
-        ok: true,
-        total: 1,
-        uploaded: 0,
-        completedSteps: 3,
-        metadataProcessed: 0,
-        imageProcessed: 0,
-        failed: 1,
-        items: [],
-      },
-    },
-  ]);
+  expectQueuedJob(upload, "personalItemUploadUrls");
+  expect(processUrls).not.toHaveBeenCalled();
+  expect(saveUploaded).not.toHaveBeenCalled();
 });
 
-test("wardrobe URL upload route emits fatal when worker fails", async (t) => {
+test("wardrobe URL upload route enqueues jobs without running workers inline", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
+  const processUrls = vi.fn(async () => {
+    throw new Error("worker_down");
+  });
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      processWardrobeUploadUrlsInChildImpl: processUrls,
+    },
+  });
+
+  const upload = await requestUploadUrls(baseUrl, [
+    "https://shop.example.com/image.jpg",
+  ]);
+
+  expectQueuedJob(upload, "personalItemUploadUrls");
+  expect(processUrls).not.toHaveBeenCalled();
+});
+
+test("wardrobe URL upload route leaves worker cleanup to the queued handler", async (t) => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const calls: unknown[] = [];
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       processWardrobeUploadUrlsInChildImpl: async () => {
-        throw new Error("worker_down");
-      },
-    },
-  });
-
-  const upload = await requestUploadUrls(baseUrl, [
-    "https://shop.example.com/image.jpg",
-  ]);
-
-  expect(upload.response.status).toBe(200);
-  expect(parseSseEvents(upload.text).at(-1)).toEqual({
-    event: "fatal",
-    data: { error: "service_unavailable" },
-  });
-});
-
-test("wardrobe URL upload route marks early saved sources failed when worker fails", async (t) => {
-  vi.spyOn(console, "error").mockImplementation(() => {});
-  const calls: unknown[] = [];
-  const source = {
-    imageUrl: "https://shop.example.com/images/linen.jpg",
-    kind: "direct-image",
-    productPageUrl: "https://shop.example.com/images/linen.jpg",
-    rawImageUrl: "https://shop.example.com/images/linen.jpg",
-    sourceImageKey: "wardrobe/542d240129883c01/remote-source.webp",
-    sourceImageUrl: "https://shop.example.com/images/linen.jpg",
-  };
-  const { baseUrl } = await startTestServer(t, {
-    overrides: {
-      processWardrobeUploadUrlsInChildImpl: async (payload) => {
-        payload.onEvent?.({
-          event: "source-uploaded",
-          inputIndex: 0,
-          kind: "direct-image",
-          source,
-          type: "event",
-        });
         throw new Error("worker_down_after_source");
       },
       saveUploadedWardrobeItemsImpl: async (payload) => {
@@ -1856,39 +1481,11 @@ test("wardrobe URL upload route marks early saved sources failed when worker fai
     "https://shop.example.com/images/linen.jpg",
   ]);
 
-  expect(upload.response.status).toBe(200);
-  expect(parseSseEvents(upload.text).at(-1)).toEqual({
-    event: "fatal",
-    data: { error: "service_unavailable" },
-  });
-  expect(calls).toEqual([
-    {
-      type: "saveUploaded",
-      payload: {
-        email: "person@example.com",
-        items: [
-          {
-            imageUrl: "https://shop.example.com/images/linen.jpg",
-            ownedR2ImageKeys: ["wardrobe/542d240129883c01/remote-source.webp"],
-            rawImageUrl: "https://shop.example.com/images/linen.jpg",
-            url: "https://shop.example.com/images/linen.jpg",
-          },
-        ],
-      },
-    },
-    {
-      type: "updateMetadata",
-      payload: {
-        email: "person@example.com",
-        id: "wardrobe-url-orphan",
-        metadata: null,
-        processingStatus: "failed",
-      },
-    },
-  ]);
+  expectQueuedJob(upload, "personalItemUploadUrls");
+  expect(calls).toEqual([]);
 });
 
-test("wardrobe URL upload route continues after a single image URL failure", async (t) => {
+test("wardrobe URL upload route enqueues multi-url jobs", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   const calls: unknown[] = [];
   const metadata = {
@@ -1982,67 +1579,16 @@ test("wardrobe URL upload route continues after a single image URL failure", asy
     "https://shop.example.com/tee.jpg",
   ]);
 
-  expect(upload.response.status).toBe(200);
-  expect(parseSseEvents(upload.text).at(-1)?.data).toEqual({
-    ok: true,
-    total: 2,
-    uploaded: 1,
-    completedSteps: 6,
-    metadataProcessed: 1,
-    imageProcessed: 1,
-    failed: 1,
-    items: [
-      expect.objectContaining({
-        id: "wardrobe-url-upload-tee",
-        name: "Cotton tee",
-        url: "https://shop.example.com/tee.jpg",
-        imageUrl:
-          "https://images.example.com/wardrobe/542d240129883c01/tee-source_clean.png",
-        rawImageUrl: "https://shop.example.com/tee.jpg",
-        source: "uploaded",
-        processingStatus: "ready",
-      }),
-    ],
-  });
-  expect(calls).toEqual([
-    {
-      type: "processUrls",
-      urls: [
-        "https://shop.example.com/missing-image.jpg",
-        "https://shop.example.com/tee.jpg",
-      ],
-    },
-    {
-      type: "saveUploaded",
-      items: [
-        {
-          imageUrl: "https://shop.example.com/tee.jpg",
-          ownedR2ImageKeys: ["wardrobe/542d240129883c01/tee-source.webp"],
-          rawImageUrl: "https://shop.example.com/tee.jpg",
-          url: "https://shop.example.com/tee.jpg",
-        },
-      ],
-    },
-  ]);
+  expectQueuedJob(upload, "personalItemUploadUrls");
+  expect(calls).toEqual([]);
 });
 
-test("wardrobe URL upload route aborts worker work after client disconnect", async (t) => {
+test("wardrobe URL upload route responds before worker execution", async (t) => {
   let workerStarted = false;
-  let resolveWorkerAborted: (value: boolean) => void = () => {};
-  const workerAborted = new Promise<boolean>((resolve) => {
-    resolveWorkerAborted = resolve;
-  });
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      processWardrobeUploadUrlsInChildImpl: async (payload) => {
+      processWardrobeUploadUrlsInChildImpl: async () => {
         workerStarted = true;
-        payload.signal.addEventListener(
-          "abort",
-          () => {
-            resolveWorkerAborted(true);
-          },
-          { once: true },
-        );
         return new Promise(() => {});
       },
     },
@@ -2061,11 +1607,18 @@ test("wardrobe URL upload route aborts worker work after client disconnect", asy
     }),
     signal: abortController.signal,
   });
-  expect(response.status).toBe(200);
+  const text = await response.text();
+  expectQueuedJob(
+    {
+      response,
+      json: JSON.parse(text),
+      text,
+    },
+    "personalItemUploadUrls",
+  );
   abortController.abort();
 
-  await expect(workerAborted).resolves.toBe(true);
-  expect(workerStarted).toBe(true);
+  expect(workerStarted).toBe(false);
 });
 
 test("wardrobe upload route validates files and maps failures", async (t) => {
@@ -2134,37 +1687,15 @@ test("wardrobe upload route validates files and maps failures", async (t) => {
     "/wardrobe/items/upload",
     buildUploadForm(),
   );
-  expect(serviceFailure.response.status).toBe(200);
-  expect(parseSseEvents(serviceFailure.text).at(-1)).toEqual({
-    event: "fatal",
-    data: { error: "service_unavailable" },
-  });
+  expectQueuedJob(serviceFailure, "personalItemUploadFiles");
 });
 
-test("wardrobe file upload route marks early saved sources failed when worker fails", async (t) => {
+test("wardrobe file upload route leaves worker cleanup to the queued handler", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   const calls: unknown[] = [];
-  const source = {
-    imageUrl: "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-    kind: "file",
-    productPageUrl:
-      "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-    rawImageUrl:
-      "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-    sourceImageKey: "wardrobe/542d240129883c01/image.webp",
-    sourceImageUrl:
-      "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-  };
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      processWardrobeUploadFilesInChildImpl: async (payload) => {
-        payload.onEvent?.({
-          event: "source-uploaded",
-          inputIndex: 0,
-          kind: "file",
-          source,
-          type: "event",
-        });
+      processWardrobeUploadFilesInChildImpl: async () => {
         throw new Error("worker_down_after_source");
       },
       saveUploadedWardrobeItemsImpl: async (payload) => {
@@ -2198,38 +1729,8 @@ test("wardrobe file upload route marks early saved sources failed when worker fa
     buildUploadForm([{ bytes: tinyPng, name: "shirt.png", type: "image/png" }]),
   );
 
-  expect(upload.response.status).toBe(200);
-  expect(parseSseEvents(upload.text).at(-1)).toEqual({
-    event: "fatal",
-    data: { error: "service_unavailable" },
-  });
-  expect(calls).toEqual([
-    {
-      type: "saveUploaded",
-      payload: {
-        email: "person@example.com",
-        items: [
-          {
-            imageUrl:
-              "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-            ownedR2ImageKeys: ["wardrobe/542d240129883c01/image.webp"],
-            rawImageUrl:
-              "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-            url: "https://images.example.com/wardrobe/542d240129883c01/image.webp",
-          },
-        ],
-      },
-    },
-    {
-      type: "updateMetadata",
-      payload: {
-        email: "person@example.com",
-        id: "wardrobe-file-orphan",
-        metadata: null,
-        processingStatus: "failed",
-      },
-    },
-  ]);
+  expectQueuedJob(upload, "personalItemUploadFiles");
+  expect(calls).toEqual([]);
 });
 
 test("wardrobe routes validate source and catalog item payloads", async (t) => {

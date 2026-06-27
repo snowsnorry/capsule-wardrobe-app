@@ -95,6 +95,7 @@ import { deleteWardrobePdfJob } from "./wardrobePdfJobRegistry.js";
 import {
   checkDatabaseConnection,
   consumeMcpAuthorizationCode,
+  clearJobRunsForEmail,
   consumePasskeyChallenge,
   deletePasskeyByIdForEmail,
   deleteLikedItemByUrl,
@@ -138,7 +139,10 @@ import { configureSharp } from "./ai/sharpConfig.js";
 import {
   AUTH_TEST_MODE,
   CLIENT_ORIGIN,
+  E2E_SERVER,
   GOOGLE_CLIENT_ID,
+  JOB_QUEUE_BACKEND,
+  JOB_WORKER_ENABLED,
   NODE_ENV,
   PASSKEY_ORIGIN,
   PASSKEY_RP_ID,
@@ -155,12 +159,23 @@ import {
   processWardrobeUploadFilesInChild,
   processWardrobeUploadUrlsInChild,
 } from "./wardrobeUploadProcessingRunner.js";
+import { processQueuedWardrobeFileUploadImpl } from "./routes/wardrobeFileUploadRoute.js";
+import { processQueuedWardrobeUrlUpload } from "./routes/wardrobeUrlUploadRoute.js";
 import { analyzeWardrobeImageUrl } from "./wardrobeImageAnalysis.js";
 import { cleanupUploadedWardrobeItemImage } from "./wardrobeImageCleanup.js";
 import { createUploadedWardrobeItemEmbedding } from "./wardrobeSemanticEmbedding.js";
 import { validateCapsuleAnchorItems } from "./capsuleAnchors.js";
 import { createMcpOAuthConfig } from "./mcp/oauthConfig.js";
 import { logInfo } from "./logger.js";
+import { annotateLikedItems } from "./routes/likedItemsRoutes.js";
+import { createJobQueue } from "./jobs/jobQueue.js";
+import { createJobWorker } from "./jobs/jobWorker.js";
+import {
+  getOwnedJobSnapshot,
+  listOwnedJobSnapshots,
+  replayJobEvents,
+} from "./jobs/jobStore.js";
+import { createInMemoryJobService } from "./jobs/inMemoryJobService.js";
 
 const sharpConfig = configureSharp();
 logInfo(
@@ -188,6 +203,7 @@ function resolveGoogleAuthClient({
 function createWardrobeImageStorageDependencies() {
   return {
     analyzeWardrobeImageUrlImpl: analyzeWardrobeImageUrl,
+    annotateLikedItems,
     cleanupUploadedWardrobeItemImageImpl: cleanupUploadedWardrobeItemImage,
     createUploadedWardrobeItemEmbeddingImpl:
       createUploadedWardrobeItemEmbedding,
@@ -337,7 +353,7 @@ function createPasskeyOAuthDependencies() {
 }
 
 function createWardrobeMediaDependencies() {
-  return {
+  const deps = {
     buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
     copyImageObjectToR2Impl: copyImageObjectToR2,
     deleteLikedItemImpl: deleteLikedItemByUrl,
@@ -371,14 +387,22 @@ function createWardrobeMediaDependencies() {
     upsertLikedItemImpl: upsertLikedItemByUrl,
     ...createWardrobeImageStorageDependencies(),
   };
+  return {
+    ...deps,
+    processQueuedWardrobeFileUploadImpl: (input) =>
+      processQueuedWardrobeFileUploadImpl({ context: deps, ...input }),
+    processQueuedWardrobeUrlUploadImpl: (input) =>
+      processQueuedWardrobeUrlUpload({ context: deps, ...input }),
+  };
 }
 
-function clearAccountTransientState(email: string) {
+async function clearAccountTransientState(email: string) {
   clearWardrobeJobsForEmail(email);
   clearPartialRegenerationJobsForEmail(email);
   clearOutfitSetImageJobsForEmail(email);
   clearOutfitImageJobsForEmail(email);
   deleteWardrobePdfJob(email);
+  await clearJobRunsForEmail(email);
 }
 
 function generateOutfitReportWithStoreLookups(email: string, outfitId: string) {
@@ -414,8 +438,32 @@ function createAccountCleanupDependencies() {
   };
 }
 
-function createDefaultAppDependencies(googleClientId: string | null) {
+function createJobDependencies(deps: Record<string, unknown>) {
+  if (NODE_ENV === "test" || E2E_SERVER) {
+    return createInMemoryJobService();
+  }
+  if (JOB_QUEUE_BACKEND !== "pg_boss") {
+    throw new Error(`unsupported_job_queue_backend:${JOB_QUEUE_BACKEND}`);
+  }
+
+  const queue = createJobQueue();
+  const worker = createJobWorker({
+    backend: queue.backend,
+    deps,
+    enabled: JOB_WORKER_ENABLED,
+  });
   return {
+    enqueueJobImpl: queue.enqueue,
+    getJobSnapshotImpl: getOwnedJobSnapshot,
+    listJobEventsAfterImpl: replayJobEvents,
+    listJobSnapshotsImpl: listOwnedJobSnapshots,
+    startJobWorkersImpl: worker.start,
+    stopJobWorkersImpl: worker.stop,
+  };
+}
+
+function createDefaultAppDependencies(googleClientId: string | null) {
+  const baseDeps = {
     ...createRuntimeDependencies(googleClientId),
     ...createAuthSessionDependencies(),
     ...createProfileOptionDependencies(),
@@ -425,6 +473,10 @@ function createDefaultAppDependencies(googleClientId: string | null) {
     ...createPasskeyOAuthDependencies(),
     ...createWardrobeMediaDependencies(),
     ...createAccountCleanupDependencies(),
+  };
+  return {
+    ...baseDeps,
+    ...createJobDependencies(baseDeps),
   };
 }
 

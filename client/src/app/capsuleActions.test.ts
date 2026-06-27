@@ -59,6 +59,31 @@ vi.mock("../api/capsules", () => ({
   updateCapsuleFilters: vi.fn(),
 }));
 
+vi.mock("../api/jobs", () => ({
+  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
+}));
+
+function createJobResponse(id = "job-1") {
+  return {
+    ok: true,
+    job: {
+      id,
+      kind: "capsuleReportGenerate",
+      status: "queued",
+      phase: "queued",
+      progress: { current: 0, total: null, label: null },
+      entity: { type: "capsule", id: "capsule-1" },
+      result: null,
+      error: null,
+      createdAt: "",
+      updatedAt: "",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+    },
+  } as const;
+}
+
 describe("capsuleActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -216,8 +241,7 @@ describe("capsuleActions", () => {
       },
     });
     vi.mocked(generateCapsuleReport).mockResolvedValueOnce({
-      ok: true,
-      report: { verdict: { score: 0.9 } },
+      ...createJobResponse(),
     });
     vi.mocked(fetchCapsule).mockResolvedValueOnce({
       capsule: capsuleWithReport,
@@ -265,8 +289,7 @@ describe("capsuleActions", () => {
 
   test("skips stale capsule report updates and unmounted report errors", async () => {
     vi.mocked(generateCapsuleReport).mockResolvedValueOnce({
-      ok: true,
-      report: { verdict: { score: 0.9 } },
+      ...createJobResponse(),
     });
     vi.mocked(fetchCapsule).mockResolvedValueOnce({
       capsule: createTestCapsule({ id: "capsule-1" }),

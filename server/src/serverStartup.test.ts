@@ -163,6 +163,73 @@ test("development startup fixes Vite stack traces before forwarding html errors"
   expect(nextCalls).toEqual([thrown]);
 });
 
+test("startup starts job workers after listen and stops them on server close", async () => {
+  const calls: string[] = [];
+  let closeListener: (() => void) | null = null;
+  const app = {
+    get: vi.fn(),
+    use: vi.fn(),
+    listen: vi.fn((_port, callback) => {
+      calls.push("listen");
+      callback?.();
+      return {
+        on: vi.fn((event, listener) => {
+          if (event === "close") {
+            closeListener = listener;
+          }
+        }),
+      };
+    }),
+  };
+  const startJobWorkersImpl = vi.fn(async () => {
+    calls.push("start-workers");
+  });
+  const stopJobWorkersImpl = vi.fn(async () => {
+    calls.push("stop-workers");
+  });
+
+  await createStartServer(app)({
+    nodeEnv: "production",
+    port: 4124,
+    ensureTablesImpl: async () => {
+      calls.push("ensure-tables");
+    },
+    existsSyncImpl: () => false,
+    logInfoImpl: () => {},
+    startJobWorkersImpl,
+    stopJobWorkersImpl,
+  });
+  expect(calls).toEqual(["ensure-tables", "listen", "start-workers"]);
+  expect(startJobWorkersImpl).toHaveBeenCalledTimes(1);
+  closeListener?.();
+  expect(stopJobWorkersImpl).toHaveBeenCalledTimes(1);
+});
+
+test("startup stops job workers and closes the server if worker start fails", async () => {
+  const close = vi.fn();
+  const app = {
+    get: vi.fn(),
+    use: vi.fn(),
+    listen: vi.fn(() => ({ close, on: vi.fn() })),
+  };
+  const stopJobWorkersImpl = vi.fn(async () => undefined);
+
+  await expect(
+    createStartServer(app)({
+      nodeEnv: "production",
+      ensureTablesImpl: async () => undefined,
+      existsSyncImpl: () => false,
+      startJobWorkersImpl: async () => {
+        throw new Error("worker_start_failed");
+      },
+      stopJobWorkersImpl,
+    }),
+  ).rejects.toThrow("worker_start_failed");
+
+  expect(stopJobWorkersImpl).toHaveBeenCalledTimes(1);
+  expect(close).toHaveBeenCalledTimes(1);
+});
+
 test("production startup serves static files, spa html, and api 404s when client dist exists", async () => {
   const app = createAppRecorder();
   const nextCalls = [];

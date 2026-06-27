@@ -6,6 +6,7 @@ import {
   generateOutfitReport,
   subscribeOutfitEvents,
 } from "../api/outfits";
+import { waitForJob } from "../api/jobs";
 import { fromContext, type AppActionContext } from "./actionContext";
 import {
   refreshActiveOutfit,
@@ -111,8 +112,35 @@ export async function generateCurrentOutfitReport(
   if (!outfitId) return;
   setOutfitReportPending(context, true);
   try {
-    await generateOutfitReport(outfitId);
-    await refreshActiveOutfit(context, outfitId, { onlyIfActive: true });
+    const { job } = await generateOutfitReport(outfitId);
+    void waitForJob(job.id)
+      .then(async (finishedJob) => {
+        if (finishedJob.status === "completed") {
+          await refreshActiveOutfit(context, outfitId, { onlyIfActive: true });
+          return;
+        }
+        throw new Error(finishedJob.error?.code || "service_unavailable");
+      })
+      .catch(() => {
+        if (
+          fromContext<{ current: boolean }>(context, "isMountedRef").current
+        ) {
+          reportStatusError(
+            context,
+            fromContext<(key: string) => string>(
+              context,
+              "t",
+            )("errors.outfitReportGenerateFailed"),
+          );
+        }
+      })
+      .finally(() => {
+        if (
+          fromContext<{ current: boolean }>(context, "isMountedRef").current
+        ) {
+          setOutfitReportPending(context, false);
+        }
+      });
   } catch {
     if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
       reportStatusError(
@@ -122,9 +150,6 @@ export async function generateCurrentOutfitReport(
           "t",
         )("errors.outfitReportGenerateFailed"),
       );
-    }
-  } finally {
-    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
       setOutfitReportPending(context, false);
     }
   }

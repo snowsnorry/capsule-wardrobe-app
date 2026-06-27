@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from "node:fs/promises";
+import crypto from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import multer from "multer";
@@ -14,12 +15,17 @@ import {
 } from "../wardrobeUploadImagesCore.js";
 import {
   advanceWardrobeUploadProgress,
-  createWardrobeUploadAbortState,
   markSavedWardrobeUploadSourcesFailed,
-  openWardrobeUploadEventStream,
   processPreparedUploadedWardrobeItemMetadata,
   writeWardrobeUploadEvent,
 } from "./wardrobeUploadStream.js";
+import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
+import {
+  cleanupStagedUploadFiles,
+  hydrateStagedUploadFiles,
+  stageUploadFile,
+  type StagedUploadFile,
+} from "../jobs/stagedUploadStorage.js";
 
 function createWardrobeUploadMiddleware(uploadDir: string) {
   return multer({
@@ -283,14 +289,6 @@ async function runFileUploadProcessingWorker({
   });
 }
 
-async function markSavedFileUploadSourcesFailed(context, req, sourceSaves) {
-  await markSavedWardrobeUploadSourcesFailed({
-    context,
-    email: req.user.email,
-    sourceSaves,
-  });
-}
-
 function registerWardrobeUploadRoute(app, context) {
   app.post(
     "/wardrobe/items/upload",
@@ -301,8 +299,7 @@ function registerWardrobeUploadRoute(app, context) {
       const uploadDir = await mkdtemp(
         path.join(os.tmpdir(), "wardrobe-upload-"),
       );
-      const abortState = createWardrobeUploadAbortState(req, res);
-      const sourceSaves = new Map();
+      const stagedFiles: StagedUploadFile[] = [];
 
       try {
         const parsed = await runWardrobeUploadMiddleware(req, res, uploadDir);
@@ -316,70 +313,123 @@ function registerWardrobeUploadRoute(app, context) {
         }
 
         const uploadFiles = await getValidatedWardrobeUploadFiles(files);
-        openWardrobeUploadEventStream(res);
-        const progress = createWardrobeUploadProgress(uploadFiles.length);
-        const processingResults = await runFileUploadProcessingWorker({
-          abortState,
-          context,
-          email: req.user.email,
-          progress,
-          res,
-          sourceSaves,
-          uploadFiles,
-        });
-        if (abortState.isAborted()) {
-          await markSavedFileUploadSourcesFailed(context, req, sourceSaves);
-          return;
+        const stagingScopeId = crypto.randomUUID();
+        for (const [index, file] of uploadFiles.entries()) {
+          stagedFiles.push(
+            await stageUploadFile({
+              filePath: file.filePath,
+              index,
+              jobId: stagingScopeId,
+              mimeType: file.mimeType,
+              originalName: file.originalName,
+            }),
+          );
         }
-
-        const processedItems = [];
-        for (const processingResult of processingResults) {
-          if (abortState.isAborted()) {
-            await markSavedFileUploadSourcesFailed(context, req, sourceSaves);
-            return;
-          }
-          const item = await processFileUploadResult({
-            context,
-            email: req.user.email,
-            processingResult,
-            progress,
-            res,
-            sourceSaves,
-          });
-          processedItems.push(item);
-        }
-
-        const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
-        writeWardrobeUploadEvent(res, "complete", {
-          ok: true,
-          ...progress,
-          items: context.annotateLikedItems(processedItems, likedUrls),
+        const job = await enqueueRouteJob(context, {
+          kind: "personalItemUploadFiles",
+          profileEmail: req.user.email,
+          entity: { type: "wardrobe", id: null },
+          phase: "queued",
+          payload: { stagedFiles, stagingScopeId },
+          progressLabel: "Uploading Personal items",
+          progressTotal: uploadFiles.length,
         });
-        return res.end();
+        return sendQueuedJob(res, job);
       } catch (error) {
-        if (abortState.isAborted()) {
-          await markSavedFileUploadSourcesFailed(context, req, sourceSaves);
-          return;
-        }
         if (error?.message === "invalid_image") {
           return res.status(400).json({ error: "invalid_image" });
         }
+        await cleanupStagedUploadFiles(stagedFiles).catch((cleanupError) => {
+          logError("[wardrobe/items/upload][staging-cleanup]", cleanupError);
+        });
+        if (error?.code === "storage_unavailable") {
+          return res.status(503).json({ error: "storage_unavailable" });
+        }
 
         logError("[wardrobe/items/upload]", error);
-        await markSavedFileUploadSourcesFailed(context, req, sourceSaves);
-        if (res.headersSent) {
-          writeWardrobeUploadEvent(res, "fatal", {
-            error: "service_unavailable",
-          });
-          return res.end();
-        }
         return res.status(503).json({ error: "service_unavailable" });
       } finally {
-        abortState.dispose();
         await rm(uploadDir, { recursive: true, force: true }).catch(() => {});
       }
     },
   );
 }
 
-export { registerWardrobeUploadRoute };
+async function processQueuedWardrobeFileUploadImpl({
+  context,
+  email,
+  filterItem = filterWardrobeItemForDisplay,
+  stagedFiles,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context: any;
+  email: string;
+  filterItem?: typeof filterWardrobeItemForDisplay;
+  stagedFiles: StagedUploadFile[];
+}) {
+  const hydrated = await hydrateStagedUploadFiles(stagedFiles);
+  const sourceSaves = new Map();
+  const progress = createWardrobeUploadProgress(hydrated.files.length);
+  const res = createQueuedUploadResponseSink();
+  const abortState = {
+    signal: undefined,
+    isAborted: () => false,
+  };
+
+  try {
+    const processingResults = await runFileUploadProcessingWorker({
+      abortState,
+      context,
+      email,
+      progress,
+      res,
+      sourceSaves,
+      uploadFiles: hydrated.files,
+    });
+
+    const processedItems = [];
+    for (const processingResult of processingResults) {
+      const item = await processFileUploadResult({
+        context,
+        email,
+        processingResult,
+        progress,
+        res,
+        sourceSaves,
+      });
+      processedItems.push(item);
+    }
+
+    const likedUrls = await context.listLikedItemUrlsImpl(email);
+    return {
+      ok: true,
+      ...progress,
+      items: context.annotateLikedItems(
+        processedItems.map(filterItem),
+        likedUrls,
+      ),
+    };
+  } catch (error) {
+    await markSavedWardrobeUploadSourcesFailed({
+      context,
+      email,
+      sourceSaves,
+    });
+    throw error;
+  } finally {
+    await hydrated.cleanup();
+    await cleanupStagedUploadFiles(stagedFiles).catch((cleanupError) => {
+      logError("[wardrobe/items/upload][job-staging-cleanup]", cleanupError);
+    });
+  }
+}
+
+function createQueuedUploadResponseSink() {
+  return {
+    destroyed: false,
+    writableEnded: false,
+    write: () => true,
+  };
+}
+
+export { processQueuedWardrobeFileUploadImpl, registerWardrobeUploadRoute };

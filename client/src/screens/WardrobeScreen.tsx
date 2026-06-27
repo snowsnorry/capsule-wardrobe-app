@@ -33,7 +33,12 @@ import type { ProductDetailMode } from "./wardrobeScreenTypes";
 import { usePersonalItemsReport } from "./usePersonalItemsReport";
 import { useWardrobeItems } from "./useWardrobeItems";
 
-function WardrobeScreen(): ReactElement {
+// eslint-disable-next-line max-lines-per-function
+function WardrobeScreen({
+  isJobActive = false,
+}: {
+  isJobActive?: boolean;
+}): ReactElement {
   const { t, locale } = useI18n();
   const isOverlay = useMediaQuery("(max-width: 1279.95px)");
   const isReportInspectorLayout = useMediaQuery(REPORT_INSPECTOR_LAYOUT_MEDIA);
@@ -56,6 +61,9 @@ function WardrobeScreen(): ReactElement {
         personalItemsReport.markStale();
         return;
       }
+      if (reason === "upload") {
+        setRefreshKey((current) => current + 1);
+      }
       void personalItemsReport.refreshReport({ force: true });
     },
   });
@@ -74,6 +82,7 @@ function WardrobeScreen(): ReactElement {
     [highlightedReportItemIds, wardrobeItems.items],
   );
   const isActionBusy =
+    isJobActive ||
     wardrobeItems.isLoading ||
     wardrobeItems.isDownloadingPdf ||
     wardrobeItems.isUploading ||
@@ -83,7 +92,6 @@ function WardrobeScreen(): ReactElement {
     filters,
     setIsUploadDialogOpen,
     setIsUrlUploadDialogOpen,
-    setRefreshKey,
     wardrobeItems,
   });
 
@@ -188,18 +196,15 @@ function useWardrobeUploadDialogHandlers({
   filters,
   setIsUploadDialogOpen,
   setIsUrlUploadDialogOpen,
-  setRefreshKey,
   wardrobeItems,
 }: {
   filters: WardrobeFiltersModel;
   setIsUploadDialogOpen: Dispatch<SetStateAction<boolean>>;
   setIsUrlUploadDialogOpen: Dispatch<SetStateAction<boolean>>;
-  setRefreshKey: Dispatch<SetStateAction<number>>;
   wardrobeItems: WardrobeItemsModel;
 }) {
   const completeUpload = (closeDialog: () => void) => {
     handleUploadSuccess(filters.setFilter, filters.setLikedOnly);
-    setRefreshKey((current) => current + 1);
     closeDialog();
   };
   const handleUploadImages = async (files: File[]) => {

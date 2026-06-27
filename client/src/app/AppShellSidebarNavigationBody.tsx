@@ -19,6 +19,7 @@ type AppShellSidebarNavigationBodyProps = {
   activeCapsuleMeta: CapsuleMeta | null;
   activeOutfitMeta: OutfitMeta | null;
   activeSidebarApp: AppId;
+  activeJobEntityKeys?: string[];
   capsuleActionMenuControllerRef: RefObject<AppShellCapsuleActionMenuController | null>;
   outfitActionMenuControllerRef: RefObject<AppShellOutfitActionMenuController | null>;
   capsuleList: CapsuleMeta[];
@@ -140,6 +141,7 @@ export default function AppShellSidebarNavigationBody({
   activeCapsuleMeta,
   activeOutfitMeta,
   activeSidebarApp,
+  activeJobEntityKeys = [],
   capsuleActionMenuControllerRef,
   outfitActionMenuControllerRef,
   capsuleList,
@@ -151,7 +153,6 @@ export default function AppShellSidebarNavigationBody({
   expandCollapsedSidebar,
   highlightedCapsuleId,
   highlightedOutfitId,
-  isContentBusy,
   isOverlaySidebar,
   isSidebarCollapsed,
   onCreateCapsuleFromSidebar,
@@ -184,7 +185,8 @@ export default function AppShellSidebarNavigationBody({
       isOverlaySidebar={isOverlaySidebar}
       isSidebarCollapsed={isSidebarCollapsed}
       desktopSidebarRailWidth={desktopSidebarRailWidth}
-      isInteractionDisabled={activeSidebarApp === "capsule" && isContentBusy}
+      isInteractionDisabled={false}
+      activeJobEntityKeys={activeJobEntityKeys}
       personalItemsCount={personalItemsCount}
       capsuleList={capsuleList}
       capsulePagination={capsulePagination}
