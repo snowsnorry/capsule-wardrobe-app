@@ -11,18 +11,18 @@ export type JobKind =
 
 export type JobEntityType = "capsule" | "outfit" | "wardrobe";
 
-export type JobEntity = {
+type JobEntity = {
   type: JobEntityType;
   id: string | null;
 };
 
-export type JobProgress = {
+type JobProgress = {
   current: number;
   total: number | null;
   label: string | null;
 };
 
-export type JobError = {
+type JobError = {
   code: string;
   message: string | null;
 };

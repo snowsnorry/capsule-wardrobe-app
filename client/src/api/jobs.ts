@@ -235,4 +235,4 @@ export {
   subscribeJobEvents,
   waitForJob,
 };
-export type { JobResponse, JobSnapshot, JobStatus };
+export type { JobResponse, JobSnapshot };

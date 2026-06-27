@@ -175,11 +175,5 @@ function clearRequestCache() {
   inFlight.clear();
 }
 
-export {
-  request,
-  requestJson,
-  getCachedJson,
-  clearRequestCache,
-  getCsrfHeader,
-};
+export { request, requestJson, getCachedJson, clearRequestCache };
 export type { JsonObject };

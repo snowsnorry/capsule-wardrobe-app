@@ -46,8 +46,6 @@ type JobEventRow = {
   created_at: string | Date;
 };
 
-const ACTIVE_STATUSES = ["queued", "running"] as const;
-
 function normalizeEmail(email: unknown): string {
   return String(email || "")
     .trim()
@@ -489,5 +487,3 @@ export async function clearJobRunsForEmail(email: string): Promise<number> {
   await cleanupStagedUploadFiles(stagedFiles);
   return result.length;
 }
-
-export { ACTIVE_STATUSES };

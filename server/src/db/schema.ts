@@ -137,7 +137,7 @@ export async function ensureMcpOAuthTables(): Promise<void> {
   await executeSchemaSqlFiles(sql, MCP_OAUTH_SCHEMA_FILES);
 }
 
-export async function ensureJobTables(): Promise<void> {
+async function ensureJobTables(): Promise<void> {
   const sql = getSqlClient();
   await executeSchemaSqlFiles(sql, JOB_SCHEMA_FILES);
 }

@@ -1,4 +1,4 @@
-export type QueueBackendJob = {
+type QueueBackendJob = {
   id: string;
   name: string;
   data: Record<string, unknown>;

@@ -28,7 +28,6 @@ export const TILE_LABEL_BACKGROUND_HEIGHT = 34;
 export const TILE_LABEL_BACKGROUND_MIN_WIDTH = 54;
 export const TILE_LABEL_BACKGROUND_PADDING_X = 10;
 export const HEADER_FONT_SIZE = 42;
-const REQUEST_TIMEOUT_MS = 15000;
 export const CATEGORY_COLLAGE_JPEG_QUALITY = 60;
 const NORMALIZED_IMAGE_JPEG_QUALITY = 80;
 export const PDF_IMAGE_JPEG_QUALITY = 76;
@@ -255,17 +254,6 @@ export async function mapWithConcurrency<T, R>(
   );
 
   return results;
-}
-
-export function getRequestSignal() {
-  if (
-    typeof AbortSignal !== "undefined" &&
-    typeof AbortSignal.timeout === "function"
-  ) {
-    return AbortSignal.timeout(REQUEST_TIMEOUT_MS);
-  }
-
-  return undefined;
 }
 
 export function getMetadataDimensions(

@@ -1,9 +1,8 @@
 import { guardedServerFetchBuffer } from "./guardedServerFetch.js";
 import { WARDROBE_UPLOAD_MAX_FILE_SIZE_BYTES } from "./wardrobeUploadImagesCore.js";
 
-export const SERVER_IMAGE_DOWNLOAD_MAX_BYTES =
-  WARDROBE_UPLOAD_MAX_FILE_SIZE_BYTES;
-export const SERVER_IMAGE_DOWNLOAD_TOO_LARGE_ERROR = "image_download_too_large";
+const SERVER_IMAGE_DOWNLOAD_MAX_BYTES = WARDROBE_UPLOAD_MAX_FILE_SIZE_BYTES;
+const SERVER_IMAGE_DOWNLOAD_TOO_LARGE_ERROR = "image_download_too_large";
 
 export type ServerImageDownloadResult = Awaited<
   ReturnType<typeof guardedServerFetchBuffer>
