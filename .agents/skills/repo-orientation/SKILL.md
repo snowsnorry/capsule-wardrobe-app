@@ -17,11 +17,11 @@ Use this skill to get oriented before changing or reviewing code in this repo.
 7. Choose the smallest safe file set and validation path. Then implement unless the user asked only for orientation, planning, or review.
 
 ## Ownership Guide
-- Frontend/UI: start with `client/src/App.tsx`, `client/src/app/`, `client/src/screens/`, `client/src/components/`, `client/src/api/`, `client/src/i18n/`, and `client/src/theme.ts`.
+- Frontend/UI: start with `client/src/App.tsx`, `client/src/app/`, `client/src/screens/`, `client/src/components/`, `client/src/api/`, `client/src/i18n/`, and `client/src/theme/`.
 - Client API/auth helpers: inspect `client/src/api/` and `client/src/auth/`, then the matching server route before changing behavior.
-- Server/API: start with `server/src/index.ts`, the owning route in `server/src/routes/`, the closest domain/store module, and matching `*.test.ts` files.
+- Server/API: start with `server/src/index.ts`; for app wiring or dependency changes inspect `server/src/appFactory.ts`, `server/src/appRoutes.ts`, `server/src/appDependencies.ts`, and `server/src/appRouteContext.ts`; then inspect the owning route in `server/src/routes/`, the closest domain/store module, and matching `*.test.ts` files.
 - Shared logic: inspect `shared/`, root shared tests, and any client/server imports before changing exported types or behavior.
-- Deployment/config: inspect root `package.json`, `client/vite.config.ts`, `client/netlify.toml`, `client/render-server.js`, server startup config, and `README.md`.
+- Deployment/config: inspect root `package.json`, `render.yaml`, `client/vite.config.ts`, `client/render-server.js`, `server/src/appConfig.ts`, `server/src/serverStartup.ts`, and `README.md`.
 - Docs/process-only tasks: keep edits local to the requested docs or skill files unless a referenced command or path is stale.
 
 ## High-Risk Surfaces

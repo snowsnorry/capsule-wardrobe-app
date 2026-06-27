@@ -23,7 +23,7 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 - capsule and outfit creation, duplication, rename, save/revert, PDF export, and delete
 - AI-assisted wardrobe generation, wardrobe/catalog source modes, and selective regeneration
 - outfit-set image generation
-- Personal items file and URL uploads, uploaded item metadata editing, catalog saves, liked items, and wardrobe PDF export
+- Personal items file and URL uploads, uploaded item metadata editing, catalog saves, liked items, AI report generation, and wardrobe PDF export
 - shareable capsule links and shared capsule import
 - product search and aggregated statistics views
 - read-only MCP tools for authenticated product search, product stats, product fetch, wardrobe item reads, and visual render helpers
@@ -50,6 +50,10 @@ Useful entrypoints:
 - `client/vite.config.ts`
 - `playwright.config.ts`
 - `server/src/index.ts`
+- `server/src/appFactory.ts`
+- `server/src/appDependencies.ts`
+- `server/src/appRouteContext.ts`
+- `server/src/appRoutes.ts`
 - `server/src/appConfig.ts`
 - `server/src/appMiddleware.ts`
 - `server/src/serverStartup.ts`
@@ -64,6 +68,7 @@ Useful entrypoints:
 - `server/src/profileStore.ts`
 - `server/src/searchStore.ts`
 - `server/src/r2Storage.ts`
+- `server/src/routes/personalItemsReportRoutes.ts`
 - `server/src/wardrobeUploadImagesRunner.ts`
 - `server/src/wardrobeUploadProcessingRunner.ts`
 - `server/src/routes/`
@@ -127,11 +132,12 @@ Common optional values:
 - `MCP_ALLOWED_REDIRECT_URIS`, `MCP_ALLOWED_REDIRECT_ORIGINS` — allowed OAuth redirect destinations for MCP clients such as ChatGPT or Codex
 - `MCP_ALLOWED_CLIENT_IDS`, `MCP_ALLOWED_CLIENT_METADATA_HOSTS` — optional MCP client allowlists; dynamic client registration is supported and production still requires redirect allowlists
 - `MCP_ACCESS_TOKEN_TTL_SECONDS`, `MCP_AUTH_CODE_TTL_SECONDS`, `MCP_REFRESH_TOKEN_TTL_SECONDS` — optional MCP OAuth connector controls
+- `VITE_THUMBNAIL_ASSET_BASE_URL` — thumbnail URL prefix also used by server-generated prompt/MCP thumbnails
 - `SESSION_PRUNE_MIN_INTERVAL_MS` — session cleanup throttle
 - `WARDROBE_PDF_CHILD_TIMEOUT_MS` — PDF child-process timeout
 - `WARDROBE_UPLOAD_CHILD_TIMEOUT_MS` — uploaded wardrobe image normalization child-process timeout
 - `WARDROBE_UPLOAD_PROCESSING_CHILD_TIMEOUT_MS`, `WARDROBE_UPLOAD_PROCESSING_CHILD_KILL_GRACE_MS` — uploaded wardrobe metadata/image processing child-process controls
-- `SHARP_CONCURRENCY`, `IMAGE_DOWNLOAD_CONCURRENCY`, `IMAGE_WORK_MAX_CONCURRENCY`, `PROMPT_IMAGES_CHILD_TIMEOUT_MS`, `PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY`, `PROMPT_CATEGORY_SHARP_CONCURRENCY`, `PROMPT_IMAGE_REQUEST_WIDTH`, `MAX_SOURCE_IMAGE_PIXELS`, `STORAGE_IMAGES_DIR` — optional tuning knobs for image and prompt-image work
+- `SHARP_CONCURRENCY`, `IMAGE_DOWNLOAD_CONCURRENCY`, `IMAGE_WORK_MAX_CONCURRENCY`, `IMAGE_WORK_MAX_PENDING`, `PROMPT_IMAGES_CHILD_TIMEOUT_MS`, `PROMPT_CATEGORY_DOWNLOAD_CONCURRENCY`, `PROMPT_CATEGORY_SHARP_CONCURRENCY`, `PROMPT_IMAGE_REQUEST_WIDTH`, `MAX_SOURCE_IMAGE_PIXELS`, `STORAGE_IMAGES_DIR` — optional tuning knobs for image and prompt-image work
 
 See [server/.env.example](server/.env.example) for the baseline template.
 
@@ -143,6 +149,13 @@ See [server/.env.example](server/.env.example) for the baseline template.
 - `BFF_UPSTREAM_ORIGIN` — upstream backend origin for proxy-based deployments
 
 See [client/.env.example](client/.env.example).
+
+### Tooling env
+
+- `E2E_PORT` — Playwright e2e server port, defaults to `5310`
+- `CI` — enables Playwright retries and CI reporter behavior
+- `SCREENSHOT_PORT`, `SCREENSHOT_HMR_PORT`, `SCREENSHOT_IMAGE_URL` — screenshot capture helper overrides
+- `CODE_QUALITY_MAX_LINES` — large-file strict gate threshold, defaults to `500`
 
 ## Local development
 
@@ -187,6 +200,14 @@ Server auth test mode:
 npm --workspace server run dev:test-auth
 ```
 
+Workspace-only helpers:
+
+```bash
+npm --workspace server run dev:e2e
+npm --workspace client run preview
+npm --workspace client run start:render
+```
+
 ### Playwright e2e server
 
 Playwright starts an isolated Express/Vite server automatically when you run e2e tests:
@@ -202,6 +223,8 @@ That server uses in-memory auth, profile, capsule, outfit, search, wardrobe, gen
 - frontend: `http://localhost:5173`
 - backend: `http://localhost:3000`
 
+The app root redirects to `/personal-items` while preserving query parameters such as OAuth return state.
+
 In local development, Vite proxies `/api` to the Express server and strips that prefix, so frontend calls to `/api/auth`, `/api/profile`, `/api/capsules`, `/api/outfits`, `/api/shared-capsules`, `/api/search`, `/api/wardrobe`, and `/api/liked-items` reach the matching backend route groups. Direct `/auth`, `/profile`, `/wardrobe/filters`, `/wardrobe/items`, and `/health` proxy entries are also present for compatibility.
 
 ## Build, start, validation
@@ -216,6 +239,13 @@ Start the production server:
 
 ```bash
 npm run start
+```
+
+Render start helpers:
+
+```bash
+npm run start:render
+npm run start:client:render
 ```
 
 Type-check:
@@ -263,7 +293,6 @@ npm run format
 npm run format:check
 npm run lint:fix
 npm run quality:deps
-npm run quality:cycles
 npm run quality:unused
 npm run quality:large-files
 npm run quality:large-files:strict
@@ -293,11 +322,11 @@ Main backend route groups:
 - `/auth/passkeys/*` — passkey list, register, authenticate, and delete flows
 - `/profile/*` — onboarding, profile data, locale, and account removal
 - `/capsules/*` — bootstrap, recent, search, CRUD, save/revert, regenerate, share, import support, PDF, SSE events, outfit-set image jobs
-- `/outfits/*` — bootstrap, recent, search, CRUD, save/revert, duplicate, select, and PDF export for saved outfit sets
+- `/outfits/*` — bootstrap, recent, search, CRUD, save/revert, duplicate, select, report SSE, image jobs/events, and PDF export for saved outfit sets
 - `/shared-capsules/*` — public shared capsule read and authenticated import
 - `/liked-items` — authenticated product like/unlike mutations
-- `/search/*` — search options, saved filters, run search, stats
-- `/wardrobe/*` — profile-derived filters, Personal items uploaded/catalog items, file and URL upload event streams, item metadata updates, and wardrobe PDF export
+- `/search/*` — search options, saved filters, run search, product-detail lookup, and stats
+- `/wardrobe/*` — profile-derived filters, Personal items uploaded/catalog items, file and URL upload event streams, AI report generation at `/wardrobe/items/report`, item metadata updates, and wardrobe PDF export
 - `/mcp` — authenticated Streamable HTTP MCP endpoint with read-only tools: `ping`, `get_search_options`, `search`, `render_product_grid`, `stats`, `fetch`, `render_product_detail`, `wardrobe_items`, and `render_wardrobe_grid`
 - `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/.well-known/openid-configuration`, `/oauth/register`, `/oauth/authorize`, `/oauth/token` — MCP OAuth discovery, dynamic client registration, PKCE consent, token exchange, and refresh-token rotation
 - `/health`, `/healthall`
@@ -306,7 +335,7 @@ The API uses camelCase request and response fields at the client/server boundary
 
 The e2e server also mounts `/__e2e/*` test-control and fixture endpoints. Those endpoints are only available when the dedicated e2e server entrypoint is used.
 
-The API is implemented in [server/src/index.ts](server/src/index.ts).
+The app is created by [server/src/appFactory.ts](server/src/appFactory.ts), with route registration in [server/src/appRoutes.ts](server/src/appRoutes.ts) and startup in [server/src/index.ts](server/src/index.ts).
 
 ## MCP connector
 
@@ -335,6 +364,7 @@ Related files:
 
 Minimum env for this path:
 
+- `NODE_VERSION=22.22.3`
 - `NODE_ENV=production`
 - `CLIENT_ORIGIN=https://<your-service>.onrender.com` or your custom domain
 - `PASSKEY_RP_ID=<your-service>.onrender.com` or your custom domain hostname

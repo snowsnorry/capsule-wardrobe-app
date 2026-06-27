@@ -38,24 +38,30 @@ High-level responsibilities:
 - `client/src/i18n/` — localization resources and helpers
 - `client/src/screens/` — page/screen-level UI flows
 - `client/src/screens/mainScreen/` — main capsule/wardrobe screen composition
+- `client/src/screens/outfitScreen/` — saved outfit screen composition, report UI, item pickers, and media controls
 - `client/src/screens/searchScreen/` — search screen composition
 - `client/src/screens/statisticsScreen/` — statistics screen composition
 - `client/src/search/` — search-related UI or logic
 - `client/src/test/` — client-side test helpers
+- `client/src/theme/` — centralized MUI theme factory, palette and radius tokens, CSS variables, component overrides, and typography
 - `client/src/utils/` — client utilities
 - `server/src/ai/` — AI-related integrations and orchestration
-- `server/src/db/` — split DB modules for auth, passkeys, profiles, capsule data, wardrobe, search, schema, product options, and MCP OAuth persistence
+- `server/src/db/` — split DB modules for auth, passkeys, profiles, capsule data, wardrobe, personal item reports, search, liked items, schema, product options, and MCP OAuth persistence
 - `server/src/mcp/` — Streamable HTTP MCP server, bearer auth, OAuth discovery/PKCE/token routes, and read-only product/wardrobe tools
 - `server/src/e2e/` — isolated e2e server, in-memory dependencies, fixtures, and e2e-only routes
 - `server/src/routes/` — grouped Express route modules
 - `server/src/test/` — server-side test helpers
 - `server/src/templates/` — server-side templates
 - `server/src/index.ts` — server entrypoint
+- `server/src/appFactory.ts` — Express app factory, middleware setup, route context creation, and direct plus `/api` route mounting
+- `server/src/appDependencies.ts` — production dependency wiring for routes, stores, AI services, storage, passkeys, and OAuth helpers
+- `server/src/appRouteContext.ts` — route context assembly for guards, rate limiters, response mappers, and event helpers
+- `server/src/appRoutes.ts` — central route group registration
 - `server/src/appConfig.ts` — runtime env/config constants
 - `server/src/appMiddleware.ts` — Helmet/CSP, CORS, rate limiters, auth guard, trusted-origin guard, and CSRF guard
 - `server/src/serverStartup.ts` — DB bootstrap, dev Vite middleware, production static serving, and shared-capsule HTML metadata injection
 - `server/src/db.ts` — database integration
-- `server/src/db/sql/` — canonical schema SQL assets, including MCP OAuth tables
+- `server/src/db/sql/` — canonical schema SQL assets, including personal item report, liked-item, and MCP OAuth tables
 - `server/src/email.ts` — email delivery/auth messaging
 - `server/src/authStore.ts` — auth/session-related storage logic
 - `server/src/capsuleStore.ts` — capsule/domain storage logic
@@ -63,7 +69,7 @@ High-level responsibilities:
 - `server/src/httpCookies.ts` — session, CSRF, and passkey challenge cookie helpers
 - `server/src/passkeyHttp.ts` and `server/src/passkeyNames.ts` — passkey response/name helpers
 - `server/src/r2Storage.ts` and `server/src/r2Delete.ts` — Cloudflare R2 upload/delete helpers
-- `server/src/wardrobe*.ts` — uploaded wardrobe image processing, semantic metadata, PDF, and download helpers
+- `server/src/wardrobe*.ts` — uploaded wardrobe image processing, semantic metadata, Personal items reports, PDF, and download helpers
 - `server/src/mcp/*.ts` — MCP OAuth config/routes, token validation, product search/stats/fetch tools, and wardrobe item tools
 - `server/src/ai/sql/` — canonical SQL assets for AI wardrobe selection
 
@@ -79,12 +85,15 @@ Development:
 - `npm run dev:client`
 - `npm run dev:server`
 - `npm run dev:server:test-auth`
+- `npm --workspace server run dev:e2e` — workspace-only e2e server helper used by Playwright
 
 Build:
 - `npm run build`
 
 Start:
 - `npm run start`
+- `npm run start:render`
+- `npm run start:client:render`
 
 Type checking:
 - `npm run typecheck`
@@ -115,13 +124,13 @@ Lint and quality:
 - `npm run format`
 - `npm run format:check`
 - `npm run quality:deps`
-- `npm run quality:cycles`
 - `npm run quality:unused`
 - `npm run quality:large-files`
 - `npm run quality:large-files:strict`
 - `npm run quality:gate`
 - `npm run quality`
 - `npm run security:audit`
+- `npm run screenshots`
 
 ## Working rules
 - Prefer minimal diffs.
@@ -151,12 +160,12 @@ For frontend tasks:
 - first inspect `client/src/App.tsx`, `client/src/app/`, `client/src/screens/`, `client/src/components/`, and `client/src/api/`
 
 For backend tasks:
-- first inspect `server/src/index.ts`, the closest route module in `server/src/routes/`, and the closest domain module (`db.ts`, `db/`, `email.ts`, `authStore.ts`, `capsuleStore.ts`, `profileStore.ts`, `searchStore.ts`, or `ai/`)
+- first inspect `server/src/index.ts`, app wiring in `server/src/appFactory.ts`, `server/src/appRoutes.ts`, `server/src/appDependencies.ts`, and `server/src/appRouteContext.ts` when relevant, the closest route module in `server/src/routes/`, and the closest domain module (`db.ts`, `db/`, `email.ts`, `authStore.ts`, `capsuleStore.ts`, `outfitStore.ts`, `profileStore.ts`, `searchStore.ts`, `wardrobe*.ts`, or `ai/`)
 - for passkey/WebAuthn work, inspect `server/src/index.ts`, `server/src/routes/passkeyRoutes.ts`, `server/src/db.ts`, `server/src/db/passkeys.ts`, `client/src/api/passkeys.ts`, and `client/src/auth/passkeys.ts`
 - for MCP connector/OAuth work, inspect `server/src/index.ts`, `server/src/mcp/`, `server/src/db/mcpOAuth*.ts`, `server/src/db/sql/schema/08*_mcp_*.sql`, `server/src/appConfig.ts`, `server/src/appMiddleware.ts`, and `client/src/app/oauthReturn.ts`
 
 For deployment/config tasks:
-- inspect root `package.json`, `client/render-server.js`, `client/vite.config.ts`, and README first
+- inspect root `package.json`, `render.yaml`, `client/render-server.js`, `client/vite.config.ts`, `server/src/appConfig.ts`, `server/src/serverStartup.ts`, and README first
 
 For Playwright/e2e infrastructure tasks:
 - inspect `playwright.config.ts`, `tests/e2e/`, `server/src/e2e/`, `server/src/index.ts`, and `server/package.json`
