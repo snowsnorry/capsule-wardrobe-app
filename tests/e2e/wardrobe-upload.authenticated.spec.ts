@@ -56,7 +56,14 @@ async function uploadWardrobeFiles(page: Page, files: FilePayload[]) {
   );
   await dialog.getByRole("button", { name: "Upload" }).click();
   const uploadResponse = await uploadResponsePromise;
-  expect(uploadResponse.status()).toBe(200);
+  expect(uploadResponse.status()).toBe(202);
+  expect(
+    (await uploadResponse.json()) as { job?: { status?: string } },
+  ).toEqual(
+    expect.objectContaining({
+      job: expect.objectContaining({ status: "completed" }),
+    }),
+  );
 
   await expect(dialog).toBeHidden();
   await expectUploadedFilterSelected(page);

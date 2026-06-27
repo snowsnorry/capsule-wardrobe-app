@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
@@ -210,6 +211,61 @@ describe("AppSidebarShell", () => {
     await user.click(screen.getByRole("button", { name: "Open user menu" }));
     await user.click(screen.getByText("Sign out"));
     expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  test("keeps the selected settings section across unrelated shell rerenders", async () => {
+    const user = userEvent.setup();
+    const settingsProfile = {
+      fullname: "Person Example",
+      email: "person@example.com",
+      locale: "en",
+      theme: "system",
+      llm: "openai:gpt-5.5",
+      imageLlm: "openai:gpt-image-2",
+    };
+    const renderUi = (contentLabel: string) => (
+      <ThemeProvider theme={theme}>
+        <LocaleProvider>
+          <AppSidebarShell
+            shellTestId="app-sidebar-shell"
+            currentApp="explore"
+            userEmail="person@example.com"
+            userName="Person Example"
+            settingsProfile={{ ...settingsProfile }}
+            onSaveSettings={vi.fn(() => Promise.resolve())}
+            sidebarBodyContent={() => <div>sidebar-body</div>}
+          >
+            <div>{contentLabel}</div>
+          </AppSidebarShell>
+        </LocaleProvider>
+      </ThemeProvider>
+    );
+
+    const view = render(renderUi("content one"));
+
+    await user.click(screen.getByRole("button", { name: "Open user menu" }));
+    await user.click(screen.getByText("Settings"));
+    const settingsDialog = await screen.findByRole("dialog", {
+      name: "Settings",
+    });
+    await user.click(
+      within(settingsDialog).getByRole("button", { name: "Account" }),
+    );
+    expect(
+      within(settingsDialog).getByRole("button", { name: "Remove account" }),
+    ).toBeInTheDocument();
+
+    view.rerender(renderUi("content two"));
+
+    const rerenderedDialog = screen.getByRole("dialog", { name: "Settings" });
+    expect(
+      within(rerenderedDialog).getByRole("button", {
+        name: "Remove account",
+      }),
+    ).toBeInTheDocument();
+    expect(within(rerenderedDialog).getByLabelText("Name")).toHaveValue(
+      "Person Example",
+    );
   });
 
   test("localizes shell-only accessibility labels in Russian", async () => {

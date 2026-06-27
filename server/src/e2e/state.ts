@@ -26,6 +26,10 @@ import {
   createE2eWardrobeDependencies,
   E2eWardrobeMemory,
 } from "./wardrobeState.js";
+import { createE2eJobDependencies } from "./jobState.js";
+import { annotateLikedItems } from "../routes/likedItemsRoutes.js";
+import { processQueuedWardrobeFileUploadImpl } from "../routes/wardrobeFileUploadRoute.js";
+import { processQueuedWardrobeUrlUpload } from "../routes/wardrobeUrlUploadRoute.js";
 
 export type E2eScenario =
   | "with-profile"
@@ -329,7 +333,7 @@ function outfitDependencies(state: E2eState) {
 }
 
 export function createE2eDependencies(state = e2eState) {
-  return {
+  const deps = {
     ...authDependencies(state),
     ...profileDependencies(state),
     ...capsuleDependencies(state),
@@ -365,5 +369,19 @@ export function createE2eDependencies(state = e2eState) {
       url: e2eImageUrl("uploaded-saved-outfit"),
       digest: "e2e",
     }),
+    annotateLikedItems,
+    clearAccountTransientStateImpl: async () => {},
+    listUploadedWardrobeR2KeysImpl: async () => [],
+  };
+  const queuedDeps = {
+    ...deps,
+    processQueuedWardrobeFileUploadImpl: (input) =>
+      processQueuedWardrobeFileUploadImpl({ context: deps, ...input }),
+    processQueuedWardrobeUrlUploadImpl: (input) =>
+      processQueuedWardrobeUrlUpload({ context: deps, ...input }),
+  };
+  return {
+    ...queuedDeps,
+    ...createE2eJobDependencies(queuedDeps),
   };
 }

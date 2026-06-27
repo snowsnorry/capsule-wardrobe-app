@@ -3,6 +3,7 @@ import {
   regenerateSelectedWardrobeItems,
 } from "../api/wardrobe";
 import { downloadCapsulePdf } from "../api/capsules";
+import type { JobResponse } from "../api/jobs";
 import { fromContext, type AppActionContext } from "./actionContext";
 import {
   clearNotificationFlow,
@@ -28,6 +29,11 @@ function failWardrobeStream(context: AppActionContext, error?: unknown) {
       )(error),
     }));
   }
+}
+
+function throwIfJobFailed(response: JobResponse) {
+  if (response.job.status !== "failed") return;
+  throw new Error(response.job.error?.code || "service_unavailable");
 }
 
 export async function refreshWardrobe(context: AppActionContext) {
@@ -63,7 +69,7 @@ export async function refreshWardrobe(context: AppActionContext) {
   }));
   fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(true);
   try {
-    await regenerateCapsuleWardrobe({ capsuleId });
+    throwIfJobFailed(await regenerateCapsuleWardrobe({ capsuleId }));
     fromContext<(kind: string, llm?: string) => void>(
       context,
       "startPendingNotificationFlow",
@@ -153,10 +159,12 @@ export async function regenerateSelectedItems(context: AppActionContext) {
     : [];
   preparePartialRegeneration(context, selectedUrls, existingItems);
   try {
-    await regenerateSelectedWardrobeItems({
-      itemUrls: selectedUrls,
-      capsuleId,
-    });
+    throwIfJobFailed(
+      await regenerateSelectedWardrobeItems({
+        itemUrls: selectedUrls,
+        capsuleId,
+      }),
+    );
     fromContext<(kind: string) => void>(
       context,
       "startPendingNotificationFlow",

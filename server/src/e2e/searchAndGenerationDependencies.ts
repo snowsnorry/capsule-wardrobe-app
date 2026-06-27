@@ -112,6 +112,7 @@ function regenerateCapsuleWardrobeHandler(state: E2eSearchAndGenerationState) {
       return res.status(503).json({
         error: "service_unavailable",
         rawSelectionText: null,
+        suppressJobHandlerLog: true,
       });
     }
 

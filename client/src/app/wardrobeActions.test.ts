@@ -66,6 +66,20 @@ function createJobResponse(id = "job-1") {
   } as const;
 }
 
+function createFailedJobResponse() {
+  const response = createJobResponse();
+  return {
+    ...response,
+    job: {
+      ...response.job,
+      status: "failed",
+      phase: "failed",
+      error: { code: "service_unavailable", message: "failed" },
+      failedAt: "",
+    },
+  } as const;
+}
+
 function mockCalls(fn: unknown) {
   return (fn as Mock).mock.calls;
 }
@@ -648,6 +662,23 @@ describe("wardrobeActions", () => {
       current: unknown,
     ) => unknown;
     expect(updater({ error: "" })).toEqual({ error: "boom" });
+  });
+
+  test("refreshWardrobe reports failed queued jobs without starting a stream", async () => {
+    vi.mocked(regenerateCapsuleWardrobe).mockResolvedValueOnce(
+      createFailedJobResponse(),
+    );
+    const context = createActionContext();
+
+    await refreshWardrobe(context);
+
+    expect(subscribeCapsuleEvents).not.toHaveBeenCalled();
+    expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
+    const updater = mockCalls(context.setStatus).at(-1)?.[0] as (
+      current: unknown,
+    ) => unknown;
+    expect(updater({ error: "" })).toEqual({ error: "service_unavailable" });
+    expect(context.setIsLoadingItems).toHaveBeenLastCalledWith(false);
   });
 
   test("refreshWardrobe no longer applies immediate ready responses", async () => {

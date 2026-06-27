@@ -226,6 +226,36 @@ test("job handler waits for selected-regeneration legacy jobs and maps handler e
   ).resolves.toEqual({});
 });
 
+test("job handler can suppress logs for expected legacy handler failures", async () => {
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const updateProgress = vi.fn(async () => {});
+  const regenerateCapsuleWardrobeHandler = vi.fn(async (_req, res) => {
+    (res as { status: (code: number) => { json: (body: unknown) => void } })
+      .status(503)
+      .json({
+        error: "service_unavailable",
+        suppressJobHandlerLog: true,
+      });
+  });
+
+  await expect(
+    runJobHandler(
+      { regenerateCapsuleWardrobeHandler },
+      {
+        job: buildJob({
+          kind: "capsuleGenerate",
+          entityId: "capsule-1",
+        }),
+        updateProgress,
+      },
+    ),
+  ).rejects.toMatchObject({
+    code: "service_unavailable",
+    message: "service_unavailable",
+  });
+  expect(consoleError).not.toHaveBeenCalled();
+});
+
 test("job handler rejects missing handlers and unsupported kinds with stable codes", async () => {
   const updateProgress = vi.fn(async () => {});
 

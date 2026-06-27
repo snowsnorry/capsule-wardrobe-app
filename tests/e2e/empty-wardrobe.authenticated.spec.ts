@@ -85,11 +85,18 @@ test("empty wardrobe recovers from one failed full regeneration and persists ret
   const failedRegenerationResponse = page.waitForResponse(
     (response) =>
       response.url().endsWith(`/capsules/${capsuleId}/regenerate`) &&
-      response.request().method() === "POST" &&
-      response.status() === 503,
+      response.request().method() === "POST",
   );
   await page.getByRole("button", { name: "Regenerate all" }).click();
-  await failedRegenerationResponse;
+  const failedResponse = await failedRegenerationResponse;
+  expect(failedResponse.status()).toBe(202);
+  await expect(
+    (await failedResponse.json()) as { job?: { status?: string } },
+  ).toEqual(
+    expect.objectContaining({
+      job: expect.objectContaining({ status: "failed" }),
+    }),
+  );
 
   await expect(page.getByRole("alert")).toContainText(failureMessage);
   await expect(page.getByRole("progressbar")).toHaveCount(0);
@@ -101,11 +108,18 @@ test("empty wardrobe recovers from one failed full regeneration and persists ret
   const successfulRetryResponse = page.waitForResponse(
     (response) =>
       response.url().endsWith(`/capsules/${capsuleId}/regenerate`) &&
-      response.request().method() === "POST" &&
-      response.status() === 200,
+      response.request().method() === "POST",
   );
   await page.getByRole("button", { name: "Regenerate all" }).click();
-  await successfulRetryResponse;
+  const retryResponse = await successfulRetryResponse;
+  expect(retryResponse.status()).toBe(202);
+  await expect(
+    (await retryResponse.json()) as { job?: { status?: string } },
+  ).toEqual(
+    expect.objectContaining({
+      job: expect.objectContaining({ status: "completed" }),
+    }),
+  );
 
   for (const product of readyProducts) {
     await expectProductCard(page, product.name);

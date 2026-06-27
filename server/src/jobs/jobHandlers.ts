@@ -37,12 +37,19 @@ function getErrorCode(error: unknown): string {
 
 function assertFakeResponseOk(res: FakeResponse) {
   if (res.statusCode >= 400) {
-    const error = new Error(
-      String((res.body as { error?: unknown } | null)?.error || "job_failed"),
-    );
-    (error as Error & { code?: string }).code = String(
-      (res.body as { error?: unknown } | null)?.error || "job_failed",
-    );
+    const body = res.body as {
+      error?: unknown;
+      suppressJobHandlerLog?: unknown;
+    } | null;
+    const error = new Error(String(body?.error || "job_failed"));
+    const handlerError = error as Error & {
+      code?: string;
+      suppressJobHandlerLog?: boolean;
+    };
+    handlerError.code = String(body?.error || "job_failed");
+    if (body?.suppressJobHandlerLog === true) {
+      handlerError.suppressJobHandlerLog = true;
+    }
     throw error;
   }
 }
@@ -232,7 +239,9 @@ export async function runJobHandler(
         throw new Error("unsupported_job_kind");
     }
   } catch (error) {
-    logError("[jobs][handler]", { jobId: job.id, kind: job.kind }, error);
+    if (!(error as { suppressJobHandlerLog?: unknown }).suppressJobHandlerLog) {
+      logError("[jobs][handler]", { jobId: job.id, kind: job.kind }, error);
+    }
     (error as Error & { code?: string }).code = getErrorCode(error);
     throw error;
   }

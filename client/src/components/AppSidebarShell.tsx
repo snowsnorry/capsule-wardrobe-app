@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import type { MouseEvent, ReactElement } from "react";
 import { useI18n } from "../i18n/useI18n";
@@ -137,6 +137,25 @@ function AppSidebarSettingsDialog({
   isOpen: boolean;
   onClose: () => void;
 }): ReactElement | null {
+  const settings = useMemo(
+    () => ({
+      fullname: settingsProfile?.fullname,
+      locale: settingsProfile?.locale,
+      theme: settingsProfile?.theme,
+      llm: settingsProfile?.llm,
+      imageLlm: settingsProfile?.imageLlm,
+      email: userEmail,
+    }),
+    [
+      settingsProfile?.fullname,
+      settingsProfile?.locale,
+      settingsProfile?.theme,
+      settingsProfile?.llm,
+      settingsProfile?.imageLlm,
+      userEmail,
+    ],
+  );
+
   if (!isOpen) {
     return null;
   }
@@ -145,10 +164,7 @@ function AppSidebarSettingsDialog({
     <Suspense fallback={null}>
       <SettingsDialog
         open={isOpen}
-        settings={{
-          ...(settingsProfile ?? {}),
-          email: userEmail,
-        }}
+        settings={settings}
         onClose={onClose}
         onRemoveAccount={onRemoveAccount}
         onSave={onSaveSettings}
