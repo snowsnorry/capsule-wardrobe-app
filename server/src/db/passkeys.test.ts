@@ -14,7 +14,6 @@ import {
   insertPasskeyChallenge,
   listPasskeysByEmail,
   normalizePasskeyRow,
-  pruneExpiredPasskeyChallenges,
   updatePasskeyAuthentication,
 } from "./passkeys.js";
 
@@ -125,9 +124,9 @@ test("passkey credential helpers normalize selected and returned rows", async ()
   ).toBe(true);
 });
 
-test("passkey challenge helpers store, consume, prune, and return null for missing rows", async () => {
+test("passkey challenge helpers store, consume, and return null for missing rows", async () => {
   const expiresAt = new Date("2026-05-07T00:00:00Z");
-  const { statements, values } = useQueuedSql([[], [challengeRow], [], []]);
+  const { statements, values } = useQueuedSql([[], [challengeRow], []]);
 
   await insertPasskeyChallenge({
     id: "challenge-1",
@@ -142,7 +141,6 @@ test("passkey challenge helpers store, consume, prune, and return null for missi
       kind: "authentication",
     }),
   ).toEqual(challengeRow);
-  await pruneExpiredPasskeyChallenges();
   expect(
     await consumePasskeyChallenge({ id: "missing", kind: "authentication" }),
   ).toBe(null);
@@ -160,9 +158,7 @@ test("passkey challenge helpers store, consume, prune, and return null for missi
   ).toBeTruthy();
   expect(
     statements.some((statement) =>
-      statement.includes(
-        "where expires_at <= now() or consumed_at is not null",
-      ),
+      statement.includes("and expires_at > now()"),
     ),
   ).toBeTruthy();
 });

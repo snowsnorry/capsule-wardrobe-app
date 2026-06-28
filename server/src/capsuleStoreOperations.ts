@@ -222,7 +222,6 @@ function buildCapsuleShareOperations(deps: ResolvedCapsuleStoreDeps) {
         capsuleId,
         clientOrigin,
         getCapsuleImpl,
-        pruneExpiredSharedCapsulesImpl: deps.pruneExpiredSharedCapsulesImpl,
         nowImpl: deps.nowImpl,
         upsertSharedCapsuleImpl: deps.upsertSharedCapsuleImpl,
         hashCapsuleContentImpl: deps.hashCapsuleContentImpl,
@@ -231,7 +230,6 @@ function buildCapsuleShareOperations(deps: ResolvedCapsuleStoreDeps) {
       getSharedCapsuleForStore({
         id,
         getValidSharedCapsuleByIdImpl: deps.getValidSharedCapsuleByIdImpl,
-        pruneExpiredSharedCapsulesImpl: deps.pruneExpiredSharedCapsulesImpl,
       }),
     getSharedCapsuleOgMetadata: (
       id: string,
@@ -239,7 +237,6 @@ function buildCapsuleShareOperations(deps: ResolvedCapsuleStoreDeps) {
       getSharedCapsuleOgMetadataForStore({
         id,
         getValidSharedCapsuleByIdImpl: deps.getValidSharedCapsuleByIdImpl,
-        pruneExpiredSharedCapsulesImpl: deps.pruneExpiredSharedCapsulesImpl,
       }),
     importSharedCapsule: (
       email: string,
@@ -249,7 +246,6 @@ function buildCapsuleShareOperations(deps: ResolvedCapsuleStoreDeps) {
         email,
         id,
         getValidSharedCapsuleByIdImpl: deps.getValidSharedCapsuleByIdImpl,
-        pruneExpiredSharedCapsulesImpl: deps.pruneExpiredSharedCapsulesImpl,
         createCapsuleImpl,
       }),
   };

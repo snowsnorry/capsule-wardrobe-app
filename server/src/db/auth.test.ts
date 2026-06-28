@@ -11,8 +11,6 @@ import {
   getLoginCodeByEmail,
   getSessionById,
   insertSession,
-  pruneExpiredSessions,
-  pruneLoginCodes,
   upsertLoginCode,
   verifyAndConsumeLoginCode,
 } from "./auth.js";
@@ -54,11 +52,10 @@ const sessionRow: SessionRow = {
   expiresAt: "2026-05-08T00:00:00.000Z",
 };
 
-test("login code helpers prune, upsert, and select rows", async () => {
+test("login code helpers upsert and select rows", async () => {
   const expiresAt = new Date("2026-05-07T00:00:00.000Z");
-  const { statements, values } = useQueuedSql([[], [], [loginCodeRow], []]);
+  const { statements, values } = useQueuedSql([[], [loginCodeRow], []]);
 
-  await pruneLoginCodes();
   await upsertLoginCode({
     email: "person@example.com",
     codeHash: "hash",
@@ -68,9 +65,8 @@ test("login code helpers prune, upsert, and select rows", async () => {
   expect(await getLoginCodeByEmail("person@example.com")).toEqual(loginCodeRow);
   expect(await getLoginCodeByEmail("missing@example.com")).toBeNull();
 
-  expect(statements[0]).toContain("delete from login_codes");
-  expect(statements[1]).toContain("on conflict (email)");
-  expect(values[1]).toEqual(["person@example.com", "hash", "nonce", expiresAt]);
+  expect(statements[0]).toContain("on conflict (email)");
+  expect(values[0]).toEqual(["person@example.com", "hash", "nonce", expiresAt]);
 });
 
 test("verifyAndConsumeLoginCode returns success and invalid attempt branches", async () => {
@@ -160,14 +156,13 @@ test("verifyAndConsumeLoginCode handles missing, consumed, expired, and max atte
   ).resolves.toEqual({ ok: false, reason: "invalid" });
 });
 
-test("session helpers insert, select, delete, and prune sessions", async () => {
-  const { statements, values } = useQueuedSql([[], [sessionRow], [], [], []]);
+test("session helpers insert, select, and delete sessions", async () => {
+  const { statements, values } = useQueuedSql([[], [sessionRow], [], []]);
 
   await insertSession(sessionRow);
   expect(await getSessionById("session-1")).toEqual(sessionRow);
   expect(await getSessionById("missing")).toBeNull();
   await deleteSessionById("session-1");
-  await pruneExpiredSessions();
 
   expect(values[0]).toEqual([
     "session-1",
@@ -176,7 +171,6 @@ test("session helpers insert, select, delete, and prune sessions", async () => {
     "2026-05-07T00:00:00.000Z",
     "2026-05-08T00:00:00.000Z",
   ]);
-  expect(statements.at(-1)).toContain(
-    "delete from user_sessions where expires_at <= now()",
-  );
+  expect(statements.at(-1)).toContain("delete from user_sessions where");
+  expect(statements.at(-1)).toContain("session_id =");
 });

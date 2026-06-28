@@ -245,11 +245,3 @@ export async function consumePasskeyChallenge({
   );
   return row || null;
 }
-
-export async function pruneExpiredPasskeyChallenges(): Promise<void> {
-  const sql = getSqlClient();
-  await sql`
-    delete from passkey_challenges
-    where expires_at <= now() or consumed_at is not null
-  `;
-}

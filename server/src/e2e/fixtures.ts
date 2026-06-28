@@ -12,7 +12,6 @@ export function buildE2ePasskeyDependencies() {
     deletePasskeyByIdForEmailImpl: async () => true,
     insertPasskeyChallengeImpl: async () => {},
     consumePasskeyChallengeImpl: async () => null,
-    pruneExpiredPasskeyChallengesImpl: async () => {},
     generateRegistrationOptionsImpl: async () => ({
       challenge: "e2e-registration-challenge",
       pubKeyCredParams: [],

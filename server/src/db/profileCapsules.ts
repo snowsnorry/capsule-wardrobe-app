@@ -456,9 +456,4 @@ export async function getValidSharedCapsuleById(
   return row || null;
 }
 
-export async function pruneExpiredSharedCapsules(): Promise<void> {
-  const sql = getSqlClient();
-  await sql`delete from shared_capsules where expires_at < now()`;
-}
-
 export * from "./profiles.js";

@@ -13,7 +13,8 @@
     "test": "vitest run",
     "build": "tsc -p tsconfig.build.json && rm -rf dist/server/src/templates dist/server/src/db/sql dist/server/src/ai/sql && mkdir -p dist/server/src/templates dist/server/src/db/sql dist/server/src/ai/sql && cp -R src/templates/. dist/server/src/templates && cp -R src/db/sql/. dist/server/src/db/sql && cp -R src/ai/sql/. dist/server/src/ai/sql",
     "start": "node ./dist/server/src/index.js",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "prune:expired-records": "node ./dist/server/src/maintenance/pruneExpiredRecords.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",

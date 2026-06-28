@@ -6,11 +6,6 @@ import {
   type VerifyAndConsumeLoginCodeResult,
 } from "./core.js";
 
-export async function pruneLoginCodes(): Promise<void> {
-  const sql = getSqlClient();
-  await sql`delete from login_codes where expires_at <= now() or consumed_at is not null`;
-}
-
 export async function upsertLoginCode({
   email,
   codeHash,
@@ -171,10 +166,5 @@ export async function getSessionById(
 export async function deleteSessionById(sessionId: string): Promise<void> {
   const sql = getSqlClient();
   await sql`delete from user_sessions where session_id = ${sessionId}`;
-}
-
-export async function pruneExpiredSessions(): Promise<void> {
-  const sql = getSqlClient();
-  await sql`delete from user_sessions where expires_at <= now()`;
 }
 export * from "./passkeys.js";

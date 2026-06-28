@@ -34,10 +34,8 @@ type SessionStoreDeps = {
   insertSessionImpl: (input: PersistedSession) => Promise<void>;
   getSessionByIdImpl: (sessionId: string) => Promise<SessionRow | null>;
   deleteSessionByIdImpl: (sessionId: string) => Promise<void>;
-  pruneExpiredSessionsImpl: () => Promise<void>;
   nowMsImpl: () => number;
   randomBytesImpl: (size: number) => Buffer;
-  sessionPruneMinIntervalMs: number;
 };
 
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -46,28 +44,10 @@ export function createSessionMethods({
   insertSessionImpl,
   getSessionByIdImpl,
   deleteSessionByIdImpl,
-  pruneExpiredSessionsImpl,
   nowMsImpl,
   randomBytesImpl,
-  sessionPruneMinIntervalMs,
 }: SessionStoreDeps) {
-  let lastSessionPruneAtMs = 0;
-
-  async function maybePruneExpiredSessions(): Promise<void> {
-    const now = nowMsImpl();
-    if (
-      sessionPruneMinIntervalMs > 0 &&
-      now - lastSessionPruneAtMs < sessionPruneMinIntervalMs
-    ) {
-      return;
-    }
-
-    await pruneExpiredSessionsImpl();
-    lastSessionPruneAtMs = now;
-  }
-
   async function createSession(email: string): Promise<CreatedSession> {
-    await maybePruneExpiredSessions();
     const sessionId = randomBytesImpl(32).toString("hex");
     const csrfToken = randomBytesImpl(32).toString("hex");
     const createdAt = new Date(nowMsImpl());
@@ -92,7 +72,6 @@ export function createSessionMethods({
   }
 
   async function getSession(sessionId: string): Promise<SessionView | null> {
-    await maybePruneExpiredSessions();
     const session = await getSessionByIdImpl(sessionId);
     return session
       ? getValidSessionView({

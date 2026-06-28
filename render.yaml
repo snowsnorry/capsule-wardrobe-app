@@ -27,3 +27,16 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
+  - type: cron
+    name: capsule-wardrobe-cleanup
+    runtime: node
+    schedule: "0 3 * * *"
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run prune:expired-records
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.3
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false

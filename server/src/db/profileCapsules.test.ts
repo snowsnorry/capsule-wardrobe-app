@@ -14,7 +14,6 @@ import {
   getValidSharedCapsuleById,
   listCapsuleNamesByEmail,
   listRecentCapsulesByEmail,
-  pruneExpiredSharedCapsules,
   renameCapsuleByIdForEmail,
   revertCapsuleDraftByIdForEmail,
   saveCapsuleByIdForEmail,
@@ -215,12 +214,8 @@ test("capsule helpers return null or booleans for empty mutation results", async
   ).toBe(false);
 });
 
-test("shared capsule helpers upsert, read, and prune shared records", async () => {
-  const { statements, values } = useQueuedSql([
-    [sharedCapsule],
-    [sharedCapsule],
-    [],
-  ]);
+test("shared capsule helpers upsert and read valid shared records", async () => {
+  const { values } = useQueuedSql([[sharedCapsule], [sharedCapsule]]);
 
   expect(
     await upsertSharedCapsule({
@@ -232,11 +227,5 @@ test("shared capsule helpers upsert, read, and prune shared records", async () =
     }),
   ).toEqual(sharedCapsule);
   expect(await getValidSharedCapsuleById("share-1")).toEqual(sharedCapsule);
-  await pruneExpiredSharedCapsules();
   expect(values[0][2]).toBe(JSON.stringify({ items: [] }));
-  expect(
-    statements
-      .at(-1)
-      ?.includes("delete from shared_capsules where expires_at < now()"),
-  ).toBeTruthy();
 });

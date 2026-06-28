@@ -7,14 +7,12 @@ export {
 } from "./db/core.js";
 export { checkDatabaseConnection, ensureTables } from "./db/schema.js";
 export {
-  pruneLoginCodes,
   upsertLoginCode,
   getLoginCodeByEmail,
   verifyAndConsumeLoginCode,
   insertSession,
   getSessionById,
   deleteSessionById,
-  pruneExpiredSessions,
   listPasskeysByEmail,
   insertPasskey,
   getPasskeyByCredentialId,
@@ -22,7 +20,6 @@ export {
   deletePasskeyByIdForEmail,
   insertPasskeyChallenge,
   consumePasskeyChallenge,
-  pruneExpiredPasskeyChallenges,
 } from "./db/auth.js";
 export {
   hasProfileByEmail,
@@ -101,7 +98,6 @@ export {
   deleteCapsuleByIdForEmail,
   upsertSharedCapsule,
   getValidSharedCapsuleById,
-  pruneExpiredSharedCapsules,
   deleteProfileByEmail,
 } from "./db/profileCapsules.js";
 export {
@@ -133,6 +129,7 @@ export {
   revokeMcpRefreshToken,
   rotateMcpRefreshToken,
 } from "./db/mcpOAuthRefreshTokens.js";
+export { pruneExpiredRecords } from "./db/expiredRecords.js";
 export {
   appendJobEvent,
   clearJobRunsForEmail,

@@ -60,7 +60,6 @@ function registerPasskeyRegistrationOptionsRoute(app, context) {
     passkeyRegisterOptionsLimiter,
     passkeyRpId,
     passkeyRpName,
-    pruneExpiredPasskeyChallengesImpl,
     requireAuth,
     requireCsrf,
     requireTrustedOrigin,
@@ -74,7 +73,6 @@ function registerPasskeyRegistrationOptionsRoute(app, context) {
     passkeyRegisterOptionsLimiter,
     async (req, res) => {
       try {
-        await pruneExpiredPasskeyChallengesImpl();
         const existingPasskeys = await listPasskeysImpl(req.user.email);
         const options = await generateRegistrationOptionsImpl({
           rpName: passkeyRpName,
@@ -214,7 +212,6 @@ function registerPasskeyAuthenticationOptionsRoute(app, context) {
     nodeEnv,
     passkeyAuthenticateOptionsLimiter,
     passkeyRpId,
-    pruneExpiredPasskeyChallengesImpl,
     requireTrustedOrigin,
   } = context;
 
@@ -224,7 +221,6 @@ function registerPasskeyAuthenticationOptionsRoute(app, context) {
     passkeyAuthenticateOptionsLimiter,
     async (_req, res) => {
       try {
-        await pruneExpiredPasskeyChallengesImpl();
         const options = await generateAuthenticationOptionsImpl({
           rpID: passkeyRpId,
           userVerification: "required",

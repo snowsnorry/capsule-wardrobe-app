@@ -28,7 +28,6 @@ type CapsuleStoreDeps = {
     limit?: number;
     offset?: number;
   }) => Promise<CapsuleStoreRecord[]>;
-  pruneExpiredSharedCapsulesImpl?: () => Promise<void>;
   renameCapsuleByIdForEmailImpl?: (payload: {
     email: string;
     capsuleId: string;

@@ -427,7 +427,7 @@ test("createCapsuleStore delegates lookup, update, duplicate, state, and delete 
   expect(calls.some((call) => call.type === "active")).toBe(false);
 });
 
-test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsules", async () => {
+test("createCapsuleStore shares, imports, and rejects unshareable capsules", async () => {
   const calls: StoreCall[] = [];
   const sharedContent = capsuleRow().saved;
   const store = createCapsuleStore({
@@ -442,9 +442,6 @@ test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsul
                 ? { filters: {}, data: { wardrobe: null, rejectedUrls: [] } }
                 : null,
           }),
-    pruneExpiredSharedCapsulesImpl: async () => {
-      calls.push({ type: "prune" });
-    },
     upsertSharedCapsuleImpl: async (payload) => {
       calls.push({ type: "upsert", payload });
       return { id: "share id", expiresAt: payload.expiresAt.toISOString() };
@@ -518,9 +515,7 @@ test("createCapsuleStore shares, imports, prunes, and rejects unshareable capsul
   await expect(() =>
     store.importSharedCapsule("person@example.com", "bad-share"),
   ).rejects.toThrow(/capsule_not_shareable/);
-  expect(
-    calls.filter((call) => call.type === "prune").length >= 3,
-  ).toBeTruthy();
+  expect(calls.some((call) => call.type === "prune")).toBe(false);
 });
 
 test("createCapsuleStore normalizes catalog wardrobe items for shares", async () => {
@@ -560,9 +555,6 @@ test("createCapsuleStore normalizes catalog wardrobe items for shares", async ()
           },
         },
       }),
-    pruneExpiredSharedCapsulesImpl: async () => {
-      calls.push({ type: "prune" });
-    },
     upsertSharedCapsuleImpl: async (payload) => {
       calls.push({ type: "upsert", payload });
       return { id: "share-1", expiresAt: payload.expiresAt.toISOString() };

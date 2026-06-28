@@ -72,7 +72,6 @@ export function createPasskeyDependencies() {
     deletePasskeyByIdForEmailImpl: async () => true,
     insertPasskeyChallengeImpl: async () => {},
     consumePasskeyChallengeImpl: async () => null,
-    pruneExpiredPasskeyChallengesImpl: async () => {},
     generateRegistrationOptionsImpl: async () => ({
       rp: { name: "Capsule Wardrobe", id: "localhost" },
       user: {

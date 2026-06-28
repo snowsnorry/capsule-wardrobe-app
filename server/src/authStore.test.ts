@@ -49,7 +49,6 @@ function createRandomBytesQueue(hexValues: string[]): () => Buffer {
 }
 
 test("createPendingCode stores hashed login code with generated nonce and expiry", async () => {
-  let pruned = 0;
   let upsertPayload: LoginCodeUpsertPayload | null = null;
   const now = 1_700_000_000_000;
   const store = createAuthStore({
@@ -57,9 +56,6 @@ test("createPendingCode stores hashed login code with generated nonce and expiry
     nowMsImpl: () => now,
     randomIntImpl: () => 123456,
     randomBytesImpl: createRandomBytesQueue(["11".repeat(16)]),
-    pruneLoginCodesImpl: async () => {
-      pruned += 1;
-    },
     upsertLoginCodeImpl: async (payload) => {
       upsertPayload = payload;
     },
@@ -68,7 +64,6 @@ test("createPendingCode stores hashed login code with generated nonce and expiry
   const result = await store.createPendingCode("person@example.com");
 
   expect(result).toEqual({ ok: true, code: "123456" });
-  expect(pruned).toBe(1);
   expect(upsertPayload).toBeTruthy();
   expect(upsertPayload.email).toBe("person@example.com");
   expect(upsertPayload.nonce).toBe("11".repeat(16));
@@ -96,7 +91,6 @@ test("createPendingCode enforces resend cooldown and hourly limit", async () => 
           .repeat(16),
       ),
     ),
-    pruneLoginCodesImpl: async () => {},
     upsertLoginCodeImpl: async () => {},
   });
 
@@ -118,7 +112,6 @@ test("createPendingCode enforces resend cooldown and hourly limit", async () => 
     nowMsImpl: () => now,
     randomIntImpl: () => 111111,
     randomBytesImpl: createRandomBytesQueue(["99".repeat(16)]),
-    pruneLoginCodesImpl: async () => {},
     upsertLoginCodeImpl: async () => {},
     initialSendState: [
       [
@@ -143,7 +136,6 @@ test("createPendingCode resets hourly window after stale send state is cleaned u
     nowMsImpl: () => now,
     randomIntImpl: () => 222222,
     randomBytesImpl: createRandomBytesQueue(["22".repeat(16), "33".repeat(16)]),
-    pruneLoginCodesImpl: async () => {},
     upsertLoginCodeImpl: async () => {},
   });
 
@@ -182,9 +174,8 @@ test("verifyCode returns not_found without stored login code and hashes candidat
   });
 });
 
-test("createSession prunes expired sessions, inserts session, and respects prune interval", async () => {
+test("createSession inserts sessions without broad pruning", async () => {
   let now = 10_000;
-  let pruneCalls = 0;
   const inserted: PersistedSession[] = [];
   const store = createAuthStore({
     codeSecret: "secret",
@@ -195,17 +186,12 @@ test("createSession prunes expired sessions, inserts session, and respects prune
       "cc".repeat(32),
       "dd".repeat(32),
     ]),
-    sessionPruneMinIntervalMs: 5_000,
-    pruneExpiredSessionsImpl: async () => {
-      pruneCalls += 1;
-    },
     insertSessionImpl: async (payload) => {
       inserted.push(payload);
     },
   });
 
   const first = await store.createSession("person@example.com");
-  expect(pruneCalls).toBe(1);
   expect(first.sessionId).toBe("aa".repeat(32));
   expect(first.session.csrfToken).toBe("bb".repeat(32));
   expect(inserted[0].expiresAt.toISOString()).toBe(
@@ -214,11 +200,10 @@ test("createSession prunes expired sessions, inserts session, and respects prune
 
   now += 1_000;
   await store.createSession("person@example.com");
-  expect(pruneCalls).toBe(1);
 
   now += 6_000;
   await store.createSession("person@example.com");
-  expect(pruneCalls).toBe(2);
+  expect(inserted.length).toBe(3);
 });
 
 test("getSession normalizes valid sessions and deletes expired sessions", async () => {
@@ -227,7 +212,6 @@ test("getSession normalizes valid sessions and deletes expired sessions", async 
   const store = createAuthStore({
     codeSecret: "secret",
     nowMsImpl: () => now,
-    pruneExpiredSessionsImpl: async () => {},
     getSessionByIdImpl: async (sessionId): Promise<SessionLookupRow | null> => {
       if (sessionId === "missing") {
         return null;

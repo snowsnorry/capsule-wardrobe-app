@@ -25,7 +25,6 @@ export async function createCapsuleShareForStore({
   capsuleId,
   clientOrigin,
   getCapsuleImpl,
-  pruneExpiredSharedCapsulesImpl,
   nowImpl,
   upsertSharedCapsuleImpl,
   hashCapsuleContentImpl,
@@ -37,7 +36,6 @@ export async function createCapsuleShareForStore({
     email: string,
     capsuleId: string,
   ) => Promise<NormalizedCapsuleRecord | null>;
-  pruneExpiredSharedCapsulesImpl: () => Promise<void>;
   nowImpl: () => number;
   upsertSharedCapsuleImpl;
   hashCapsuleContentImpl: (content: unknown) => string;
@@ -59,7 +57,6 @@ export async function createCapsuleShareForStore({
     throwCapsuleNotShareable();
   }
 
-  await pruneExpiredSharedCapsulesImpl();
   const expiresAt = new Date(nowImpl() + SHARE_TTL_MS);
   const shared = await upsertSharedCapsuleImpl({
     profileEmail: email,
@@ -81,15 +78,12 @@ export async function createCapsuleShareForStore({
 export async function getSharedCapsuleForStore({
   id,
   getValidSharedCapsuleByIdImpl,
-  pruneExpiredSharedCapsulesImpl,
 }: {
   id: string;
   getValidSharedCapsuleByIdImpl;
-  pruneExpiredSharedCapsulesImpl: () => Promise<void>;
 }): Promise<SharedCapsuleMetadata | null> {
   const shared = await getValidSharedCapsuleByIdImpl(String(id || "").trim());
   if (!shared) {
-    await pruneExpiredSharedCapsulesImpl();
     return null;
   }
 
@@ -103,15 +97,12 @@ export async function getSharedCapsuleForStore({
 export async function getSharedCapsuleOgMetadataForStore({
   id,
   getValidSharedCapsuleByIdImpl,
-  pruneExpiredSharedCapsulesImpl,
 }: {
   id: string;
   getValidSharedCapsuleByIdImpl;
-  pruneExpiredSharedCapsulesImpl: () => Promise<void>;
 }): Promise<SharedCapsuleOgMetadata | null> {
   const shared = await getValidSharedCapsuleByIdImpl(String(id || "").trim());
   if (!shared) {
-    await pruneExpiredSharedCapsulesImpl();
     return null;
   }
 
@@ -125,13 +116,11 @@ export async function importSharedCapsuleForStore({
   email,
   id,
   getValidSharedCapsuleByIdImpl,
-  pruneExpiredSharedCapsulesImpl,
   createCapsuleImpl,
 }: {
   email: string;
   id: string;
   getValidSharedCapsuleByIdImpl;
-  pruneExpiredSharedCapsulesImpl: () => Promise<void>;
   createCapsuleImpl: (
     email: string,
     options,
@@ -139,7 +128,6 @@ export async function importSharedCapsuleForStore({
 }): Promise<NormalizedCapsuleRecord | null> {
   const shared = await getValidSharedCapsuleByIdImpl(String(id || "").trim());
   if (!shared) {
-    await pruneExpiredSharedCapsulesImpl();
     return null;
   }
 

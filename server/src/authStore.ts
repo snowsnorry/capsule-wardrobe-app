@@ -2,12 +2,10 @@ import crypto from "node:crypto";
 import {
   getLoginCodeByEmail,
   verifyAndConsumeLoginCode,
-  pruneLoginCodes,
   upsertLoginCode,
   insertSession,
   getSessionById,
   deleteSessionById,
-  pruneExpiredSessions,
 } from "./db.js";
 import {
   SESSION_TTL_MS,
@@ -43,7 +41,6 @@ type AuthStoreDeps = {
     codeHash: string;
     maxAttempts: number;
   }) => Promise<VerifyCodeResult>;
-  pruneLoginCodesImpl?: () => Promise<void>;
   upsertLoginCodeImpl?: (input: {
     email: string;
     codeHash: string;
@@ -53,12 +50,10 @@ type AuthStoreDeps = {
   insertSessionImpl?: (input: PersistedSession) => Promise<void>;
   getSessionByIdImpl?: (sessionId: string) => Promise<SessionRow | null>;
   deleteSessionByIdImpl?: (sessionId: string) => Promise<void>;
-  pruneExpiredSessionsImpl?: () => Promise<void>;
   nowMsImpl?: () => number;
   randomIntImpl?: (min: number, max: number) => number;
   randomBytesImpl?: (size: number) => Buffer;
   codeSecret?: string | undefined;
-  sessionPruneMinIntervalMs?: number;
   initialSendState?: Iterable<[string, SendStateEntry]>;
 };
 
@@ -66,10 +61,6 @@ const CODE_TTL_MS = 5 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_CODE_SENDS_PER_HOUR = 60;
 const MAX_VERIFY_ATTEMPTS = 5;
-const SESSION_PRUNE_MIN_INTERVAL_MS = Math.max(
-  0,
-  Number.parseInt(process.env.SESSION_PRUNE_MIN_INTERVAL_MS || "0", 10) || 0,
-);
 
 function createAuthStore(deps: AuthStoreDeps = {}) {
   return {
@@ -84,7 +75,6 @@ function getLoginCodeDeps(deps: AuthStoreDeps) {
       deps.getLoginCodeByEmailImpl ?? getLoginCodeByEmail,
     verifyAndConsumeLoginCodeImpl:
       deps.verifyAndConsumeLoginCodeImpl ?? verifyAndConsumeLoginCode,
-    pruneLoginCodesImpl: deps.pruneLoginCodesImpl ?? pruneLoginCodes,
     upsertLoginCodeImpl: deps.upsertLoginCodeImpl ?? upsertLoginCode,
     nowMsImpl: deps.nowMsImpl ?? (() => Date.now()),
     randomIntImpl:
@@ -101,20 +91,15 @@ function getSessionDeps(deps: AuthStoreDeps) {
     insertSessionImpl: deps.insertSessionImpl ?? insertSession,
     getSessionByIdImpl: deps.getSessionByIdImpl ?? getSessionById,
     deleteSessionByIdImpl: deps.deleteSessionByIdImpl ?? deleteSessionById,
-    pruneExpiredSessionsImpl:
-      deps.pruneExpiredSessionsImpl ?? pruneExpiredSessions,
     nowMsImpl: deps.nowMsImpl ?? (() => Date.now()),
     randomBytesImpl:
       deps.randomBytesImpl ?? ((size) => crypto.randomBytes(size)),
-    sessionPruneMinIntervalMs:
-      deps.sessionPruneMinIntervalMs ?? SESSION_PRUNE_MIN_INTERVAL_MS,
   };
 }
 
 function createLoginCodeMethods({
   getLoginCodeByEmailImpl,
   verifyAndConsumeLoginCodeImpl,
-  pruneLoginCodesImpl,
   upsertLoginCodeImpl,
   nowMsImpl,
   randomIntImpl,
@@ -126,7 +111,6 @@ function createLoginCodeMethods({
     AuthStoreDeps,
     | "getLoginCodeByEmailImpl"
     | "verifyAndConsumeLoginCodeImpl"
-    | "pruneLoginCodesImpl"
     | "upsertLoginCodeImpl"
     | "nowMsImpl"
     | "randomIntImpl"
@@ -163,7 +147,6 @@ function createLoginCodeMethods({
 
     const code = String(randomIntImpl(100000, 1000000));
     const nonce = randomBytesImpl(16).toString("hex");
-    await pruneLoginCodesImpl();
     await upsertLoginCodeImpl({
       email,
       codeHash: hashCode({ email, code, nonce }),

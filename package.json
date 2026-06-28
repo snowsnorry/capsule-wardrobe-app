@@ -13,6 +13,7 @@
     "start": "npm --workspace server run start",
     "start:render": "npm --workspace server run start",
     "start:client:render": "npm --workspace client run start:render",
+    "prune:expired-records": "npm --workspace server run prune:expired-records",
     "dev:client": "npm --workspace client run dev",
     "dev:server": "npm --workspace server run dev",
     "dev:all": "concurrently -k -n client,server \"npm:dev:client\" \"npm:dev:server\"",
