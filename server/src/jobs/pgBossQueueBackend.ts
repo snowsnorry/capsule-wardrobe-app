@@ -41,6 +41,8 @@ export function createPgBossQueueBackend({
 } = {}): QueueBackend {
   let bossInstance: PgBoss | null = boss || null;
   let started = false;
+  let queueReady = false;
+  let startupPromise: Promise<void> | null = null;
   const getBoss = () => {
     if (!bossInstance) {
       bossInstance = createBoss();
@@ -48,14 +50,36 @@ export function createPgBossQueueBackend({
     return bossInstance;
   };
 
+  async function ensureStartedAndQueueReady() {
+    if (started && queueReady) {
+      return;
+    }
+
+    if (!startupPromise) {
+      startupPromise = (async () => {
+        const activeBoss = getBoss();
+        if (!started) {
+          await activeBoss.start();
+          started = true;
+        }
+        if (!queueReady) {
+          await activeBoss.createQueue(queueName);
+          queueReady = true;
+        }
+      })();
+    }
+
+    try {
+      await startupPromise;
+    } finally {
+      startupPromise = null;
+    }
+  }
+
   return {
     async enqueue({ jobId, kind, payload = {} }) {
-      const activeBoss = getBoss();
-      if (!started) {
-        await activeBoss.start();
-        started = true;
-      }
-      const providerJobId = await activeBoss.send(
+      await ensureStartedAndQueueReady();
+      const providerJobId = await getBoss().send(
         queueName,
         { jobId, kind, payload },
         { retryLimit: 1, retryBackoff: true },
@@ -64,13 +88,9 @@ export function createPgBossQueueBackend({
     },
 
     async start(handler: QueueBackendWorkerHandler) {
-      const activeBoss = getBoss();
-      if (!started) {
-        await activeBoss.start();
-        started = true;
-      }
+      await ensureStartedAndQueueReady();
 
-      await activeBoss.work(
+      await getBoss().work(
         queueName,
         {
           batchSize: 1,

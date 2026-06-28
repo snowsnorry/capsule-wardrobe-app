@@ -16,10 +16,12 @@ vi.mock("./config", () => ({
 }));
 
 import {
+  addJobSnapshotListener,
   fetchActiveJobs,
   fetchJob,
   getJobEntityKey,
   parseJobResponse,
+  parseTrackedJobResponse,
   subscribeJobEvents,
   waitForJob,
 } from "./jobs";
@@ -75,6 +77,8 @@ describe("jobs api", () => {
 
   test("fetchJob parses the public job response contract and rejects malformed payloads", async () => {
     const job = createJob({ id: "job/with space" });
+    const onSnapshot = vi.fn();
+    const unsubscribe = addJobSnapshotListener(onSnapshot);
     requestApi.requestJson.mockResolvedValueOnce({ ok: true, job });
 
     await expect(fetchJob("job/with space")).resolves.toEqual({
@@ -85,10 +89,25 @@ describe("jobs api", () => {
       "https://api.example.test/jobs/job%2Fwith%20space",
       { credentials: "include" },
     );
+    expect(onSnapshot).toHaveBeenCalledWith(job);
+    unsubscribe();
 
     expect(() =>
       parseJobResponse({ ok: true, job: { kind: "missing-id" } }),
     ).toThrowError("invalid_job_response");
+  });
+
+  test("parseTrackedJobResponse publishes valid job snapshots", () => {
+    const job = createJob();
+    const onSnapshot = vi.fn();
+    const unsubscribe = addJobSnapshotListener(onSnapshot);
+
+    expect(parseTrackedJobResponse({ ok: true, job })).toEqual({
+      ok: true,
+      job,
+    });
+    expect(onSnapshot).toHaveBeenCalledWith(job);
+    unsubscribe();
   });
 
   test("waitForJob polls until a terminal job snapshot is returned", async () => {
@@ -128,6 +147,8 @@ describe("jobs api", () => {
 
   test("subscribeJobEvents forwards valid job snapshots and ignores malformed events", async () => {
     const onJob = vi.fn();
+    const onSnapshot = vi.fn();
+    const unsubscribe = addJobSnapshotListener(onSnapshot);
     const signal = new AbortController().signal;
     const failed = createJob({
       status: "failed",
@@ -156,6 +177,8 @@ describe("jobs api", () => {
       }),
     );
     expect(onJob).toHaveBeenCalledWith(failed);
+    expect(onSnapshot).toHaveBeenCalledWith(failed);
+    unsubscribe();
   });
 
   test("getJobEntityKey creates stable sidebar keys for entity-scoped jobs", () => {

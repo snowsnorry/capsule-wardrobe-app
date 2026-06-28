@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "./config";
 import { request, requestJson, type JsonObject } from "./request";
-import { parseJobResponse, type JobResponse } from "./jobs";
+import { parseTrackedJobResponse, type JobResponse } from "./jobs";
 
 type CapsuleResponse = JsonObject;
 type CapsuleFilters = Record<string, unknown>;
@@ -236,7 +236,7 @@ export async function deleteCapsule(id: string): Promise<CapsuleResponse> {
 }
 
 async function generateCapsuleReport(id: string): Promise<JobResponse> {
-  return parseJobResponse(
+  return parseTrackedJobResponse(
     await requestJson(capsuleUrl(`${capsuleIdPath(id)}/report`), {
       method: "POST",
       credentials: "include",

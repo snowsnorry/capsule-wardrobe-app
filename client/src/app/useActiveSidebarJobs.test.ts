@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, renderHook } from "@testing-library/react";
 
 const jobsApi = vi.hoisted(() => ({
+  addJobSnapshotListener: vi.fn(),
   fetchActiveJobs: vi.fn(),
   getJobEntityKey: vi.fn((job: { entity?: { id?: string; type?: string } }) =>
     job.entity?.type === "wardrobe"
@@ -14,8 +15,11 @@ const jobsApi = vi.hoisted(() => ({
 vi.mock("../api/jobs", () => jobsApi);
 
 import { useActiveSidebarJobs } from "./useActiveSidebarJobs";
+import type { JobSnapshot } from "../api/jobs";
 
-function createJob(overrides = {}) {
+const jobSnapshotListeners = new Set<(job: JobSnapshot) => void>();
+
+function createJob(overrides: Partial<JobSnapshot> = {}): JobSnapshot {
   return {
     id: "job-1",
     kind: "capsuleReportGenerate",
@@ -36,6 +40,14 @@ function createJob(overrides = {}) {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  jobSnapshotListeners.clear();
+  jobsApi.addJobSnapshotListener.mockReset();
+  jobsApi.addJobSnapshotListener.mockImplementation((listener) => {
+    jobSnapshotListeners.add(listener);
+    return () => {
+      jobSnapshotListeners.delete(listener);
+    };
+  });
   jobsApi.fetchActiveJobs.mockReset();
   jobsApi.getJobEntityKey.mockClear();
   jobsApi.subscribeJobEvents.mockReset();
@@ -46,14 +58,19 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
-test("useActiveSidebarJobs bootstraps active keys and keeps them across transient refresh failures", async () => {
+function emitJobSnapshot(job: JobSnapshot) {
+  for (const listener of jobSnapshotListeners) {
+    listener(job);
+  }
+}
+
+test("useActiveSidebarJobs bootstraps active keys without interval polling", async () => {
   const queued = createJob();
-  jobsApi.fetchActiveJobs
-    .mockResolvedValueOnce({ ok: true, jobs: [queued] })
-    .mockRejectedValueOnce(new Error("network"));
+  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
 
   const { result } = renderHook(() => useActiveSidebarJobs("person@test.com"));
 
@@ -64,6 +81,85 @@ test("useActiveSidebarJobs bootstraps active keys and keeps them across transien
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(2000);
+  });
+
+  expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+});
+
+test("useActiveSidebarJobs polls idle visible tabs at a low discovery cadence", async () => {
+  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [] });
+
+  renderHook(() => useActiveSidebarJobs("person@test.com"));
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(59_999);
+  });
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(2);
+});
+
+test("useActiveSidebarJobs does not poll the active list while known jobs are tracked by SSE", async () => {
+  const queued = createJob();
+  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
+
+  renderHook(() => useActiveSidebarJobs("person@test.com"));
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+});
+
+test("useActiveSidebarJobs pauses discovery while the document is hidden", async () => {
+  const visibilitySpy = vi
+    .spyOn(document, "visibilityState", "get")
+    .mockReturnValue("hidden");
+  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [] });
+
+  renderHook(() => useActiveSidebarJobs("person@test.com"));
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(jobsApi.fetchActiveJobs).not.toHaveBeenCalled();
+
+  visibilitySpy.mockReturnValue("visible");
+  await act(async () => {
+    document.dispatchEvent(new Event("visibilitychange"));
+    await Promise.resolve();
+  });
+
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+});
+
+test("useActiveSidebarJobs merges locally observed job snapshots", async () => {
+  const queued = createJob();
+  jobsApi.fetchActiveJobs.mockResolvedValueOnce({ ok: true, jobs: [] });
+
+  const { result } = renderHook(() => useActiveSidebarJobs("person@test.com"));
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(result.current.activeJobEntityKeys).toEqual([]);
+
+  act(() => {
+    emitJobSnapshot(queued);
   });
 
   expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);

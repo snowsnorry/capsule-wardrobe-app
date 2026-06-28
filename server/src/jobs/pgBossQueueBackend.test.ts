@@ -7,6 +7,7 @@ afterEach(() => {
 
 function createBossMock() {
   return {
+    createQueue: vi.fn(async () => undefined),
     send: vi.fn(async () => "provider-1"),
     start: vi.fn(async () => undefined),
     stop: vi.fn(async () => undefined),
@@ -34,6 +35,13 @@ test("pg-boss backend starts lazily and enqueues app-owned job payloads", async 
   ).resolves.toBe("provider-1");
 
   expect(boss.start).toHaveBeenCalledTimes(1);
+  expect(boss.createQueue).toHaveBeenCalledWith("core");
+  expect(boss.start.mock.invocationCallOrder[0]).toBeLessThan(
+    boss.createQueue.mock.invocationCallOrder[0],
+  );
+  expect(boss.createQueue.mock.invocationCallOrder[0]).toBeLessThan(
+    boss.send.mock.invocationCallOrder[0],
+  );
   expect(boss.send).toHaveBeenCalledWith(
     "core",
     {
@@ -70,6 +78,10 @@ test("pg-boss backend registers worker with configured local concurrency and nor
     },
   ]);
 
+  expect(boss.createQueue).toHaveBeenCalledWith("core");
+  expect(boss.createQueue.mock.invocationCallOrder[0]).toBeLessThan(
+    boss.work.mock.invocationCallOrder[0],
+  );
   expect(boss.work).toHaveBeenCalledWith(
     "core",
     {
@@ -99,6 +111,7 @@ test("pg-boss backend clamps invalid concurrency and stops only after start", as
 
   await backend.start(async () => undefined);
   expect(getMockCall(boss.work)[1]).toMatchObject({ localConcurrency: 1 });
+  expect(boss.createQueue).toHaveBeenCalledTimes(1);
 
   await backend.stop();
   expect(boss.stop).toHaveBeenCalledWith({

@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "./config";
 import { getCachedJson, request, requestJson } from "./request";
 import type { JsonObject } from "./request";
-import { parseJobResponse, type JobResponse } from "./jobs";
+import { parseTrackedJobResponse, type JobResponse } from "./jobs";
 import type { PersonalItemsReport } from "../app/appTypes";
 
 type PersonalItemSource = "uploaded" | "from_catalog";
@@ -125,7 +125,7 @@ async function fetchPersonalItemsReport(
 }
 
 async function generatePersonalItemsReport(): Promise<JobResponse> {
-  return parseJobResponse(
+  return parseTrackedJobResponse(
     await requestJson(getPersonalItemsReportUrl(), {
       method: "POST",
       credentials: "include",
@@ -158,7 +158,7 @@ async function uploadWardrobeImages(
     ...EMPTY_UPLOAD_PROGRESS,
     total: files.length,
   });
-  return parseJobResponse(
+  return parseTrackedJobResponse(
     await requestJson(`${API_BASE_URL}/wardrobe/items/upload`, {
       method: "POST",
       credentials: "include",
@@ -175,7 +175,7 @@ async function uploadWardrobeUrls(
     ...EMPTY_UPLOAD_PROGRESS,
     total: urls.length,
   });
-  return parseJobResponse(
+  return parseTrackedJobResponse(
     await requestJson(`${API_BASE_URL}/wardrobe/items/upload-url`, {
       method: "POST",
       credentials: "include",

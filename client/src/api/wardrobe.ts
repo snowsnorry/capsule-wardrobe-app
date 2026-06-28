@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "./config";
 import { requestJson } from "./request";
-import { parseJobResponse, type JobResponse } from "./jobs";
+import { parseTrackedJobResponse, type JobResponse } from "./jobs";
 import type { JsonObject } from "./request";
 
 class RetriableError extends Error {}
@@ -127,7 +127,7 @@ async function subscribeCapsuleEvents({
 async function regenerateCapsuleWardrobe({
   capsuleId,
 }: WardrobeMutationInput): Promise<JobResponse> {
-  return parseJobResponse(
+  return parseTrackedJobResponse(
     await requestJson(
       `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate`,
       {
@@ -142,7 +142,7 @@ async function regenerateSelectedWardrobeItems({
   itemUrls,
   capsuleId,
 }: SelectedWardrobeMutationInput): Promise<JobResponse> {
-  return parseJobResponse(
+  return parseTrackedJobResponse(
     await requestJson(
       `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/regenerate-selected`,
       {

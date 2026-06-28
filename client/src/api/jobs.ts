@@ -43,10 +43,12 @@ type EventStreamLike = {
 type WaitForJobOptions = {
   signal?: AbortSignal;
 };
+type JobSnapshotListener = (job: JobSnapshot) => void;
 
 let fetchEventSourcePromise: Promise<
   EventStreamLike["fetchEventSource"]
 > | null = null;
+const jobSnapshotListeners = new Set<JobSnapshotListener>();
 
 function loadFetchEventSource(): Promise<EventStreamLike["fetchEventSource"]> {
   if (!fetchEventSourcePromise) {
@@ -77,6 +79,12 @@ function parseJobResponse(response: JsonObject): JobResponse {
   return { ok: true, job };
 }
 
+function parseTrackedJobResponse(response: JsonObject): JobResponse {
+  const parsed = parseJobResponse(response);
+  emitJobSnapshot(parsed.job);
+  return parsed;
+}
+
 async function fetchActiveJobs(options: { force?: boolean } = {}) {
   const response = await getCachedJson(`${jobsUrl()}?status=active`, {
     credentials: "include",
@@ -89,12 +97,27 @@ async function fetchActiveJobs(options: { force?: boolean } = {}) {
   return { ok: true, jobs } as JobsResponse;
 }
 
+function emitJobSnapshot(job: JobSnapshot) {
+  for (const listener of jobSnapshotListeners) {
+    listener(job);
+  }
+}
+
+function addJobSnapshotListener(listener: JobSnapshotListener) {
+  jobSnapshotListeners.add(listener);
+  return () => {
+    jobSnapshotListeners.delete(listener);
+  };
+}
+
 async function fetchJob(id: string) {
-  return parseJobResponse(
+  const response = parseJobResponse(
     await requestJson(jobsUrl(`/${encodeURIComponent(id)}`), {
       credentials: "include",
     }),
   );
+  emitJobSnapshot(response.job);
+  return response;
 }
 
 function isTerminalJob(job: JobSnapshot) {
@@ -211,6 +234,7 @@ async function subscribeJobEvents({
       try {
         const data = JSON.parse(event.data) as { job?: unknown };
         if (isJobSnapshot(data.job)) {
+          emitJobSnapshot(data.job);
           onJob(data.job);
         }
       } catch {
@@ -228,10 +252,12 @@ function getJobEntityKey(job: JobSnapshot): string {
 }
 
 export {
+  addJobSnapshotListener,
   fetchActiveJobs,
   fetchJob,
   getJobEntityKey,
   parseJobResponse,
+  parseTrackedJobResponse,
   subscribeJobEvents,
   waitForJob,
 };
