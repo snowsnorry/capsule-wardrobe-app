@@ -149,7 +149,7 @@ function CapsuleActionsButton({
 function CapsuleJobProgress() {
   return (
     <Box
-      className="capsule-row-actions-slot"
+      className="capsule-row-job-slot"
       sx={{ alignItems: "center", display: "flex", justifyContent: "center" }}
     >
       <CircularProgress
@@ -316,6 +316,7 @@ export function CapsuleRow({
       }
       selected={isActive}
       disabled={isInteractionDisabled}
+      data-job-active={isJobActive ? "true" : undefined}
       onClick={handleClick}
       onContextMenu={mobileContextMenu.onContextMenu}
       onKeyDown={mobileContextMenu.onKeyDown}

@@ -16,6 +16,7 @@ import type {
 } from "./appTypes";
 import type { SettingsSavePayload } from "../components/SettingsDialog";
 import type { UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
+import type { JobSnapshot } from "../api/jobs";
 import type { MainScreenItem } from "../screens/mainScreen/MainScreenTypes";
 
 type TranslationFn = (key: string, params?: Record<string, unknown>) => string;
@@ -57,6 +58,7 @@ type SharedFilterProps = {
 
 export type AppRouteContentProps = SharedFilterProps & {
   appRoute: AppRoute;
+  activeJobEntityKeys: string[];
   currentView: string;
   hasFilterChanges: boolean;
   hasPendingAdditionalItems: boolean;
@@ -83,6 +85,7 @@ export type AppRouteContentProps = SharedFilterProps & {
   status: StatusState;
   t: TranslationFn;
   user: UserLike | null;
+  waitForJobCompletion: (jobId: string) => Promise<JobSnapshot>;
   step: "email" | "code";
   email: string;
   code: string;

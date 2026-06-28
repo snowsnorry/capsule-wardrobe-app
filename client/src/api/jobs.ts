@@ -130,15 +130,15 @@ function delay(ms: number, signal?: AbortSignal) {
       reject(new Error("job_wait_aborted"));
       return;
     }
-    const timer = window.setTimeout(resolve, ms);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        window.clearTimeout(timer);
-        reject(new Error("job_wait_aborted"));
-      },
-      { once: true },
-    );
+    const onAbort = () => {
+      window.clearTimeout(timer);
+      reject(new Error("job_wait_aborted"));
+    };
+    const timer = window.setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -192,10 +192,6 @@ async function waitForJob(
       reject(error);
     };
 
-    const poll = () => {
-      void pollJobUntilTerminal(id, controller.signal).then(settle, fail);
-    };
-
     void subscribeJobEvents({
       id,
       signal: controller.signal,
@@ -208,10 +204,9 @@ async function waitForJob(
       .catch(() => undefined)
       .finally(() => {
         if (!settled && !controller.signal.aborted) {
-          poll();
+          void pollJobUntilTerminal(id, controller.signal).then(settle, fail);
         }
       });
-    poll();
   });
 }
 
@@ -240,6 +235,9 @@ async function subscribeJobEvents({
       } catch {
         // Ignore malformed transient events; polling can recover.
       }
+    },
+    onerror(error: unknown) {
+      throw error;
     },
   });
 }

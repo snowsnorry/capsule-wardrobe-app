@@ -11,10 +11,17 @@ vi.mock("../screens/mainScreen/MainScreen", () => ({
     onOpenCapsule,
     items,
     userEmail,
+    isCapsuleReportPending,
+    isContentBusy,
+    isLoadingItems,
   }) => (
     <div>
       <span>
         main:{userEmail}:{items.length}
+      </span>
+      <span>
+        main-state:{String(isLoadingItems)}:{String(isCapsuleReportPending)}:
+        {String(isContentBusy)}
       </span>
       <button type="button" onClick={() => onToggleOccasion("office")}>
         main-occasion
@@ -54,7 +61,7 @@ vi.mock("../screens/SearchScreen", () => ({
 }));
 
 vi.mock("../screens/WardrobeScreen", () => ({
-  default: () => <div>wardrobe</div>,
+  default: ({ isJobActive }) => <div>wardrobe:{String(isJobActive)}</div>,
 }));
 
 vi.mock("../screens/StatisticsScreen", () => ({
@@ -76,6 +83,7 @@ type AppRouteContentProps = ComponentProps<typeof AppRouteContent>;
 function makeProps(overrides: Record<string, unknown> = {}) {
   return {
     appRoute: "capsule",
+    activeJobEntityKeys: [],
     currentView: "main",
     hasFilterChanges: false,
     hasPendingAdditionalItems: false,
@@ -124,6 +132,7 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     selectedSourceMode: "catalog_only",
     selectedText: "",
     user: { email: "person@example.com" },
+    waitForJobCompletion: vi.fn(() => Promise.resolve({ status: "completed" })),
     step: "email",
     email: "person@example.com",
     code: "",
@@ -246,7 +255,7 @@ describe("AppRouteContent", () => {
         <AppRouteContent {...routeProps({ appRoute: "wardrobe" })} />
       </Suspense>,
     );
-    expect(await screen.findByText("wardrobe")).toBeInTheDocument();
+    expect(await screen.findByText("wardrobe:false")).toBeInTheDocument();
 
     rerender(
       <Suspense fallback={<div>loading</div>}>
@@ -282,6 +291,29 @@ describe("AppRouteContent", () => {
       props.setSelectedSeason,
     );
     expect(props.onOpenCapsule).toHaveBeenCalledWith("capsule-1");
+  });
+
+  test("capsule active job marks report busy without enabling item placeholders", async () => {
+    renderRoute({
+      activeJobEntityKeys: ["capsule:capsule-1"],
+      isLoadingItems: false,
+    });
+
+    expect(
+      await screen.findByText("main-state:false:true:true"),
+    ).toBeInTheDocument();
+  });
+
+  test("capsule job for another capsule does not busy the current capsule", async () => {
+    renderRoute({
+      activeJobEntityKeys: ["capsule:capsule-2"],
+      isContentBusy: false,
+      isCapsuleReportPending: false,
+    });
+
+    expect(
+      await screen.findByText("main-state:false:false:false"),
+    ).toBeInTheDocument();
   });
 
   test("wires profile route shared filter callbacks and hides transient profile setup", async () => {

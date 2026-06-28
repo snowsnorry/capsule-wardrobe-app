@@ -118,6 +118,11 @@ describe("buildAppControllerModel", () => {
       isLarge: true,
       isShareDialogOpen: false,
       isShareLoading: false,
+      jobTracker: {
+        activeJobEntityKeys: ["capsule:capsule-1"],
+        jobs: [],
+        waitForJobCompletion: vi.fn(),
+      },
       navigation: {
         appRoute: "capsule",
         capsuleRouteId: "",
@@ -181,6 +186,7 @@ describe("buildAppControllerModel", () => {
     );
     expect(sidebarActions.openSearchDialog).toHaveBeenCalledTimes(1);
     expect(model.activeCapsuleId).toBe("capsule-1");
+    expect(model.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
     expect(model.shareMetadata).toEqual({ id: "share-1" });
     expect(model.notificationOpen).toBe(true);
   });

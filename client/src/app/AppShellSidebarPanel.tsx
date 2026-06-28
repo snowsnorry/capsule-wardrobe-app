@@ -12,7 +12,6 @@ import {
 } from "./AppShellRouteLayout";
 import { getActiveSidebarApp } from "./appRouting";
 import { usePersonalItemsCount } from "./personalItemsCount";
-import { useActiveSidebarJobs } from "./useActiveSidebarJobs";
 import { useSidebarCapsuleSearch } from "./useSidebarCapsuleSearch";
 import type { AppShellCapsuleActionMenuController } from "./AppShellCapsuleActionMenu";
 import type { AppShellOutfitActionMenuController } from "./AppShellOutfitActionMenu";
@@ -72,7 +71,6 @@ function useAppShellSidebarPanelModel(props: AppShellContentProps) {
   const activeSidebarApp = getActiveSidebarApp(props.appRoute);
   const userEmail = getUserEmail(props.user);
   const personalItemsCount = usePersonalItemsCount(userEmail);
-  const activeJobs = useActiveSidebarJobs(userEmail);
   const usesCapsuleLayout = isFullScreenAppShellRoute(props);
   const sidebarSearch = useSidebarCapsuleSearch(props.onSearchCapsules);
   const outfitSidebarSearch = useSidebarCapsuleSearch(
@@ -97,7 +95,7 @@ function useAppShellSidebarPanelModel(props: AppShellContentProps) {
 
   return {
     activeSidebarApp,
-    activeJobEntityKeys: activeJobs.activeJobEntityKeys,
+    activeJobEntityKeys: props.activeJobEntityKeys,
     capsuleActionMenuControllerRef,
     highlightedCapsuleId: getHighlightedCapsuleId(activeSidebarApp, props),
     highlightedOutfitId: getHighlightedOutfitId(activeSidebarApp, props),

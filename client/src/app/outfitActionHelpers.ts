@@ -40,13 +40,15 @@ export async function refreshActiveOutfit(
   outfitId: string,
   { onlyIfActive = false }: { onlyIfActive?: boolean } = {},
 ) {
-  const result = (await fetchOutfit(outfitId)) as OutfitMutationResponse;
-  if (
-    !onlyIfActive ||
-    fromContext<string>(context, "activeOutfitId") === outfitId
-  ) {
-    setActiveOutfit(context, result.outfit || null);
+  const getActiveOutfitId =
+    fromContext<(() => string) | undefined>(context, "getActiveOutfitId") ||
+    (() => fromContext<string>(context, "activeOutfitId"));
+  if (onlyIfActive && getActiveOutfitId() !== outfitId) {
+    await refreshOutfitList(context);
+    return;
   }
+  const result = (await fetchOutfit(outfitId)) as OutfitMutationResponse;
+  setActiveOutfit(context, result.outfit || null);
   await refreshOutfitList(context);
 }
 

@@ -14,6 +14,7 @@ import type { useAppNotifications } from "./useAppNotifications";
 import type { useAppState } from "./useAppState";
 import type { usePasskeyPrompt } from "./usePasskeyPrompt";
 import type { useProfileOptions } from "./useProfileOptions";
+import type { JobTrackerState } from "./useActiveSidebarJobs";
 
 type AppState = ReturnType<typeof useAppState>;
 type AppNavigation = ReturnType<typeof useAppNavigation>;
@@ -275,6 +276,7 @@ export function buildControllerModel({
   appTheme,
   cardPadding,
   handlers,
+  jobTracker,
   isLarge,
   navigation,
   notifications,
@@ -289,6 +291,7 @@ export function buildControllerModel({
   cardPadding: number;
   handlers: ReturnType<typeof useAppHandlers>;
   isLarge: boolean;
+  jobTracker: JobTrackerState;
   navigation: AppNavigation;
   notifications: AppNotifications;
   passkeys: AppPasskeys;
@@ -305,6 +308,7 @@ export function buildControllerModel({
     dismissPasskeyPrompt: passkeys.dismissPasskeyPrompt,
     handleAddPasskeyFromPrompt: passkeys.handleAddPasskeyFromPrompt,
     handlers,
+    jobTracker,
     navigation,
     notifications,
     profileOptions,

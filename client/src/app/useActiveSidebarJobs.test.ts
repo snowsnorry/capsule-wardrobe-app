@@ -4,6 +4,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 const jobsApi = vi.hoisted(() => ({
   addJobSnapshotListener: vi.fn(),
   fetchActiveJobs: vi.fn(),
+  fetchJob: vi.fn(),
   getJobEntityKey: vi.fn((job: { entity?: { id?: string; type?: string } }) =>
     job.entity?.type === "wardrobe"
       ? "wardrobe"
@@ -14,7 +15,7 @@ const jobsApi = vi.hoisted(() => ({
 
 vi.mock("../api/jobs", () => jobsApi);
 
-import { useActiveSidebarJobs } from "./useActiveSidebarJobs";
+import { useJobTracker } from "./useActiveSidebarJobs";
 import type { JobSnapshot } from "../api/jobs";
 
 const jobSnapshotListeners = new Set<(job: JobSnapshot) => void>();
@@ -38,6 +39,12 @@ function createJob(overrides: Partial<JobSnapshot> = {}): JobSnapshot {
   };
 }
 
+async function flushPromises(count = 1) {
+  for (let index = 0; index < count; index += 1) {
+    await Promise.resolve();
+  }
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   jobSnapshotListeners.clear();
@@ -49,6 +56,7 @@ beforeEach(() => {
     };
   });
   jobsApi.fetchActiveJobs.mockReset();
+  jobsApi.fetchJob.mockReset();
   jobsApi.getJobEntityKey.mockClear();
   jobsApi.subscribeJobEvents.mockReset();
   jobsApi.subscribeJobEvents.mockImplementation(
@@ -68,126 +76,138 @@ function emitJobSnapshot(job: JobSnapshot) {
   }
 }
 
-test("useActiveSidebarJobs bootstraps active keys without interval polling", async () => {
+test("useJobTracker discovers active jobs every 30s even while jobs are active", async () => {
   const queued = createJob();
   jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
 
-  const { result } = renderHook(() => useActiveSidebarJobs("person@test.com"));
+  const { result } = renderHook(() => useJobTracker("person@test.com"));
 
   await act(async () => {
-    await Promise.resolve();
+    await flushPromises();
   });
   expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
-
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(2000);
-  });
-
-  expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
   expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
-});
-
-test("useActiveSidebarJobs polls idle visible tabs at a low discovery cadence", async () => {
-  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [] });
-
-  renderHook(() => useActiveSidebarJobs("person@test.com"));
+  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledWith(
+    expect.objectContaining({ id: "job-1" }),
+  );
 
   await act(async () => {
-    await Promise.resolve();
-  });
-  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
-
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(59_999);
+    await vi.advanceTimersByTimeAsync(29_999);
   });
   expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1);
+    await flushPromises();
   });
   expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(2);
 });
 
-test("useActiveSidebarJobs does not poll the active list while known jobs are tracked by SSE", async () => {
-  const queued = createJob();
-  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
+test("useJobTracker discovers new jobs on the next discovery and opens SSE for them", async () => {
+  const firstJob = createJob();
+  const secondJob = createJob({
+    id: "job-2",
+    kind: "outfitReportGenerate",
+    entity: { type: "outfit", id: "outfit-1" },
+  });
+  jobsApi.fetchActiveJobs
+    .mockResolvedValueOnce({ ok: true, jobs: [firstJob] })
+    .mockResolvedValueOnce({ ok: true, jobs: [firstJob, secondJob] });
 
-  renderHook(() => useActiveSidebarJobs("person@test.com"));
+  const { result } = renderHook(() => useJobTracker("person@test.com"));
 
   await act(async () => {
-    await Promise.resolve();
+    await flushPromises();
   });
-  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+  expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
 
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(30_000);
+    await flushPromises();
   });
-  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+
+  expect(result.current.activeJobEntityKeys).toEqual([
+    "capsule:capsule-1",
+    "outfit:outfit-1",
+  ]);
+  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledWith(
+    expect.objectContaining({ id: "job-1" }),
+  );
+  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledWith(
+    expect.objectContaining({ id: "job-2" }),
+  );
 });
 
-test("useActiveSidebarJobs pauses discovery while the document is hidden", async () => {
-  const visibilitySpy = vi
-    .spyOn(document, "visibilityState", "get")
-    .mockReturnValue("hidden");
-  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [] });
+test("useJobTracker resolves waiters and removes terminal jobs from SSE snapshots", async () => {
+  const queued = createJob();
+  const completed = createJob({
+    status: "completed",
+    completedAt: "2026-01-01T00:01:00.000Z",
+  });
+  let emitSseJob: ((job: JobSnapshot) => void) | undefined;
+  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
+  jobsApi.subscribeJobEvents.mockImplementation(({ onJob }) => {
+    emitSseJob = onJob;
+    return new Promise(() => undefined);
+  });
 
-  renderHook(() => useActiveSidebarJobs("person@test.com"));
+  const { result } = renderHook(() => useJobTracker("person@test.com"));
 
   await act(async () => {
-    await Promise.resolve();
+    await flushPromises();
   });
-  expect(jobsApi.fetchActiveJobs).not.toHaveBeenCalled();
+  const waitResultPromise = result.current.waitForJobCompletion("job-1");
+  act(() => {
+    emitSseJob?.(completed);
+  });
+  const waitResult = await waitResultPromise;
+
+  expect(waitResult).toEqual(completed);
+  expect(result.current.activeJobEntityKeys).toEqual([]);
+});
+
+test("useJobTracker pauses timer and SSE while hidden, then discovers immediately when visible", async () => {
+  const visibilitySpy = vi
+    .spyOn(document, "visibilityState", "get")
+    .mockReturnValue("visible");
+  const queued = createJob();
+  const streamSignals: AbortSignal[] = [];
+  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
+  jobsApi.subscribeJobEvents.mockImplementation(({ signal }) => {
+    streamSignals.push(signal);
+    return new Promise(() => undefined);
+  });
+
+  renderHook(() => useJobTracker("person@test.com"));
+
+  await act(async () => {
+    await flushPromises();
+  });
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+  expect(streamSignals).toHaveLength(1);
+
+  visibilitySpy.mockReturnValue("hidden");
+  act(() => {
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(streamSignals[0].aborted).toBe(true);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30_000);
+  });
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
 
   visibilitySpy.mockReturnValue("visible");
   await act(async () => {
     document.dispatchEvent(new Event("visibilitychange"));
-    await Promise.resolve();
+    await flushPromises();
   });
 
-  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
+  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(2);
+  expect(streamSignals).toHaveLength(2);
 });
 
-test("useActiveSidebarJobs merges locally observed job snapshots", async () => {
-  const queued = createJob();
-  jobsApi.fetchActiveJobs.mockResolvedValueOnce({ ok: true, jobs: [] });
-
-  const { result } = renderHook(() => useActiveSidebarJobs("person@test.com"));
-
-  await act(async () => {
-    await Promise.resolve();
-  });
-  expect(result.current.activeJobEntityKeys).toEqual([]);
-
-  act(() => {
-    emitJobSnapshot(queued);
-  });
-
-  expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
-});
-
-test("useActiveSidebarJobs clears active jobs when user email is empty", async () => {
-  const queued = createJob();
-  jobsApi.fetchActiveJobs.mockResolvedValueOnce({ ok: true, jobs: [queued] });
-
-  const { result, rerender } = renderHook(
-    ({ email }) => useActiveSidebarJobs(email),
-    { initialProps: { email: "person@test.com" } },
-  );
-
-  await act(async () => {
-    await Promise.resolve();
-  });
-  expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
-
-  rerender({ email: "" });
-
-  await act(async () => {
-    await Promise.resolve();
-  });
-  expect(result.current.activeJobEntityKeys).toEqual([]);
-});
-
-test("useActiveSidebarJobs removes terminal jobs from SSE snapshots", async () => {
+test("useJobTracker does one terminal reconciliation fetch when a known job disappears from active discovery", async () => {
   const queued = createJob();
   const completed = createJob({
     status: "completed",
@@ -196,72 +216,71 @@ test("useActiveSidebarJobs removes terminal jobs from SSE snapshots", async () =
   jobsApi.fetchActiveJobs
     .mockResolvedValueOnce({ ok: true, jobs: [queued] })
     .mockResolvedValueOnce({ ok: true, jobs: [] });
-  jobsApi.subscribeJobEvents.mockImplementation(async ({ onJob }) => {
-    onJob(completed);
-  });
+  jobsApi.fetchJob.mockResolvedValue({ ok: true, job: completed });
 
-  const { result } = renderHook(() => useActiveSidebarJobs("person@test.com"));
+  const { result } = renderHook(() => useJobTracker("person@test.com"));
 
   await act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushPromises();
   });
-  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledWith(
-    expect.objectContaining({ id: "job-1" }),
-  );
+  expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
+
   await act(async () => {
-    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(30_000);
+    await flushPromises(2);
   });
+
+  expect(jobsApi.fetchJob).toHaveBeenCalledTimes(1);
+  expect(jobsApi.fetchJob).toHaveBeenCalledWith("job-1");
   expect(result.current.activeJobEntityKeys).toEqual([]);
 });
 
-test("useActiveSidebarJobs merges non-terminal SSE snapshots", async () => {
+test("useJobTracker does not fetch job details when SSE fails for a still-active job", async () => {
   const queued = createJob();
-  const running = createJob({ status: "running" });
-  const outfitJob = createJob({
-    id: "job-2",
-    kind: "outfitReportGenerate",
-    status: "running",
-    entity: { type: "outfit", id: "outfit-1" },
-  });
   jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
-  jobsApi.subscribeJobEvents.mockImplementation(({ onJob }) => {
-    onJob(running);
-    onJob(outfitJob);
-    return new Promise(() => undefined);
-  });
+  jobsApi.subscribeJobEvents
+    .mockRejectedValueOnce(new Error("stream failed"))
+    .mockImplementation(() => new Promise(() => undefined));
 
-  const { result } = renderHook(() => useActiveSidebarJobs("person@test.com"));
+  renderHook(() => useJobTracker("person@test.com"));
 
   await act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushPromises(2);
+  });
+  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledTimes(1);
+  expect(jobsApi.fetchJob).not.toHaveBeenCalled();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30_000);
+    await flushPromises(2);
   });
 
-  expect(result.current.jobs).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ id: "job-1", status: "running" }),
-      expect.objectContaining({ id: "job-2", status: "running" }),
-    ]),
-  );
+  expect(jobsApi.fetchJob).not.toHaveBeenCalled();
+  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledTimes(2);
 });
 
-test("useActiveSidebarJobs refetches active jobs when a non-terminal stream closes", async () => {
+test("useJobTracker merges locally observed snapshots and clears state on logout", async () => {
   const queued = createJob();
-  const running = createJob({ status: "running" });
-  jobsApi.fetchActiveJobs
-    .mockResolvedValueOnce({ ok: true, jobs: [queued] })
-    .mockResolvedValueOnce({ ok: true, jobs: [running] });
-  jobsApi.subscribeJobEvents.mockResolvedValue(undefined);
+  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [] });
 
-  const { result } = renderHook(() => useActiveSidebarJobs("person@test.com"));
-
-  await act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+  const { result, rerender } = renderHook(({ email }) => useJobTracker(email), {
+    initialProps: { email: "person@test.com" },
   });
 
-  expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(2);
-  expect(result.current.jobs[0]).toMatchObject({ status: "running" });
+  await act(async () => {
+    await flushPromises();
+  });
+  expect(result.current.activeJobEntityKeys).toEqual([]);
+
+  act(() => {
+    emitJobSnapshot(queued);
+  });
+  expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
+
+  rerender({ email: "" });
+  await act(async () => {
+    await flushPromises();
+  });
+
+  expect(result.current.activeJobEntityKeys).toEqual([]);
 });

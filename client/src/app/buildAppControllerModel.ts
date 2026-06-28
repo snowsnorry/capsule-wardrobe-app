@@ -5,6 +5,7 @@ import type { useAppNavigation } from "./useAppNavigation";
 import type { useAppNotifications } from "./useAppNotifications";
 import type { useAppState } from "./useAppState";
 import type { useProfileOptions } from "./useProfileOptions";
+import type { JobTrackerState } from "./useActiveSidebarJobs";
 import type { buildAppViewState } from "./appViewState";
 import type { CapsuleMeta, OutfitMeta, PasskeyPromptState } from "./appTypes";
 
@@ -19,6 +20,7 @@ type ControllerModelInput = {
   isLarge: boolean;
   isShareDialogOpen: boolean;
   isShareLoading: boolean;
+  jobTracker: JobTrackerState;
   navigation: ReturnType<typeof useAppNavigation>;
   notifications: ReturnType<typeof useAppNotifications>;
   passkeyPrompt: PasskeyPromptState;
@@ -164,6 +166,8 @@ function buildLayout(input: ControllerModelInput) {
   return {
     activeCapsuleId: state.activeCapsuleId,
     activeCapsuleMeta: state.activeCapsuleMeta,
+    activeJobEntityKeys: input.jobTracker.activeJobEntityKeys,
+    waitForJobCompletion: input.jobTracker.waitForJobCompletion,
     activeOutfitId: state.activeOutfitId,
     activeOutfitMeta: state.activeOutfitMeta,
     appRoute: input.navigation.appRoute,

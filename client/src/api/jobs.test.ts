@@ -110,35 +110,59 @@ describe("jobs api", () => {
     unsubscribe();
   });
 
-  test("waitForJob polls until a terminal job snapshot is returned", async () => {
+  test("waitForJob uses polling fallback only after the SSE stream closes", async () => {
     vi.useFakeTimers();
     const running = createJob({ status: "running" });
     const completed = createJob({
       status: "completed",
       completedAt: "2026-01-01T00:01:00.000Z",
     });
+    eventSourceApi.fetchEventSource.mockResolvedValue(undefined);
     requestApi.requestJson
       .mockResolvedValueOnce({ ok: true, job: running })
       .mockResolvedValueOnce({ ok: true, job: completed });
 
     const result = waitForJob("job-1");
+    expect(requestApi.requestJson).not.toHaveBeenCalled();
+
+    await Promise.resolve();
     await vi.runOnlyPendingTimersAsync();
 
     await expect(result).resolves.toEqual(completed);
     expect(requestApi.requestJson).toHaveBeenCalledTimes(2);
   });
 
-  test("waitForJob keeps waiting after transient polling failures", async () => {
+  test("waitForJob resolves from SSE without polling", async () => {
+    const completed = createJob({
+      status: "completed",
+      completedAt: "2026-01-01T00:01:00.000Z",
+    });
+    eventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        const onmessage = options.onmessage as (event: {
+          data?: string;
+        }) => void;
+        onmessage({ data: JSON.stringify({ job: completed }) });
+      },
+    );
+
+    await expect(waitForJob("job-1")).resolves.toEqual(completed);
+    expect(requestApi.requestJson).not.toHaveBeenCalled();
+  });
+
+  test("waitForJob keeps waiting after transient fallback polling failures", async () => {
     vi.useFakeTimers();
     const completed = createJob({
       status: "completed",
       completedAt: "2026-01-01T00:01:00.000Z",
     });
+    eventSourceApi.fetchEventSource.mockResolvedValue(undefined);
     requestApi.requestJson
       .mockRejectedValueOnce(new Error("network"))
       .mockResolvedValueOnce({ ok: true, job: completed });
 
     const result = waitForJob("job-1");
+    await Promise.resolve();
     await vi.runOnlyPendingTimersAsync();
 
     await expect(result).resolves.toEqual(completed);
@@ -179,6 +203,19 @@ describe("jobs api", () => {
     expect(onJob).toHaveBeenCalledWith(failed);
     expect(onSnapshot).toHaveBeenCalledWith(failed);
     unsubscribe();
+  });
+
+  test("subscribeJobEvents fails fast on stream errors instead of allowing hidden retries", async () => {
+    const streamError = new Error("stream failed");
+    eventSourceApi.fetchEventSource.mockImplementation((_url, options) => {
+      const onerror = options.onerror as (error: unknown) => void;
+      onerror(streamError);
+      return Promise.resolve();
+    });
+
+    await expect(
+      subscribeJobEvents({ id: "job-1", onJob: vi.fn() }),
+    ).rejects.toThrow("stream failed");
   });
 
   test("getJobEntityKey creates stable sidebar keys for entity-scoped jobs", () => {

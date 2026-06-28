@@ -4,7 +4,6 @@ import {
   GOOGLE_CLIENT_ID,
 } from "./appConstants";
 import { importMainScreen } from "./mainScreenLoader";
-import { useActiveSidebarJobs } from "./useActiveSidebarJobs";
 import type { AppRouteContentProps } from "./AppRouteContentTypes";
 const MainScreen = lazy(importMainScreen);
 const WardrobeScreen = lazy(() => import("../screens/WardrobeScreen"));
@@ -153,8 +152,7 @@ function MainRoute(props: AppRouteContentProps) {
 }
 
 function useCurrentEntityJobState(props: AppRouteContentProps) {
-  const activeJobs = useActiveSidebarJobs(props.user?.email || "");
-  const activeKeys = activeJobs.activeJobEntityKeys;
+  const activeKeys = props.activeJobEntityKeys;
   return {
     isCapsuleJobActive: Boolean(
       props.appRoute === "capsule" &&
@@ -172,7 +170,7 @@ function useCurrentEntityJobState(props: AppRouteContentProps) {
   };
 }
 
-// eslint-disable-next-line complexity
+// eslint-disable-next-line complexity, max-lines-per-function
 export default function AppRouteContent(props: AppRouteContentProps) {
   const currentEntityJobs = useCurrentEntityJobState(props);
   if (props.isCheckingSession || !props.sessionInitialized) {
@@ -210,7 +208,10 @@ export default function AppRouteContent(props: AppRouteContentProps) {
     }
     if (props.appRoute === "wardrobe") {
       return (
-        <WardrobeScreen isJobActive={currentEntityJobs.isWardrobeJobActive} />
+        <WardrobeScreen
+          isJobActive={currentEntityJobs.isWardrobeJobActive}
+          waitForJobCompletion={props.waitForJobCompletion}
+        />
       );
     }
     if (props.appRoute === "statistics") {
@@ -254,9 +255,10 @@ export default function AppRouteContent(props: AppRouteContentProps) {
         isContentBusy={
           props.isContentBusy || currentEntityJobs.isCapsuleJobActive
         }
-        isLoadingItems={
-          props.isLoadingItems || currentEntityJobs.isCapsuleJobActive
+        isCapsuleReportPending={
+          props.isCapsuleReportPending || currentEntityJobs.isCapsuleJobActive
         }
+        isLoadingItems={props.isLoadingItems}
       />
     );
   }

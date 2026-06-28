@@ -43,6 +43,23 @@ function capsuleActionsSlotSx(isOverlaySidebar: boolean) {
   };
 }
 
+function capsuleJobSlotSx(isOverlaySidebar: boolean) {
+  return {
+    alignItems: "center",
+    display: "flex",
+    flex: "0 0 auto",
+    height: 32,
+    justifyContent: "center",
+    minWidth: 0,
+    opacity: 1,
+    overflow: "hidden",
+    pointerEvents: "none",
+    position: isOverlaySidebar ? "static" : "absolute",
+    right: 0,
+    width: 32,
+  };
+}
+
 function getCapsuleRowTransformTransition(isPressing: boolean) {
   if (isPressing) {
     return "transform 520ms linear";
@@ -88,6 +105,7 @@ export function capsuleRowSx(isOverlaySidebar: boolean, isPressing = false) {
       transition: "padding-right 180ms ease",
     },
     "& .capsule-row-actions-slot": capsuleActionsSlotSx(isOverlaySidebar),
+    "& .capsule-row-job-slot": capsuleJobSlotSx(isOverlaySidebar),
     "&:hover .capsule-row-unsaved-dot, &:focus-within .capsule-row-unsaved-dot":
       {
         opacity: 0,
@@ -95,6 +113,9 @@ export function capsuleRowSx(isOverlaySidebar: boolean, isPressing = false) {
         mr: 0,
       },
     "&:hover .capsule-row-text, &:focus-within .capsule-row-text": {
+      pr: 4,
+    },
+    "&[data-job-active='true'] .capsule-row-text": {
       pr: 4,
     },
     "& .capsule-row-actions": {
@@ -113,7 +134,7 @@ export function capsuleRowSx(isOverlaySidebar: boolean, isPressing = false) {
     "@media (prefers-reduced-motion: reduce)": {
       transform: "none",
       transition: "none",
-      "& .capsule-row-unsaved-dot, & .capsule-row-text, & .capsule-row-actions-slot, & .capsule-row-pin-slot":
+      "& .capsule-row-unsaved-dot, & .capsule-row-text, & .capsule-row-actions-slot, & .capsule-row-job-slot, & .capsule-row-pin-slot":
         {
           transition: "none",
           transform: "none",

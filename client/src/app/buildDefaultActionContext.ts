@@ -44,5 +44,8 @@ export function buildDefaultActionContext({
     startCapsuleEventStream: operations.startCapsuleEventStream,
     startPendingNotificationFlow: operations.startPendingNotificationFlow,
     t,
+    waitForJobCompletion: async () => {
+      throw new Error("job_tracker_unavailable");
+    },
   });
 }

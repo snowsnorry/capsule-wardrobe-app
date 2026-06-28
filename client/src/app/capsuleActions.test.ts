@@ -59,10 +59,6 @@ vi.mock("../api/capsules", () => ({
   updateCapsuleFilters: vi.fn(),
 }));
 
-vi.mock("../api/jobs", () => ({
-  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
-}));
-
 function createJobResponse(id = "job-1") {
   return {
     ok: true,
@@ -256,14 +252,39 @@ describe("capsuleActions", () => {
     });
 
     await generateCurrentCapsuleReport(context, "capsule-1");
+    await vi.waitFor(() =>
+      expect(fetchCapsule).toHaveBeenCalledWith("capsule-1"),
+    );
     await deleteCurrentCapsuleReport(context, "capsule-1");
 
     expect(generateCapsuleReport).toHaveBeenCalledWith("capsule-1");
-    expect(fetchCapsule).toHaveBeenCalledWith("capsule-1");
     expect(deleteCapsuleReport).toHaveBeenCalledWith("capsule-1");
+    expect(context.waitForJobCompletion).toHaveBeenCalledWith("job-1");
     expect(context.applyCapsuleState).toHaveBeenCalledWith(capsuleWithReport);
     expect(context.setIsCapsuleReportPending).toHaveBeenNthCalledWith(1, true);
     expect(context.setIsCapsuleReportPending).toHaveBeenLastCalledWith(false);
+  });
+
+  test("refreshes capsule list but skips body refresh when completed report belongs to a non-active capsule", async () => {
+    vi.mocked(generateCapsuleReport).mockResolvedValueOnce({
+      ...createJobResponse("job-2"),
+    });
+    const context = createActionContext({
+      getActiveCapsuleId: vi.fn(() => "capsule-2"),
+      setCapsuleList: vi.fn(),
+      setCapsulePagination: vi.fn(),
+      waitForJobCompletion: vi.fn(async () => ({ status: "completed" })),
+    });
+
+    await generateCurrentCapsuleReport(context, "capsule-1");
+    await vi.waitFor(() =>
+      expect(context.setCapsuleList).toHaveBeenCalledWith([
+        expect.objectContaining({ id: "capsule-1" }),
+      ]),
+    );
+
+    expect(fetchCapsule).not.toHaveBeenCalled();
+    expect(context.applyCapsuleState).not.toHaveBeenCalled();
   });
 
   test("reports capsule report generation failures without clearing old reports", async () => {
@@ -394,6 +415,7 @@ describe("capsuleActions", () => {
   });
 
   test("resetProfileFilters restores the active capsule or reports errors", async () => {
+    vi.mocked(fetchCapsule).mockReset();
     vi.mocked(fetchCapsule).mockResolvedValueOnce({
       capsule: createTestCapsule({ id: "capsule-1" }),
     });

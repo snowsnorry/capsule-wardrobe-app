@@ -6,13 +6,19 @@ import {
   generatePersonalItemsReport,
   type PersonalItemsReportResponse,
 } from "../api/personalItems";
-import { waitForJob } from "../api/jobs";
+import type { JobSnapshot } from "../api/jobs";
 import type { PersonalItemsReport } from "../app/appTypes";
 
 type UsePersonalItemsReportOptions = {
   setError: (error: string) => void;
   t: (key: string) => string;
+  waitForJobCompletion: (jobId: string) => Promise<JobSnapshot>;
 };
+
+type ReportLoadOptions = Omit<
+  UsePersonalItemsReportOptions,
+  "waitForJobCompletion"
+>;
 
 type ReportStateSetters = {
   setGeneratedAt: Dispatch<SetStateAction<string | null>>;
@@ -40,7 +46,7 @@ function useInitialReportLoad({
   setters,
   setIsLoadingReport,
   t,
-}: UsePersonalItemsReportOptions & {
+}: ReportLoadOptions & {
   setIsLoadingReport: Dispatch<SetStateAction<boolean>>;
   setters: ReportStateSetters;
 }) {
@@ -72,6 +78,7 @@ function useInitialReportLoad({
 function usePersonalItemsReport({
   setError,
   t,
+  waitForJobCompletion,
 }: UsePersonalItemsReportOptions) {
   const [report, setReport] = useState<PersonalItemsReport | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
@@ -105,7 +112,8 @@ function usePersonalItemsReport({
     setIsReportPending(true);
     try {
       const { job } = await generatePersonalItemsReport();
-      void waitForJob(job.id)
+      setIsReportPending(false);
+      void waitForJobCompletion(job.id)
         .then(async (finishedJob) => {
           if (finishedJob.status !== "completed") {
             throw new Error(finishedJob.error?.code || "service_unavailable");

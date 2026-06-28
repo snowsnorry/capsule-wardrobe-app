@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
 import { fetchPersonalItems } from "../api/personalItems";
+import type { JobSnapshot } from "../api/jobs";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 import { getSourceFilter, type WardrobeFilter } from "./WardrobeToolbar";
 import {
@@ -18,6 +19,7 @@ export function useWardrobeItems(
   filter: WardrobeFilter,
   refreshKey: number,
   t: (key: string) => string,
+  waitForJobCompletion: (jobId: string) => Promise<JobSnapshot>,
   options: {
     onItemsChanged?: (reason: WardrobeItemsChangedReason) => void;
   } = {},
@@ -40,6 +42,7 @@ export function useWardrobeItems(
     onItemsChanged: options.onItemsChanged,
     setError,
     t,
+    waitForJobCompletion,
   });
   const handleConfirmRemove = useWardrobeRemoveAction({
     onItemsChanged: options.onItemsChanged,

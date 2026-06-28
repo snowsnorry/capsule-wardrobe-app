@@ -20,6 +20,7 @@ type AppActionContextInput = {
   startCapsuleEventStream: AppActionContext["startCapsuleEventStream"];
   startPendingNotificationFlow: AppActionContext["startPendingNotificationFlow"];
   t: AppActionContext["t"];
+  waitForJobCompletion?: AppActionContext["waitForJobCompletion"];
 };
 
 export function buildAppActionContext(input: AppActionContextInput) {
@@ -41,6 +42,8 @@ export function buildAppActionContext(input: AppActionContextInput) {
     capsuleEventsAbortRef: state.capsuleEventsAbortRef,
     clearShareRoute: input.clearShareRoute,
     closeNotificationPrompt: input.closeNotificationPrompt,
+    getActiveCapsuleId: () => state.activeCapsuleId,
+    getActiveOutfitId: () => state.activeOutfitId,
     handleLogout: async () => {
       await input.handlers.signOut();
     },
@@ -94,5 +97,6 @@ export function buildAppActionContext(input: AppActionContextInput) {
     startPendingNotificationFlow: input.startPendingNotificationFlow,
     t: input.t,
     user: state.user,
+    waitForJobCompletion: input.waitForJobCompletion,
   };
 }

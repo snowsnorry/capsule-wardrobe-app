@@ -10,6 +10,7 @@ import { useAppLifecycleEffects } from "./useAppLifecycleEffects";
 import { useAppNavigation } from "./useAppNavigation";
 import { useAppNotifications } from "./useAppNotifications";
 import { useAppState } from "./useAppState";
+import { useJobTracker } from "./useActiveSidebarJobs";
 import { usePasskeyPrompt } from "./usePasskeyPrompt";
 import { useProfileOptions } from "./useProfileOptions";
 import {
@@ -29,6 +30,7 @@ export function useAppControllerModel() {
   const navigation = useAppNavigation();
   const profileOptions = useProfileOptions();
   const appState = useAppState();
+  const jobTracker = useJobTracker(appState.user?.email || "");
   const cardPadding = useMemo(() => (isLarge ? 5 : 3), [isLarge]);
   const appTheme = useAppTheme(appState.settingsProfile.theme, prefersDarkMode);
   const notifications = useAppNotifications(t, appState.settingsProfile.llm);
@@ -76,6 +78,7 @@ export function useAppControllerModel() {
   connectAppActionContext({
     appState,
     handlers,
+    jobTracker,
     locale,
     navigation,
     notifications,
@@ -91,6 +94,7 @@ export function useAppControllerModel() {
     appTheme,
     cardPadding,
     handlers,
+    jobTracker,
     isLarge,
     navigation,
     notifications,

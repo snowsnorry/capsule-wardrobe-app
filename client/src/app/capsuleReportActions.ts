@@ -3,7 +3,6 @@ import {
   fetchCapsule,
   generateCapsuleReport,
 } from "../api/capsules";
-import { waitForJob } from "../api/jobs";
 import { fromContext, type AppActionContext } from "./actionContext";
 import { refreshCapsuleList } from "./capsuleListActions";
 import type { CapsuleMeta, CapsuleMutationResponse } from "./appTypes";
@@ -20,10 +19,13 @@ async function refreshActiveCapsuleReport(
   context: AppActionContext,
   capsuleId: string,
 ) {
-  const result = (await fetchCapsule(capsuleId)) as {
-    capsule?: CapsuleMeta | null;
-  };
-  if (capsuleId === fromContext<string>(context, "activeCapsuleId")) {
+  const getActiveCapsuleId =
+    fromContext<(() => string) | undefined>(context, "getActiveCapsuleId") ||
+    (() => fromContext<string>(context, "activeCapsuleId"));
+  if (capsuleId === getActiveCapsuleId()) {
+    const result = (await fetchCapsule(capsuleId)) as {
+      capsule?: CapsuleMeta | null;
+    };
     fromContext<(capsule?: CapsuleMeta | null) => void>(
       context,
       "applyCapsuleState",
@@ -40,7 +42,16 @@ async function generateCurrentCapsuleReport(
   setCapsuleReportPending(context, true);
   try {
     const { job } = await generateCapsuleReport(capsuleId);
-    void waitForJob(job.id)
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      setCapsuleReportPending(context, false);
+    }
+    const waitForJobCompletion = fromContext<
+      (jobId: string) => Promise<{
+        status: string;
+        error?: { code?: string | null } | null;
+      }>
+    >(context, "waitForJobCompletion");
+    void waitForJobCompletion(job.id)
       .then(async (finishedJob) => {
         if (finishedJob.status === "completed") {
           await refreshActiveCapsuleReport(context, capsuleId);

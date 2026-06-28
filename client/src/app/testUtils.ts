@@ -75,12 +75,15 @@ export function createTestProfile(
   };
 }
 
+// eslint-disable-next-line max-lines-per-function
 export function createActionContext(
   overrides: AppActionContext = {},
 ): AppActionContext {
-  return {
+  const context: AppActionContext = {
     activeCapsuleId: "capsule-1",
     activeCapsuleMeta: createTestCapsule(),
+    activeOutfitId: "outfit-1",
+    activeOutfitMeta: null,
     applyCapsuleState: vi.fn(),
     applyWardrobeSnapshot: vi.fn(),
     bootstrapCapsules: vi.fn(async () => createTestProfile()),
@@ -153,6 +156,18 @@ export function createActionContext(
         })[key] || key,
     ),
     user: { email: "person@example.com" },
+    waitForJobCompletion: vi.fn(async () => ({ status: "completed" })),
     ...overrides,
   };
+  if (!("getActiveCapsuleId" in overrides)) {
+    context.getActiveCapsuleId = vi.fn(() =>
+      String(context.activeCapsuleId || ""),
+    );
+  }
+  if (!("getActiveOutfitId" in overrides)) {
+    context.getActiveOutfitId = vi.fn(() =>
+      String(context.activeOutfitId || ""),
+    );
+  }
+  return context;
 }

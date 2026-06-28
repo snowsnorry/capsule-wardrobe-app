@@ -9,11 +9,11 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock("../api/personalItems", () => api);
-vi.mock("../api/jobs", () => ({
-  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
-}));
 
 const t = (key: string) => key;
+const waitForJobCompletion = vi.fn().mockResolvedValue({
+  status: "completed",
+});
 
 function createJobResponse() {
   return {
@@ -38,6 +38,7 @@ function createJobResponse() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  waitForJobCompletion.mockResolvedValue({ status: "completed" });
   api.fetchPersonalItemsReport.mockResolvedValue({
     ok: true,
     report: null,
@@ -67,7 +68,7 @@ describe("usePersonalItemsReport", () => {
       });
     const setError = vi.fn();
     const { result } = renderHook(() =>
-      usePersonalItemsReport({ setError, t }),
+      usePersonalItemsReport({ setError, t, waitForJobCompletion }),
     );
 
     await waitFor(() => expect(result.current.isLoadingReport).toBe(false));
@@ -85,6 +86,7 @@ describe("usePersonalItemsReport", () => {
       }),
     );
     expect(api.generatePersonalItemsReport).toHaveBeenCalledTimes(1);
+    expect(waitForJobCompletion).toHaveBeenCalledWith("job-1");
     expect(result.current.report).toEqual({ verdict: { score: 0.82 } });
     expect(result.current.stale).toBe(false);
     expect(setError).toHaveBeenLastCalledWith("");
@@ -114,7 +116,7 @@ describe("usePersonalItemsReport", () => {
     api.generatePersonalItemsReport.mockRejectedValueOnce(new Error("failed"));
     const setError = vi.fn();
     const { result } = renderHook(() =>
-      usePersonalItemsReport({ setError, t }),
+      usePersonalItemsReport({ setError, t, waitForJobCompletion }),
     );
 
     await waitFor(() => expect(result.current.isLoadingReport).toBe(false));
@@ -130,7 +132,7 @@ describe("usePersonalItemsReport", () => {
     api.fetchPersonalItemsReport.mockRejectedValueOnce(new Error("failed"));
     const setError = vi.fn();
     const { result } = renderHook(() =>
-      usePersonalItemsReport({ setError, t }),
+      usePersonalItemsReport({ setError, t, waitForJobCompletion }),
     );
 
     await waitFor(() => expect(result.current.isLoadingReport).toBe(false));
@@ -149,7 +151,7 @@ describe("usePersonalItemsReport", () => {
     });
     const setError = vi.fn();
     const { result } = renderHook(() =>
-      usePersonalItemsReport({ setError, t }),
+      usePersonalItemsReport({ setError, t, waitForJobCompletion }),
     );
 
     await waitFor(() => expect(result.current.isLoadingReport).toBe(false));

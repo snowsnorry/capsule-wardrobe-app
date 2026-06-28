@@ -372,6 +372,10 @@ describe("AppSidebarNavigation", () => {
       screen.queryByRole("button", { name: "Capsule actions Capsule 1" }),
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText("Job in progress")).toBeInTheDocument();
+    const jobSlot = capsuleRow.querySelector(".capsule-row-job-slot");
+    expect(jobSlot).not.toBeNull();
+    expect(capsuleRow.querySelector(".capsule-row-actions-slot")).toBeNull();
+    expect(getComputedStyle(jobSlot as Element).opacity).toBe("1");
     expect(
       screen.getAllByRole("button", { name: "Pin capsule" })[0],
     ).toBeDisabled();

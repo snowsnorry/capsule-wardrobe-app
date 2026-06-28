@@ -15,6 +15,7 @@ type TranslationFn = (key: string, params?: Record<string, unknown>) => string;
 export type AppShellContentProps = {
   activeCapsuleId: string;
   activeCapsuleMeta: CapsuleMeta | null;
+  activeJobEntityKeys: string[];
   activeOutfitId?: string;
   activeOutfitMeta?: OutfitMeta | null;
   appRoute: AppRoute;

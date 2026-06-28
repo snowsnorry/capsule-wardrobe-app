@@ -5,23 +5,44 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type MutableRefObject,
   type SetStateAction,
 } from "react";
 import {
   addJobSnapshotListener,
   fetchActiveJobs,
+  fetchJob,
   getJobEntityKey,
   subscribeJobEvents,
   type JobSnapshot,
 } from "../api/jobs";
 
-const IDLE_REFRESH_INTERVAL_MS = 60_000;
+const DISCOVERY_INTERVAL_MS = 30_000;
+
+type JobWaiter = {
+  reject: (error: unknown) => void;
+  resolve: (job: JobSnapshot) => void;
+};
+
+type JobTrackerState = {
+  activeJobEntityKeys: string[];
+  jobs: JobSnapshot[];
+  waitForJobCompletion: (jobId: string) => Promise<JobSnapshot>;
+};
+
+function isTerminalJob(job: JobSnapshot) {
+  return job.status === "completed" || job.status === "failed";
+}
+
+function isVisibleDocument() {
+  return document.visibilityState === "visible";
+}
 
 function mergeJobSnapshot(
   current: JobSnapshot[],
   nextJob: JobSnapshot,
 ): JobSnapshot[] {
-  if (nextJob.status === "completed" || nextJob.status === "failed") {
+  if (isTerminalJob(nextJob)) {
     return current.filter((item) => item.id !== nextJob.id);
   }
   const existingIndex = current.findIndex((item) => item.id === nextJob.id);
@@ -31,36 +52,13 @@ function mergeJobSnapshot(
   return current.map((item) => (item.id === nextJob.id ? nextJob : item));
 }
 
-function subscribeActiveJob(
-  jobId: string,
-  setJobs: Dispatch<SetStateAction<JobSnapshot[]>>,
-  isActive: () => boolean,
+function mergeActiveJobs(
+  current: JobSnapshot[],
+  nextActiveJobs: JobSnapshot[],
 ) {
-  const controller = new AbortController();
-  void subscribeJobEvents({
-    id: jobId,
-    signal: controller.signal,
-    onJob: (nextJob) => {
-      if (!isActive()) return;
-      setJobs((current) => mergeJobSnapshot(current, nextJob));
-    },
-  })
-    .catch(() => undefined)
-    .finally(() => {
-      if (!isActive()) return;
-      void fetchActiveJobs({ force: true })
-        .then((response) => {
-          if (isActive()) {
-            setJobs(response.jobs);
-          }
-        })
-        .catch(() => undefined);
-    });
-  return controller;
-}
-
-function isVisibleDocument() {
-  return document.visibilityState === "visible";
+  const nextActiveIds = new Set(nextActiveJobs.map((job) => job.id));
+  const disappearedJobs = current.filter((job) => !nextActiveIds.has(job.id));
+  return { disappearedJobs, jobs: nextActiveJobs };
 }
 
 function useTrackedJobsState() {
@@ -79,12 +77,80 @@ function useTrackedJobsState() {
   return { jobs, jobsRef, setTrackedJobs };
 }
 
-function useActiveJobDiscovery({
+function resolveWaiters(
+  waitersRef: MutableRefObject<Map<string, JobWaiter[]>>,
+  job: JobSnapshot,
+) {
+  if (!isTerminalJob(job)) return;
+  const waiters = waitersRef.current.get(job.id);
+  if (!waiters) return;
+  waitersRef.current.delete(job.id);
+  for (const waiter of waiters) {
+    waiter.resolve(job);
+  }
+}
+
+function rejectAllWaiters(
+  waitersRef: MutableRefObject<Map<string, JobWaiter[]>>,
+  error: unknown,
+) {
+  for (const waiters of waitersRef.current.values()) {
+    for (const waiter of waiters) {
+      waiter.reject(error);
+    }
+  }
+  waitersRef.current.clear();
+}
+
+function useWaitForJobCompletion({
   jobsRef,
+  waitersRef,
+}: {
+  jobsRef: { current: JobSnapshot[] };
+  waitersRef: MutableRefObject<Map<string, JobWaiter[]>>;
+}) {
+  return useCallback(
+    (jobId: string) => {
+      const existingJob = jobsRef.current.find((job) => job.id === jobId);
+      if (existingJob && isTerminalJob(existingJob)) {
+        return Promise.resolve(existingJob);
+      }
+      return new Promise<JobSnapshot>((resolve, reject) => {
+        const waiters = waitersRef.current.get(jobId) || [];
+        waiters.push({ reject, resolve });
+        waitersRef.current.set(jobId, waiters);
+      });
+    },
+    [jobsRef, waitersRef],
+  );
+}
+
+function useJobSnapshotBus({
+  setTrackedJobs,
+  userEmail,
+  waitersRef,
+}: {
+  setTrackedJobs: Dispatch<SetStateAction<JobSnapshot[]>>;
+  userEmail: string;
+  waitersRef: MutableRefObject<Map<string, JobWaiter[]>>;
+}) {
+  useEffect(() => {
+    if (!userEmail) return undefined;
+    return addJobSnapshotListener((job) => {
+      resolveWaiters(waitersRef, job);
+      setTrackedJobs((current) => mergeJobSnapshot(current, job));
+    });
+  }, [setTrackedJobs, userEmail, waitersRef]);
+}
+
+function useJobDiscovery({
+  jobsRef,
+  onDiscovery,
   setTrackedJobs,
   userEmail,
 }: {
   jobsRef: { current: JobSnapshot[] };
+  onDiscovery: () => void;
   setTrackedJobs: Dispatch<SetStateAction<JobSnapshot[]>>;
   userEmail: string;
 }) {
@@ -92,79 +158,185 @@ function useActiveJobDiscovery({
     let active = true;
     let timer: number | undefined;
 
-    function clearRefreshTimer() {
+    function clearDiscoveryTimer() {
       if (timer === undefined) return;
       window.clearTimeout(timer);
       timer = undefined;
     }
 
-    function scheduleRefresh(nextJobs = jobsRef.current) {
-      if (!active || !userEmail || !isVisibleDocument() || nextJobs.length > 0)
-        return;
-      clearRefreshTimer();
-      timer = window.setTimeout(() => {
-        timer = undefined;
-        void load();
-      }, IDLE_REFRESH_INTERVAL_MS);
-    }
-
-    async function load() {
-      if (!userEmail) {
-        setTrackedJobs([]);
-        clearRefreshTimer();
-        return;
-      }
-      if (!isVisibleDocument()) {
-        clearRefreshTimer();
-        return;
-      }
-      let nextJobs = jobsRef.current;
+    async function reconcileDisappearedJob(jobId: string) {
       try {
-        const response = await fetchActiveJobs({ force: true });
-        nextJobs = response.jobs;
+        const { job } = await fetchJob(jobId);
         if (active) {
-          setTrackedJobs(response.jobs);
+          setTrackedJobs((current) => mergeJobSnapshot(current, job));
         }
       } catch {
-        // Keep the last known active jobs on transient failures so busy rows do
-        // not briefly unlock while work may still be running.
+        // If a disappeared job can no longer be fetched, keep it removed from
+        // active UI. The next discovery can restore it if it is still active.
+      }
+    }
+
+    function scheduleNextDiscovery() {
+      clearDiscoveryTimer();
+      if (!active || !userEmail || !isVisibleDocument()) return;
+      timer = window.setTimeout(() => {
+        timer = undefined;
+        void loadActiveJobs();
+      }, DISCOVERY_INTERVAL_MS);
+    }
+
+    async function loadActiveJobs() {
+      if (!userEmail) {
+        setTrackedJobs([]);
+        clearDiscoveryTimer();
+        return;
+      }
+      if (!isVisibleDocument()) {
+        clearDiscoveryTimer();
+        return;
+      }
+      try {
+        const response = await fetchActiveJobs({ force: true });
+        const merged = mergeActiveJobs(jobsRef.current, response.jobs);
+        if (active) {
+          setTrackedJobs(merged.jobs);
+          onDiscovery();
+          for (const job of merged.disappearedJobs) {
+            void reconcileDisappearedJob(job.id);
+          }
+        }
+      } catch {
+        // Keep last known active jobs on transient list failures.
       } finally {
         if (active) {
-          scheduleRefresh(nextJobs);
+          scheduleNextDiscovery();
         }
       }
     }
 
-    const unsubscribe = addJobSnapshotListener((job) => {
-      if (!active || !userEmail) return;
-      const nextJobs = mergeJobSnapshot(jobsRef.current, job);
-      setTrackedJobs(nextJobs);
-      scheduleRefresh(nextJobs);
-    });
-    const refreshVisibleJobs = () => {
+    const onVisibilityChange = () => {
       if (!active || !userEmail) return;
       if (!isVisibleDocument()) {
-        clearRefreshTimer();
+        clearDiscoveryTimer();
         return;
       }
-      void load();
+      void loadActiveJobs();
     };
 
-    void load();
-    document.addEventListener("visibilitychange", refreshVisibleJobs);
+    void loadActiveJobs();
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       active = false;
-      clearRefreshTimer();
-      unsubscribe();
-      document.removeEventListener("visibilitychange", refreshVisibleJobs);
+      clearDiscoveryTimer();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [jobsRef, setTrackedJobs, userEmail]);
+  }, [jobsRef, onDiscovery, setTrackedJobs, userEmail]);
 }
 
-export function useActiveSidebarJobs(userEmail: string) {
-  const { jobs, jobsRef, setTrackedJobs } = useTrackedJobsState();
-  const activeJobIds = useMemo(
+function useJobEventStreams({
+  activeJobIds,
+  discoveryVersion,
+  setTrackedJobs,
+  userEmail,
+  waitersRef,
+}: {
+  activeJobIds: string;
+  discoveryVersion: number;
+  setTrackedJobs: Dispatch<SetStateAction<JobSnapshot[]>>;
+  userEmail: string;
+  waitersRef: MutableRefObject<Map<string, JobWaiter[]>>;
+}) {
+  const controllersRef = useRef(new Map<string, AbortController>());
+  const [visibilityVersion, setVisibilityVersion] = useState(0);
+
+  const abortAllStreams = useCallback(() => {
+    for (const controller of controllersRef.current.values()) {
+      controller.abort();
+    }
+    controllersRef.current.clear();
+  }, []);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      setVisibilityVersion((current) => current + 1);
+      if (!isVisibleDocument()) {
+        abortAllStreams();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [abortAllStreams]);
+
+  useEffect(() => {
+    if (!userEmail || !isVisibleDocument()) {
+      abortAllStreams();
+      return;
+    }
+
+    const nextJobIds = new Set(activeJobIds.split("\n").filter(Boolean));
+    for (const [jobId, controller] of controllersRef.current.entries()) {
+      if (!nextJobIds.has(jobId)) {
+        controller.abort();
+        controllersRef.current.delete(jobId);
+      }
+    }
+    for (const jobId of nextJobIds) {
+      if (controllersRef.current.has(jobId)) continue;
+      const controller = new AbortController();
+      controllersRef.current.set(jobId, controller);
+      void subscribeJobEvents({
+        id: jobId,
+        signal: controller.signal,
+        onJob(job) {
+          resolveWaiters(waitersRef, job);
+          setTrackedJobs((current) => mergeJobSnapshot(current, job));
+        },
+      })
+        .catch(() => undefined)
+        .finally(() => {
+          if (controllersRef.current.get(jobId) !== controller) return;
+          controllersRef.current.delete(jobId);
+        });
+    }
+  }, [
+    abortAllStreams,
+    activeJobIds,
+    discoveryVersion,
+    setTrackedJobs,
+    userEmail,
+    visibilityVersion,
+    waitersRef,
+  ]);
+
+  useEffect(
+    () => () => {
+      abortAllStreams();
+    },
+    [abortAllStreams],
+  );
+}
+
+function useClearJobsWhenSignedOut({
+  setTrackedJobs,
+  userEmail,
+  waitersRef,
+}: {
+  setTrackedJobs: Dispatch<SetStateAction<JobSnapshot[]>>;
+  userEmail: string;
+  waitersRef: MutableRefObject<Map<string, JobWaiter[]>>;
+}) {
+  useEffect(() => {
+    if (userEmail) return;
+    setTrackedJobs([]);
+    rejectAllWaiters(waitersRef, new Error("job_wait_aborted"));
+  }, [setTrackedJobs, userEmail, waitersRef]);
+}
+
+function useActiveJobIds(jobs: JobSnapshot[]) {
+  return useMemo(
     () =>
       jobs
         .map((job) => job.id)
@@ -172,33 +344,46 @@ export function useActiveSidebarJobs(userEmail: string) {
         .join("\n"),
     [jobs],
   );
+}
 
-  useActiveJobDiscovery({ jobsRef, setTrackedJobs, userEmail });
+export function useJobTracker(userEmail: string): JobTrackerState {
+  const { jobs, jobsRef, setTrackedJobs } = useTrackedJobsState();
+  const waitersRef = useRef(new Map<string, JobWaiter[]>());
+  const [discoveryVersion, setDiscoveryVersion] = useState(0);
+  const activeJobIds = useActiveJobIds(jobs);
+  const waitForJobCompletion = useWaitForJobCompletion({
+    jobsRef,
+    waitersRef,
+  });
 
-  useEffect(() => {
-    const jobIds = activeJobIds.split("\n").filter(Boolean);
-    if (!userEmail || jobIds.length === 0) {
-      return undefined;
-    }
-
-    let active = true;
-    const controllers = jobIds.map((jobId) =>
-      subscribeActiveJob(jobId, setTrackedJobs, () => active),
-    );
-
-    return () => {
-      active = false;
-      for (const controller of controllers) {
-        controller.abort();
-      }
-    };
-  }, [activeJobIds, setTrackedJobs, userEmail]);
+  useClearJobsWhenSignedOut({ setTrackedJobs, userEmail, waitersRef });
+  useJobSnapshotBus({ setTrackedJobs, userEmail, waitersRef });
+  const noteDiscovery = useCallback(() => {
+    setDiscoveryVersion((current) => current + 1);
+  }, []);
+  useJobDiscovery({
+    jobsRef,
+    onDiscovery: noteDiscovery,
+    setTrackedJobs,
+    userEmail,
+  });
+  useJobEventStreams({
+    activeJobIds,
+    discoveryVersion,
+    setTrackedJobs,
+    userEmail,
+    waitersRef,
+  });
 
   return useMemo(
     () => ({
       activeJobEntityKeys: jobs.map(getJobEntityKey).filter(Boolean),
       jobs,
+      waitForJobCompletion,
     }),
-    [jobs],
+    [jobs, waitForJobCompletion],
   );
 }
+
+export const useActiveSidebarJobs = useJobTracker;
+export type { JobTrackerState };

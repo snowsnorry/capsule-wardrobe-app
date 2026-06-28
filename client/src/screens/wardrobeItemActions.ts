@@ -12,7 +12,7 @@ import {
   type PersonalItemSource,
   type UploadedWardrobeItemUpdatePayload,
 } from "../api/personalItems";
-import { waitForJob, type JobResponse } from "../api/jobs";
+import type { JobResponse, JobSnapshot } from "../api/jobs";
 import { notifyPersonalItemsChanged } from "../app/personalItemsCount";
 import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import {
@@ -137,10 +137,12 @@ function useWardrobeUploadActions({
   onItemsChanged,
   setError,
   t,
+  waitForJobCompletion,
 }: {
   onItemsChanged?: ItemsChangedCallback;
   setError: SetError;
   t: Translate;
+  waitForJobCompletion: (jobId: string) => Promise<JobSnapshot>;
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(EMPTY_UPLOAD_PROGRESS);
@@ -159,7 +161,7 @@ function useWardrobeUploadActions({
     try {
       const { job } = await upload();
       setError("");
-      void waitForJob(job.id)
+      void waitForJobCompletion(job.id)
         .then((finishedJob) => {
           if (finishedJob.status !== "completed") {
             throw new Error(finishedJob.error?.code || "service_unavailable");
@@ -173,6 +175,7 @@ function useWardrobeUploadActions({
         .finally(() => {
           setIsUploading(false);
         });
+      setIsUploading(false);
       return true;
     } catch {
       setError(t(errorKey));

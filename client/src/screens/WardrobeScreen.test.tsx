@@ -34,9 +34,6 @@ const useMediaQueryMock = vi.hoisted(() => vi.fn((_query?: string) => false));
 
 vi.mock("../api/personalItems", () => api);
 vi.mock("../api/likedItems", () => likedApi);
-vi.mock("../api/jobs", () => ({
-  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
-}));
 vi.mock("../i18n/useI18n", () => ({
   useI18n: useI18nMock,
 }));
@@ -361,9 +358,12 @@ const translations: Record<string, string> = {
 };
 
 function renderScreen() {
+  const waitForJobCompletion = vi.fn().mockResolvedValue({
+    status: "completed",
+  });
   return render(
     <ThemeProvider theme={theme}>
-      <WardrobeScreen />
+      <WardrobeScreen waitForJobCompletion={waitForJobCompletion} />
     </ThemeProvider>,
   );
 }

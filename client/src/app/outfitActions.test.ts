@@ -64,10 +64,6 @@ vi.mock("../api/outfits", () => ({
   updateOutfitItems: vi.fn(),
 }));
 
-vi.mock("../api/jobs", () => ({
-  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
-}));
-
 function mockCalls(fn: unknown) {
   return (fn as Mock).mock.calls;
 }
@@ -482,11 +478,14 @@ describe("outfitActions", () => {
     });
 
     await generateCurrentOutfitReport(context, "outfit-1");
+    await vi.waitFor(() =>
+      expect(fetchOutfit).toHaveBeenCalledWith("outfit-1"),
+    );
     await deleteCurrentOutfitReport(context, "outfit-1");
 
     expect(generateOutfitReport).toHaveBeenCalledWith("outfit-1");
     expect(deleteOutfitReport).toHaveBeenCalledWith("outfit-1");
-    expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
+    expect(context.waitForJobCompletion).toHaveBeenCalledWith("job-1");
     expect(context.setActiveOutfitMeta).toHaveBeenCalledWith(outfit);
     expect(context.setIsOutfitReportPending).toHaveBeenNthCalledWith(1, true);
     expect(context.setIsOutfitReportPending).toHaveBeenLastCalledWith(false);
@@ -583,15 +582,38 @@ describe("outfitActions", () => {
 
     await generateCurrentOutfitImage(context, "outfit-1");
     await vi.waitFor(() => {
-      expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
+      expect(context.setOutfitList).toHaveBeenCalled();
     });
 
+    expect(fetchOutfit).not.toHaveBeenCalled();
     expect(context.setActiveOutfitId).not.toHaveBeenCalled();
     expect(context.setActiveOutfitMeta).not.toHaveBeenCalled();
-    expect(context.setOutfitList).toHaveBeenCalled();
     await vi.waitFor(() => {
       expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
     });
+  });
+
+  test("does not fetch or apply a completed report for a non-active outfit", async () => {
+    vi.mocked(generateOutfitReport).mockResolvedValueOnce({
+      ...createJobResponse("job-2"),
+    });
+    const context = createActionContext({
+      activeOutfitId: "outfit-2",
+      setActiveOutfitId: vi.fn(),
+      setActiveOutfitMeta: vi.fn(),
+      setOutfitList: vi.fn(),
+      setOutfitPagination: vi.fn(),
+      waitForJobCompletion: vi.fn(async () => ({ status: "completed" })),
+    });
+
+    await generateCurrentOutfitReport(context, "outfit-1");
+    await vi.waitFor(() => {
+      expect(context.setOutfitList).toHaveBeenCalled();
+    });
+
+    expect(fetchOutfit).not.toHaveBeenCalled();
+    expect(context.setActiveOutfitId).not.toHaveBeenCalled();
+    expect(context.setActiveOutfitMeta).not.toHaveBeenCalled();
   });
 
   test("resets busy flags when outfit operations fail", async () => {

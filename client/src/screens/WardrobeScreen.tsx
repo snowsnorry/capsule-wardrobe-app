@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, ReactElement, SetStateAction } from "react";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { type UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
+import type { JobSnapshot } from "../api/jobs";
 import { useI18n } from "../i18n/useI18n";
 import { isUploadedWardrobeItemNeedsReview } from "../utils/uploadedWardrobeItemStatus";
 import {
@@ -36,8 +37,10 @@ import { useWardrobeItems } from "./useWardrobeItems";
 // eslint-disable-next-line max-lines-per-function
 function WardrobeScreen({
   isJobActive = false,
+  waitForJobCompletion,
 }: {
   isJobActive?: boolean;
+  waitForJobCompletion: (jobId: string) => Promise<JobSnapshot>;
 }): ReactElement {
   const { t, locale } = useI18n();
   const isOverlay = useMediaQuery("(max-width: 1279.95px)");
@@ -54,19 +57,26 @@ function WardrobeScreen({
   const personalItemsReport = usePersonalItemsReport({
     setError: setReportError,
     t,
+    waitForJobCompletion,
   });
-  const wardrobeItems = useWardrobeItems(filters.filter, refreshKey, t, {
-    onItemsChanged: (reason) => {
-      if (reason === "metadata") {
-        personalItemsReport.markStale();
-        return;
-      }
-      if (reason === "upload") {
-        setRefreshKey((current) => current + 1);
-      }
-      void personalItemsReport.refreshReport({ force: true });
+  const wardrobeItems = useWardrobeItems(
+    filters.filter,
+    refreshKey,
+    t,
+    waitForJobCompletion,
+    {
+      onItemsChanged: (reason) => {
+        if (reason === "metadata") {
+          personalItemsReport.markStale();
+          return;
+        }
+        if (reason === "upload") {
+          setRefreshKey((current) => current + 1);
+        }
+        void personalItemsReport.refreshReport({ force: true });
+      },
     },
-  });
+  );
   const productDetail = useWardrobeProductDetailState(wardrobeItems);
   const reportLayout = useWardrobeReportLayout(
     personalItemsReport,

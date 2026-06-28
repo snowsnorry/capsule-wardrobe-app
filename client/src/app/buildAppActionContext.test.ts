@@ -6,6 +6,7 @@ describe("buildAppActionContext", () => {
   test("maps app state, operations, and logout handler into an action context", async () => {
     const expected = createActionContext();
     const signOut = vi.fn(() => Promise.resolve());
+    const waitForJobCompletion = vi.fn();
     const appState = {
       ...expected,
       setIsShareLoading: vi.fn(),
@@ -31,6 +32,7 @@ describe("buildAppActionContext", () => {
       startCapsuleEventStream: expected.startCapsuleEventStream,
       startPendingNotificationFlow: expected.startPendingNotificationFlow,
       t: expected.t,
+      waitForJobCompletion,
     } as never);
 
     expect(context.activeCapsuleId).toBe("capsule-1");
@@ -39,6 +41,9 @@ describe("buildAppActionContext", () => {
     expect(context.setIsShareLoading).toBe(expected.setIsShareLoading);
     expect(context.setLocale).toBe(expected.setLocale);
     expect(context.shareMetadata).toEqual({ id: "share-2" });
+    expect(context.getActiveCapsuleId()).toBe("capsule-1");
+    expect(context.getActiveOutfitId()).toBe("outfit-1");
+    expect(context.waitForJobCompletion).toBe(waitForJobCompletion);
 
     await context.handleLogout();
 

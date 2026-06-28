@@ -22,11 +22,11 @@ const personalItems = vi.hoisted(() => ({
 vi.mock("../api/personalItems", () => api);
 vi.mock("../api/likedItems", () => likedApi);
 vi.mock("../app/personalItemsCount", () => personalItems);
-vi.mock("../api/jobs", () => ({
-  waitForJob: vi.fn().mockResolvedValue({ status: "completed" }),
-}));
 
 const t = (key: string) => key;
+const waitForJobCompletion = vi.fn().mockResolvedValue({
+  status: "completed",
+});
 
 function createJobResponse(kind = "personalItemUploadUrls") {
   return {
@@ -51,6 +51,7 @@ function createJobResponse(kind = "personalItemUploadUrls") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  waitForJobCompletion.mockResolvedValue({ status: "completed" });
   api.fetchPersonalItems.mockResolvedValue({ items: [] });
   api.deleteUploadedWardrobeItem.mockResolvedValue({ ok: true });
   api.downloadPersonalItemsPdf.mockResolvedValue(undefined);
@@ -76,7 +77,9 @@ describe("useWardrobeItems", () => {
         resolveItems = resolve;
       }),
     );
-    const { unmount } = renderHook(() => useWardrobeItems("all", 0, t));
+    const { unmount } = renderHook(() =>
+      useWardrobeItems("all", 0, t, waitForJobCompletion),
+    );
 
     unmount();
 
@@ -106,7 +109,9 @@ describe("useWardrobeItems", () => {
     });
     const onItemsChanged = vi.fn();
     const { result } = renderHook(() =>
-      useWardrobeItems("uploaded", 0, t, { onItemsChanged }),
+      useWardrobeItems("uploaded", 0, t, waitForJobCompletion, {
+        onItemsChanged,
+      }),
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -127,6 +132,7 @@ describe("useWardrobeItems", () => {
       ["https://shop.test/a"],
       expect.objectContaining({ onProgress: expect.any(Function) }),
     );
+    expect(waitForJobCompletion).toHaveBeenCalledWith("job-1");
     await waitFor(() =>
       expect(onItemsChanged).toHaveBeenNthCalledWith(1, "upload"),
     );
@@ -217,7 +223,9 @@ describe("useWardrobeItems", () => {
 
   test("handles empty and failing operations", async () => {
     api.fetchPersonalItems.mockRejectedValueOnce(new Error("load failed"));
-    const { result } = renderHook(() => useWardrobeItems("all", 1, t));
+    const { result } = renderHook(() =>
+      useWardrobeItems("all", 1, t, waitForJobCompletion),
+    );
 
     await waitFor(() =>
       expect(result.current.error).toBe("wardrobe.loadFailed"),

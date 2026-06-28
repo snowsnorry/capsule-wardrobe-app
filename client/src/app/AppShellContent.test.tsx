@@ -241,6 +241,7 @@ function createProps(
   return {
     activeCapsuleId: "capsule-1",
     activeCapsuleMeta: { id: "capsule-1", name: "Spring", status: "saved" },
+    activeJobEntityKeys: [],
     appRoute: "explore",
     capsuleRouteId: "",
     capsuleList: [],

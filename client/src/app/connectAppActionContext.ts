@@ -5,10 +5,12 @@ import type { useAppNavigation } from "./useAppNavigation";
 import type { useAppNotifications } from "./useAppNotifications";
 import type { useAppState } from "./useAppState";
 import type { useShareRoute } from "./useShareRoute";
+import type { JobTrackerState } from "./useActiveSidebarJobs";
 
 type ConnectAppActionContextOptions = {
   appState: ReturnType<typeof useAppState>;
   handlers: ReturnType<typeof useAppHandlers>;
+  jobTracker: JobTrackerState;
   locale: string;
   navigation: ReturnType<typeof useAppNavigation>;
   notifications: ReturnType<typeof useAppNotifications>;
@@ -24,6 +26,7 @@ type ConnectAppActionContextOptions = {
 export function connectAppActionContext({
   appState,
   handlers,
+  jobTracker,
   locale,
   navigation,
   notifications,
@@ -43,6 +46,7 @@ export function connectAppActionContext({
       clearShareRoute: shareRoute.clearShareRoute,
       closeNotificationPrompt: notifications.closeNotificationPrompt,
       handlers,
+      waitForJobCompletion: jobTracker.waitForJobCompletion,
       locale,
       pendingShareId: navigation.pendingShareId,
       resolveErrorMessage,

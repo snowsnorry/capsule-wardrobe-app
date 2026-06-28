@@ -6,7 +6,6 @@ import {
   generateOutfitReport,
   subscribeOutfitEvents,
 } from "../api/outfits";
-import { waitForJob } from "../api/jobs";
 import { fromContext, type AppActionContext } from "./actionContext";
 import {
   refreshActiveOutfit,
@@ -113,7 +112,16 @@ export async function generateCurrentOutfitReport(
   setOutfitReportPending(context, true);
   try {
     const { job } = await generateOutfitReport(outfitId);
-    void waitForJob(job.id)
+    if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      setOutfitReportPending(context, false);
+    }
+    const waitForJobCompletion = fromContext<
+      (jobId: string) => Promise<{
+        status: string;
+        error?: { code?: string | null } | null;
+      }>
+    >(context, "waitForJobCompletion");
+    void waitForJobCompletion(job.id)
       .then(async (finishedJob) => {
         if (finishedJob.status === "completed") {
           await refreshActiveOutfit(context, outfitId, { onlyIfActive: true });
