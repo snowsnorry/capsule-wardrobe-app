@@ -385,5 +385,4 @@ export function useJobTracker(userEmail: string): JobTrackerState {
   );
 }
 
-export const useActiveSidebarJobs = useJobTracker;
 export type { JobTrackerState };

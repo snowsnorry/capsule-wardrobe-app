@@ -28,13 +28,16 @@ const waitForJobCompletion = vi.fn().mockResolvedValue({
   status: "completed",
 });
 
-function createJobResponse(kind = "personalItemUploadUrls") {
+function createJobResponse(
+  kind = "personalItemUploadUrls",
+  status: "queued" | "completed" | "failed" = "queued",
+) {
   return {
     ok: true,
     job: {
       id: "job-1",
       kind,
-      status: "queued",
+      status,
       phase: "queued",
       progress: { current: 0, total: null, label: null },
       entity: { type: "wardrobe", id: null },
@@ -219,6 +222,32 @@ describe("useWardrobeItems", () => {
     );
     expect(personalItems.notifyPersonalItemsChanged).toHaveBeenCalledTimes(2);
     expect(onItemsChanged).toHaveBeenNthCalledWith(4, "items");
+  });
+
+  test("handles an upload job that completed in the upload response", async () => {
+    api.uploadWardrobeImages.mockResolvedValueOnce(
+      createJobResponse("personalItemUploadFiles", "completed"),
+    );
+    const onItemsChanged = vi.fn();
+    const { result } = renderHook(() =>
+      useWardrobeItems("uploaded", 0, t, waitForJobCompletion, {
+        onItemsChanged,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      expect(
+        await result.current.handleUploadImages([
+          new File(["image"], "shirt.png", { type: "image/png" }),
+        ]),
+      ).toBe(true);
+    });
+
+    expect(waitForJobCompletion).not.toHaveBeenCalled();
+    expect(personalItems.notifyPersonalItemsChanged).toHaveBeenCalledTimes(1);
+    expect(onItemsChanged).toHaveBeenCalledWith("upload");
   });
 
   test("handles empty and failing operations", async () => {

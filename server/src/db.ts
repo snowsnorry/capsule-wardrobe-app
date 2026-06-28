@@ -129,7 +129,6 @@ export {
   revokeMcpRefreshToken,
   rotateMcpRefreshToken,
 } from "./db/mcpOAuthRefreshTokens.js";
-export { pruneExpiredRecords } from "./db/expiredRecords.js";
 export {
   appendJobEvent,
   clearJobRunsForEmail,

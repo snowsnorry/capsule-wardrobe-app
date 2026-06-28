@@ -148,4 +148,52 @@ describe("request api", () => {
     ).resolves.toEqual({ hasProfile: false });
     expect(fetch).toHaveBeenCalledTimes(2);
   });
+
+  test("getCachedJson force bypasses stale in-flight requests", async () => {
+    let resolveFirst: ((response: Response) => void) | undefined;
+    let resolveSecond: ((response: Response) => void) | undefined;
+    vi.mocked(fetch)
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveFirst = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveSecond = resolve;
+          }),
+      );
+
+    const staleRequest = getCachedJson("/wardrobe/items", { ttlMs: 1000 });
+    const freshRequest = getCachedJson("/wardrobe/items", {
+      force: true,
+      ttlMs: 1000,
+    });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    resolveSecond?.(
+      createResponse({
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ items: [{ id: "uploaded-1" }] }),
+      }) as Response,
+    );
+    await expect(freshRequest).resolves.toEqual({
+      items: [{ id: "uploaded-1" }],
+    });
+
+    resolveFirst?.(
+      createResponse({
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ items: [] }),
+      }) as Response,
+    );
+    await expect(staleRequest).resolves.toEqual({ items: [] });
+
+    await expect(
+      getCachedJson("/wardrobe/items", { ttlMs: 1000 }),
+    ).resolves.toEqual({ items: [{ id: "uploaded-1" }] });
+  });
 });

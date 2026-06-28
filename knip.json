@@ -10,6 +10,7 @@
     },
     "server": {
       "entry": [
+        "src/maintenance/pruneExpiredRecords.ts",
         "src/wardrobeUploadProcessing.child.ts"
       ],
       "ignore": [

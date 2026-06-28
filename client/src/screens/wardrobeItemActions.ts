@@ -34,6 +34,21 @@ type Translate = (key: string) => string;
 export type WardrobeItemsChangedReason = "items" | "metadata" | "upload";
 type ItemsChangedCallback = (reason: WardrobeItemsChangedReason) => void;
 
+function isTerminalJob(job: JobResponse["job"]) {
+  return job.status === "completed" || job.status === "failed";
+}
+
+function applyCompletedUpload(
+  job: JobResponse["job"],
+  onItemsChanged?: ItemsChangedCallback,
+) {
+  if (job.status !== "completed") {
+    throw new Error(job.error?.code || "service_unavailable");
+  }
+  notifyPersonalItemsChanged();
+  onItemsChanged?.("upload");
+}
+
 function useWardrobeProductMenuState() {
   const [productMenu, setProductMenu] = useState<WardrobeProductMenuState>({
     anchor: null,
@@ -161,13 +176,14 @@ function useWardrobeUploadActions({
     try {
       const { job } = await upload();
       setError("");
+      if (isTerminalJob(job)) {
+        applyCompletedUpload(job, onItemsChanged);
+        setIsUploading(false);
+        return true;
+      }
       void waitForJobCompletion(job.id)
         .then((finishedJob) => {
-          if (finishedJob.status !== "completed") {
-            throw new Error(finishedJob.error?.code || "service_unavailable");
-          }
-          notifyPersonalItemsChanged();
-          onItemsChanged?.("upload");
+          applyCompletedUpload(finishedJob, onItemsChanged);
         })
         .catch(() => {
           setError(t(errorKey));

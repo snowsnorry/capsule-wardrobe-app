@@ -155,14 +155,18 @@ async function getCachedJson(
     return cached.value;
   }
 
-  if (!inFlight.has(key)) {
+  if (force || !inFlight.has(key)) {
     const promise = requestJson(url, options)
       .then((value) => {
-        cache.set(key, { value, timestamp: Date.now() });
+        if (inFlight.get(key) === promise) {
+          cache.set(key, { value, timestamp: Date.now() });
+        }
         return value;
       })
       .finally(() => {
-        inFlight.delete(key);
+        if (inFlight.get(key) === promise) {
+          inFlight.delete(key);
+        }
       });
     inFlight.set(key, promise);
   }
