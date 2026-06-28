@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { useAppControllerModel } from "./useAppControllerModel";
 import { createActionContext, createTestProfile } from "./testUtils";
@@ -14,6 +14,11 @@ const controllerOperations = vi.hoisted(() => ({
   startCapsuleEventStream: vi.fn(),
   startPendingNotificationFlow: vi.fn(),
 }));
+const appHandlersMock = vi.hoisted(() =>
+  vi.fn((_options: { getAppActionContext: () => unknown }) => ({
+    signOut: vi.fn(),
+  })),
+);
 
 vi.mock("@mui/material", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@mui/material")>()),
@@ -70,7 +75,7 @@ vi.mock("./useAppControllerOperations", () => ({
 }));
 
 vi.mock("./useAppHandlers", () => ({
-  useAppHandlers: () => ({ signOut: vi.fn() }),
+  useAppHandlers: appHandlersMock,
 }));
 
 vi.mock("./useAppLifecycleEffects", () => ({
@@ -181,6 +186,10 @@ vi.mock("./useShareRoute", () => ({
   }),
 }));
 
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 function HookHarness() {
   const model = useAppControllerModel() as unknown as {
     cardPadding: number;
@@ -205,5 +214,24 @@ describe("useAppControllerModel", () => {
 
     expect(screen.getByTestId("padding")).toHaveTextContent("5");
     expect(screen.getByTestId("theme")).toHaveTextContent("dark");
+  });
+
+  test("passes a lazy action context getter to handlers", () => {
+    mediaQueryMock.mockReturnValue(false);
+    const initialGetContext = controllerOperations.getAppActionContext;
+
+    render(<HookHarness />);
+
+    const handlerOptions = appHandlersMock.mock.calls[0]?.[0];
+    expect(handlerOptions).toBeDefined();
+    controllerOperations.getAppActionContext = vi.fn(() => ({
+      marker: "connected",
+    }));
+
+    expect(handlerOptions?.getAppActionContext()).toEqual({
+      marker: "connected",
+    });
+
+    controllerOperations.getAppActionContext = initialGetContext;
   });
 });
