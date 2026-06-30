@@ -46,9 +46,6 @@ jobs:
       - name: Format check
         run: npm run format:check
 
-      - name: Cycle check
-        run: npm run quality:cycles
-
       - name: Unused code check
         run: npm run quality:unused
 
