@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
-    "@aws-sdk/client-s3": "^3.1073.0",
+    "@aws-sdk/client-s3": "^3.1076.0",
     "@fontsource/dm-sans": "^5.0.18",
     "@google/genai": "^2.9.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -35,7 +35,7 @@
     "multer": "^2.1.1",
     "mustache": "^4.2.0",
     "ollama": "^0.6.3",
-    "openai": "^6.44.0",
+    "openai": "^6.45.0",
     "pdf-lib": "^1.17.1",
     "pg-boss": "^12.23.0",
     "sharp": "^0.35.2",
