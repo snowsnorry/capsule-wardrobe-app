@@ -17,7 +17,7 @@
     "prune:expired-records": "node ./dist/server/src/maintenance/pruneExpiredRecords.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.108.0",
+    "@anthropic-ai/sdk": "^0.109.0",
     "@aws-sdk/client-s3": "^3.1077.0",
     "@fontsource/dm-sans": "^5.0.18",
     "@google/genai": "^2.10.0",
