@@ -10,6 +10,10 @@ vi.mock("../api/auth", () => ({
 
 function createAppState(overrides: Record<string, unknown> = {}) {
   return {
+    activeCapsuleId: "capsule-1",
+    activeCapsuleIdRef: { current: "" },
+    activeOutfitId: "outfit-1",
+    activeOutfitIdRef: { current: "" },
     capsuleEventsAbortRef: { current: null },
     hasProfile: true,
     isMountedRef: { current: false },
@@ -43,6 +47,8 @@ describe("useAppLifecycleEffects", () => {
     );
 
     expect(appState.isMountedRef.current).toBe(true);
+    expect(appState.activeCapsuleIdRef.current).toBe("capsule-1");
+    expect(appState.activeOutfitIdRef.current).toBe("outfit-1");
     expect(appState.pendingRegenerationUrlsRef.current).toEqual([
       "https://example.com/top",
     ]);

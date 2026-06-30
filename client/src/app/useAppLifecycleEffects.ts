@@ -38,6 +38,14 @@ export function useAppLifecycleEffects({
   ]);
 
   useEffect(() => {
+    appState.activeCapsuleIdRef.current = appState.activeCapsuleId;
+  }, [appState.activeCapsuleId, appState.activeCapsuleIdRef]);
+
+  useEffect(() => {
+    appState.activeOutfitIdRef.current = appState.activeOutfitId;
+  }, [appState.activeOutfitId, appState.activeOutfitIdRef]);
+
+  useEffect(() => {
     if (
       !appState.sessionInitialized ||
       !appState.user ||

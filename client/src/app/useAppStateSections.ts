@@ -205,6 +205,8 @@ export function useWardrobeProgressAppState() {
 
 export function useAppRefs() {
   const isMountedRef = useRef(true);
+  const activeCapsuleIdRef = useRef("");
+  const activeOutfitIdRef = useRef("");
   const pendingRegenerationUrlsRef = useRef<string[]>([]);
   const regenerationBaseItemsRef = useRef<WardrobeItem[]>([]);
   const capsuleEventsAbortRef = useRef<AbortController | null>(null);
@@ -214,6 +216,8 @@ export function useAppRefs() {
   const outfitSidebarActionsRef = useRef<OutfitSidebarActions | null>(null);
 
   return {
+    activeCapsuleIdRef,
+    activeOutfitIdRef,
     capsuleEventsAbortRef,
     capsuleSidebarActionsRef,
     outfitSidebarActionsRef,

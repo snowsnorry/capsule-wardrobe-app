@@ -265,7 +265,7 @@ describe("capsuleActions", () => {
     expect(context.setIsCapsuleReportPending).toHaveBeenLastCalledWith(false);
   });
 
-  test("refreshes capsule list but skips body refresh when completed report belongs to a non-active capsule", async () => {
+  test("skips screen and list refresh when completed report belongs to a non-active capsule", async () => {
     vi.mocked(generateCapsuleReport).mockResolvedValueOnce({
       ...createJobResponse("job-2"),
     });
@@ -278,13 +278,13 @@ describe("capsuleActions", () => {
 
     await generateCurrentCapsuleReport(context, "capsule-1");
     await vi.waitFor(() =>
-      expect(context.setCapsuleList).toHaveBeenCalledWith([
-        expect.objectContaining({ id: "capsule-1" }),
-      ]),
+      expect(context.waitForJobCompletion).toHaveBeenCalledWith("job-2"),
     );
 
     expect(fetchCapsule).not.toHaveBeenCalled();
+    expect(fetchRecentCapsules).not.toHaveBeenCalled();
     expect(context.applyCapsuleState).not.toHaveBeenCalled();
+    expect(context.setCapsuleList).not.toHaveBeenCalled();
   });
 
   test("reports capsule report generation failures without clearing old reports", async () => {

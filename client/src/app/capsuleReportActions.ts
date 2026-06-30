@@ -22,15 +22,15 @@ async function refreshActiveCapsuleReport(
   const getActiveCapsuleId =
     fromContext<(() => string) | undefined>(context, "getActiveCapsuleId") ||
     (() => fromContext<string>(context, "activeCapsuleId"));
-  if (capsuleId === getActiveCapsuleId()) {
-    const result = (await fetchCapsule(capsuleId)) as {
-      capsule?: CapsuleMeta | null;
-    };
-    fromContext<(capsule?: CapsuleMeta | null) => void>(
-      context,
-      "applyCapsuleState",
-    )(result.capsule);
-  }
+  if (capsuleId !== getActiveCapsuleId()) return;
+
+  const result = (await fetchCapsule(capsuleId)) as {
+    capsule?: CapsuleMeta | null;
+  };
+  fromContext<(capsule?: CapsuleMeta | null) => void>(
+    context,
+    "applyCapsuleState",
+  )(result.capsule);
   await refreshCapsuleList(context);
 }
 

@@ -9,6 +9,8 @@ describe("buildAppActionContext", () => {
     const waitForJobCompletion = vi.fn();
     const appState = {
       ...expected,
+      activeCapsuleIdRef: { current: "capsule-live" },
+      activeOutfitIdRef: { current: "outfit-live" },
       setIsShareLoading: vi.fn(),
       setLocale: vi.fn(),
       shareMetadata: { id: "state-share" },
@@ -41,8 +43,8 @@ describe("buildAppActionContext", () => {
     expect(context.setIsShareLoading).toBe(expected.setIsShareLoading);
     expect(context.setLocale).toBe(expected.setLocale);
     expect(context.shareMetadata).toEqual({ id: "share-2" });
-    expect(context.getActiveCapsuleId()).toBe("capsule-1");
-    expect(context.getActiveOutfitId()).toBe("outfit-1");
+    expect(context.getActiveCapsuleId()).toBe("capsule-live");
+    expect(context.getActiveOutfitId()).toBe("outfit-live");
     expect(context.waitForJobCompletion).toBe(waitForJobCompletion);
 
     await context.handleLogout();

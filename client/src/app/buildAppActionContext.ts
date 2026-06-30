@@ -42,8 +42,10 @@ export function buildAppActionContext(input: AppActionContextInput) {
     capsuleEventsAbortRef: state.capsuleEventsAbortRef,
     clearShareRoute: input.clearShareRoute,
     closeNotificationPrompt: input.closeNotificationPrompt,
-    getActiveCapsuleId: () => state.activeCapsuleId,
-    getActiveOutfitId: () => state.activeOutfitId,
+    getActiveCapsuleId: () =>
+      state.activeCapsuleIdRef?.current ?? state.activeCapsuleId,
+    getActiveOutfitId: () =>
+      state.activeOutfitIdRef?.current ?? state.activeOutfitId,
     handleLogout: async () => {
       await input.handlers.signOut();
     },
