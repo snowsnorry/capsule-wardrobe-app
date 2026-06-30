@@ -33,8 +33,7 @@ type WardrobeUploadProcessingUrlInput = {
 };
 
 type WardrobeUploadProcessingInput =
-  | WardrobeUploadProcessingFileInput
-  | WardrobeUploadProcessingUrlInput;
+  WardrobeUploadProcessingFileInput | WardrobeUploadProcessingUrlInput;
 
 type WardrobeUploadProcessingPayload = {
   email: string;

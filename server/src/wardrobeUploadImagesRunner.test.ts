@@ -6,11 +6,7 @@ import { normalizeWardrobeUploadImagesInChild } from "./wardrobeUploadImagesRunn
 import type { WardrobeUploadForkLike } from "./wardrobeUploadImagesCore.ts";
 
 type FakeChildMode =
-  | "success"
-  | "child-failure"
-  | "invalid-payload"
-  | "exit"
-  | "send-error";
+  "success" | "child-failure" | "invalid-payload" | "exit" | "send-error";
 
 class FakeWardrobeUploadChild extends EventEmitter {
   killed = false;

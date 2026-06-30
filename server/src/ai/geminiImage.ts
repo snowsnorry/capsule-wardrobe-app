@@ -4,8 +4,7 @@ const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image";
 const DEFAULT_API_VERSION = "v1beta";
 
 type GeminiImagePromptPart =
-  | { text: string }
-  | { inlineData: { mimeType: string; data: string } };
+  { text: string } | { inlineData: { mimeType: string; data: string } };
 
 type GeminiImageGenerateContentPayload = {
   model: string;

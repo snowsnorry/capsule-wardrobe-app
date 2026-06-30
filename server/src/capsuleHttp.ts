@@ -32,8 +32,7 @@ const API_EXACT_PATHS = new Set([
 ]);
 
 type RejectedUrlsValidationResult =
-  | { error: "invalid_payload" | "not_found" }
-  | { rejectedUrls: string[] };
+  { error: "invalid_payload" | "not_found" } | { rejectedUrls: string[] };
 
 export function buildPdfDownloadFilename(capsuleName) {
   const normalizedName = String(capsuleName || "")

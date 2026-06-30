@@ -57,8 +57,7 @@ function useStatisticsActions({
   const updateDraftState = useCallback(
     async (
       updater:
-        | SearchDraftState
-        | ((current: SearchDraftState) => SearchDraftState),
+        SearchDraftState | ((current: SearchDraftState) => SearchDraftState),
       { submit: shouldSubmit = false } = {},
     ) => {
       const nextState =

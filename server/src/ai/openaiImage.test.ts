@@ -96,8 +96,7 @@ test("openai image client uses generate when no reference images are provided", 
 test("openai image client uses edit when reference images are provided", async () => {
   let generatePayload: Record<string, unknown> | null = null;
   let editPayload:
-    | (Record<string, unknown> & { image?: { name?: string }[] })
-    | null = null;
+    (Record<string, unknown> & { image?: { name?: string }[] }) | null = null;
   const client = createOpenAiImageClient({
     cache: false,
     getApiKeyImpl: () => "openai-key",

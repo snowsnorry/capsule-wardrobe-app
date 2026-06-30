@@ -1151,8 +1151,7 @@ test("oauth PKCE code flow issues an access token accepted by mcp", async (t) =>
     "openai/outputTemplate": WARDROBE_GRID_WIDGET_URI,
   });
   const wardrobeProperties = wardrobeItemsTool?.inputSchema?.properties as
-    | Record<string, Record<string, unknown>>
-    | undefined;
+    Record<string, Record<string, unknown>> | undefined;
   expect(wardrobeItemsTool?.inputSchema?.required || []).not.toContain(
     "source",
   );

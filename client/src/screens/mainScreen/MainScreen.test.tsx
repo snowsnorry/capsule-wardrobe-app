@@ -719,8 +719,7 @@ describe("MainScreen", () => {
   test("disables primary controls while content is busy or share link is being created", async () => {
     const user = userEvent.setup();
     let resolveShare:
-      | ((result: { url: string; expiresAt: string }) => void)
-      | undefined;
+      ((result: { url: string; expiresAt: string }) => void) | undefined;
     const onShareCapsule = vi.fn(
       () =>
         new Promise<{ url: string; expiresAt: string }>((resolve) => {

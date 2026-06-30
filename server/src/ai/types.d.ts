@@ -1,11 +1,5 @@
 type JsonSchemaPrimitiveType =
-  | "string"
-  | "number"
-  | "integer"
-  | "boolean"
-  | "object"
-  | "array"
-  | "null";
+  "string" | "number" | "integer" | "boolean" | "object" | "array" | "null";
 
 type JsonSchema = {
   type?: JsonSchemaPrimitiveType | JsonSchemaPrimitiveType[];

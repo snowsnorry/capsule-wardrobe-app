@@ -6,8 +6,7 @@ function sendQueuedJob(res, job: JobSnapshot) {
 
 async function enqueueRouteJob(context, input: EnqueueJobInput) {
   const enqueue = context.enqueueJobImpl as
-    | ((input: EnqueueJobInput) => Promise<JobSnapshot>)
-    | undefined;
+    ((input: EnqueueJobInput) => Promise<JobSnapshot>) | undefined;
   if (!enqueue) {
     throw new Error("job_queue_unavailable");
   }

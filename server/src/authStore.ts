@@ -31,8 +31,7 @@ type SendStateEntry = {
 };
 
 type CreatePendingCodeResult =
-  | { ok: true; code: string }
-  | { ok: false; reason: "cooldown" | "rate_limit" };
+  { ok: true; code: string } | { ok: false; reason: "cooldown" | "rate_limit" };
 
 type AuthStoreDeps = {
   getLoginCodeByEmailImpl?: (email: string) => Promise<LoginCodeRow | null>;

@@ -45,8 +45,7 @@ type ValidatedCapsuleAnchorsLike = {
 
 type CapsuleWardrobeSqlParamsLike = Record<string, unknown>;
 type CapsuleWardrobeSqlResultLike =
-  | Array<Record<string, unknown>>
-  | { count: number };
+  Array<Record<string, unknown>> | { count: number };
 
 export type {
   CapsuleGenerateJsonWithLlm,

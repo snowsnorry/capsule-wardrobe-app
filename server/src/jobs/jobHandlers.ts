@@ -87,8 +87,7 @@ async function runLegacyCapsuleGeneration(
   };
   const res = createFakeResponse();
   const handler = deps.regenerateCapsuleWardrobeHandler as
-    | ((req: unknown, res: unknown) => Promise<unknown>)
-    | undefined;
+    ((req: unknown, res: unknown) => Promise<unknown>) | undefined;
   if (!handler) {
     throw new Error("capsule_generation_handler_missing");
   }
@@ -97,8 +96,7 @@ async function runLegacyCapsuleGeneration(
   assertFakeResponseOk(res);
   const legacyJob = (
     deps.getWardrobeJobImpl as
-      | ((email: string, capsuleId: string) => unknown)
-      | undefined
+      ((email: string, capsuleId: string) => unknown) | undefined
   )?.(email, capsuleId);
   await waitForLegacyJob(legacyJob);
 }
@@ -119,8 +117,7 @@ async function runLegacySelectedRegeneration(
   };
   const res = createFakeResponse();
   const handler = deps.regenerateSelectedCapsuleItemsHandler as
-    | ((req: unknown, res: unknown) => Promise<unknown>)
-    | undefined;
+    ((req: unknown, res: unknown) => Promise<unknown>) | undefined;
   if (!handler) {
     throw new Error("capsule_selected_regeneration_handler_missing");
   }
@@ -129,8 +126,7 @@ async function runLegacySelectedRegeneration(
   assertFakeResponseOk(res);
   const legacyJob = (
     deps.getPartialRegenerationJobImpl as
-      | ((email: string, capsuleId: string) => unknown)
-      | undefined
+      ((email: string, capsuleId: string) => unknown) | undefined
   )?.(email, capsuleId);
   await waitForLegacyJob(legacyJob);
 }

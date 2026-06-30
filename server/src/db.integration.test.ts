@@ -41,8 +41,7 @@ type SqlCallContext = SqlCall & {
 
 type SqlResultValue = unknown[] | { count: number };
 type SqlResultHandler =
-  | SqlResultValue
-  | ((context: SqlCallContext) => SqlResultValue);
+  SqlResultValue | ((context: SqlCallContext) => SqlResultValue);
 
 type DatabaseConnectionRow = {
   database: string;
@@ -159,8 +158,7 @@ function createSqlMock(handlers: SqlResultHandler[]) {
     }
     if (typeof handler === "function") {
       return handler({ strings, values, text, calls }) as
-        | TRow[]
-        | { count: number };
+        TRow[] | { count: number };
     }
     return handler as TRow[] | { count: number };
   }

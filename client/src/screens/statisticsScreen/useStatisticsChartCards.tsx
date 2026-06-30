@@ -42,8 +42,7 @@ function buildDimensionChartCard({
 }) {
   const activeValues =
     (draftState[dimension.key as keyof SearchDraftState] as
-      | string[]
-      | undefined) || [];
+      string[] | undefined) || [];
   const formatLabel = (value: string) =>
     getFacetLabel({
       value,

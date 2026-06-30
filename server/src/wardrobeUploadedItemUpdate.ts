@@ -34,8 +34,7 @@ type UploadedWardrobeItemDetails = {
 };
 
 type NormalizedField<T> =
-  | { ok: true; value: T }
-  | { ok: false; reason: "invalid_payload" };
+  { ok: true; value: T } | { ok: false; reason: "invalid_payload" };
 
 const AUDIENCE_ALIASES: Record<string, string> = {
   all: "all",
