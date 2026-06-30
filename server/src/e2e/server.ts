@@ -19,7 +19,7 @@ async function createE2eViteServer(config) {
     ...config,
     server: {
       ...config.server,
-      hmr: { port: hmrPort },
+      ws: { port: hmrPort },
     },
   });
 }
