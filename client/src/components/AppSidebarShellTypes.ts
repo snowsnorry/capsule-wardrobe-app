@@ -21,8 +21,7 @@ type AppSidebarShellContext = {
 };
 
 type AppSidebarShellSlot =
-  | ReactNode
-  | ((context: AppSidebarShellContext) => ReactNode);
+  ReactNode | ((context: AppSidebarShellContext) => ReactNode);
 
 type AppSidebarShellContentMaxWidth = {
   default: number;

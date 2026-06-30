@@ -58,10 +58,7 @@ export type PromptImagesFork = (
   options?: Record<string, unknown>,
 ) => PromptImagesChildProcessLike;
 export type PromptImageTimingState =
-  | PromptImageTimings
-  | Partial<PromptImageTimings>
-  | null
-  | undefined;
+  PromptImageTimings | Partial<PromptImageTimings> | null | undefined;
 export type PromptDebugImageCategoryWithFile = PromptDebugImageCategory & {
   file: string;
 };
@@ -258,9 +255,7 @@ export async function mapWithConcurrency<T, R>(
 
 export function getMetadataDimensions(
   metadata:
-    | { width?: number | null; height?: number | null }
-    | null
-    | undefined,
+    { width?: number | null; height?: number | null } | null | undefined,
 ) {
   return {
     width: typeof metadata?.width === "number" ? metadata.width : null,

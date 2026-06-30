@@ -28,8 +28,7 @@ export type McpOAuthClientMetadata = {
 };
 
 export type McpOAuthGrantTypes =
-  | "authorization_code"
-  | "authorization_code refresh_token";
+  "authorization_code" | "authorization_code refresh_token";
 
 export type McpRegisteredClientRow = {
   clientId: string;

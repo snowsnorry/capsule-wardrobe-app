@@ -175,8 +175,7 @@ function createSearchActions(runtime: SearchRuntime) {
     },
     changeSidebarDraft: async (
       updater:
-        | SearchDraftState
-        | ((current: SearchDraftState) => SearchDraftState),
+        SearchDraftState | ((current: SearchDraftState) => SearchDraftState),
       { submit = false } = {},
     ) => {
       const nextState =

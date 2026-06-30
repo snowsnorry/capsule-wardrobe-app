@@ -141,8 +141,7 @@ type PromptImagesChildFailurePayload = {
 };
 
 type PromptImagesChildPayload =
-  | PromptImagesChildSuccessPayload
-  | PromptImagesChildFailurePayload;
+  PromptImagesChildSuccessPayload | PromptImagesChildFailurePayload;
 
 export type {
   PromptDebugImageCategory,

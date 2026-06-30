@@ -26,9 +26,7 @@ type RegenerateSelectedSqlParams = {
 };
 
 type RegenerateSelectedSourceMode =
-  | "catalog_only"
-  | "wardrobe_preferred"
-  | "wardrobe_only";
+  "catalog_only" | "wardrobe_preferred" | "wardrobe_only";
 
 const WARDROBE_RELEVANCE_BOOST = 25;
 const CATALOG_POOL_LIMIT = 10;

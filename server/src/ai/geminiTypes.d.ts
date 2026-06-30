@@ -5,8 +5,7 @@ type GeminiUploadedFileLike = {
 };
 
 type GeminiContentPart =
-  | { fileData: { fileUri: string; mimeType: string } }
-  | { text: string };
+  { fileData: { fileUri: string; mimeType: string } } | { text: string };
 
 type GeminiJsonSchemaLike = {
   type?: string;

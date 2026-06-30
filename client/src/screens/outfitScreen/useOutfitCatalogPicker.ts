@@ -253,8 +253,7 @@ function useCatalogActions({
     applyCatalogSearch,
     changeCatalogDraft: async (
       updater:
-        | SearchDraftState
-        | ((current: SearchDraftState) => SearchDraftState),
+        SearchDraftState | ((current: SearchDraftState) => SearchDraftState),
       options: { submit?: boolean } = {},
     ) => {
       const nextState =
@@ -267,8 +266,7 @@ function useCatalogActions({
     },
     changeCatalogMobileFiltersDraft: (
       updater:
-        | SearchDraftState
-        | ((current: SearchDraftState) => SearchDraftState),
+        SearchDraftState | ((current: SearchDraftState) => SearchDraftState),
     ) => {
       setCatalogMobileFiltersDraftState((current) =>
         typeof updater === "function" ? updater(current) : updater,

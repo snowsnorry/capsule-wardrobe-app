@@ -39,9 +39,7 @@ export type MainScreenItem = {
 };
 
 type CapsuleSourceMode =
-  | "catalog_only"
-  | "wardrobe_preferred"
-  | "wardrobe_only";
+  "catalog_only" | "wardrobe_preferred" | "wardrobe_only";
 
 type AnchorItemRef = {
   source: "uploaded" | "from_catalog";

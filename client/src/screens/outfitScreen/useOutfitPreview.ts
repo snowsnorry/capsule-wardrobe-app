@@ -22,10 +22,7 @@ function useOutfitPreview({
     item: WardrobeItem,
     payload: UploadedWardrobeItemUpdatePayload,
   ) =>
-    | Promise<WardrobeItem | null | undefined>
-    | WardrobeItem
-    | null
-    | undefined;
+    Promise<WardrobeItem | null | undefined> | WardrobeItem | null | undefined;
   replaceItems: (nextItems: OutfitItemSnapshot[]) => void;
 }) {
   const [previewItem, setPreviewItem] = useState<WardrobeItem | null>(null);

@@ -32,9 +32,7 @@ export type ProfileSettings = {
 };
 
 export type CapsuleSourceMode =
-  | "catalog_only"
-  | "wardrobe_preferred"
-  | "wardrobe_only";
+  "catalog_only" | "wardrobe_preferred" | "wardrobe_only";
 
 export type AnchorItemRef = {
   source: "uploaded" | "from_catalog";
@@ -76,10 +74,7 @@ export type OutfitItemSnapshot = {
 };
 
 type OutfitReportVerdictStatus =
-  | "valid"
-  | "acceptable_with_notes"
-  | "incomplete"
-  | "incoherent";
+  "valid" | "acceptable_with_notes" | "incomplete" | "incoherent";
 
 type OutfitReportVerdict = {
   llmScore?: number;
@@ -476,12 +471,7 @@ export type WardrobeMutationResponse = {
 };
 
 export type AppRoute =
-  | "capsule"
-  | "outfit"
-  | "explore"
-  | "wardrobe"
-  | "statistics"
-  | "share";
+  "capsule" | "outfit" | "explore" | "wardrobe" | "statistics" | "share";
 
 export type AppNavigationOptions = {
   query?: string;

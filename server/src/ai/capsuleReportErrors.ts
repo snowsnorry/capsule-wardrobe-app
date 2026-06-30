@@ -1,7 +1,5 @@
 type CapsuleReportErrorCode =
-  | "invalid_payload"
-  | "not_found"
-  | "service_unavailable";
+  "invalid_payload" | "not_found" | "service_unavailable";
 
 type CapsuleReportError = Error & {
   code?: CapsuleReportErrorCode;

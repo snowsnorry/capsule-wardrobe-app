@@ -19,9 +19,7 @@ type AnchorItemRef = {
 };
 
 type CapsuleSourceMode =
-  | "catalog_only"
-  | "wardrobe_preferred"
-  | "wardrobe_only";
+  "catalog_only" | "wardrobe_preferred" | "wardrobe_only";
 
 type OutfitSetPayload = {
   itemIds: string[];

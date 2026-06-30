@@ -6,9 +6,7 @@ type StyleOptions = {
 type AccentColorValue = ProfileFilterValue | null;
 type AccentColorOptions = ProfileFilterValue[];
 type CapsuleSourceMode =
-  | "catalog_only"
-  | "wardrobe_preferred"
-  | "wardrobe_only";
+  "catalog_only" | "wardrobe_preferred" | "wardrobe_only";
 type AnchorItemRef = {
   source: "uploaded" | "from_catalog";
   url: string;

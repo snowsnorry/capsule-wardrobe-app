@@ -1,7 +1,5 @@
 type PersonalItemsReportErrorCode =
-  | "invalid_payload"
-  | "not_found"
-  | "service_unavailable";
+  "invalid_payload" | "not_found" | "service_unavailable";
 
 type PersonalItemsReportError = Error & {
   code?: PersonalItemsReportErrorCode;

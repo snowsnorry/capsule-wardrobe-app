@@ -7,8 +7,7 @@ type SearchFiltersStatus = {
 };
 
 type SearchStateUpdater =
-  | SearchDraftState
-  | ((current: SearchDraftState) => SearchDraftState);
+  SearchDraftState | ((current: SearchDraftState) => SearchDraftState);
 
 type SearchFiltersSidebarProps = {
   options: SearchOptions;

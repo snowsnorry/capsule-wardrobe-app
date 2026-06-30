@@ -295,13 +295,11 @@ function buildProductDetailGroups(
   context: ProductDetailContext,
 ) {
   const detailRows: DetailRow[] = detailFields
-    .map(
-      (field): PendingDetailRow => ({
-        key: field.key,
-        label: context.t(field.labelKey),
-        value: field.resolveValue(item, context),
-      }),
-    )
+    .map((field): PendingDetailRow => ({
+      key: field.key,
+      label: context.t(field.labelKey),
+      value: field.resolveValue(item, context),
+    }))
     .filter((row): row is DetailRow => Boolean(row.value));
 
   const getRows = (keys: readonly string[]): DetailRow[] =>

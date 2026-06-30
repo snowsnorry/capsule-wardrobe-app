@@ -13,8 +13,7 @@ type CoverageLevel =
   | "overrepresented"
   | "not_applicable";
 type ScorablePersonalItemsReport =
-  | PersonalItemsReportLlmOutput
-  | PersonalItemsReport;
+  PersonalItemsReportLlmOutput | PersonalItemsReport;
 
 type WeightedScore = {
   value: number;

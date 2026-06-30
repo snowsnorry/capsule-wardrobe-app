@@ -1,8 +1,5 @@
 type OutfitReportVerdictStatus =
-  | "valid"
-  | "acceptable_with_notes"
-  | "incomplete"
-  | "incoherent";
+  "valid" | "acceptable_with_notes" | "incomplete" | "incoherent";
 
 type OutfitReportTone = "success" | "warning" | "error" | "neutral";
 

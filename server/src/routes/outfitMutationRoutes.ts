@@ -14,8 +14,7 @@ type OutfitImageSourceRequest =
   | { error: string }
   | { sourceCapsuleId: string; sourceSetIndex: number };
 type CopiedImageResult =
-  | { error: string }
-  | { image: string | null; imageObsolete: boolean };
+  { error: string } | { image: string | null; imageObsolete: boolean };
 type CopyImageResult = { url?: string | null } | null | undefined;
 type SourceOutfitSetResult =
   | { error: string }

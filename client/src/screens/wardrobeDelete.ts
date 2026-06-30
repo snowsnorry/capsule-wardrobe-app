@@ -1,8 +1,7 @@
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 
 type WardrobeDeletionTarget =
-  | { kind: "uploaded"; id: string }
-  | { kind: "from_catalog"; url: string };
+  { kind: "uploaded"; id: string } | { kind: "from_catalog"; url: string };
 
 function getWardrobeDeletionTarget(
   item: MainScreenItem,

@@ -32,8 +32,7 @@ type WardrobePdfJobManagerDeps = {
     email: string,
   ) => Promise<Buffer | Uint8Array | number[] | null>;
   getProfileWithPdfByEmail?:
-    | ((email: string) => Promise<ProfileWithPdfResult>)
-    | null;
+    ((email: string) => Promise<ProfileWithPdfResult>) | null;
   updateProfilePdfByEmail?: UpdateProfilePdfImpl;
   getProducts?: typeof getProductsByUrlsInOrder;
   buildPdfInChild?: (
