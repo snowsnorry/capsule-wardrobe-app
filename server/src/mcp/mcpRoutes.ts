@@ -111,6 +111,10 @@ async function createMcpServer(req, context) {
 }
 
 function sendMcpInternalError(res) {
+  if (res.headersSent || res.writableEnded) {
+    return;
+  }
+
   res.status(500).json({
     jsonrpc: "2.0",
     error: {
@@ -122,21 +126,23 @@ function sendMcpInternalError(res) {
 }
 
 async function handleMcpRequest(req, res, context) {
-  const server = await createMcpServer(req, context);
-  const transport = new StreamableHTTPServerTransport({
-    enableJsonResponse: true,
-    sessionIdGenerator: undefined,
-  });
+  let server: McpServer | null = null;
+  let transport: StreamableHTTPServerTransport | null = null;
 
   try {
+    server = await createMcpServer(req, context);
+    transport = new StreamableHTTPServerTransport({
+      enableJsonResponse: true,
+      sessionIdGenerator: undefined,
+    });
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
     logError("[mcp/request]", error);
     sendMcpInternalError(res);
   } finally {
-    await transport.close();
-    await server.close();
+    await transport?.close();
+    await server?.close();
   }
 }
 
@@ -202,41 +208,45 @@ function getMcpSession(req, res) {
 }
 
 async function handleStatefulMcpInitialize(req, res, context) {
-  const server = await createMcpServer(req, context);
   let sessionId = "";
-  const transport = new StreamableHTTPServerTransport({
-    enableJsonResponse: true,
-    sessionIdGenerator: randomUUID,
-    onsessioninitialized: (initializedSessionId) => {
-      sessionId = initializedSessionId;
-      mcpSessions.set(initializedSessionId, session);
-      refreshMcpSession(initializedSessionId, session);
-    },
-    onsessionclosed: (closedSessionId) => {
-      void closeMcpSession(closedSessionId, false);
-    },
-  });
-  const session: McpHttpSession = {
-    clientId: req.mcpAuth.clientId,
-    scopes: req.mcpAuth.scopes,
-    server,
-    subject: req.mcpAuth.subject,
-    timeout: null,
-    transport,
-  };
+  let server: McpServer | null = null;
+  let transport: StreamableHTTPServerTransport | null = null;
+  let session: McpHttpSession | null = null;
 
   try {
+    server = await createMcpServer(req, context);
+    transport = new StreamableHTTPServerTransport({
+      enableJsonResponse: true,
+      sessionIdGenerator: randomUUID,
+      onsessioninitialized: (initializedSessionId) => {
+        if (!session) {
+          return;
+        }
+        sessionId = initializedSessionId;
+        mcpSessions.set(initializedSessionId, session);
+        refreshMcpSession(initializedSessionId, session);
+      },
+      onsessionclosed: (closedSessionId) => {
+        void closeMcpSession(closedSessionId, false);
+      },
+    });
+    session = {
+      clientId: req.mcpAuth.clientId,
+      scopes: req.mcpAuth.scopes,
+      server,
+      subject: req.mcpAuth.subject,
+      timeout: null,
+      transport,
+    };
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
     logError("[mcp/request]", error);
-    if (!res.headersSent) {
-      sendMcpInternalError(res);
-    }
+    sendMcpInternalError(res);
   } finally {
     if (!sessionId) {
-      await transport.close();
-      await server.close();
+      await transport?.close();
+      await server?.close();
     }
   }
 }
@@ -251,9 +261,7 @@ async function handleStatefulMcpSessionRequest(req, res) {
     await session.transport.handleRequest(req, res, req.body);
   } catch (error) {
     logError("[mcp/request]", error);
-    if (!res.headersSent) {
-      sendMcpInternalError(res);
-    }
+    sendMcpInternalError(res);
   }
 }
 
@@ -274,7 +282,12 @@ async function handleMcpTransportRequest(req, res, context) {
 export function registerMcpRoutes(app, context) {
   const requireMcpBearerToken = createMcpAuthMiddleware(context);
 
-  app.all("/mcp", requireMcpBearerToken, (req, res) => {
-    void handleMcpTransportRequest(req, res, context);
+  app.all("/mcp", requireMcpBearerToken, async (req, res) => {
+    try {
+      await handleMcpTransportRequest(req, res, context);
+    } catch (error) {
+      logError("[mcp/request]", error);
+      sendMcpInternalError(res);
+    }
   });
 }

@@ -1906,6 +1906,29 @@ test("mcp search schema falls back when search options are unavailable", async (
   expectSearchSchemaEnums(searchInputSchema, FALLBACK_SEARCH_ENUMS);
 });
 
+test("mcp returns internal error when server setup fails", async (t) => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const { baseUrl } = await startMcpTestServerWithDependencyOverrides(t, {
+    getSearchOptionsImpl: undefined,
+  });
+  const token = bearerToken({
+    scope: "mcp:read catalog:read",
+    sub: "setup-failure@example.com",
+  });
+
+  const result = await listMcpTools(baseUrl, token);
+
+  expect(result.response.status).toBe(500);
+  expect(result.json).toMatchObject({
+    jsonrpc: "2.0",
+    error: {
+      code: -32603,
+      message: "Internal server error",
+    },
+    id: null,
+  });
+});
+
 test("mcp product search accepts empty, query, filters, and pagination inputs", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
   const token = bearerToken({
