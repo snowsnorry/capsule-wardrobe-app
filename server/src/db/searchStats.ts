@@ -151,7 +151,7 @@ function addArrayFilter(
     sql,
     `(cardinality(`,
     value,
-    `::text[]) = 0 or coalesce(${facet.column}, array[]::text[]) && `,
+    `::text[]) = 0 or ${facet.column} && `,
   );
   addSqlValue(sql, "", value, "::text[])");
 }

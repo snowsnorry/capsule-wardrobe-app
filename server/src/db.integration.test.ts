@@ -430,7 +430,10 @@ test("db integration shapes search persistence and searchProducts queries", asyn
   expect(countCall.values.some((value) => value === "[0.1,0.2]")).toBe(true);
   expect(countCall.values.some((value) => value === 0.35)).toBe(true);
   expect(countCall.values).toContain("semantic");
-  expect(itemCall.text).toMatch(/case[\s\S]*embedding <=>[\s\S]*as distance/i);
+  expect(itemCall.text).toMatch(
+    /case[\s\S]*embedding::vector\(1024\) <=>[\s\S]*as distance/i,
+  );
+  expect(itemCall.text).toContain("products.season && params.season");
   expect(itemCall.values.filter((value) => value === 50).length >= 2).toBe(
     true,
   );

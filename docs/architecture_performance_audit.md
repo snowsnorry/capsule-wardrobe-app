@@ -238,47 +238,50 @@
 
 ### P1 - сначала
 
-1. Закрепить performance contract для `products`.
+1. [x] Закрепить performance contract для `products`.
    - Добавить/задокументировать обязательные индексы: `url/id`, `category`, scalar facets, GIN для arrays, vector HNSW/IVFFLAT для embeddings, trigram/tsvector для lexical search.
    - Добавить query plan checks или smoke benchmark для search/count/stats на representative catalog size.
    - Ожидаемый эффект: снижение DB CPU/IO и более предсказуемый p95/p99.
+   - Статус 2026-07-01: repo-level contract добавлен в `server/src/db/sql/products_performance_contract.sql`, search SQL выровнен под индексируемые array predicates и `vector(1024)` semantic distance path.
+   - Neon production (`purple-frog-30056878`, branch `production`) подтверждает риск: `products` содержит примерно 38 970 строк, `embedding` имеет 1024 измерения, установлен `vector`, но нет `pg_trgm`/`pg_stat_statements`; текущие планы для facet count, lexical contains и semantic nearest-neighbor используют `Seq Scan`/`Sort`.
+   - Production migration по контрактным индексам подготовлена как отдельные `CREATE INDEX CONCURRENTLY` statements и должна применяться на временной Neon branch, затем на production только после отдельного approval.
 
-2. Кэшировать options и переработать stats.
+2. [ ] Кэшировать options и переработать stats.
    - Option dictionaries кэшировать с TTL/version или materialized view.
    - Facet stats вынести в rollup/materialized tables либо ограничить параллелизм.
    - Где UX допускает, заменить exact `total` на `limit + 1`/`hasMore`.
    - Ожидаемый эффект: меньше повторных full scans по `products`.
 
-3. Ввести pagination/cursor и lightweight projections для wardrobe.
+3. [ ] Ввести pagination/cursor и lightweight projections для wardrobe.
    - `/wardrobe/items` должен иметь paginated/list projection без `embedding`.
    - Sidebar count заменить на lightweight count endpoint/bootstrap field.
    - Personal report ограничить hard cap, chunking или summary precomputation.
    - Ожидаемый эффект: ниже DB egress, Node memory, client parse/render time.
 
-4. Исправить job reliability.
+4. [ ] Исправить job reliability.
    - Добавить transactional outbox/reconciler для `queued` jobs без provider id.
    - Сделать row state update + event append атомарными.
    - Добавить per-job deadline и довести `AbortSignal` до child process/LLM/image provider calls.
    - Ожидаемый эффект: меньше stuck jobs и предсказуемое освобождение worker slots.
 
-5. Закрыть MCP error boundary.
+5. [x] Закрыть MCP error boundary.
    - Не отбрасывать Promise в `/mcp` handler.
    - Обернуть `createMcpServer` в `try`.
    - Аккуратно проверять `headersSent` перед error JSON.
    - Ожидаемый эффект: меньше hung integration requests и unhandled rejections.
 
-6. Добавить production startup preflight.
+6. [ ] Добавить production startup preflight.
    - Проверять `CLIENT_ORIGIN`, passkey origin/RP, `DATABASE_URL`, `AUTH_CODE_SECRET`, Resend config и OAuth config до `listen`.
    - Для production убрать localhost defaults или явно запрещать их.
    - Ожидаемый эффект: broken deploy падает сразу, а не в первом user flow.
 
-7. Разделить `/live` и `/ready`.
+7. [ ] Разделить `/live` и `/ready`.
    - `/live` может оставаться cheap process health.
    - `/ready` должен проверять DB и минимальные runtime dependencies.
    - Render readiness лучше направить на readiness endpoint или добавить отдельный alert по `/healthall`.
    - Ожидаемый эффект: меньше "green but broken" деплоев.
 
-8. Исправить frontend correctness bugs.
+8. [ ] Исправить frontend correctness bugs.
    - Добавить sequence/abort guard в `useOutfitCatalogPicker`.
    - Обернуть `localStorage` read/write в `try/catch`.
    - Добавить timeout/abort policy для client job waiters.
@@ -286,34 +289,34 @@
 
 ### P2 - после стабилизации hot paths
 
-1. Сузить app model и уменьшить render cascades.
+1. [ ] Сузить app model и уменьшить render cascades.
    - Мемоизировать model slices/actions там, где это реально снижает renders.
    - Убрать broad object dependencies вроде полного `appState` из effects.
    - Разделить route-level state так, чтобы dialogs/shell не получали лишние changing references.
 
-2. Виртуализировать большие списки.
+2. [ ] Виртуализировать большие списки.
    - Wardrobe grid: windowing/virtualization или server-side pagination.
    - Charts: top-N, aggregation или scrollable virtual list для high-cardinality bars.
 
-3. Сделать bounded client cache.
+3. [ ] Сделать bounded client cache.
    - Для `getCachedJson` добавить max size и LRU/TTL eviction.
    - Ключ расширить только тогда, когда появятся GET-варианты с разными headers/options.
 
-4. Добавить scoped rate limits и active caps.
+4. [ ] Добавить scoped rate limits и active caps.
    - Upload, report/generate enqueue, `/oauth/token`, `/mcp` initialize, `/auth/google`.
    - Для SSE: max stream duration, per-user/session cap, active stream metrics.
 
-5. Перейти к stream-friendly upload/proxy paths.
+5. [ ] Перейти к stream-friendly upload/proxy paths.
    - R2 staging: заменить `readFile` на stream body, ограничить concurrent staging.
    - `client/render-server.js`, если используется, должен passthrough-stream SSE/download endpoints.
 
-6. Улучшить deployment pipeline.
+6. [ ] Улучшить deployment pipeline.
    - Render build: `npm ci --include=dev`.
    - Cron cleanup: server-only build или общий artifact.
    - CI/quality gate: добавить production build.
    - SPA fallback: кэшировать base `index.html` template в памяти.
 
-7. Добавить observability baseline.
+7. [ ] Добавить observability baseline.
    - Request id, structured JSON logs, latency/status logs.
    - Queue metrics: active/queued/failed/stuck jobs.
    - Build SHA/release version в logs/health.

@@ -5,7 +5,7 @@ WITH query_params AS (
   SELECT
     -- Optional query embedding vector used for semantic ranking and filtering.
     $1::text AS embedding_vector_text,
-    $1::vector AS embedding_vector,
+    $1::vector(1024) AS embedding_vector,
     -- Normalized exact lexical query used for name equality scoring.
     $2::text AS text_query,
     -- Escaped LIKE prefix pattern for lexical name, description, composition, and color matching.
@@ -60,7 +60,9 @@ filtered_products AS (
     products.*,
     CASE
       WHEN params.embedding_vector_text IS NULL THEN NULL
-      ELSE products.embedding <=> params.embedding_vector
+      WHEN products.embedding IS NULL THEN NULL
+      WHEN vector_dims(products.embedding) <> 1024 THEN NULL
+      ELSE products.embedding::vector(1024) <=> params.embedding_vector
     END AS distance,
     (
       CASE
@@ -121,15 +123,15 @@ filtered_products AS (
     )
     AND (cardinality(params.audience) = 0 OR lower(coalesce(products.audience, '')) = ANY(params.audience))
     AND (cardinality(params.category) = 0 OR lower(coalesce(products.category, '')) = ANY(params.category))
-    AND (cardinality(params.season) = 0 OR coalesce(products.season, ARRAY[]::text[]) && params.season)
-    AND (cardinality(params.formality_level) = 0 OR coalesce(products.formality_level, ARRAY[]::text[]) && params.formality_level)
-    AND (cardinality(params.style) = 0 OR coalesce(products.style, ARRAY[]::text[]) && params.style)
-    AND (cardinality(params.occasions) = 0 OR coalesce(products.occasions, ARRAY[]::text[]) && params.occasions)
-    AND (cardinality(params.color) = 0 OR coalesce(products.color_base, ARRAY[]::text[]) && params.color)
+    AND (cardinality(params.season) = 0 OR products.season && params.season)
+    AND (cardinality(params.formality_level) = 0 OR products.formality_level && params.formality_level)
+    AND (cardinality(params.style) = 0 OR products.style && params.style)
+    AND (cardinality(params.occasions) = 0 OR products.occasions && params.occasions)
+    AND (cardinality(params.color) = 0 OR products.color_base && params.color)
     AND (cardinality(params.pattern) = 0 OR lower(coalesce(products.pattern, '')) = ANY(params.pattern))
     AND (cardinality(params.silhouette) = 0 OR lower(coalesce(products.silhouette, '')) = ANY(params.silhouette))
     AND (cardinality(params.fit) = 0 OR lower(coalesce(products.fit, '')) = ANY(params.fit))
-    AND (cardinality(params.closure_type) = 0 OR coalesce(products.closure_type, ARRAY[]::text[]) && params.closure_type)
+    AND (cardinality(params.closure_type) = 0 OR products.closure_type && params.closure_type)
 ),
 matching_products AS (
   SELECT

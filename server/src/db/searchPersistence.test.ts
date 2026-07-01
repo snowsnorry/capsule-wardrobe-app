@@ -129,6 +129,34 @@ test("searchProducts qualifies result columns that overlap with query params", a
   expect(itemStatement).not.toMatch(/\bcoalesce\(name,/i);
 });
 
+test("searchProducts keeps array filters and vector distance aligned with the products performance contract", async () => {
+  const statements: string[] = [];
+  const values: unknown[][] = [];
+  const sql = createSearchSqlRecorder({ statements, values });
+  setSqlClientOverride(sql);
+
+  await searchProducts({
+    color: ["black"],
+    queryEmbedding: [0.1, 0.2],
+    season: ["winter"],
+    textSearchMode: "semantic",
+  });
+
+  const joinedStatements = statements.join("\n");
+
+  expect(joinedStatements).toContain("$1::vector(1024)");
+  expect(joinedStatements).toContain("products.embedding::vector(1024)");
+  expect(joinedStatements).toContain("vector_dims(products.embedding) <> 1024");
+  expect(joinedStatements).toContain("products.season && params.season");
+  expect(joinedStatements).toContain("products.color_base && params.color");
+  expect(joinedStatements).not.toContain(
+    "coalesce(products.season, ARRAY[]::text[]) && params.season",
+  );
+  expect(joinedStatements).not.toContain(
+    "coalesce(products.color_base, ARRAY[]::text[]) && params.color",
+  );
+});
+
 function createSearchSqlRecorder({
   statements,
   values,
