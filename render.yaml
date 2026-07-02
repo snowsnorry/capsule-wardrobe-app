@@ -8,7 +8,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
-        value: 22.22.3
+        value: 24.18.0
       - key: NODE_ENV
         value: production
       - key: CLIENT_ORIGIN
@@ -35,7 +35,7 @@ services:
     startCommand: npm run prune:expired-records
     envVars:
       - key: NODE_VERSION
-        value: 22.22.3
+        value: 24.18.0
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL

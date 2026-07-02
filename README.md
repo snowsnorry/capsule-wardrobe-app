@@ -75,7 +75,7 @@ Useful entrypoints:
 
 ## Requirements
 
-- Node.js 22.13+ on the 22.x LTS line
+- Node.js 24.x LTS
 - npm
 
 ## Setup
@@ -364,7 +364,7 @@ Related files:
 
 Minimum env for this path:
 
-- `NODE_VERSION=22.22.3`
+- `NODE_VERSION=24.18.0`
 - `NODE_ENV=production`
 - `CLIENT_ORIGIN=https://<your-service>.onrender.com` or your custom domain
 - `PASSKEY_RP_ID=<your-service>.onrender.com` or your custom domain hostname
