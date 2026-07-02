@@ -122,7 +122,6 @@ RETURNING
   silhouette,
   fit,
   closure_type AS "closureType",
-  embedding,
   source,
   raw_image_url AS "rawImageUrl",
   processing_status AS "processingStatus",

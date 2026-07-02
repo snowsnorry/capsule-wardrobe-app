@@ -198,6 +198,16 @@ function findSqlCall(calls: SqlCall[], pattern: RegExp): SqlCall {
   return call as SqlCall;
 }
 
+function getReturningProjection(text: string): string {
+  const index = text.toLowerCase().lastIndexOf("returning");
+  expect(index).toBeGreaterThanOrEqual(0);
+  return text.slice(index);
+}
+
+function expectNoEmbeddingInReturning(call: SqlCall) {
+  expect(getReturningProjection(call.text)).not.toMatch(/\bembedding\b/i);
+}
+
 afterEach(() => {
   setSqlClientOverride(null);
 });
@@ -641,6 +651,7 @@ test("db integration lists and saves user wardrobe items", async () => {
     source: "from_catalog",
   });
   expect(calls[0].text).toMatch(/from wardrobe/i);
+  expect(calls[0].text).not.toMatch(/\bembedding\b/i);
   expect(calls[0].values).toEqual([
     "user@example.com",
     "from_catalog",
@@ -649,8 +660,11 @@ test("db integration lists and saves user wardrobe items", async () => {
   expect(calls[1].text).toMatch(/insert into wardrobe/i);
   expect(calls[1].text).toMatch(/from products/i);
   expect(calls[1].text).toMatch(/products\.id::text/i);
+  expect(calls[1].text).toMatch(/products\.embedding/i);
   expect(calls[1].text).toMatch(/product_id = excluded\.product_id/i);
+  expect(calls[1].text).toMatch(/embedding = excluded\.embedding/i);
   expect(calls[1].text).toMatch(/on conflict \(profile_email, url\)/i);
+  expectNoEmbeddingInReturning(calls[1]);
   expect(calls[1].values[0]).toBe("user@example.com");
   expect(calls[1].values[1]).toBe("https://example.com/products/linen-shirt");
   expect(deleted).toBe(true);
@@ -741,6 +755,7 @@ test("db integration reads uploaded wardrobe items by id", async () => {
   expect(calls).toHaveLength(2);
   expect(calls[0].text).toMatch(/from wardrobe/i);
   expect(calls[0].text).toMatch(/source = 'uploaded'/i);
+  expect(calls[0].text).not.toMatch(/\bembedding\b/i);
   expect(calls[0].values).toEqual(["user@example.com", "wardrobe-upload-1"]);
   expect(calls[1].values).toEqual(["user@example.com", "missing-upload"]);
 });
@@ -810,12 +825,14 @@ test("db integration lists wardrobe items by exact urls and source", async () =>
   expect(calls[0].text).toMatch(/from unnest/i);
   expect(calls[0].text).toMatch(/'wardrobe:\/\/' \|\| wardrobe\.id::text/i);
   expect(calls[0].text).toMatch(/wardrobe\.source =/i);
+  expect(calls[0].text).not.toMatch(/\bembedding\b/i);
   expect(calls[0].values).toEqual([
     ["wardrobe://wardrobe-upload-1"],
     "uploaded",
     "user@example.com",
     "uploaded",
   ]);
+  expect(calls[1].text).not.toMatch(/\bembedding\b/i);
   expect(calls[1].values).toEqual([
     ["https://example.com/catalog-shirt"],
     "from_catalog",
@@ -860,6 +877,7 @@ test("db integration lists wardrobe items by ids in caller order", async () => {
   expect(calls).toHaveLength(1);
   expect(calls[0].text).toMatch(/id = any/i);
   expect(calls[0].text).toMatch(/array_position/i);
+  expect(calls[0].text).not.toMatch(/\bembedding\b/i);
   expect(calls[0].values).toEqual(["user@example.com", [42, 7], [42, 7]]);
 });
 
@@ -875,6 +893,8 @@ test("db integration returns null when catalog wardrobe save finds no product", 
   expect(saved).toBeNull();
   expect(calls).toHaveLength(1);
   expect(calls[0].text).toMatch(/insert into wardrobe/i);
+  expect(calls[0].text).toMatch(/products\.embedding/i);
+  expectNoEmbeddingInReturning(calls[0]);
   expect(calls[0].values).toEqual([
     "user@example.com",
     "https://example.com/products/missing",
@@ -932,6 +952,8 @@ test("db integration saves uploaded wardrobe items", async () => {
   expect(calls[1].text).toMatch(/update wardrobe/i);
   expect(calls[1].text).toMatch(/coalesce\(nullif\(trim\(wardrobe\.url\)/i);
   expect(calls[1].text).toMatch(/array_position/i);
+  expect(calls[1].text).not.toMatch(/select\s+\*/i);
+  expect(calls[1].text).not.toMatch(/\bembedding\b/i);
   expect(calls[1].values).toEqual([
     ["wardrobe-upload-1"],
     ["wardrobe-upload-1"],
@@ -1052,6 +1074,7 @@ test("db integration deletes uploaded wardrobe items by id", async () => {
   );
   expect(calls[0].text).toMatch(/delete from wardrobe/i);
   expect(calls[0].text).toMatch(/source = 'uploaded'/i);
+  expectNoEmbeddingInReturning(calls[0]);
   expect(calls[0].values).toEqual(["user@example.com", "wardrobe-upload-1"]);
 });
 
@@ -1154,6 +1177,8 @@ test("db integration updates uploaded wardrobe item metadata status", async () =
   );
   expect(calls[0].text).toMatch(/update wardrobe/i);
   expect(calls[0].text).toMatch(/processing_status =/i);
+  expect(calls[0].text).toMatch(/embedding =/i);
+  expectNoEmbeddingInReturning(calls[0]);
   expect(calls[0].values).toEqual([
     "Linen shirt",
     null,
@@ -1214,6 +1239,7 @@ test("db integration marks uploaded wardrobe item metadata failed", async () => 
   );
   expect(calls[0].text).toMatch(/update wardrobe/i);
   expect(calls[0].text).toMatch(/processing_status = 'failed'/i);
+  expectNoEmbeddingInReturning(calls[0]);
   expect(calls[0].values).toEqual(["user@example.com", "wardrobe-upload-1"]);
 });
 
@@ -1285,6 +1311,8 @@ test("db integration updates uploaded wardrobe item details", async () => {
   );
   expect(calls[0].text).toMatch(/update wardrobe/i);
   expect(calls[0].text).toMatch(/source = 'uploaded'/i);
+  expect(calls[0].text).toMatch(/embedding =/i);
+  expectNoEmbeddingInReturning(calls[0]);
   expect(calls[0].values).toEqual([
     "Updated shirt",
     "Button-front shirt",
@@ -1361,6 +1389,7 @@ test("db integration saves failed uploaded detail update with null embedding", a
     }),
   );
   expect(calls[0].text).toMatch(/embedding =/i);
+  expectNoEmbeddingInReturning(calls[0]);
   expect(calls[0].values).toContain("failed");
   expect(calls[0].values).toContain(null);
 });

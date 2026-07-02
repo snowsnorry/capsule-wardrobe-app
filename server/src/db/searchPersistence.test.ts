@@ -147,6 +147,8 @@ test("searchProducts keeps array filters and vector distance aligned with the pr
   expect(joinedStatements).toContain("$1::vector(1024)");
   expect(joinedStatements).toContain("products.embedding::vector(1024)");
   expect(joinedStatements).toContain("vector_dims(products.embedding) <> 1024");
+  expect(joinedStatements).not.toContain("products.*");
+  expect(joinedStatements).not.toContain("filtered_products.*");
   expect(joinedStatements).toContain("products.season && params.season");
   expect(joinedStatements).toContain("products.color_base && params.color");
   expect(joinedStatements).not.toContain(

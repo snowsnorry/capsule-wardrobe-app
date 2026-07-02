@@ -62,7 +62,6 @@ async function deleteUploadedWardrobeItemById({
         silhouette,
         fit,
         closure_type as "closureType",
-        embedding,
         owned_r2_image_keys as "ownedR2ImageKeys",
         source,
         raw_image_url as "rawImageUrl",

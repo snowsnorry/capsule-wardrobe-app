@@ -266,12 +266,30 @@ export async function getProductsWithEmbeddingsByUrlsInOrder(
   return getResultRows(
     await sql<ProductWithEmbeddingRow>`
     select
-      products.*,
+      products.id,
+      products.name,
+      products.url,
+      products.description,
+      products.brand,
+      products.price,
+      products.currency,
+      products.availability,
       products.image_url as "imageUrl",
+      products.audience,
+      products.category,
+      products.season,
       products.formality_level as "formalityLevel",
+      products.style,
+      products.occasions,
       products.color_base as "colorBase",
+      products.pattern,
+      products.finish,
       products.is_neutral as "isNeutral",
-      products.closure_type as "closureType"
+      products.composition,
+      products.silhouette,
+      products.fit,
+      products.closure_type as "closureType",
+      products.embedding
     from unnest(${normalizedUrls}::text[]) with ordinality as selected(url, position)
     join products on products.url = selected.url
     order by selected.position asc

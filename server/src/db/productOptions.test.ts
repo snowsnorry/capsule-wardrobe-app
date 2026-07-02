@@ -113,7 +113,7 @@ test("product url lookups short-circuit empty input and preserve normalized url 
     fit: null,
     closureType: [],
   };
-  const { values } = useQueuedSql([
+  const { statements, values } = useQueuedSql([
     [product],
     [{ ...product, embedding: [0.1, 0.2] }],
   ]);
@@ -126,6 +126,9 @@ test("product url lookups short-circuit empty input and preserve normalized url 
   expect(
     await getProductsWithEmbeddingsByUrlsInOrder(["https://example.com/shirt"]),
   ).toEqual([{ ...product, embedding: [0.1, 0.2] }]);
+  expect(statements[0]).not.toMatch(/\bembedding\b/i);
+  expect(statements[1]).not.toMatch(/products\.\*/i);
+  expect(statements[1]).toMatch(/products\.embedding/i);
   expect(values[0]).toEqual([["https://example.com/shirt"]]);
   expect(values[1]).toEqual([["https://example.com/shirt"]]);
 });
@@ -152,8 +155,10 @@ test("product MCP fetch lookups include wardrobe saved state by id and exact url
 
   expect(statements[0]).toMatch(/where products\.id =/i);
   expect(statements[0]).toMatch(/wardrobe\.profile_email =/i);
+  expect(statements[0]).not.toMatch(/\bembedding\b/i);
   expect(statements[1]).toMatch(/where products\.url =/i);
   expect(statements[1]).toMatch(/wardrobe\.source = 'from_catalog'/i);
+  expect(statements[1]).not.toMatch(/\bembedding\b/i);
   expect(values[0]).toEqual(["person@example.com", "person@example.com", "p1"]);
   expect(values[1]).toEqual([
     "person@example.com",
@@ -185,6 +190,7 @@ test("product URL batch lookup includes profile saved state", async () => {
   ).toEqual([product]);
   expect(statements[0]).toMatch(/from unnest/i);
   expect(statements[0]).toMatch(/wardrobe\.source = 'from_catalog'/i);
+  expect(statements[0]).not.toMatch(/\bembedding\b/i);
   expect(values[0]).toEqual([
     "person@example.com",
     ["https://example.com/shirt"],

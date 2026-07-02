@@ -53,7 +53,6 @@ WITH query_params AS (
 ),
 filtered_products AS (
   SELECT
-    products.*,
     CASE
       WHEN params.embedding_vector_text IS NULL THEN NULL
       WHEN products.embedding IS NULL THEN NULL
