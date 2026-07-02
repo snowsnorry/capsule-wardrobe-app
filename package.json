@@ -59,7 +59,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.7.0",
-    "knip": "^6.23.0",
+    "knip": "^6.24.0",
     "prettier": "^3.9.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.1",
