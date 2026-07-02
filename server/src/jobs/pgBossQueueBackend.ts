@@ -1,5 +1,6 @@
 import { PgBoss } from "pg-boss";
 import { JOB_WORKER_CONCURRENCY } from "../appConfig.js";
+import { logError } from "../logger.js";
 import type {
   QueueBackend,
   QueueBackendWorkerHandler,
@@ -30,6 +31,13 @@ function createBoss() {
   });
 }
 
+function attachBossErrorHandler(boss: PgBoss): PgBoss {
+  boss.on("error", (error) => {
+    logError("[jobs][pg-boss]", error);
+  });
+  return boss;
+}
+
 export function createPgBossQueueBackend({
   boss,
   queueName = CORE_QUEUE_NAME,
@@ -40,12 +48,17 @@ export function createPgBossQueueBackend({
   workerConcurrency?: number;
 } = {}): QueueBackend {
   let bossInstance: PgBoss | null = boss || null;
+  let bossErrorHandlerAttached = false;
   let started = false;
   let queueReady = false;
   let startupPromise: Promise<void> | null = null;
   const getBoss = () => {
     if (!bossInstance) {
       bossInstance = createBoss();
+    }
+    if (!bossErrorHandlerAttached) {
+      attachBossErrorHandler(bossInstance);
+      bossErrorHandlerAttached = true;
     }
     return bossInstance;
   };

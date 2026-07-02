@@ -6,13 +6,15 @@ afterEach(() => {
 });
 
 function createBossMock() {
-  return {
+  const boss = {
     createQueue: vi.fn(async () => undefined),
+    on: vi.fn(() => boss),
     send: vi.fn(async () => "provider-1"),
     start: vi.fn(async () => undefined),
     stop: vi.fn(async () => undefined),
     work: vi.fn(async () => undefined),
   };
+  return boss;
 }
 
 function getMockCall(mock: { mock: { calls: unknown[][] } }, index = 0) {
@@ -35,6 +37,11 @@ test("pg-boss backend starts lazily and enqueues app-owned job payloads", async 
   ).resolves.toBe("provider-1");
 
   expect(boss.start).toHaveBeenCalledTimes(1);
+  expect(boss.on).toHaveBeenCalledWith("error", expect.any(Function));
+  expect(boss.on).toHaveBeenCalledTimes(1);
+  expect(boss.on.mock.invocationCallOrder[0]).toBeLessThan(
+    boss.start.mock.invocationCallOrder[0],
+  );
   expect(boss.createQueue).toHaveBeenCalledWith("core");
   expect(boss.start.mock.invocationCallOrder[0]).toBeLessThan(
     boss.createQueue.mock.invocationCallOrder[0],
@@ -118,6 +125,7 @@ test("pg-boss backend clamps invalid concurrency and stops only after start", as
     graceful: true,
     timeout: 30_000,
   });
+  expect(boss.on).toHaveBeenCalledTimes(1);
 });
 
 test("pg-boss backend reports missing DATABASE_URL before creating a default boss", async () => {
