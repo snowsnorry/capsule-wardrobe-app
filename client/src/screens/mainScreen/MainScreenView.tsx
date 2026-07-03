@@ -1,4 +1,10 @@
-import { useMemo, useState, type MouseEvent } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 import { Box, Divider, LinearProgress } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 import {
@@ -191,6 +197,7 @@ const mainScreenBodySx = {
 
 function MainScreenCapsulePanel(model: MainScreenViewProps) {
   const { activeImageSrc, activeSet, visibleItems } = model.display;
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
   const [highlightedReportItemIds, setHighlightedReportItemIds] = useState<
     string[]
   >([]);
@@ -215,6 +222,7 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
   return (
     <Box
       {...primaryScrollTargetAttribute}
+      ref={scrollContainerRef}
       sx={getCapsulePanelLayoutSx(showFloatingReportInspector)}
     >
       <CapsuleStickyHeader {...model} />
@@ -233,6 +241,7 @@ function MainScreenCapsulePanel(model: MainScreenViewProps) {
           activeSet={activeSet}
           highlightedReportItemKeys={highlightedReportItemKeys}
           model={model}
+          scrollContainerRef={scrollContainerRef}
           visibleItems={visibleItems}
         />
       </Box>
@@ -261,12 +270,14 @@ function MainScreenWardrobePanel({
   activeSet,
   highlightedReportItemKeys,
   model,
+  scrollContainerRef,
   visibleItems,
 }: {
   activeImageSrc: MainScreenViewProps["display"]["activeImageSrc"];
   activeSet: MainScreenViewProps["display"]["activeSet"];
   highlightedReportItemKeys: string[];
   model: MainScreenViewProps;
+  scrollContainerRef: RefObject<HTMLElement | null>;
   visibleItems: MainScreenViewProps["display"]["visibleItems"];
 }) {
   return (
@@ -287,6 +298,7 @@ function MainScreenWardrobePanel({
       selectedUrls={model.props.selectedRegenerationUrls}
       selectionMode={model.selectionMode || model.selectedCount > 0}
       showAdditionalItemPlaceholder={model.props.showAdditionalItemPlaceholder}
+      scrollContainerRef={scrollContainerRef}
       visibleItems={visibleItems}
       onDeleteImage={(index) =>
         model.setConfirm({

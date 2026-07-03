@@ -1,4 +1,5 @@
 import { Box, Divider, Stack } from "@mui/material";
+import type { RefObject } from "react";
 import ClothingCard from "../../components/ClothingCard";
 import ClothingGridPlaceholder, {
   ClothingPlaceholderCard,
@@ -14,6 +15,12 @@ import type {
   ResolvedOutfitSet,
 } from "./MainScreenTypes";
 import type { ProductMenuOpenOptions } from "../../components/ClothingCardTypes";
+import {
+  buildWardrobeGridEntries,
+  shouldVirtualizeWardrobeGrid,
+  type WardrobeGridEntry,
+} from "./MainScreenVirtualGrid";
+import VirtualWardrobeGrid from "./MainScreenVirtualWardrobeGrid";
 
 type WardrobeProps = {
   activeImageSrc: string;
@@ -29,6 +36,7 @@ type WardrobeProps = {
   selectedUrls: string[];
   selectionMode: boolean;
   showAdditionalItemPlaceholder: boolean;
+  scrollContainerRef: RefObject<HTMLElement | null>;
   visibleItems: MainScreenItem[];
   onDeleteImage: (index: number) => void;
   onGenerateImage?: (index: number) => void;
@@ -80,67 +88,96 @@ function OutfitImageBlock({ props }: { props: WardrobeProps }) {
 function WardrobeGrid({ props }: { props: WardrobeProps }) {
   const { t } = useI18n();
   const highlightedKeySet = new Set(props.highlightedKeys || []);
+  const entries = buildWardrobeGridEntries({
+    showAdditionalItemPlaceholder: props.showAdditionalItemPlaceholder,
+    visibleItems: props.visibleItems,
+  });
+
+  if (shouldVirtualizeWardrobeGrid(entries.length)) {
+    return (
+      <VirtualWardrobeGrid
+        entries={entries}
+        mobileColumns={props.mobileColumns}
+        scrollContainerRef={props.scrollContainerRef}
+        renderEntry={(entry) =>
+          renderWardrobeGridEntry({ entry, highlightedKeySet, props, t })
+        }
+      />
+    );
+  }
 
   return (
     <Box sx={buildResponsiveClothingGridSx(props.mobileColumns)}>
-      {props.visibleItems.map((item) => {
-        const itemUrl = String(item?.url || "");
-        const itemKey = getWardrobeItemKey(item);
-        const highlighted = highlightedKeySet.has(itemKey);
-        const isAnchor = isAnchorWardrobeItem(
-          item,
-          props.selectedAnchorItemRefs,
-        );
-        const regenerationLockedReason = isAnchor
-          ? t("capsule.anchorRegenerationLocked")
-          : null;
-        if (props.partialPendingUrls.includes(itemUrl)) {
-          return (
-            <ClothingPlaceholderCard
-              key={`pending-${item.url || item.id}`}
-              placeholderKey={`pending-${item.url || item.id}`}
-              mobileColumns={props.mobileColumns}
-            />
-          );
-        }
-        return (
-          <Box
-            key={itemKey}
-            data-testid={
-              highlighted ? "capsule-report-item-highlighted" : undefined
-            }
-            sx={getReportHighlightSx(highlighted)}
-          >
-            <ClothingCard
-              item={item}
-              isSelectable={Boolean(itemUrl) && !isAnchor}
-              isSelected={props.selectedUrls.includes(itemUrl)}
-              isSelectionMode={props.selectionMode}
-              isRegenerating={props.disabled}
-              regenerationLockedReason={regenerationLockedReason}
-              onToggleSelected={props.onToggleSelected}
-              onProductClick={props.onProductClick}
-              onProductMenuOpen={props.onProductMenuOpen}
-              allowProductMenuWithoutUrl
-              isMobile={props.isOverlay}
-              mobileColumns={props.mobileColumns}
-            />
-          </Box>
-        );
-      })}
-      {props.showAdditionalItemPlaceholder ? (
-        <ClothingGridPlaceholder
-          count={1}
-          inline
-          mobileColumns={props.mobileColumns}
-        />
-      ) : null}
+      {entries.map((entry) =>
+        renderWardrobeGridEntry({ entry, highlightedKeySet, props, t }),
+      )}
     </Box>
   );
 }
 
-function getWardrobeItemKey(item: MainScreenItem) {
-  return String(item?.url || item?.id || "").trim();
+function renderWardrobeGridEntry({
+  entry,
+  highlightedKeySet,
+  props,
+  t,
+}: {
+  entry: WardrobeGridEntry;
+  highlightedKeySet: Set<string>;
+  props: WardrobeProps;
+  t: ReturnType<typeof useI18n>["t"];
+}) {
+  if (entry.kind === "additional-placeholder") {
+    return (
+      <ClothingGridPlaceholder
+        key={entry.key}
+        count={1}
+        inline
+        mobileColumns={props.mobileColumns}
+      />
+    );
+  }
+
+  const item = entry.item;
+  const itemUrl = String(item?.url || "");
+  const itemKey = entry.key;
+  const highlighted = highlightedKeySet.has(itemKey);
+  const isAnchor = isAnchorWardrobeItem(item, props.selectedAnchorItemRefs);
+  const regenerationLockedReason = isAnchor
+    ? t("capsule.anchorRegenerationLocked")
+    : null;
+
+  if (props.partialPendingUrls.includes(itemUrl)) {
+    return (
+      <ClothingPlaceholderCard
+        key={`pending-${item.url || item.id}`}
+        placeholderKey={`pending-${item.url || item.id}`}
+        mobileColumns={props.mobileColumns}
+      />
+    );
+  }
+
+  return (
+    <Box
+      key={itemKey}
+      data-testid={highlighted ? "capsule-report-item-highlighted" : undefined}
+      sx={getReportHighlightSx(highlighted)}
+    >
+      <ClothingCard
+        item={item}
+        isSelectable={Boolean(itemUrl) && !isAnchor}
+        isSelected={props.selectedUrls.includes(itemUrl)}
+        isSelectionMode={props.selectionMode}
+        isRegenerating={props.disabled}
+        regenerationLockedReason={regenerationLockedReason}
+        onToggleSelected={props.onToggleSelected}
+        onProductClick={props.onProductClick}
+        onProductMenuOpen={props.onProductMenuOpen}
+        allowProductMenuWithoutUrl
+        isMobile={props.isOverlay}
+        mobileColumns={props.mobileColumns}
+      />
+    </Box>
+  );
 }
 
 function getReportHighlightSx(highlighted: boolean) {

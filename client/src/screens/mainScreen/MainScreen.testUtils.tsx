@@ -283,6 +283,12 @@ export function setMainScreenLayout(
   });
 }
 
+export function setMainScreenMediaQuery(
+  implementation: (query: string) => boolean,
+) {
+  mediaQueryMock.mockImplementation(implementation);
+}
+
 export function renderWithTheme(children: ReactNode) {
   return render(<ThemeProvider theme={theme}>{children}</ThemeProvider>);
 }

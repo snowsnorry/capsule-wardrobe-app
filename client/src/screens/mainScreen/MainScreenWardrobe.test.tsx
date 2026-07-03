@@ -1,12 +1,14 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, RefObject } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   renderWithTheme,
   resetMainScreenTestMocks,
+  setMainScreenMediaQuery,
 } from "./MainScreen.testUtils";
 import MainScreenWardrobe from "./MainScreenWardrobe";
+import type { MainScreenItem } from "./MainScreenTypes";
 
 type WardrobeProps = ComponentProps<typeof MainScreenWardrobe>;
 
@@ -27,6 +29,28 @@ const items = [
   { id: "c", url: "https://example.com/c", name: "Bag", category: "bag" },
 ];
 
+function createItems(count: number): MainScreenItem[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `item-${index}`,
+    url: `https://example.com/item-${index}`,
+    name: `Item ${index}`,
+    category: "top",
+  }));
+}
+
+function createScrollContainerRef(
+  clientHeight = 800,
+): RefObject<HTMLElement | null> {
+  const element = document.createElement("div");
+  Object.defineProperty(element, "clientHeight", {
+    configurable: true,
+    value: clientHeight,
+  });
+  element.setAttribute("data-test-scroll-container", "true");
+  document.body.appendChild(element);
+  return { current: element };
+}
+
 function createWardrobeProps(
   overrides: Partial<WardrobeProps> = {},
 ): WardrobeProps {
@@ -43,6 +67,7 @@ function createWardrobeProps(
     selectedUrls: [],
     selectionMode: false,
     showAdditionalItemPlaceholder: false,
+    scrollContainerRef: createScrollContainerRef(),
     visibleItems: [],
     onDeleteImage: vi.fn(),
     onGenerateImage: vi.fn(),
@@ -65,7 +90,12 @@ describe("MainScreenWardrobe", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     cleanup();
+    document
+      .querySelectorAll("[data-test-scroll-container]")
+      .forEach((element) => element.remove());
   });
 
   test("renders loading placeholder with configured mobile columns", () => {
@@ -106,6 +136,228 @@ describe("MainScreenWardrobe", () => {
 
     await user.click(screen.getByTestId("clothing-card-https://example.com/c"));
     expect(onToggleSelected).toHaveBeenCalledWith(items[2]);
+  });
+
+  test("keeps short lists on the regular grid path", () => {
+    renderWardrobe({ visibleItems: createItems(12) });
+
+    expect(
+      screen.queryByTestId("virtual-wardrobe-grid"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("clothing-card-https://example.com/item-0"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("clothing-card-https://example.com/item-11"),
+    ).toBeInTheDocument();
+  });
+
+  test("virtualizes long lists without mounting every card immediately", () => {
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 1200,
+        height: 800,
+        top: 0,
+        right: 1200,
+        bottom: 800,
+        left: 0,
+        toJSON: () => ({}),
+      });
+
+    renderWardrobe({ visibleItems: createItems(100) });
+
+    expect(screen.getByTestId("virtual-wardrobe-grid")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("clothing-card-https://example.com/item-0"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("clothing-card-https://example.com/item-99"),
+    ).not.toBeInTheDocument();
+
+    rectSpy.mockRestore();
+  });
+
+  test("uses the sm breakpoint for virtual columns even when content width is below sm", () => {
+    setMainScreenMediaQuery((query) =>
+      String(query).includes("min-width:600px"),
+    );
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      width: 520,
+      height: 800,
+      top: 0,
+      right: 520,
+      bottom: 800,
+      left: 0,
+      toJSON: () => ({}),
+    });
+
+    renderWardrobe({ mobileColumns: 3, visibleItems: createItems(72) });
+
+    expect(screen.getByTestId("virtual-wardrobe-grid")).toHaveAttribute(
+      "data-column-count",
+      "2",
+    );
+  });
+
+  test("applies scroll margin when content sits above the virtual grid", async () => {
+    const scrollContainerRef = createScrollContainerRef(800);
+    scrollContainerRef.current!.scrollTop = 50;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function getRect(this: HTMLElement) {
+        const isScrollContainer = this.hasAttribute(
+          "data-test-scroll-container",
+        );
+        const isVirtualGrid =
+          this.getAttribute("data-testid") === "virtual-wardrobe-grid";
+        const top = isVirtualGrid ? 300 : isScrollContainer ? 20 : 0;
+        return {
+          x: 0,
+          y: top,
+          width: 1200,
+          height: isScrollContainer ? 800 : 400,
+          top,
+          right: 1200,
+          bottom: top + (isScrollContainer ? 800 : 400),
+          left: 0,
+          toJSON: () => ({}),
+        };
+      },
+    );
+
+    renderWardrobe({
+      scrollContainerRef,
+      visibleItems: createItems(72),
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("virtual-wardrobe-grid")).toHaveAttribute(
+        "data-scroll-margin",
+        "330",
+      ),
+    );
+  });
+
+  test("uses ResizeObserver when the browser provides it", () => {
+    class ResizeObserverMock {
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    }
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      width: 1200,
+      height: 800,
+      top: 0,
+      right: 1200,
+      bottom: 800,
+      left: 0,
+      toJSON: () => ({}),
+    });
+
+    const { unmount } = renderWardrobe({ visibleItems: createItems(72) });
+
+    expect(screen.getByTestId("virtual-wardrobe-grid")).toBeInTheDocument();
+
+    unmount();
+    vi.unstubAllGlobals();
+  });
+
+  test("preserves card behavior in the virtualized grid path", async () => {
+    const user = userEvent.setup();
+    const onToggleSelected = vi.fn();
+    const virtualItems = createItems(72);
+    virtualItems[0] = {
+      id: "selected",
+      url: "https://example.com/selected",
+      name: "Selected",
+      category: "top",
+    };
+    virtualItems[1] = {
+      id: "pending",
+      url: "https://example.com/pending",
+      name: "Pending",
+      category: "top",
+    };
+    virtualItems[2] = {
+      id: "anchor",
+      url: "wardrobe://anchor",
+      name: "Anchor",
+      category: "top",
+      source: "uploaded" as const,
+    };
+
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      width: 1200,
+      height: 800,
+      top: 0,
+      right: 1200,
+      bottom: 800,
+      left: 0,
+      toJSON: () => ({}),
+    });
+
+    renderWardrobe({
+      visibleItems: virtualItems,
+      selectedUrls: ["https://example.com/selected"],
+      partialPendingUrls: ["https://example.com/pending"],
+      selectedAnchorItemRefs: [
+        { source: "uploaded", url: "wardrobe://anchor" },
+      ],
+      selectionMode: true,
+      onToggleSelected,
+    });
+
+    expect(
+      screen.getByTestId("clothing-card-https://example.com/selected"),
+    ).toHaveAttribute("data-selected", "true");
+    expect(
+      screen.getByTestId(
+        "placeholder-card-pending-https://example.com/pending",
+      ),
+    ).toHaveAttribute("data-mobile-columns", "2");
+    expect(
+      screen.getByTestId("clothing-card-wardrobe://anchor"),
+    ).toHaveAttribute("data-selectable", "false");
+
+    await user.click(
+      screen.getByTestId("clothing-card-https://example.com/item-3"),
+    );
+    expect(onToggleSelected).toHaveBeenCalledWith(virtualItems[3]);
+  });
+
+  test("can render the additional placeholder on the virtualized path", () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      width: 1200,
+      height: 10000,
+      top: 0,
+      right: 1200,
+      bottom: 10000,
+      left: 0,
+      toJSON: () => ({}),
+    });
+
+    renderWardrobe({
+      scrollContainerRef: createScrollContainerRef(10000),
+      showAdditionalItemPlaceholder: true,
+      visibleItems: createItems(61),
+    });
+
+    expect(screen.getByTestId("virtual-wardrobe-grid")).toBeInTheDocument();
+    expect(screen.getByTestId("inline-placeholder-1")).toHaveAttribute(
+      "data-mobile-columns",
+      "2",
+    );
   });
 
   test("keeps anchor wardrobe cards out of partial-regeneration selection", async () => {

@@ -117,7 +117,7 @@
 
 - App-level model собирается как большой набор nested objects/actions; многие объекты и handlers создаются заново на каждый render.
 - Некоторые effects зависят от широких object references вроде `appState`.
-- Grids и chart rows не виртуализированы и не всегда ограничены top-N.
+- Длинные списки карточек не виртуализированы и не всегда имеют server-side pagination.
 - `getCachedJson` использует module-level `Map` без max size/eviction.
 - SearchScreen защищен от stale responses sequence guard'ом, но Outfit catalog picker аналогичной защиты не имеет.
 
@@ -294,14 +294,13 @@
 
 ### P2 - после стабилизации hot paths
 
-1. [ ] Сузить app model и уменьшить render cascades.
+1. [x] Сузить app model и уменьшить render cascades.
    - Мемоизировать model slices/actions там, где это реально снижает renders.
    - Убрать broad object dependencies вроде полного `appState` из effects.
    - Разделить route-level state так, чтобы dialogs/shell не получали лишние changing references.
 
-2. [ ] Виртуализировать большие списки.
-   - Wardrobe grid: windowing/virtualization или server-side pagination.
-   - Charts: top-N, aggregation или scrollable virtual list для high-cardinality bars.
+2. [x] Виртуализировать карточки в длинных списках.
+   - Wardrobe grid и другие card-based lists: windowing/virtualization или server-side pagination.
 
 3. [ ] Сделать bounded client cache.
    - Для `getCachedJson` добавить max size и LRU/TTL eviction.
