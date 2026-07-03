@@ -11,64 +11,77 @@ export function useAppLifecycleEffects({
   appState: AppState;
   locale: string;
 }) {
+  const {
+    activeCapsuleId,
+    activeCapsuleIdRef,
+    activeOutfitId,
+    activeOutfitIdRef,
+    capsuleEventsAbortRef,
+    hasProfile,
+    isMountedRef,
+    partialRegenerationPendingUrls,
+    pendingNotificationKindRef,
+    pendingRegenerationUrlsRef,
+    profileCreated,
+    sessionInitialized,
+    setSettingsProfile,
+    settingsProfile,
+    user,
+  } = appState;
+
   useEffect(() => {
-    appState.isMountedRef.current = true;
+    isMountedRef.current = true;
     return () => {
-      appState.isMountedRef.current = false;
+      isMountedRef.current = false;
     };
-  }, [appState.isMountedRef]);
+  }, [isMountedRef]);
 
   useEffect(
     () => () => {
-      if (appState.capsuleEventsAbortRef.current) {
-        appState.capsuleEventsAbortRef.current.abort();
-        appState.capsuleEventsAbortRef.current = null;
+      if (capsuleEventsAbortRef.current) {
+        capsuleEventsAbortRef.current.abort();
+        capsuleEventsAbortRef.current = null;
       }
-      appState.pendingNotificationKindRef.current = "";
+      pendingNotificationKindRef.current = "";
     },
-    [appState.capsuleEventsAbortRef, appState.pendingNotificationKindRef],
+    [capsuleEventsAbortRef, pendingNotificationKindRef],
   );
 
   useEffect(() => {
-    appState.pendingRegenerationUrlsRef.current =
-      appState.partialRegenerationPendingUrls;
-  }, [
-    appState.partialRegenerationPendingUrls,
-    appState.pendingRegenerationUrlsRef,
-  ]);
+    pendingRegenerationUrlsRef.current = partialRegenerationPendingUrls;
+  }, [partialRegenerationPendingUrls, pendingRegenerationUrlsRef]);
 
   useEffect(() => {
-    appState.activeCapsuleIdRef.current = appState.activeCapsuleId;
-  }, [appState.activeCapsuleId, appState.activeCapsuleIdRef]);
+    activeCapsuleIdRef.current = activeCapsuleId;
+  }, [activeCapsuleId, activeCapsuleIdRef]);
 
   useEffect(() => {
-    appState.activeOutfitIdRef.current = appState.activeOutfitId;
-  }, [appState.activeOutfitId, appState.activeOutfitIdRef]);
+    activeOutfitIdRef.current = activeOutfitId;
+  }, [activeOutfitId, activeOutfitIdRef]);
 
   useEffect(() => {
     if (
-      !appState.sessionInitialized ||
-      !appState.user ||
-      !(appState.hasProfile || appState.profileCreated) ||
-      !appState.settingsProfile.locale ||
-      locale === appState.settingsProfile.locale
+      !sessionInitialized ||
+      !user ||
+      !(hasProfile || profileCreated) ||
+      !settingsProfile.locale ||
+      locale === settingsProfile.locale
     )
       return;
     updateProfileLocale(locale)
       .then(() => {
-        if (appState.isMountedRef.current)
-          appState.setSettingsProfile((current) => ({ ...current, locale }));
+        if (isMountedRef.current)
+          setSettingsProfile((current) => ({ ...current, locale }));
       })
       .catch(() => {});
   }, [
     locale,
-    appState.settingsProfile.locale,
-    appState.sessionInitialized,
-    appState.user,
-    appState.hasProfile,
-    appState.profileCreated,
-    appState.isMountedRef,
-    appState.setSettingsProfile,
-    appState,
+    settingsProfile.locale,
+    sessionInitialized,
+    user,
+    hasProfile,
+    profileCreated,
+    isMountedRef,
+    setSettingsProfile,
   ]);
 }

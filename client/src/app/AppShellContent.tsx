@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import { memo, Suspense, type ReactNode } from "react";
 import { Box, Container, Paper, Stack, Typography } from "@mui/material";
 import RoutePanelFallback from "./RoutePanelFallback";
 import AppSidebarPanel from "./AppShellSidebarPanel";
@@ -114,7 +114,7 @@ function CardPanel(
   );
 }
 
-export default function AppShellContent(props: AppShellContentProps) {
+function AppShellContent(props: AppShellContentProps) {
   const isFullScreenRoute = isFullScreenAppShellRoute(props);
   const verticalPadding = getShellContainerVerticalPadding({
     isFullScreenRoute,
@@ -169,3 +169,5 @@ export default function AppShellContent(props: AppShellContentProps) {
     </Box>
   );
 }
+
+export default memo(AppShellContent);

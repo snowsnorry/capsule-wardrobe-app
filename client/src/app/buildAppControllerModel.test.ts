@@ -1,7 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { buildAppControllerModel } from "./buildAppControllerModel";
 import { createActionContext, createTestCapsule } from "./testUtils";
-import type { MouseEvent } from "react";
 
 function createHandlers() {
   const names = [
@@ -72,6 +71,7 @@ describe("buildAppControllerModel", () => {
       isWardrobePending: false,
       partialRegenerationPendingUrls: [],
       pendingImageSetIndexes: [],
+      profileItems: [],
       profileCreated: true,
       profileOutfitSets: [],
       selectedColor: null,
@@ -102,11 +102,6 @@ describe("buildAppControllerModel", () => {
     const requestBrowserNotificationPermission = vi.fn();
     const setIsSignOutConfirmOpen = vi.fn();
     const clearShareRoute = vi.fn();
-    const event = {
-      currentTarget: document.createElement("button"),
-    } as unknown as MouseEvent<HTMLElement>;
-    const capsule = createTestCapsule({ id: "capsule-2" });
-
     const model = buildAppControllerModel({
       appState,
       appTheme: { palette: {} },
@@ -160,15 +155,14 @@ describe("buildAppControllerModel", () => {
       },
     } as never);
 
-    model.onClearError();
-    model.onCloseSignOutConfirm();
-    model.onAddPasskey();
-    model.onDismissPasskey();
-    model.onImportSharedCapsule();
-    model.onLogout();
-    model.onRequestNotificationPermission();
-    model.openCapsuleActions(event, capsule);
-    model.openSearchDialog();
+    model.snackbars.onClearError();
+    model.dialogs.onCloseSignOutConfirm();
+    model.snackbars.onAddPasskey();
+    model.snackbars.onDismissPasskey();
+    model.dialogs.onImportSharedCapsule();
+    model.dialogs.onLogout();
+    model.snackbars.onRequestNotificationPermission();
+    model.shell.openSearchDialog();
 
     expect(setStatus).toHaveBeenCalledWith(expect.any(Function));
     expect(
@@ -180,14 +174,14 @@ describe("buildAppControllerModel", () => {
     expect(handlers.handleImportSharedCapsule).toHaveBeenCalledTimes(1);
     expect(handlers.signOut).toHaveBeenCalledTimes(1);
     expect(requestBrowserNotificationPermission).toHaveBeenCalledTimes(1);
-    expect(sidebarActions.openCapsuleActions).toHaveBeenCalledWith(
-      event,
-      capsule,
-    );
     expect(sidebarActions.openSearchDialog).toHaveBeenCalledTimes(1);
-    expect(model.activeCapsuleId).toBe("capsule-1");
-    expect(model.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
-    expect(model.shareMetadata).toEqual({ id: "share-1" });
-    expect(model.notificationOpen).toBe(true);
+    expect(model.shell.activeCapsuleId).toBe("capsule-1");
+    expect(model.route.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
+    expect(model.dialogs.shareMetadata).toEqual({ id: "share-1" });
+    expect(model.snackbars.notificationOpen).toBe(true);
+    expect(model.route.profileItems).toBe(appState.profileItems);
+    expect(model.shell).not.toHaveProperty("profileItems");
+    expect(model.route).not.toHaveProperty("isShareDialogOpen");
+    expect(model.dialogs).not.toHaveProperty("profileItems");
   });
 });

@@ -10,6 +10,7 @@ import {
   saveCurrentCapsule,
   setCurrentCapsulePin,
 } from "./capsuleActions";
+import { useCallback, useMemo } from "react";
 import {
   deleteCurrentOutfitReport,
   deleteCurrentOutfit,
@@ -54,17 +55,36 @@ type UseAppHandlersOptions = {
   sessionActionContext: SessionActionContext;
 };
 
+type MemoizedHandlerInputOptions = Pick<
+  UseAppHandlersOptions,
+  | "activeCapsuleId"
+  | "getAppActionContext"
+  | "navigateApp"
+  | "navigateCapsule"
+  | "navigateNewCapsule"
+  | "pendingShareId"
+  | "shareMetadata"
+> & {
+  activeOutfitId: string;
+  navigateOutfit: NonNullable<UseAppHandlersOptions["navigateOutfit"]>;
+  navigateNewOutfit: NonNullable<UseAppHandlersOptions["navigateNewOutfit"]>;
+};
+
+const EMPTY_OUTFIT_SIDEBAR_ACTIONS_REF = { current: null };
+const noopNavigateEntity = () => {};
+const noopNavigateNew = () => {};
+
 export function useAppHandlers({
   activeCapsuleId,
   activeOutfitId = "",
   capsuleSidebarActionsRef,
-  outfitSidebarActionsRef = { current: null },
+  outfitSidebarActionsRef = EMPTY_OUTFIT_SIDEBAR_ACTIONS_REF,
   getAppActionContext,
   navigateCapsule,
-  navigateOutfit = () => {},
+  navigateOutfit = noopNavigateEntity,
   navigateApp,
   navigateNewCapsule,
-  navigateNewOutfit = () => {},
+  navigateNewOutfit = noopNavigateNew,
   pendingShareId,
   setCurrentView,
   setIsSignOutConfirmOpen,
@@ -72,44 +92,127 @@ export function useAppHandlers({
   shareMetadata,
   sessionActionContext,
 }: UseAppHandlersOptions) {
-  const capsuleHandlers = buildCapsuleHandlerInputs({
-    activeCapsuleId,
-    getAppActionContext,
-    navigateApp,
-    navigateCapsule,
-    navigateNewCapsule,
-  });
-  const outfitHandlers = buildOutfitHandlerInputs({
-    activeOutfitId,
-    getAppActionContext,
-    navigateApp,
-    navigateOutfit,
-    navigateNewOutfit,
-  });
-  const sharedHandlers = buildSharedHandlerInputs({
-    getAppActionContext,
-    navigateCapsule,
-    pendingShareId,
-    shareMetadata,
-  });
+  const { capsuleHandlers, handleNavigateApp, outfitHandlers, sharedHandlers } =
+    useMemoizedHandlerInputs({
+      activeCapsuleId,
+      activeOutfitId,
+      getAppActionContext,
+      navigateApp,
+      navigateCapsule,
+      navigateNewCapsule,
+      navigateNewOutfit,
+      navigateOutfit,
+      pendingShareId,
+      shareMetadata,
+    });
 
-  return buildAppHandlers({
-    activeCapsuleId,
-    activeOutfitId,
-    capsuleSidebarActionsRef,
-    outfitSidebarActionsRef,
-    getAppActionContext,
-    handleNavigateApp: (nextApp, options = {}) => navigateApp(nextApp, options),
-    sessionActionContext,
-    setCurrentView,
-    setIsSignOutConfirmOpen,
-    setSelectedRegenerationUrls,
-    navigateNewCapsule,
-    navigateNewOutfit,
-    ...capsuleHandlers,
-    ...outfitHandlers,
-    ...sharedHandlers,
-  });
+  return useMemo(
+    () =>
+      buildAppHandlers({
+        activeCapsuleId,
+        activeOutfitId,
+        capsuleSidebarActionsRef,
+        outfitSidebarActionsRef,
+        getAppActionContext,
+        handleNavigateApp,
+        sessionActionContext,
+        setCurrentView,
+        setIsSignOutConfirmOpen,
+        setSelectedRegenerationUrls,
+        navigateNewCapsule,
+        navigateNewOutfit,
+        ...capsuleHandlers,
+        ...outfitHandlers,
+        ...sharedHandlers,
+      }),
+    [
+      activeCapsuleId,
+      activeOutfitId,
+      capsuleHandlers,
+      capsuleSidebarActionsRef,
+      getAppActionContext,
+      handleNavigateApp,
+      navigateNewCapsule,
+      navigateNewOutfit,
+      outfitHandlers,
+      outfitSidebarActionsRef,
+      sessionActionContext,
+      setCurrentView,
+      setIsSignOutConfirmOpen,
+      setSelectedRegenerationUrls,
+      sharedHandlers,
+    ],
+  );
+}
+
+function useMemoizedHandlerInputs({
+  activeCapsuleId,
+  activeOutfitId,
+  getAppActionContext,
+  navigateApp,
+  navigateCapsule,
+  navigateNewCapsule,
+  navigateNewOutfit,
+  navigateOutfit,
+  pendingShareId,
+  shareMetadata,
+}: MemoizedHandlerInputOptions) {
+  const handleNavigateApp = useCallback(
+    (nextApp: Exclude<AppRoute, "share">, options: AppNavigationOptions = {}) =>
+      navigateApp(nextApp, options),
+    [navigateApp],
+  );
+  const capsuleHandlers = useMemo(
+    () =>
+      buildCapsuleHandlerInputs({
+        activeCapsuleId,
+        getAppActionContext,
+        navigateApp,
+        navigateCapsule,
+        navigateNewCapsule,
+      }),
+    [
+      activeCapsuleId,
+      getAppActionContext,
+      navigateApp,
+      navigateCapsule,
+      navigateNewCapsule,
+    ],
+  );
+  const outfitHandlers = useMemo(
+    () =>
+      buildOutfitHandlerInputs({
+        activeOutfitId,
+        getAppActionContext,
+        navigateApp,
+        navigateOutfit,
+        navigateNewOutfit,
+      }),
+    [
+      activeOutfitId,
+      getAppActionContext,
+      navigateApp,
+      navigateOutfit,
+      navigateNewOutfit,
+    ],
+  );
+  const sharedHandlers = useMemo(
+    () =>
+      buildSharedHandlerInputs({
+        getAppActionContext,
+        navigateCapsule,
+        pendingShareId,
+        shareMetadata,
+      }),
+    [getAppActionContext, navigateCapsule, pendingShareId, shareMetadata],
+  );
+
+  return {
+    capsuleHandlers,
+    handleNavigateApp,
+    outfitHandlers,
+    sharedHandlers,
+  };
 }
 
 function buildCapsuleHandlerInputs({

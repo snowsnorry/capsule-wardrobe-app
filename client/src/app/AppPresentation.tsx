@@ -1,28 +1,21 @@
-import type { ComponentProps } from "react";
-import type AppDialogs from "./AppDialogs";
 import AppRootView from "./AppRootView";
 import AppRouteContent from "./AppRouteContent";
-import AppShellContent from "./AppShellContent";
-import type AppSnackbars from "./AppSnackbars";
-
-export type AppPresentationModel = Record<string, unknown>;
+import type { AppPresentationModel } from "./appPresentationModel";
 
 export default function AppPresentation({
   model,
 }: {
   model: AppPresentationModel;
 }) {
-  const routeContent = (
-    <AppRouteContent {...(model as ComponentProps<typeof AppRouteContent>)} />
-  );
+  const routeContent = <AppRouteContent {...model.route} />;
 
   return (
     <AppRootView
-      theme={model.theme as ComponentProps<typeof AppRootView>["theme"]}
+      theme={model.theme}
       routeContent={routeContent}
-      shell={model as ComponentProps<typeof AppShellContent>}
-      snackbars={model as ComponentProps<typeof AppSnackbars>}
-      dialogs={model as ComponentProps<typeof AppDialogs>}
+      shell={model.shell}
+      snackbars={model.snackbars}
+      dialogs={model.dialogs}
     />
   );
 }

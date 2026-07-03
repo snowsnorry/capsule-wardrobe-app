@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import type AppDialogs from "./AppDialogs";
 import AppShellContent from "./AppShellContent";
+import type { AppShellContentProps } from "./AppShellContent";
 import type AppSnackbars from "./AppSnackbars";
 import RoutePanelFallback from "./RoutePanelFallback";
 
@@ -12,7 +13,7 @@ const LazyAppSnackbars = lazy(() => import("./AppSnackbars"));
 type AppRootViewProps = {
   dialogs: ComponentProps<typeof AppDialogs>;
   routeContent: ReactNode;
-  shell: ComponentProps<typeof AppShellContent>;
+  shell: Omit<AppShellContentProps, "children">;
   snackbars: ComponentProps<typeof AppSnackbars>;
   theme: ComponentProps<typeof ThemeProvider>["theme"];
 };

@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { lazy, memo } from "react";
 import {
   FALLBACK_ACCENT_COLOR_OPTIONS,
   GOOGLE_CLIENT_ID,
@@ -171,7 +171,7 @@ function useCurrentEntityJobState(props: AppRouteContentProps) {
 }
 
 // eslint-disable-next-line complexity, max-lines-per-function
-export default function AppRouteContent(props: AppRouteContentProps) {
+function AppRouteContent(props: AppRouteContentProps) {
   const currentEntityJobs = useCurrentEntityJobState(props);
   if (props.isCheckingSession || !props.sessionInitialized) {
     return null;
@@ -264,3 +264,5 @@ export default function AppRouteContent(props: AppRouteContentProps) {
   }
   return null;
 }
+
+export default memo(AppRouteContent);

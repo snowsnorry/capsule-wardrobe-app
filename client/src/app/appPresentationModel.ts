@@ -1,65 +1,19 @@
-type PresentationModelInput<
-  Actions extends object,
-  Handlers extends object,
-  Layout extends object,
-  Notifications extends object,
-  Options extends object,
-  Session extends object,
-  Share extends object,
-  View extends object,
-  Theme,
-> = {
-  actions: Actions;
-  handlers: Handlers;
-  layout: Layout;
-  notifications: Notifications;
-  options: Options;
-  session: Session;
-  share: Share;
+import type { ComponentProps } from "react";
+import type AppDialogs from "./AppDialogs";
+import type AppRouteContent from "./AppRouteContent";
+import type AppShellContent from "./AppShellContent";
+import type AppSnackbars from "./AppSnackbars";
+
+export type AppPresentationModel<Theme = unknown> = {
+  dialogs: ComponentProps<typeof AppDialogs>;
+  route: ComponentProps<typeof AppRouteContent>;
+  shell: Omit<ComponentProps<typeof AppShellContent>, "children">;
+  snackbars: ComponentProps<typeof AppSnackbars>;
   theme: Theme;
-  view: View;
 };
 
-export function buildAppPresentationModel<
-  Actions extends object,
-  Handlers extends object,
-  Layout extends object,
-  Notifications extends object,
-  Options extends object,
-  Session extends object,
-  Share extends object,
-  View extends object,
-  Theme,
->({
-  actions,
-  handlers,
-  layout,
-  notifications,
-  options,
-  session,
-  share,
-  theme,
-  view,
-}: PresentationModelInput<
-  Actions,
-  Handlers,
-  Layout,
-  Notifications,
-  Options,
-  Session,
-  Share,
-  View,
-  Theme
->) {
-  return {
-    ...actions,
-    ...handlers,
-    ...layout,
-    ...notifications,
-    ...options,
-    ...session,
-    ...share,
-    ...view,
-    theme,
-  };
+export function buildAppPresentationModel<Theme>(
+  model: AppPresentationModel<Theme>,
+) {
+  return model;
 }

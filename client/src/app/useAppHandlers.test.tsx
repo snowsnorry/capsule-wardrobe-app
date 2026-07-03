@@ -108,6 +108,30 @@ function createSessionContext(): SessionActionContext {
   };
 }
 
+function createHandlerOptions(
+  overrides: Partial<Parameters<typeof useAppHandlers>[0]> = {},
+): Parameters<typeof useAppHandlers>[0] {
+  return {
+    activeCapsuleId: "capsule-1",
+    activeOutfitId: "outfit-1",
+    capsuleSidebarActionsRef: { current: null },
+    outfitSidebarActionsRef: { current: null },
+    getAppActionContext: () => createActionContext(),
+    navigateCapsule: vi.fn(),
+    navigateOutfit: vi.fn(),
+    navigateApp: vi.fn(),
+    navigateNewCapsule: vi.fn(),
+    navigateNewOutfit: vi.fn(),
+    pendingShareId: "share-pending",
+    setCurrentView: vi.fn(),
+    setIsSignOutConfirmOpen: vi.fn(),
+    setSelectedRegenerationUrls: vi.fn(),
+    shareMetadata: { id: "share-meta" },
+    sessionActionContext: createSessionContext(),
+    ...overrides,
+  };
+}
+
 describe("useAppHandlers", () => {
   test("wires app, capsule, wardrobe, profile, and session handlers", async () => {
     const actionContext = createActionContext();
@@ -380,6 +404,40 @@ describe("useAppHandlers", () => {
       expect.objectContaining({
         openSearchDialog: expect.any(Function),
       }),
+    );
+  });
+
+  test("keeps handler references stable for stable inputs and updates default ids when active ids change", async () => {
+    const actionContext = createActionContext();
+    const baseOptions = createHandlerOptions({
+      getAppActionContext: () => actionContext,
+    });
+
+    const { rerender, result } = renderHook(
+      ({ activeCapsuleId }: { activeCapsuleId: string }) =>
+        useAppHandlers({ ...baseOptions, activeCapsuleId }),
+      { initialProps: { activeCapsuleId: "capsule-1" } },
+    );
+    const initialHandlers = result.current;
+
+    rerender({ activeCapsuleId: "capsule-1" });
+    expect(result.current).toBe(initialHandlers);
+    expect(result.current.handleSaveCapsule).toBe(
+      initialHandlers.handleSaveCapsule,
+    );
+
+    await result.current.handleSaveCapsule();
+    expect(capsuleActions.saveCurrentCapsule).toHaveBeenLastCalledWith(
+      actionContext,
+      "capsule-1",
+    );
+
+    rerender({ activeCapsuleId: "capsule-2" });
+    expect(result.current).not.toBe(initialHandlers);
+    await result.current.handleSaveCapsule();
+    expect(capsuleActions.saveCurrentCapsule).toHaveBeenLastCalledWith(
+      actionContext,
+      "capsule-2",
     );
   });
 

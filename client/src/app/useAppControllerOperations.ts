@@ -1,5 +1,6 @@
 import { fetchCapsule, fetchCapsuleBootstrap } from "../api/capsules";
 import { fetchOutfitBootstrap } from "../api/outfits";
+import { useRef } from "react";
 import { buildDefaultActionContext } from "./buildDefaultActionContext";
 import { buildDraftSnapshotFromState } from "./capsuleState";
 import { applyCapsuleStateToApp } from "./capsuleStateActions";
@@ -44,7 +45,11 @@ export function useAppControllerOperations({
   shareRoute: ReturnType<typeof useShareRoute>;
   t: (key: string, params?: Record<string, unknown>) => string;
 }): AppControllerOperations {
-  const operations = {} as AppControllerOperations;
+  const operationsRef = useRef<AppControllerOperations | null>(null);
+  if (!operationsRef.current) {
+    operationsRef.current = {} as AppControllerOperations;
+  }
+  const operations = operationsRef.current;
   assignAppControllerOperations({
     appState,
     notifications,

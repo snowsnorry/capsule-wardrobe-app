@@ -58,7 +58,10 @@ vi.mock("./buildAppActionContext", () => ({
 }));
 
 vi.mock("./buildAppControllerModel", () => ({
-  buildAppControllerModel: vi.fn((input) => input),
+  buildAppControllerModel: vi.fn((input) => ({
+    shell: { cardPadding: input.cardPadding },
+    theme: input.appTheme,
+  })),
 }));
 
 vi.mock("./buildAppSessionActionContext", () => ({
@@ -192,13 +195,13 @@ beforeEach(() => {
 
 function HookHarness() {
   const model = useAppControllerModel() as unknown as {
-    cardPadding: number;
-    appTheme: { mode: string };
+    shell: { cardPadding: number };
+    theme: { mode: string };
   };
   return (
     <div>
-      <span data-testid="padding">{model.cardPadding}</span>
-      <span data-testid="theme">{model.appTheme.mode}</span>
+      <span data-testid="padding">{model.shell.cardPadding}</span>
+      <span data-testid="theme">{model.theme.mode}</span>
     </div>
   );
 }

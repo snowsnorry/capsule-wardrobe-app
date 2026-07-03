@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { buildAppControllerModel } from "./buildAppControllerModel";
 import { buildAppSessionActionContext } from "./buildAppSessionActionContext";
 import { buildAppViewState, toggleStringSelection } from "./appViewState";
@@ -53,19 +53,39 @@ function useShareRouteOptions({
   navigation: AppNavigation;
   resolveErrorMessage: ResolveErrorMessage;
 }) {
+  const {
+    hasProfile,
+    isMountedRef,
+    profileCreated,
+    sessionInitialized,
+    setStatus,
+    user,
+  } = appState;
+  const { clearShareRoute, pendingShareId } = navigation;
+
   return useMemo(
     () => ({
-      clearNavigationShareRoute: navigation.clearShareRoute,
-      hasProfile: appState.hasProfile,
-      isMountedRef: appState.isMountedRef,
-      pendingShareId: navigation.pendingShareId,
-      profileCreated: appState.profileCreated,
+      clearNavigationShareRoute: clearShareRoute,
+      hasProfile,
+      isMountedRef,
+      pendingShareId,
+      profileCreated,
       resolveErrorMessage,
-      sessionInitialized: appState.sessionInitialized,
-      setStatus: appState.setStatus,
-      user: appState.user,
+      sessionInitialized,
+      setStatus,
+      user,
     }),
-    [appState, navigation, resolveErrorMessage],
+    [
+      clearShareRoute,
+      hasProfile,
+      isMountedRef,
+      pendingShareId,
+      profileCreated,
+      resolveErrorMessage,
+      sessionInitialized,
+      setStatus,
+      user,
+    ],
   );
 }
 
@@ -138,12 +158,17 @@ export function useHandlersForApp({
   sessionActionContext: ReturnType<typeof useSessionActionContextForApp>;
   shareRoute: ReturnType<typeof useShareRouteForApp>;
 }) {
+  const getAppActionContext = useCallback(
+    () => operations.getAppActionContext(),
+    [operations],
+  );
+
   return useAppHandlers({
     activeCapsuleId: appState.activeCapsuleId,
     activeOutfitId: appState.activeOutfitId,
     capsuleSidebarActionsRef: appState.capsuleSidebarActionsRef,
     outfitSidebarActionsRef: appState.outfitSidebarActionsRef,
-    getAppActionContext: () => operations.getAppActionContext(),
+    getAppActionContext,
     navigateCapsule: navigation.navigateCapsule,
     navigateOutfit: navigation.navigateOutfit,
     navigateApp: navigation.navigateApp,
