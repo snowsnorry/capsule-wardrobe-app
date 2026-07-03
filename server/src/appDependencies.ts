@@ -63,8 +63,10 @@ import {
   getSearchOptions,
   getSavedSearch,
   getSearchStats,
+  markSearchProductOptionsStale,
   runSavedSearch,
 } from "./searchStore.js";
+import { createSearchCacheInvalidationService } from "./searchCacheInvalidation.js";
 import { runMcpProductSearch } from "./mcp/productSearch.js";
 import {
   clearWardrobeJobsForEmail,
@@ -323,11 +325,32 @@ function createSearchMcpDependencies() {
     insertMcpAuthorizationCodeImpl: insertMcpAuthorizationCode,
     insertMcpRefreshTokenImpl: insertMcpRefreshToken,
     insertMcpRegisteredClientImpl: insertMcpRegisteredClient,
+    markSearchProductOptionsStaleImpl: markSearchProductOptionsStale,
     revokeMcpRefreshTokenImpl: revokeMcpRefreshToken,
     rotateMcpRefreshTokenImpl: rotateMcpRefreshToken,
     runMcpProductSearchImpl: runMcpProductSearch,
     runSavedSearchImpl: runSavedSearch,
     upsertMcpGrantImpl: upsertMcpGrant,
+  };
+}
+
+function createSearchCacheInvalidationDependencies(deps: {
+  markSearchProductOptionsStaleImpl: () => void;
+  nodeEnv: string;
+}) {
+  if (deps.nodeEnv === "test" || E2E_SERVER) {
+    return {
+      startSearchCacheInvalidationImpl: async () => undefined,
+      stopSearchCacheInvalidationImpl: async () => undefined,
+    };
+  }
+
+  const service = createSearchCacheInvalidationService({
+    markStale: deps.markSearchProductOptionsStaleImpl,
+  });
+  return {
+    startSearchCacheInvalidationImpl: service.start,
+    stopSearchCacheInvalidationImpl: service.stop,
   };
 }
 
@@ -475,6 +498,7 @@ function createDefaultAppDependencies(googleClientId: string | null) {
   };
   return {
     ...baseDeps,
+    ...createSearchCacheInvalidationDependencies(baseDeps),
     ...createJobDependencies(baseDeps),
   };
 }

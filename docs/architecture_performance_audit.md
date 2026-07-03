@@ -246,11 +246,13 @@
    - Neon production (`purple-frog-30056878`, branch `production`) подтверждает риск: `products` содержит примерно 38 970 строк, `embedding` имеет 1024 измерения, установлен `vector`, но нет `pg_trgm`/`pg_stat_statements`; текущие планы для facet count, lexical contains и semantic nearest-neighbor используют `Seq Scan`/`Sort`.
    - Production migration по контрактным индексам подготовлена как отдельные `CREATE INDEX CONCURRENTLY` statements и должна применяться на временной Neon branch, затем на production только после отдельного approval.
 
-2. [ ] Кэшировать options и переработать stats.
-   - Option dictionaries кэшировать с TTL/version или materialized view.
-   - Facet stats вынести в rollup/materialized tables либо ограничить параллелизм.
-   - Где UX допускает, заменить exact `total` на `limit + 1`/`hasMore`.
-   - Ожидаемый эффект: меньше повторных full scans по `products`.
+2. [x] Кэшировать options и переработать stats.
+   - Product option dictionaries кэшировать на сервере in-memory с lazy rebuild и in-flight dedupe: startup начинает с empty/stale cache, `LISTEN/NOTIFY` по изменению `products` только помечает cache stale, hourly timer также только помечает stale, а пересборка выполняется следующим запросом.
+   - Для `/search/run` и `/search/stats` использовать cached options для validation, но при `invalid_payload` делать один forced options refresh и повторять validation, чтобы stale cache не ломал UI после редкого обновления каталога.
+   - Profile-specific `styles` кэшировать отдельно от глобальных product options, потому что они зависят от пользователя.
+   - Facet stats кэшировать коротким bounded TTL/LRU по normalized filters + user/liked context и добавить in-flight dedupe; не менять shape ответа `{ total, stats, priceBuckets }`.
+   - Facet stats переработать без потери UI-функциональности: сначала ограничить DB parallelism, затем рассмотреть rollup/materialized tables; exact `total` и полный interactive facet behavior сохранить для текущего statistics UI.
+   - Ожидаемый эффект: меньше повторных full scans по `products`, меньше DB spikes от stats, без потери доступных фильтров, точных totals и интерактивности charts.
 
 3. [ ] Ввести pagination/cursor и lightweight projections для wardrobe.
    - `/wardrobe/items` должен иметь paginated/list projection без `embedding`.

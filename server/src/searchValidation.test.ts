@@ -1,5 +1,8 @@
 import { test, expect } from "vitest";
-import { assertValidSearchPayload } from "./searchValidation.js";
+import {
+  assertValidSearchPayload,
+  getSearchPayloadValidationFailure,
+} from "./searchValidation.js";
 import type { SearchOptions, SearchPayload } from "./searchTypes.js";
 
 const options: SearchOptions = {
@@ -83,4 +86,20 @@ test("assertValidSearchPayload rejects unknown facets and invalid price ranges",
       options,
     ),
   );
+});
+
+test("getSearchPayloadValidationFailure classifies facet and price failures", () => {
+  expect(
+    getSearchPayloadValidationFailure(
+      payload({ category: ["dress"] }),
+      options,
+    ),
+  ).toBe("facet");
+  expect(
+    getSearchPayloadValidationFailure(
+      payload({ priceMin: 150, priceMax: 100 }),
+      options,
+    ),
+  ).toBe("price");
+  expect(getSearchPayloadValidationFailure(payload(), options)).toBe(null);
 });

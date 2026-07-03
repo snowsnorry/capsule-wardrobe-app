@@ -208,6 +208,62 @@ test("startup starts job workers after listen and stops them on server close", a
   expect(stopJobWorkersImpl).toHaveBeenCalledTimes(1);
 });
 
+test("startup starts search cache invalidation after listen and stops it on close", async () => {
+  const calls: string[] = [];
+  let closeListener: (() => void) | null = null;
+  const app = {
+    get: vi.fn(),
+    use: vi.fn(),
+    listen: vi.fn((_port, callback) => {
+      calls.push("listen");
+      callback?.();
+      return {
+        on: vi.fn((event, listener) => {
+          if (event === "close") {
+            closeListener = listener;
+          }
+        }),
+      };
+    }),
+  };
+  const startSearchCacheInvalidationImpl = vi.fn(async () => {
+    calls.push("start-search-cache");
+  });
+  const stopSearchCacheInvalidationImpl = vi.fn(async () => {
+    calls.push("stop-search-cache");
+  });
+  const startJobWorkersImpl = vi.fn(async () => {
+    calls.push("start-workers");
+  });
+  const stopJobWorkersImpl = vi.fn(async () => {
+    calls.push("stop-workers");
+  });
+
+  await createStartServer(app)({
+    nodeEnv: "production",
+    port: 4124,
+    ensureTablesImpl: async () => {
+      calls.push("ensure-tables");
+    },
+    existsSyncImpl: () => false,
+    logInfoImpl: () => {},
+    runProductionStartupPreflightImpl: skipProductionPreflight,
+    startJobWorkersImpl,
+    stopJobWorkersImpl,
+    startSearchCacheInvalidationImpl,
+    stopSearchCacheInvalidationImpl,
+  });
+  expect(calls).toEqual([
+    "ensure-tables",
+    "listen",
+    "start-search-cache",
+    "start-workers",
+  ]);
+  closeListener?.();
+  expect(stopJobWorkersImpl).toHaveBeenCalledTimes(1);
+  expect(stopSearchCacheInvalidationImpl).toHaveBeenCalledTimes(1);
+});
+
 test("startup stops job workers and closes the server if worker start fails", async () => {
   const close = vi.fn();
   const app = {
@@ -231,6 +287,36 @@ test("startup stops job workers and closes the server if worker start fails", as
   ).rejects.toThrow("worker_start_failed");
 
   expect(stopJobWorkersImpl).toHaveBeenCalledTimes(1);
+  expect(close).toHaveBeenCalledTimes(1);
+});
+
+test("startup stops search cache invalidation if worker start fails", async () => {
+  const close = vi.fn();
+  const app = {
+    get: vi.fn(),
+    use: vi.fn(),
+    listen: vi.fn(() => ({ close, on: vi.fn() })),
+  };
+  const stopJobWorkersImpl = vi.fn(async () => undefined);
+  const stopSearchCacheInvalidationImpl = vi.fn(async () => undefined);
+
+  await expect(
+    createStartServer(app)({
+      nodeEnv: "production",
+      ensureTablesImpl: async () => undefined,
+      existsSyncImpl: () => false,
+      runProductionStartupPreflightImpl: skipProductionPreflight,
+      startSearchCacheInvalidationImpl: async () => undefined,
+      stopSearchCacheInvalidationImpl,
+      startJobWorkersImpl: async () => {
+        throw new Error("worker_start_failed");
+      },
+      stopJobWorkersImpl,
+    }),
+  ).rejects.toThrow("worker_start_failed");
+
+  expect(stopJobWorkersImpl).toHaveBeenCalledTimes(1);
+  expect(stopSearchCacheInvalidationImpl).toHaveBeenCalledTimes(1);
   expect(close).toHaveBeenCalledTimes(1);
 });
 

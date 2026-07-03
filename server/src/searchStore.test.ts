@@ -39,6 +39,14 @@ function createSearchStoreDeps(overrides = {}) {
   };
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 test("normalizeSearchPayload normalizes nullable values and array filters", () => {
   expect(
     normalizeSearchPayload({
@@ -304,6 +312,210 @@ test("createSearchStore builds options and saved search from injected persistenc
   expect((await store.getSavedSearch("person@example.com")).query).toBe(
     " saved ",
   );
+});
+
+test("getSearchOptions caches product options and styles with in-flight dedupe", async () => {
+  let brandCalls = 0;
+  let styleCalls = 0;
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      getDistinctProductBrandsImpl: async () => {
+        brandCalls += 1;
+        return [{ value: "cos", label: "COS" }];
+      },
+      getStylesImpl: async () => {
+        styleCalls += 1;
+        return ["minimalistic"];
+      },
+    }),
+  );
+
+  const [first, second] = await Promise.all([
+    store.getSearchOptions("person@example.com"),
+    store.getSearchOptions("person@example.com"),
+  ]);
+
+  expect(first.brands).toEqual([{ value: "cos", label: "COS" }]);
+  expect(second.brands).toEqual([{ value: "cos", label: "COS" }]);
+  expect(brandCalls).toBe(1);
+  expect(styleCalls).toBe(1);
+
+  await store.getSearchOptions("person@example.com");
+  expect(brandCalls).toBe(1);
+  expect(styleCalls).toBe(1);
+});
+
+test("getSearchOptions keeps profile styles separate from global product options", async () => {
+  let brandCalls = 0;
+  const styleCalls: string[] = [];
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      getDistinctProductBrandsImpl: async () => {
+        brandCalls += 1;
+        return [{ value: "cos", label: "COS" }];
+      },
+      getStylesImpl: async (email) => {
+        styleCalls.push(email);
+        return [`style:${email}`];
+      },
+    }),
+  );
+
+  expect((await store.getSearchOptions("a@example.com")).styles).toEqual([
+    "style:a@example.com",
+  ]);
+  expect((await store.getSearchOptions("b@example.com")).styles).toEqual([
+    "style:b@example.com",
+  ]);
+  expect((await store.getSearchOptions("a@example.com")).styles).toEqual([
+    "style:a@example.com",
+  ]);
+  expect(brandCalls).toBe(1);
+  expect(styleCalls).toEqual(["a@example.com", "b@example.com"]);
+});
+
+test("markSearchProductOptionsStale rebuilds product options on the next request", async () => {
+  let brandCalls = 0;
+  let styleCalls = 0;
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      getDistinctProductBrandsImpl: async () => {
+        brandCalls += 1;
+        return [{ value: `brand-${brandCalls}`, label: `Brand ${brandCalls}` }];
+      },
+      getStylesImpl: async () => {
+        styleCalls += 1;
+        return ["minimalistic"];
+      },
+    }),
+  );
+
+  expect((await store.getSearchOptions("person@example.com")).brands).toEqual([
+    { value: "brand-1", label: "Brand 1" },
+  ]);
+  store.markSearchProductOptionsStale();
+  expect((await store.getSearchOptions("person@example.com")).brands).toEqual([
+    { value: "brand-2", label: "Brand 2" },
+  ]);
+  expect(brandCalls).toBe(2);
+  expect(styleCalls).toBe(1);
+});
+
+test("markSearchProductOptionsStale during an in-flight rebuild keeps cache stale", async () => {
+  let brandCalls = 0;
+  const firstBrand = createDeferred<Array<{ value: string; label: string }>>();
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      getDistinctProductBrandsImpl: async () => {
+        brandCalls += 1;
+        if (brandCalls === 1) {
+          return firstBrand.promise;
+        }
+        return [{ value: `brand-${brandCalls}`, label: `Brand ${brandCalls}` }];
+      },
+    }),
+  );
+
+  const firstOptionsPromise = store.getSearchOptions("person@example.com");
+  store.markSearchProductOptionsStale();
+  firstBrand.resolve([{ value: "brand-1", label: "Brand 1" }]);
+
+  expect((await firstOptionsPromise).brands).toEqual([
+    { value: "brand-1", label: "Brand 1" },
+  ]);
+  expect((await store.getSearchOptions("person@example.com")).brands).toEqual([
+    { value: "brand-2", label: "Brand 2" },
+  ]);
+  expect(brandCalls).toBe(2);
+});
+
+test("search validation retries once with forced refreshed options", async () => {
+  let categoryCalls = 0;
+  let statsPayload = null;
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      getDistinctProductCategoriesImpl: async () => {
+        categoryCalls += 1;
+        return categoryCalls === 1 ? ["top"] : ["top", "dress"];
+      },
+      searchProductStatsImpl: async (payload) => {
+        statsPayload = payload;
+        return { ok: true };
+      },
+    }),
+  );
+
+  await expect(
+    store.getSearchStats("person@example.com", { category: ["dress"] }),
+  ).resolves.toEqual({ ok: true });
+  expect(categoryCalls).toBe(2);
+  expect(statsPayload.category).toEqual(["dress"]);
+});
+
+test("search validation dedupes concurrent forced refreshed options", async () => {
+  let categoryCalls = 0;
+  const forcedCategories = createDeferred<string[]>();
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      getDistinctProductCategoriesImpl: async () => {
+        categoryCalls += 1;
+        return categoryCalls === 1 ? ["top"] : forcedCategories.promise;
+      },
+      searchProductStatsImpl: async () => ({ ok: true }),
+    }),
+  );
+  await store.getSearchOptions("person@example.com");
+
+  const firstStatsPromise = store.getSearchStats("person@example.com", {
+    category: ["dress"],
+  });
+  const secondStatsPromise = store.getSearchStats("person@example.com", {
+    category: ["dress"],
+  });
+  forcedCategories.resolve(["top", "dress"]);
+
+  await expect(
+    Promise.all([firstStatsPromise, secondStatsPromise]),
+  ).resolves.toEqual([{ ok: true }, { ok: true }]);
+  expect(categoryCalls).toBe(2);
+});
+
+test("search validation does not force refresh for invalid price ranges", async () => {
+  let categoryCalls = 0;
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      getDistinctProductCategoriesImpl: async () => {
+        categoryCalls += 1;
+        return ["top"];
+      },
+    }),
+  );
+
+  await expect(
+    store.getSearchStats("person@example.com", {
+      category: ["top"],
+      priceMin: 150,
+      priceMax: 100,
+    }),
+  ).rejects.toThrow(/invalid_payload/);
+  expect(categoryCalls).toBe(1);
+});
+
+test("search validation still rejects invalid payload after forced refresh", async () => {
+  let categoryCalls = 0;
+  const store = createSearchStore(
+    createSearchStoreDeps({
+      getDistinctProductCategoriesImpl: async () => {
+        categoryCalls += 1;
+        return ["top"];
+      },
+    }),
+  );
+
+  await expect(
+    store.getSearchStats("person@example.com", { category: ["dress"] }),
+  ).rejects.toThrow(/invalid_payload/);
+  expect(categoryCalls).toBe(2);
 });
 
 test("runSavedSearch uses URL prefix for URL queries and skips embeddings", async () => {

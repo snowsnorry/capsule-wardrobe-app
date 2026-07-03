@@ -1,5 +1,7 @@
 import type { SearchOptions, SearchPayload } from "./searchTypes.js";
 
+type SearchPayloadValidationFailure = "facet" | "price";
+
 function isAllowedArrayValue(
   values: readonly string[],
   allowedItems: readonly string[],
@@ -55,11 +57,24 @@ export function assertValidSearchPayload(
   normalized: SearchPayload,
   options: SearchOptions,
 ): void {
+  if (getSearchPayloadValidationFailure(normalized, options)) {
+    throwInvalidSearchPayload();
+  }
+}
+
+export function getSearchPayloadValidationFailure(
+  normalized: SearchPayload,
+  options: SearchOptions,
+): SearchPayloadValidationFailure | null {
   const hasInvalidFacet = getSearchValidationPairs(normalized, options).some(
     ([values, allowedItems]) => !isAllowedArrayValue(values, allowedItems),
   );
 
-  if (hasInvalidFacet || hasInvalidSearchPriceRange(normalized)) {
-    throwInvalidSearchPayload();
+  if (hasInvalidFacet) {
+    return "facet";
   }
+  if (hasInvalidSearchPriceRange(normalized)) {
+    return "price";
+  }
+  return null;
 }

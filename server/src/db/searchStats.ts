@@ -9,10 +9,14 @@ import {
   type SearchProductsInput,
   type SqlClientLike,
   type SqlResultLike,
+  stableStringify,
 } from "./core.js";
 import { buildPriceBuckets, normalizeFacetRows } from "./searchPersistence.js";
 
 const PRICE_BUCKET_COUNT = 100;
+const SEARCH_STATS_CACHE_TTL_MS = 30_000;
+const SEARCH_STATS_CACHE_MAX_ENTRIES = 100;
+const SEARCH_STATS_QUERY_CONCURRENCY = 4;
 
 type SearchStatsInput = Omit<
   SearchProductsInput,
@@ -34,6 +38,11 @@ type SearchStatsResult = {
   total: number;
   stats: Record<SearchStatsFacetKey, Array<{ value: string; count: number }>>;
   priceBuckets: PriceBucket[];
+};
+type SearchStatsCacheEntry = {
+  expiresAt: number;
+  pending: Promise<SearchStatsResult> | null;
+  value: SearchStatsResult | null;
 };
 
 type SearchFacetConfig = {
@@ -80,34 +89,48 @@ const DEFAULT_FILTERS: SearchStatsFilters = {
   fit: [],
   closureType: [],
 };
+const searchStatsCache = new Map<string, SearchStatsCacheEntry>();
 
 function withDefault<T>(value: T | undefined, defaultValue: T) {
   return value === undefined ? defaultValue : value;
+}
+
+function normalizeArrayFilter(
+  value: string[] | undefined,
+  defaultValue: string[],
+) {
+  return [...withDefault(value, defaultValue)].sort();
 }
 
 function normalizeSearchStatsInput(
   input: SearchStatsInput = {},
 ): SearchStatsFilters {
   return {
-    brand: withDefault(input.brand, DEFAULT_FILTERS.brand),
+    brand: normalizeArrayFilter(input.brand, DEFAULT_FILTERS.brand),
     likedOnly: withDefault(input.likedOnly, DEFAULT_FILTERS.likedOnly),
     profileEmail: withDefault(input.profileEmail, DEFAULT_FILTERS.profileEmail),
     priceMin: withDefault(input.priceMin, DEFAULT_FILTERS.priceMin),
     priceMax: withDefault(input.priceMax, DEFAULT_FILTERS.priceMax),
-    audience: withDefault(input.audience, DEFAULT_FILTERS.audience),
-    category: withDefault(input.category, DEFAULT_FILTERS.category),
-    season: withDefault(input.season, DEFAULT_FILTERS.season),
-    formalityLevel: withDefault(
+    audience: normalizeArrayFilter(input.audience, DEFAULT_FILTERS.audience),
+    category: normalizeArrayFilter(input.category, DEFAULT_FILTERS.category),
+    season: normalizeArrayFilter(input.season, DEFAULT_FILTERS.season),
+    formalityLevel: normalizeArrayFilter(
       input.formalityLevel,
       DEFAULT_FILTERS.formalityLevel,
     ),
-    style: withDefault(input.style, DEFAULT_FILTERS.style),
-    occasions: withDefault(input.occasions, DEFAULT_FILTERS.occasions),
-    color: withDefault(input.color, DEFAULT_FILTERS.color),
-    pattern: withDefault(input.pattern, DEFAULT_FILTERS.pattern),
-    silhouette: withDefault(input.silhouette, DEFAULT_FILTERS.silhouette),
-    fit: withDefault(input.fit, DEFAULT_FILTERS.fit),
-    closureType: withDefault(input.closureType, DEFAULT_FILTERS.closureType),
+    style: normalizeArrayFilter(input.style, DEFAULT_FILTERS.style),
+    occasions: normalizeArrayFilter(input.occasions, DEFAULT_FILTERS.occasions),
+    color: normalizeArrayFilter(input.color, DEFAULT_FILTERS.color),
+    pattern: normalizeArrayFilter(input.pattern, DEFAULT_FILTERS.pattern),
+    silhouette: normalizeArrayFilter(
+      input.silhouette,
+      DEFAULT_FILTERS.silhouette,
+    ),
+    fit: normalizeArrayFilter(input.fit, DEFAULT_FILTERS.fit),
+    closureType: normalizeArrayFilter(
+      input.closureType,
+      DEFAULT_FILTERS.closureType,
+    ),
   };
 }
 
@@ -342,6 +365,27 @@ function queryPriceBuckets(sql: SqlClientLike, filters: SearchStatsFilters) {
   );
 }
 
+async function runWithConcurrency<T>(
+  tasks: Array<() => Promise<T>>,
+  concurrency: number,
+): Promise<T[]> {
+  const results = new Array<T>(tasks.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < tasks.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await tasks[index]();
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker()),
+  );
+  return results;
+}
+
 function buildStatsResult(rows: SqlResultLike[]): SearchStatsResult {
   const [countRow, ...facetRows] = rows;
   const priceRows = facetRows.pop();
@@ -364,16 +408,113 @@ function buildStatsResult(rows: SqlResultLike[]): SearchStatsResult {
   };
 }
 
+function getCachedStatsValue(
+  cacheKey: string,
+  cached: SearchStatsCacheEntry | undefined,
+  now: number,
+) {
+  if (cached?.value && cached.expiresAt > now) {
+    searchStatsCache.delete(cacheKey);
+    searchStatsCache.set(cacheKey, cached);
+    return cached.value;
+  }
+  return cached?.pending || null;
+}
+
+function createStatsTasks(
+  sql: SqlClientLike,
+  filters: SearchStatsFilters,
+): Array<() => Promise<SqlResultLike>> {
+  return [
+    () => queryCount(sql, filters),
+    ...FACETS.map((facet) => () => queryFacet(sql, filters, facet)),
+    () => queryPriceBuckets(sql, filters),
+  ];
+}
+
+function trimSearchStatsCache() {
+  while (searchStatsCache.size > SEARCH_STATS_CACHE_MAX_ENTRIES) {
+    const firstKey = searchStatsCache.keys().next().value;
+    if (firstKey === undefined) return;
+    searchStatsCache.delete(firstKey);
+  }
+}
+
+function restoreFailedStatsCacheRefresh(
+  cacheKey: string,
+  entry: SearchStatsCacheEntry,
+  cached: SearchStatsCacheEntry | undefined,
+) {
+  if (searchStatsCache.get(cacheKey) !== entry) {
+    return;
+  }
+  if (!cached?.value) {
+    searchStatsCache.delete(cacheKey);
+    return;
+  }
+  searchStatsCache.set(cacheKey, {
+    expiresAt: cached.expiresAt,
+    pending: null,
+    value: cached.value,
+  });
+}
+
+async function resolveStatsPending({
+  cacheKey,
+  cached,
+  entry,
+  pending,
+}: {
+  cacheKey: string;
+  cached: SearchStatsCacheEntry | undefined;
+  entry: SearchStatsCacheEntry;
+  pending: Promise<SearchStatsResult>;
+}) {
+  let succeeded = false;
+  try {
+    const value = await pending;
+    succeeded = true;
+    entry.value = value;
+    entry.expiresAt = Date.now() + SEARCH_STATS_CACHE_TTL_MS;
+    return value;
+  } finally {
+    if (entry.pending === pending) {
+      entry.pending = null;
+    }
+    if (!succeeded) {
+      restoreFailedStatsCacheRefresh(cacheKey, entry, cached);
+    }
+  }
+}
+
 export async function searchProductStats(
   input: SearchStatsInput = {},
 ): Promise<SearchStatsResult> {
   const sql = getSqlClient();
   const filters = normalizeSearchStatsInput(input);
-  const rows = await Promise.all([
-    queryCount(sql, filters),
-    ...FACETS.map((facet) => queryFacet(sql, filters, facet)),
-    queryPriceBuckets(sql, filters),
-  ]);
+  const cacheKey = stableStringify(filters);
+  const now = Date.now();
+  const cached = searchStatsCache.get(cacheKey);
+  const cachedValue = getCachedStatsValue(cacheKey, cached, now);
+  if (cachedValue) {
+    return cachedValue;
+  }
 
-  return buildStatsResult(rows);
+  const pending = runWithConcurrency(
+    createStatsTasks(sql, filters),
+    SEARCH_STATS_QUERY_CONCURRENCY,
+  ).then(buildStatsResult);
+  const entry: SearchStatsCacheEntry = {
+    expiresAt: cached?.expiresAt || 0,
+    pending,
+    value: cached?.value || null,
+  };
+  searchStatsCache.set(cacheKey, entry);
+  trimSearchStatsCache();
+
+  return resolveStatsPending({ cacheKey, cached, entry, pending });
+}
+
+export function clearSearchProductStatsCache() {
+  searchStatsCache.clear();
 }

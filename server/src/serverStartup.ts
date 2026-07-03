@@ -212,6 +212,10 @@ function resolveStartServerOptions(app, options = {}) {
     runProductionStartupPreflightImpl: runProductionStartupPreflight,
     startJobWorkersImpl: app.locals?.appDependencies?.startJobWorkersImpl,
     stopJobWorkersImpl: app.locals?.appDependencies?.stopJobWorkersImpl,
+    startSearchCacheInvalidationImpl:
+      app.locals?.appDependencies?.startSearchCacheInvalidationImpl,
+    stopSearchCacheInvalidationImpl:
+      app.locals?.appDependencies?.stopSearchCacheInvalidationImpl,
     ...options,
   };
 }
@@ -238,6 +242,8 @@ export function createStartServer(app) {
       runProductionStartupPreflightImpl,
       startJobWorkersImpl,
       stopJobWorkersImpl,
+      startSearchCacheInvalidationImpl,
+      stopSearchCacheInvalidationImpl,
     } = resolveStartServerOptions(app, options);
 
     let server;
@@ -270,12 +276,19 @@ export function createStartServer(app) {
       });
       if (typeof server.on === "function") {
         server.on("close", () => {
-          void stopJobWorkersImpl?.();
+          void Promise.all([
+            stopJobWorkersImpl?.(),
+            stopSearchCacheInvalidationImpl?.(),
+          ]);
         });
       }
+      await startSearchCacheInvalidationImpl?.();
       await startJobWorkersImpl?.();
     } catch (error) {
-      await stopJobWorkersImpl?.();
+      await Promise.all([
+        stopJobWorkersImpl?.(),
+        stopSearchCacheInvalidationImpl?.(),
+      ]);
       server?.close?.();
       throw error;
     }

@@ -1,4 +1,7 @@
-import { assertValidSearchPayload } from "./searchValidation.js";
+import {
+  assertValidSearchPayload,
+  getSearchPayloadValidationFailure,
+} from "./searchValidation.js";
 import type { SearchOptions, SearchPayload } from "./searchTypes.js";
 import {
   getRelaxedSemanticDistanceThreshold,
@@ -19,6 +22,7 @@ import {
   type SearchResults,
   type SearchStoreDeps,
 } from "./searchStoreDeps.js";
+import { createSearchOptionsCache } from "./searchOptionsCache.js";
 
 type SearchRunPayload = Partial<SearchPayload> & {
   limit?: unknown;
@@ -46,6 +50,7 @@ type SearchRunContext = {
   shouldPersist: boolean;
   textRouting: SearchTextRouting;
 };
+type SearchOptionsCache = ReturnType<typeof createSearchOptionsCache>;
 
 function normalizeSearchRunLimit(value: unknown): number | undefined {
   const parsed = Number(value);
@@ -57,51 +62,48 @@ function normalizeSearchRunLimit(value: unknown): number | undefined {
 
 async function getSearchOptionsForStore(
   email: string,
-  deps: ResolvedSearchStoreDeps,
+  cache: SearchOptionsCache,
+  { force = false } = {},
 ): Promise<SearchOptions> {
-  const [
-    brands,
-    categories,
-    seasons,
-    formalityLevels,
-    styles,
-    occasions,
-    colors,
-    patterns,
-    silhouettes,
-    fits,
-    closureTypes,
-    priceRange,
-  ] = await Promise.all([
-    deps.getDistinctProductBrandsImpl(),
-    deps.getDistinctProductCategoriesImpl(),
-    deps.getDistinctProductSeasonsImpl(),
-    deps.getDistinctProductFormalityLevelsImpl(),
-    deps.getStylesImpl(email),
-    deps.getDistinctProductOccasionsImpl(),
-    deps.getDistinctProductColorsImpl(),
-    deps.getDistinctProductPatternsImpl(),
-    deps.getDistinctProductSilhouettesImpl(),
-    deps.getDistinctProductFitsImpl(),
-    deps.getDistinctProductClosureTypesImpl(),
-    deps.getProductPriceRangeImpl(),
+  const [productOptions, styles] = await Promise.all([
+    cache.getProductOptions({ force }),
+    cache.getStyles(email, { force }),
   ]);
 
   return {
-    brands,
-    categories,
-    seasons,
-    formalityLevels,
+    ...productOptions,
     styles,
-    occasions,
     audience: [...SEARCH_AUDIENCE_OPTIONS],
-    colors,
-    patterns,
-    silhouettes,
-    fits,
-    closureTypes,
-    priceRange,
   };
+}
+
+async function getValidatedSearchOptionsForStore({
+  cache,
+  email,
+  normalized,
+}: {
+  cache: SearchOptionsCache;
+  email: string;
+  normalized: SearchPayload;
+}): Promise<SearchOptions> {
+  const options = await getSearchOptionsForStore(email, cache);
+  const validationFailure = getSearchPayloadValidationFailure(
+    normalized,
+    options,
+  );
+  if (!validationFailure) {
+    return options;
+  }
+  if (validationFailure !== "facet") {
+    assertValidSearchPayload(normalized, options);
+    return options;
+  }
+
+  const refreshedOptions = await getSearchOptionsForStore(email, cache, {
+    force: true,
+  });
+  assertValidSearchPayload(normalized, refreshedOptions);
+  return refreshedOptions;
 }
 
 function buildSearchProductsPayload({
@@ -212,15 +214,15 @@ async function runSavedSearchForStore(
   email: string,
   payload: SearchRunPayload,
   deps: ResolvedSearchStoreDeps,
+  cache: SearchOptionsCache,
 ): Promise<SearchResults & { savedSearch: SearchPayload }> {
   const normalized = normalizeSearchPayload(payload);
   const limit = normalizeSearchRunLimit(payload.limit);
   const shouldPersist = payload.persist !== false;
-  const [options, currentSearch] = await Promise.all([
-    getSearchOptionsForStore(email, deps),
+  const [, currentSearch] = await Promise.all([
+    getValidatedSearchOptionsForStore({ cache, email, normalized }),
     deps.getSearchByEmailImpl(email),
   ]);
-  assertValidSearchPayload(normalized, options);
 
   const textRouting = routeSearchText(normalized.query);
   const queryEmbedding = textRouting.usesEmbedding
@@ -269,31 +271,37 @@ async function getSearchStatsForStore(
   email: string,
   payload: Partial<SearchPayload>,
   deps: ResolvedSearchStoreDeps,
+  cache: SearchOptionsCache,
 ): Promise<unknown> {
   const normalized = normalizeSearchPayload(payload);
-  const options = await getSearchOptionsForStore(email, deps);
-  assertValidSearchPayload(normalized, options);
+  await getValidatedSearchOptionsForStore({ cache, email, normalized });
 
   return deps.searchProductStatsImpl({ ...normalized, profileEmail: email });
 }
 
 function createSearchStore(deps: SearchStoreDeps = {}) {
   const resolvedDeps = resolveSearchStoreDeps(deps);
+  const cache = createSearchOptionsCache(resolvedDeps);
   return {
-    getSearchOptions: (email: string) =>
-      getSearchOptionsForStore(email, resolvedDeps),
+    getSearchOptions: (email: string) => getSearchOptionsForStore(email, cache),
     getSavedSearch: async (email: string) =>
       serializeSearchRow(await resolvedDeps.getSearchByEmailImpl(email)),
     runSavedSearch: (email: string, payload: SearchRunPayload = {}) =>
-      runSavedSearchForStore(email, payload, resolvedDeps),
+      runSavedSearchForStore(email, payload, resolvedDeps, cache),
     getSearchStats: (email: string, payload: Partial<SearchPayload> = {}) =>
-      getSearchStatsForStore(email, payload, resolvedDeps),
+      getSearchStatsForStore(email, payload, resolvedDeps, cache),
+    markSearchProductOptionsStale: cache.markProductOptionsStale,
   };
 }
 
 const defaultSearchStore = createSearchStore();
-const { getSearchOptions, getSavedSearch, runSavedSearch, getSearchStats } =
-  defaultSearchStore;
+const {
+  getSearchOptions,
+  getSavedSearch,
+  runSavedSearch,
+  getSearchStats,
+  markSearchProductOptionsStale,
+} = defaultSearchStore;
 
 export {
   DEFAULT_SEARCH_STATE,
@@ -309,4 +317,5 @@ export {
   getSavedSearch,
   runSavedSearch,
   getSearchStats,
+  markSearchProductOptionsStale,
 };
