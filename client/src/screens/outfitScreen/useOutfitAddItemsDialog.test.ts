@@ -53,6 +53,16 @@ function t(key: string) {
   return key;
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, reject, resolve };
+}
+
 function HookHarness() {
   const model = useOutfitAddItemsDialog({
     existingItems: [],
@@ -271,5 +281,201 @@ describe("useOutfitCatalogPicker", () => {
       await result.current.resetCatalogSearch();
     });
     expect(result.current.isCatalogFiltersOpen).toBe(false);
+  });
+
+  test("ignores stale catalog search results from older requests", async () => {
+    const slowSearch = createDeferred<{
+      items: { name: string; url: string }[];
+      total: number;
+    }>();
+    const fastSearch = createDeferred<{
+      items: { name: string; url: string }[];
+      total: number;
+    }>();
+    searchApi.runSearch
+      .mockResolvedValueOnce({
+        items: [{ url: "https://example.com/initial", name: "Initial" }],
+        total: 1,
+      })
+      .mockImplementationOnce(() => slowSearch.promise)
+      .mockImplementationOnce(() => fastSearch.promise);
+    const { result } = renderHook(() =>
+      useOutfitCatalogPicker({
+        locale: "en",
+        open: true,
+        tab: 1,
+        t,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.catalogTotal).toBe(1));
+
+    let slowAction: Promise<void> = Promise.resolve();
+    await act(async () => {
+      slowAction = result.current.changeCatalogDraft(
+        (current) => ({ ...current, query: "slow" }),
+        { submit: true },
+      );
+      await Promise.resolve();
+    });
+    let fastAction: Promise<void> = Promise.resolve();
+    await act(async () => {
+      fastAction = result.current.changeCatalogDraft(
+        (current) => ({ ...current, query: "fast" }),
+        { submit: true },
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fastSearch.resolve({
+        items: [{ url: "https://example.com/fast", name: "Fast" }],
+        total: 2,
+      });
+      await fastAction;
+    });
+    expect(result.current.catalogTotal).toBe(2);
+    expect(result.current.visibleCatalogItems).toEqual([
+      expect.objectContaining({ name: "Fast" }),
+    ]);
+
+    await act(async () => {
+      slowSearch.resolve({
+        items: [{ url: "https://example.com/slow", name: "Slow" }],
+        total: 3,
+      });
+      await slowAction;
+    });
+
+    expect(result.current.catalogTotal).toBe(2);
+    expect(result.current.visibleCatalogItems).toEqual([
+      expect.objectContaining({ name: "Fast" }),
+    ]);
+  });
+
+  test("does not close catalog filters after a stale apply request resolves", async () => {
+    const slowSearch = createDeferred<{
+      items: { name: string; url: string }[];
+      total: number;
+    }>();
+    const fastSearch = createDeferred<{
+      items: { name: string; url: string }[];
+      total: number;
+    }>();
+    searchApi.runSearch
+      .mockResolvedValueOnce({
+        items: [{ url: "https://example.com/initial", name: "Initial" }],
+        total: 1,
+      })
+      .mockImplementationOnce(() => slowSearch.promise)
+      .mockImplementationOnce(() => fastSearch.promise);
+    const { result } = renderHook(() =>
+      useOutfitCatalogPicker({
+        locale: "en",
+        open: true,
+        tab: 1,
+        t,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.catalogTotal).toBe(1));
+
+    act(() => {
+      result.current.openCatalogFilters();
+    });
+    let staleApply: Promise<void> = Promise.resolve();
+    await act(async () => {
+      staleApply = result.current.applyCatalogSearch({
+        ...result.current.catalogMobileFiltersDraftState,
+        query: "slow",
+      });
+      await Promise.resolve();
+    });
+    let fastAction: Promise<void> = Promise.resolve();
+    await act(async () => {
+      fastAction = result.current.changeCatalogDraft(
+        (current) => ({ ...current, query: "fast" }),
+        { submit: true },
+      );
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fastSearch.resolve({
+        items: [{ url: "https://example.com/fast", name: "Fast" }],
+        total: 2,
+      });
+      await fastAction;
+    });
+    act(() => {
+      result.current.openCatalogFilters();
+    });
+    expect(result.current.isCatalogFiltersOpen).toBe(true);
+
+    await act(async () => {
+      slowSearch.resolve({
+        items: [{ url: "https://example.com/slow", name: "Slow" }],
+        total: 3,
+      });
+      await staleApply;
+    });
+
+    expect(result.current.isCatalogFiltersOpen).toBe(true);
+    expect(result.current.catalogTotal).toBe(2);
+  });
+
+  test("shows generic catalog error for the current failed search", async () => {
+    searchApi.runSearch
+      .mockResolvedValueOnce({
+        items: [{ url: "https://example.com/initial", name: "Initial" }],
+        total: 1,
+      })
+      .mockRejectedValueOnce(new Error("network"));
+    const { result } = renderHook(() =>
+      useOutfitCatalogPicker({
+        locale: "en",
+        open: true,
+        tab: 1,
+        t,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.catalogTotal).toBe(1));
+
+    await act(async () => {
+      await result.current.changeCatalogDraft(
+        (current) => ({ ...current, query: "error" }),
+        { submit: true },
+      );
+    });
+
+    expect(result.current.catalogStatus).toEqual({
+      loading: false,
+      error: "errors.generic",
+    });
+  });
+
+  test("invalidates pending catalog bootstrap when the dialog closes", async () => {
+    const optionsRequest =
+      createDeferred<ReturnType<typeof makeCatalogOptions>>();
+    searchApi.fetchSearchOptions.mockReturnValueOnce(optionsRequest.promise);
+    const { rerender } = renderHook(
+      ({ open, tab }: { open: boolean; tab: number }) =>
+        useOutfitCatalogPicker({
+          locale: "en",
+          open,
+          tab,
+          t,
+        }),
+      { initialProps: { open: true, tab: 1 } },
+    );
+
+    rerender({ open: false, tab: 1 });
+    await act(async () => {
+      optionsRequest.resolve(makeCatalogOptions());
+      await optionsRequest.promise;
+    });
+
+    expect(searchApi.runSearch).not.toHaveBeenCalled();
   });
 });

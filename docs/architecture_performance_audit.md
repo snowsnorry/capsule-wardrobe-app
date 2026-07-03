@@ -285,11 +285,12 @@
    - Render readiness лучше направить на readiness endpoint или добавить отдельный alert по `/healthall`.
    - Ожидаемый эффект: меньше "green but broken" деплоев.
 
-8. [ ] Исправить frontend correctness bugs.
+8. [x] Исправить frontend correctness bugs.
    - Добавить sequence/abort guard в `useOutfitCatalogPicker`.
    - Обернуть `localStorage` read/write в `try/catch`.
-   - Добавить timeout/abort policy для client job waiters.
+   - Добавить server-authoritative watchdog/reconciliation для client job waiters: при истечении локального ожидания перечитывать `GET /jobs/:id`, для `queued`/`running` сохранять progress UI и продолжать ожидание, для `completed`/`failed` использовать terminal server state, при недоступности server status показывать transport/status-check error, не помечая саму job failed локально.
    - Ожидаемый эффект: меньше stale UI и runtime падений в edge browsers.
+   - Статус 2026-07-03: `useOutfitCatalogPicker` получил request sequence guard для bootstrap/search и invalidation при закрытии/смене tab, audit-listed `localStorage` paths стали best-effort с fallback defaults, client job waiters сверяют зависшее ожидание с authoritative server status и сохраняют progress UI для активных jobs.
 
 ### P2 - после стабилизации hot paths
 

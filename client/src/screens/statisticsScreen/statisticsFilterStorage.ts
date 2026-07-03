@@ -33,10 +33,14 @@ function writeStoredStatisticsFilters(
     return;
   }
 
-  window.localStorage?.setItem(
-    STATISTICS_FILTERS_STORAGE_KEY,
-    JSON.stringify(serializeStatisticsState(state, priceRange)),
-  );
+  try {
+    window.localStorage?.setItem(
+      STATISTICS_FILTERS_STORAGE_KEY,
+      JSON.stringify(serializeStatisticsState(state, priceRange)),
+    );
+  } catch {
+    // Filter persistence is optional; keep the in-memory state.
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

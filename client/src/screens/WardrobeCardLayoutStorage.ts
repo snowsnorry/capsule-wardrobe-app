@@ -20,20 +20,28 @@ function readStoredWardrobeMobileCardColumns(): MobileCardColumns {
     return 2;
   }
 
-  const parsed = Number(
-    window.localStorage?.getItem(WARDROBE_MOBILE_CARD_COLUMNS_STORAGE_KEY),
-  );
-  return isMobileCardColumns(parsed) ? parsed : 2;
+  try {
+    const parsed = Number(
+      window.localStorage?.getItem(WARDROBE_MOBILE_CARD_COLUMNS_STORAGE_KEY),
+    );
+    return isMobileCardColumns(parsed) ? parsed : 2;
+  } catch {
+    return 2;
+  }
 }
 
 function writeStoredWardrobeMobileCardColumns(value: MobileCardColumns) {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage?.setItem(
-    WARDROBE_MOBILE_CARD_COLUMNS_STORAGE_KEY,
-    String(value),
-  );
+  try {
+    window.localStorage?.setItem(
+      WARDROBE_MOBILE_CARD_COLUMNS_STORAGE_KEY,
+      String(value),
+    );
+  } catch {
+    // Layout persistence is optional; keep the in-memory state.
+  }
 }
 
 function readStoredWardrobeFilters(): StoredWardrobeFilters {
@@ -64,10 +72,14 @@ function writeStoredWardrobeFilters(value: StoredWardrobeFilters) {
     return;
   }
 
-  window.localStorage?.setItem(
-    WARDROBE_FILTERS_STORAGE_KEY,
-    JSON.stringify(value),
-  );
+  try {
+    window.localStorage?.setItem(
+      WARDROBE_FILTERS_STORAGE_KEY,
+      JSON.stringify(value),
+    );
+  } catch {
+    // Filter persistence is optional; keep the in-memory state.
+  }
 }
 
 function isWardrobeFilter(value: unknown): value is WardrobeFilter {

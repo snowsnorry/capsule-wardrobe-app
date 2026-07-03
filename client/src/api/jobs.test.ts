@@ -169,21 +169,90 @@ describe("jobs api", () => {
     expect(requestApi.requestJson).toHaveBeenCalledTimes(2);
   });
 
-  test("waitForJob aborts SSE and rejects when the wait timeout expires", async () => {
+  test("waitForJob reconciles watchdog timeouts with server status before continuing", async () => {
+    vi.useFakeTimers();
+    const running = createJob({ status: "running" });
+    const completed = createJob({
+      status: "completed",
+      completedAt: "2026-01-01T00:01:00.000Z",
+    });
+    eventSourceApi.fetchEventSource.mockImplementation(
+      () => new Promise(() => undefined),
+    );
+    requestApi.requestJson
+      .mockResolvedValueOnce({ ok: true, job: running })
+      .mockResolvedValueOnce({ ok: true, job: completed });
+
+    const result = waitForJob("job-1", { timeoutMs: 25 });
+    const onResolved = vi.fn();
+    void result.then(onResolved);
+
+    await vi.advanceTimersByTimeAsync(25);
+    await Promise.resolve();
+
+    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
+    expect(eventSourceApi.fetchEventSource).toHaveBeenCalledTimes(2);
+    expect(onResolved).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(25);
+
+    await expect(result).resolves.toEqual(completed);
+    expect(requestApi.requestJson).toHaveBeenCalledTimes(2);
+    const signals = eventSourceApi.fetchEventSource.mock.calls.map(
+      (call) => (call[1] as { signal?: AbortSignal }).signal,
+    );
+    expect(signals.every((signal) => signal?.aborted)).toBe(true);
+  });
+
+  test("waitForJob keeps waiting when watchdog aborts polling fallback for an active job", async () => {
+    vi.useFakeTimers();
+    const running = createJob({ status: "running" });
+    const completed = createJob({
+      status: "completed",
+      completedAt: "2026-01-01T00:01:00.000Z",
+    });
+    eventSourceApi.fetchEventSource.mockResolvedValue(undefined);
+    requestApi.requestJson
+      .mockResolvedValueOnce({ ok: true, job: running })
+      .mockResolvedValueOnce({ ok: true, job: running })
+      .mockResolvedValueOnce({ ok: true, job: running })
+      .mockResolvedValueOnce({ ok: true, job: completed });
+
+    const result = waitForJob("job-1", { timeoutMs: 25 });
+    const onRejected = vi.fn();
+    void result.catch(onRejected);
+
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(25);
+    await Promise.resolve();
+
+    expect(onRejected).not.toHaveBeenCalled();
+    expect(requestApi.requestJson).toHaveBeenCalledTimes(3);
+    expect(eventSourceApi.fetchEventSource).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(25);
+
+    await expect(result).resolves.toEqual(completed);
+    expect(onRejected).not.toHaveBeenCalled();
+    expect(requestApi.requestJson).toHaveBeenCalledTimes(4);
+  });
+
+  test("waitForJob rejects with status check error when watchdog reconciliation cannot fetch the job", async () => {
     vi.useFakeTimers();
     eventSourceApi.fetchEventSource.mockImplementation(
       () => new Promise(() => undefined),
     );
+    requestApi.requestJson.mockRejectedValue(new Error("network"));
 
     const result = waitForJob("job-1", { timeoutMs: 25 });
-    const expectation = expect(result).rejects.toThrow("job_wait_timeout");
+    const expectation = expect(result).rejects.toThrow(
+      "job_status_check_failed",
+    );
+
     await vi.advanceTimersByTimeAsync(25);
 
     await expectation;
-    const options = eventSourceApi.fetchEventSource.mock.calls[0]?.[1] as {
-      signal?: AbortSignal;
-    };
-    expect(options.signal?.aborted).toBe(true);
+    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
   });
 
   test("waitForJob rejects with job_wait_aborted when caller aborts", async () => {

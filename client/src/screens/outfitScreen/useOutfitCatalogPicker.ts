@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useMediaQuery } from "@mui/material";
 import { fetchSearchOptions, runSearch } from "../../api/search";
@@ -21,6 +21,7 @@ import type {
 import { sortOutfitWardrobeItems } from "./outfitItemMappers";
 
 const CATALOG_PICKER_PAGE_SIZE = 20;
+const INITIAL_CATALOG_STATUS = { loading: false, error: "" };
 
 function getCatalogMobileFiltersDraft(catalogDraftState: SearchDraftState) {
   return catalogDraftState;
@@ -32,6 +33,76 @@ function getAppliedCatalogSearchState(state: SearchDraftState) {
 
 function getResetCatalogSearchState(catalogOptions: SearchOptions) {
   return createSearchState(null, catalogOptions.priceRange);
+}
+
+function useCatalogRequestSequencer() {
+  const catalogRequestSeqRef = useRef(0);
+  const beginCatalogRequest = useCallback(() => {
+    catalogRequestSeqRef.current += 1;
+    return catalogRequestSeqRef.current;
+  }, []);
+  const isCurrentCatalogRequest = useCallback(
+    (requestSeq: number) => catalogRequestSeqRef.current === requestSeq,
+    [],
+  );
+  const invalidateCatalogRequests = useCallback(() => {
+    catalogRequestSeqRef.current += 1;
+  }, []);
+
+  return {
+    beginCatalogRequest,
+    invalidateCatalogRequests,
+    isCurrentCatalogRequest,
+  };
+}
+
+function useCatalogBootstrapEffect({
+  bootstrapCatalogSearch,
+  invalidateCatalogRequests,
+  open,
+  tab,
+}: {
+  bootstrapCatalogSearch: () => Promise<void>;
+  invalidateCatalogRequests: () => void;
+  open: boolean;
+  tab: number;
+}) {
+  useEffect(() => {
+    if (open && tab === 1) {
+      void bootstrapCatalogSearch();
+      return;
+    }
+    invalidateCatalogRequests();
+  }, [bootstrapCatalogSearch, invalidateCatalogRequests, open, tab]);
+}
+
+function useCatalogActiveChips({
+  catalogAppliedQuery,
+  catalogDraftState,
+  catalogOptions,
+  locale,
+  t,
+}: {
+  catalogAppliedQuery: string;
+  catalogDraftState: SearchDraftState;
+  catalogOptions: SearchOptions;
+  locale: string;
+  t: Translate;
+}) {
+  return useMemo(
+    () =>
+      buildActiveFilterChips({
+        state:
+          catalogDraftState.query === catalogAppliedQuery
+            ? catalogDraftState
+            : { ...catalogDraftState, query: catalogAppliedQuery },
+        options: catalogOptions,
+        locale,
+        t,
+        translateOption,
+      }),
+    [catalogAppliedQuery, catalogDraftState, catalogOptions, locale, t],
+  );
 }
 
 function useOutfitCatalogPicker({
@@ -57,15 +128,19 @@ function useOutfitCatalogPicker({
     useState<SearchDraftState>(() =>
       createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange),
     );
-  const [catalogStatus, setCatalogStatus] = useState({
-    loading: false,
-    error: "",
-  });
+  const [catalogStatus, setCatalogStatus] = useState(INITIAL_CATALOG_STATUS);
   const [isCatalogFiltersOpen, setIsCatalogFiltersOpen] = useState(false);
   const isCatalogMobile = useMediaQuery("(max-width:899px)");
+  const {
+    beginCatalogRequest,
+    invalidateCatalogRequests,
+    isCurrentCatalogRequest,
+  } = useCatalogRequestSequencer();
 
   const runCatalogSearch = useCatalogSearchRunner({
+    beginCatalogRequest,
     catalogOptions,
+    isCurrentCatalogRequest,
     setCatalogItems,
     setCatalogStatus,
     setCatalogTotal,
@@ -73,6 +148,8 @@ function useOutfitCatalogPicker({
   });
 
   const bootstrapCatalogSearch = useCatalogBootstrap({
+    beginCatalogRequest,
+    isCurrentCatalogRequest,
     setCatalogAppliedQuery,
     setCatalogItems,
     setCatalogDraftState,
@@ -83,26 +160,19 @@ function useOutfitCatalogPicker({
     t,
   });
 
-  useEffect(() => {
-    if (open && tab === 1) {
-      void bootstrapCatalogSearch();
-    }
-  }, [bootstrapCatalogSearch, open, tab]);
-
-  const catalogActiveChips = useMemo(
-    () =>
-      buildActiveFilterChips({
-        state:
-          catalogDraftState.query === catalogAppliedQuery
-            ? catalogDraftState
-            : { ...catalogDraftState, query: catalogAppliedQuery },
-        options: catalogOptions,
-        locale,
-        t,
-        translateOption,
-      }),
-    [catalogAppliedQuery, catalogDraftState, catalogOptions, locale, t],
-  );
+  useCatalogBootstrapEffect({
+    bootstrapCatalogSearch,
+    invalidateCatalogRequests,
+    open,
+    tab,
+  });
+  const catalogActiveChips = useCatalogActiveChips({
+    catalogAppliedQuery,
+    catalogDraftState,
+    catalogOptions,
+    locale,
+    t,
+  });
 
   return {
     catalogActiveChips,
@@ -129,13 +199,17 @@ function useOutfitCatalogPicker({
 }
 
 function useCatalogSearchRunner({
+  beginCatalogRequest,
   catalogOptions,
+  isCurrentCatalogRequest,
   setCatalogItems,
   setCatalogStatus,
   setCatalogTotal,
   t,
 }: {
+  beginCatalogRequest: () => number;
   catalogOptions: SearchOptions;
+  isCurrentCatalogRequest: (requestSeq: number) => boolean;
   setCatalogItems: Dispatch<SetStateAction<WardrobeItem[]>>;
   setCatalogStatus: (status: { loading: boolean; error: string }) => void;
   setCatalogTotal: (total: number) => void;
@@ -143,6 +217,7 @@ function useCatalogSearchRunner({
 }) {
   return useCallback(
     async (nextState: SearchDraftState) => {
+      const requestSeq = beginCatalogRequest();
       setCatalogStatus({ loading: true, error: "" });
       try {
         const payload = serializeDraftState(
@@ -154,15 +229,21 @@ function useCatalogSearchRunner({
           limit: CATALOG_PICKER_PAGE_SIZE,
           persist: false,
         });
+        if (!isCurrentCatalogRequest(requestSeq)) return false;
         setCatalogItems(Array.isArray(result.items) ? result.items : []);
         setCatalogTotal(Number(result.total) || 0);
         setCatalogStatus({ loading: false, error: "" });
+        return true;
       } catch {
+        if (!isCurrentCatalogRequest(requestSeq)) return false;
         setCatalogStatus({ loading: false, error: t("errors.generic") });
+        return true;
       }
     },
     [
+      beginCatalogRequest,
       catalogOptions.priceRange,
+      isCurrentCatalogRequest,
       setCatalogItems,
       setCatalogStatus,
       setCatalogTotal,
@@ -172,6 +253,8 @@ function useCatalogSearchRunner({
 }
 
 function useCatalogBootstrap({
+  beginCatalogRequest,
+  isCurrentCatalogRequest,
   setCatalogAppliedQuery,
   setCatalogItems,
   setCatalogDraftState,
@@ -181,6 +264,8 @@ function useCatalogBootstrap({
   setCatalogTotal,
   t,
 }: {
+  beginCatalogRequest: () => number;
+  isCurrentCatalogRequest: (requestSeq: number) => boolean;
   setCatalogAppliedQuery: (query: string) => void;
   setCatalogItems: Dispatch<SetStateAction<WardrobeItem[]>>;
   setCatalogDraftState: Dispatch<SetStateAction<SearchDraftState>>;
@@ -191,9 +276,11 @@ function useCatalogBootstrap({
   t: Translate;
 }) {
   return useCallback(async () => {
+    const requestSeq = beginCatalogRequest();
     setCatalogStatus({ loading: true, error: "" });
     try {
       const optionsResponse = await fetchSearchOptions({ force: true });
+      if (!isCurrentCatalogRequest(requestSeq)) return;
       const nextOptions = buildSearchOptionsPayload(optionsResponse);
       const nextState = createSearchState(null, nextOptions.priceRange);
       setCatalogOptions(nextOptions);
@@ -205,13 +292,17 @@ function useCatalogBootstrap({
         limit: CATALOG_PICKER_PAGE_SIZE,
         persist: false,
       });
+      if (!isCurrentCatalogRequest(requestSeq)) return;
       setCatalogItems(Array.isArray(result.items) ? result.items : []);
       setCatalogTotal(Number(result.total) || 0);
       setCatalogStatus({ loading: false, error: "" });
     } catch {
+      if (!isCurrentCatalogRequest(requestSeq)) return;
       setCatalogStatus({ loading: false, error: t("errors.generic") });
     }
   }, [
+    beginCatalogRequest,
+    isCurrentCatalogRequest,
     setCatalogAppliedQuery,
     setCatalogItems,
     setCatalogDraftState,
@@ -234,7 +325,7 @@ function useCatalogActions({
 }: {
   catalogDraftState: SearchDraftState;
   catalogOptions: SearchOptions;
-  runCatalogSearch: (state: SearchDraftState) => Promise<void>;
+  runCatalogSearch: (state: SearchDraftState) => Promise<boolean>;
   setCatalogAppliedQuery: (query: string) => void;
   setCatalogDraftState: Dispatch<SetStateAction<SearchDraftState>>;
   setCatalogMobileFiltersDraftState: Dispatch<SetStateAction<SearchDraftState>>;
@@ -245,8 +336,9 @@ function useCatalogActions({
     setCatalogDraftState(nextState);
     setCatalogAppliedQuery(nextState.query);
     setCatalogMobileFiltersDraftState(nextState);
-    await runCatalogSearch(nextState);
-    setIsCatalogFiltersOpen(false);
+    if (await runCatalogSearch(nextState)) {
+      setIsCatalogFiltersOpen(false);
+    }
   };
 
   return {
@@ -305,8 +397,9 @@ function useCatalogActions({
       setCatalogDraftState(nextState);
       setCatalogAppliedQuery(nextState.query);
       setCatalogMobileFiltersDraftState(nextState);
-      await runCatalogSearch(nextState);
-      setIsCatalogFiltersOpen(false);
+      if (await runCatalogSearch(nextState)) {
+        setIsCatalogFiltersOpen(false);
+      }
     },
   };
 }

@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { STATISTICS_FILTERS_STORAGE_KEY } from "./statisticsFilterStorage";
+import {
+  STATISTICS_FILTERS_STORAGE_KEY,
+  readStoredStatisticsFilters,
+  writeStoredStatisticsFilters,
+} from "./statisticsFilterStorage";
 import { useStatisticsStats } from "./useStatisticsStats";
 
 const searchApi = vi.hoisted(() => ({
@@ -192,6 +196,7 @@ describe("useStatisticsStats", () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   test("bootstraps options and statistics from defaults", async () => {
@@ -370,6 +375,32 @@ describe("useStatisticsStats", () => {
     );
     expect(screen.getByTestId("chips")).toHaveTextContent("Category: Top");
     expect(screen.getByTestId("chips")).toHaveTextContent("Liked only");
+  });
+
+  test("falls back to default filters when localStorage throws", () => {
+    const priceRange = makeOptions().priceRange;
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+
+    expect(readStoredStatisticsFilters(priceRange)).toEqual(
+      expect.objectContaining({
+        category: [],
+        likedOnly: false,
+      }),
+    );
+    expect(() =>
+      writeStoredStatisticsFilters(
+        {
+          ...readStoredStatisticsFilters(priceRange),
+          likedOnly: true,
+        },
+        priceRange,
+      ),
+    ).not.toThrow();
   });
 
   test("handles price chips and failed stats refreshes", async () => {

@@ -122,6 +122,7 @@ describe("AppSidebarShell", () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   test("renders overlay, medium desktop, and large desktop modes", () => {
@@ -313,6 +314,29 @@ describe("AppSidebarShell", () => {
     expect(
       screen.getByRole("button", { name: "Collapse sidebar" }),
     ).toBeInTheDocument();
+  });
+
+  test("keeps sidebar usable when collapsed state storage is unavailable", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation((key) => {
+      if (key === "capsule.appSidebarCollapsed") {
+        throw new Error("storage blocked");
+      }
+      return null;
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation((key) => {
+      if (key === "capsule.appSidebarCollapsed") {
+        throw new Error("storage blocked");
+      }
+    });
+
+    renderShell();
+
+    expect(
+      screen.getByRole("button", { name: "Collapse sidebar" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.getByTestId("shell-expand-hitbox")).toBeInTheDocument();
   });
 
   test("uses transform and clipping for desktop sidebar motion", async () => {

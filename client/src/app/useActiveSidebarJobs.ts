@@ -148,11 +148,13 @@ function useJobDiscovery({
   onDiscovery,
   setTrackedJobs,
   userEmail,
+  waitersRef,
 }: {
   jobsRef: { current: JobSnapshot[] };
   onDiscovery: () => void;
   setTrackedJobs: Dispatch<SetStateAction<JobSnapshot[]>>;
   userEmail: string;
+  waitersRef: MutableRefObject<Map<string, JobWaiter[]>>;
 }) {
   useEffect(() => {
     let active = true;
@@ -168,6 +170,7 @@ function useJobDiscovery({
       try {
         const { job } = await fetchJob(jobId);
         if (active) {
+          resolveWaiters(waitersRef, job);
           setTrackedJobs((current) => mergeJobSnapshot(current, job));
         }
       } catch {
@@ -231,7 +234,7 @@ function useJobDiscovery({
       clearDiscoveryTimer();
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [jobsRef, onDiscovery, setTrackedJobs, userEmail]);
+  }, [jobsRef, onDiscovery, setTrackedJobs, userEmail, waitersRef]);
 }
 
 function useJobEventStreams({
@@ -366,6 +369,7 @@ export function useJobTracker(userEmail: string): JobTrackerState {
     onDiscovery: noteDiscovery,
     setTrackedJobs,
     userEmail,
+    waitersRef,
   });
   useJobEventStreams({
     activeJobIds,

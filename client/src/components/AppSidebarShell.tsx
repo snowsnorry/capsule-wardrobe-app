@@ -21,15 +21,25 @@ function readSharedDesktopSidebarCollapsed(): boolean {
     return false;
   }
 
-  return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true";
+  try {
+    return (
+      window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true"
+    );
+  } catch {
+    return false;
+  }
 }
 
 function writeSharedDesktopSidebarCollapsed(value: boolean): void {
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(
-      SIDEBAR_COLLAPSED_STORAGE_KEY,
-      value ? "true" : "false",
-    );
+    try {
+      window.localStorage.setItem(
+        SIDEBAR_COLLAPSED_STORAGE_KEY,
+        value ? "true" : "false",
+      );
+    } catch {
+      // Sidebar persistence is optional; keep the in-memory state.
+    }
   }
 }
 

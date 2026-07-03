@@ -235,6 +235,65 @@ test("useJobTracker does one terminal reconciliation fetch when a known job disa
   expect(result.current.activeJobEntityKeys).toEqual([]);
 });
 
+test("useJobTracker resolves waiters when disappeared job reconciles to failed", async () => {
+  const queued = createJob();
+  const failed = createJob({
+    status: "failed",
+    error: { code: "job_failed", message: "Generation failed" },
+    failedAt: "2026-01-01T00:01:00.000Z",
+  });
+  jobsApi.fetchActiveJobs
+    .mockResolvedValueOnce({ ok: true, jobs: [queued] })
+    .mockResolvedValueOnce({ ok: true, jobs: [] });
+  jobsApi.fetchJob.mockResolvedValue({ ok: true, job: failed });
+
+  const { result } = renderHook(() => useJobTracker("person@test.com"));
+
+  await act(async () => {
+    await flushPromises();
+  });
+  const waitResultPromise = result.current.waitForJobCompletion("job-1");
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30_000);
+    await flushPromises(2);
+  });
+
+  await expect(waitResultPromise).resolves.toEqual(failed);
+  expect(result.current.activeJobEntityKeys).toEqual([]);
+});
+
+test("useJobTracker keeps active UI and waiters when disappeared job reconciles to running", async () => {
+  const queued = createJob();
+  const running = createJob({
+    status: "running",
+    phase: "running",
+    progress: { current: 1, total: 3, label: "Running" },
+    startedAt: "2026-01-01T00:00:30.000Z",
+  });
+  jobsApi.fetchActiveJobs
+    .mockResolvedValueOnce({ ok: true, jobs: [queued] })
+    .mockResolvedValueOnce({ ok: true, jobs: [] });
+  jobsApi.fetchJob.mockResolvedValue({ ok: true, job: running });
+
+  const { result } = renderHook(() => useJobTracker("person@test.com"));
+
+  await act(async () => {
+    await flushPromises();
+  });
+  const onResolved = vi.fn();
+  void result.current.waitForJobCompletion("job-1").then(onResolved);
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30_000);
+    await flushPromises(2);
+  });
+
+  expect(onResolved).not.toHaveBeenCalled();
+  expect(result.current.jobs).toEqual([running]);
+  expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
+});
+
 test("useJobTracker does not fetch job details when SSE fails for a still-active job", async () => {
   const queued = createJob();
   jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });

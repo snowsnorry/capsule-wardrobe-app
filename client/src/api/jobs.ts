@@ -45,6 +45,21 @@ type WaitForJobOptions = {
   timeoutMs?: number;
 };
 type JobSnapshotListener = (job: JobSnapshot) => void;
+type JobWaitReconciliationInput = {
+  cycleController: AbortController;
+  fail: (error: unknown) => void;
+  id: string;
+  settle: (job: JobSnapshot) => void;
+  startCycle: () => void;
+};
+type JobWaitPollingInput = {
+  cycleController: AbortController;
+  fail: (error: unknown) => void;
+  getController: () => AbortController | null;
+  id: string;
+  isSettled: () => boolean;
+  settle: (job: JobSnapshot) => void;
+};
 
 const DEFAULT_JOB_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -167,66 +182,134 @@ async function pollJobUntilTerminal(
   }
 }
 
+async function reconcileJobWaitAfterWatchdog({
+  cycleController,
+  fail,
+  id,
+  settle,
+  startCycle,
+}: JobWaitReconciliationInput) {
+  cycleController.abort();
+  try {
+    const { job } = await fetchJob(id);
+    if (isTerminalJob(job)) {
+      settle(job);
+      return;
+    }
+    startCycle();
+  } catch {
+    fail(new Error("job_status_check_failed"));
+  }
+}
+
+function startJobWaitFallbackPolling({
+  cycleController,
+  fail,
+  getController,
+  id,
+  isSettled,
+  settle,
+}: JobWaitPollingInput) {
+  void pollJobUntilTerminal(id, cycleController.signal).then(
+    settle,
+    (error) => {
+      if (
+        !isSettled() &&
+        getController() === cycleController &&
+        !cycleController.signal.aborted
+      ) {
+        fail(error);
+      }
+    },
+  );
+}
+
 async function waitForJob(
   id: string,
   options: WaitForJobOptions = {},
 ): Promise<JobSnapshot> {
-  const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? DEFAULT_JOB_WAIT_TIMEOUT_MS;
-  let timeout: number | null = null;
-  if (options.signal?.aborted) {
-    throw new Error("job_wait_aborted");
-  }
+  if (options.signal?.aborted) throw new Error("job_wait_aborted");
 
   return new Promise<JobSnapshot>((resolve, reject) => {
     let settled = false;
+    let controller: AbortController | null = null;
+    let timeout: number | null = null;
+    const clearWatchdog = () => {
+      if (timeout === null) return;
+      window.clearTimeout(timeout);
+      timeout = null;
+    };
     const settle = (job: JobSnapshot) => {
       if (settled) return;
       settled = true;
-      if (timeout !== null) {
-        window.clearTimeout(timeout);
-      }
-      controller.abort();
+      clearWatchdog();
+      controller?.abort();
       options.signal?.removeEventListener("abort", abortFromCaller);
       resolve(job);
     };
     const fail = (error: unknown) => {
       if (settled) return;
       settled = true;
-      if (timeout !== null) {
-        window.clearTimeout(timeout);
-      }
-      controller.abort();
+      clearWatchdog();
+      controller?.abort();
       options.signal?.removeEventListener("abort", abortFromCaller);
       reject(error);
     };
     function abortFromCaller() {
       fail(new Error("job_wait_aborted"));
     }
-
-    options.signal?.addEventListener("abort", abortFromCaller, { once: true });
-
-    if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+    function scheduleWatchdog(cycleController: AbortController) {
+      clearWatchdog();
+      if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return;
       timeout = window.setTimeout(() => {
-        fail(new Error("job_wait_timeout"));
+        clearWatchdog();
+        void reconcileJobWaitAfterWatchdog({
+          cycleController,
+          fail,
+          id,
+          settle,
+          startCycle,
+        });
       }, timeoutMs);
     }
-
-    void subscribeJobEvents({
-      id,
-      signal: controller.signal,
-      onJob(job) {
-        if (isTerminalJob(job)) {
-          settle(job);
+    function startCycle() {
+      if (settled || options.signal?.aborted) {
+        if (options.signal?.aborted) {
+          fail(new Error("job_wait_aborted"));
         }
-      },
-    })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!settled && !controller.signal.aborted) {
-          void pollJobUntilTerminal(id, controller.signal).then(settle, fail);
-        }
-      });
+        return;
+      }
+      const cycleController = new AbortController();
+      controller = cycleController;
+      scheduleWatchdog(cycleController);
+      void subscribeJobEvents({
+        id,
+        signal: cycleController.signal,
+        onJob(job) {
+          if (isTerminalJob(job)) settle(job);
+        },
+      })
+        .catch(() => undefined)
+        .finally(() => {
+          if (
+            !settled &&
+            controller === cycleController &&
+            !cycleController.signal.aborted
+          ) {
+            startJobWaitFallbackPolling({
+              cycleController,
+              fail,
+              getController: () => controller,
+              id,
+              isSettled: () => settled,
+              settle,
+            });
+          }
+        });
+    }
+    options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+    startCycle();
   });
 }
 
