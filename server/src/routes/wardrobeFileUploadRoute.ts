@@ -359,12 +359,14 @@ async function processQueuedWardrobeFileUploadImpl({
   context,
   email,
   filterItem = filterWardrobeItemForDisplay,
+  signal,
   stagedFiles,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   context: any;
   email: string;
   filterItem?: typeof filterWardrobeItemForDisplay;
+  signal?: AbortSignal;
   stagedFiles: StagedUploadFile[];
 }) {
   const hydrated = await hydrateStagedUploadFiles(stagedFiles);
@@ -372,8 +374,8 @@ async function processQueuedWardrobeFileUploadImpl({
   const progress = createWardrobeUploadProgress(hydrated.files.length);
   const res = createQueuedUploadResponseSink();
   const abortState = {
-    signal: undefined,
-    isAborted: () => false,
+    signal,
+    isAborted: () => Boolean(signal?.aborted),
   };
 
   try {

@@ -52,6 +52,7 @@ test("job handler dispatches report and upload jobs to worker dependencies", asy
     processQueuedWardrobeUrlUploadImpl,
     processQueuedWardrobeFileUploadImpl,
   };
+  const uploadSignal = new AbortController().signal;
 
   await expect(
     runJobHandler(deps, {
@@ -101,11 +102,13 @@ test("job handler dispatches report and upload jobs to worker dependencies", asy
         kind: "personalItemUploadUrls",
         payload: { urls: [" https://example.com/a.jpg ", "", null] },
       }),
+      signal: uploadSignal,
       updateProgress,
     }),
   ).resolves.toEqual({ uploaded: 2 });
   expect(processQueuedWardrobeUrlUploadImpl).toHaveBeenCalledWith({
     email: "person@example.com",
+    signal: uploadSignal,
     urls: ["https://example.com/a.jpg"],
   });
 
@@ -115,12 +118,14 @@ test("job handler dispatches report and upload jobs to worker dependencies", asy
         kind: "personalItemUploadFiles",
         payload: { stagedFiles: [{ key: "staged/job-1/a.png" }] },
       }),
+      signal: uploadSignal,
       updateProgress,
     }),
   ).resolves.toEqual({ uploaded: 1 });
   expect(processQueuedWardrobeFileUploadImpl).toHaveBeenCalledWith({
     email: "person@example.com",
     stagedFiles: [{ key: "staged/job-1/a.png" }],
+    signal: uploadSignal,
     filterItem: expect.any(Function),
   });
 

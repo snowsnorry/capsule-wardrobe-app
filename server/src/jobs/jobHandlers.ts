@@ -165,23 +165,36 @@ async function runPersonalItemsReport(deps: HandlerDeps, job: JobRunRecord) {
   return result || {};
 }
 
-async function runUploadUrls(deps: HandlerDeps, job: JobRunRecord) {
+async function runUploadUrls(
+  deps: HandlerDeps,
+  job: JobRunRecord,
+  signal?: AbortSignal,
+) {
   const urls = Array.isArray(job.payload.urls)
     ? job.payload.urls.map((url) => String(url || "").trim()).filter(Boolean)
     : [];
   const handler = deps.processQueuedWardrobeUrlUploadImpl as
     | ((input: {
         email: string;
+        signal?: AbortSignal;
         urls: string[];
       }) => Promise<Record<string, unknown>>)
     | undefined;
   if (!handler) {
     throw new Error("wardrobe_url_upload_handler_missing");
   }
-  return handler({ email: job.profileEmail, urls });
+  return handler({
+    email: job.profileEmail,
+    signal,
+    urls,
+  });
 }
 
-async function runUploadFiles(deps: HandlerDeps, job: JobRunRecord) {
+async function runUploadFiles(
+  deps: HandlerDeps,
+  job: JobRunRecord,
+  signal?: AbortSignal,
+) {
   const stagedFiles = Array.isArray(job.payload.stagedFiles)
     ? job.payload.stagedFiles
     : [];
@@ -189,6 +202,7 @@ async function runUploadFiles(deps: HandlerDeps, job: JobRunRecord) {
     | ((input: {
         email: string;
         stagedFiles: unknown[];
+        signal?: AbortSignal;
         filterItem: typeof filterWardrobeItemForDisplay;
       }) => Promise<Record<string, unknown>>)
     | undefined;
@@ -198,6 +212,7 @@ async function runUploadFiles(deps: HandlerDeps, job: JobRunRecord) {
   return handler({
     email: job.profileEmail,
     stagedFiles,
+    signal,
     filterItem: filterWardrobeItemForDisplay,
   });
 }
@@ -228,9 +243,9 @@ export async function runJobHandler(
       case "personalItemsReportGenerate":
         return await runPersonalItemsReport(deps, job);
       case "personalItemUploadUrls":
-        return await runUploadUrls(deps, job);
+        return await runUploadUrls(deps, job, context.signal);
       case "personalItemUploadFiles":
-        return await runUploadFiles(deps, job);
+        return await runUploadFiles(deps, job, context.signal);
       default:
         throw new Error("unsupported_job_kind");
     }

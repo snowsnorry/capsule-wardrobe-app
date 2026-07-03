@@ -208,11 +208,13 @@ function registerWardrobeUrlUploadRoute(app, context) {
 async function processQueuedWardrobeUrlUpload({
   context,
   email,
+  signal,
   urls,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   context: any;
   email: string;
+  signal?: AbortSignal;
   urls: string[];
 }) {
   const sourceSaves = new Map();
@@ -225,6 +227,9 @@ async function processQueuedWardrobeUrlUpload({
         email,
         imageLlm,
         onEvent: (event) => {
+          if (signal?.aborted) {
+            return;
+          }
           scheduleWardrobeUrlSourceSave({
             context,
             email,
@@ -234,7 +239,7 @@ async function processQueuedWardrobeUrlUpload({
             sourceSaves,
           });
         },
-        signal: undefined,
+        signal,
         urls,
       });
     const processedItems = [];

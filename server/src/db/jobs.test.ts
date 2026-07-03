@@ -17,6 +17,7 @@ vi.mock("../jobs/stagedUploadStorage.js", () => stagedUploadStorageApi);
 
 import {
   appendJobEvent,
+  claimQueuedJobRunsWithoutProviderId,
   clearJobRunsForEmail,
   createJobRun,
   getJobRunById,
@@ -69,6 +70,12 @@ function eventRow(overrides = {}) {
   };
 }
 
+function getSqlText(index: number) {
+  const strings = coreApi.sql.mock.calls[index]?.[0] as
+    TemplateStringsArray | undefined;
+  return Array.from(strings || []).join(" ");
+}
+
 beforeEach(() => {
   coreApi.sql.mockReset();
   coreApi.getSqlClient.mockReturnValue(coreApi.sql);
@@ -116,6 +123,7 @@ test("createJobRun inserts queued jobs and recovers from unique active dedupe ra
     deduped: false,
     job: { id: "job-2", payload: { ok: true } },
   });
+  expect(getSqlText(1)).toContain("insert into job_events");
 
   const uniqueViolation = new Error("23505 duplicate");
   (uniqueViolation as Error & { code?: string }).code = "23505";
@@ -132,6 +140,19 @@ test("createJobRun inserts queued jobs and recovers from unique active dedupe ra
       payload: {},
     }),
   ).resolves.toMatchObject({ deduped: true, job: { id: "job-3" } });
+});
+
+test("claimQueuedJobRunsWithoutProviderId conditionally claims stale providerless queued jobs", async () => {
+  coreApi.sql.mockResolvedValueOnce([
+    jobRow({ id: "job-1", provider_job_id: null, status: "queued" }),
+  ]);
+
+  await expect(
+    claimQueuedJobRunsWithoutProviderId({ staleMs: 30_000, limit: 25 }),
+  ).resolves.toMatchObject([{ id: "job-1", status: "queued" }]);
+
+  expect(getSqlText(0)).toContain("provider_job_id is null");
+  expect(getSqlText(0)).toContain("for update skip locked");
 });
 
 test("job query helpers enforce ownership and status filtering", async () => {
@@ -184,6 +205,7 @@ test("job mutation helpers update lifecycle state and parse nullable JSON object
     status: "running",
     startedAt: "2026-01-01T00:00:00.000Z",
   });
+  expect(getSqlText(0)).toContain("insert into job_events");
 
   coreApi.sql.mockResolvedValueOnce([
     jobRow({
@@ -207,6 +229,7 @@ test("job mutation helpers update lifecycle state and parse nullable JSON object
     progressTotal: 4,
     progressLabel: "Uploading",
   });
+  expect(getSqlText(1)).toContain("insert into job_events");
 
   coreApi.sql.mockResolvedValueOnce([
     jobRow({
@@ -221,6 +244,7 @@ test("job mutation helpers update lifecycle state and parse nullable JSON object
     status: "completed",
     result: { items: 2 },
   });
+  expect(getSqlText(2)).toContain("insert into job_events");
 
   coreApi.sql.mockResolvedValueOnce([
     jobRow({
@@ -242,6 +266,7 @@ test("job mutation helpers update lifecycle state and parse nullable JSON object
     result: null,
     errorCode: "llm_failed",
   });
+  expect(getSqlText(3)).toContain("insert into job_events");
 });
 
 test("job event helpers append replayable events and cleanup profile-owned rows", async () => {
@@ -264,6 +289,29 @@ test("job event helpers append replayable events and cleanup profile-owned rows"
   await expect(
     listJobEventsAfter({ jobId: "job-1", afterId: 2 }),
   ).resolves.toMatchObject([{ id: 3, jobId: "job-1" }]);
+
+  coreApi.sql.mockResolvedValueOnce([
+    eventRow({
+      data: {
+        jobRun: jobRow({
+          completed_at: "2026-01-01T00:01:00.000Z",
+          phase: "complete",
+          status: "completed",
+        }),
+      },
+      event_type: "complete",
+      id: 4,
+    }),
+  ]);
+  await expect(
+    listJobEventsAfter({ jobId: "job-1", afterId: 3 }),
+  ).resolves.toMatchObject([
+    {
+      data: { job: { id: "job-1", phase: "complete", status: "completed" } },
+      eventType: "complete",
+      id: 4,
+    },
+  ]);
 
   coreApi.sql.mockResolvedValueOnce([
     {

@@ -1,5 +1,5 @@
 import {
-  appendJobEvent,
+  claimQueuedJobRunsWithoutProviderId,
   createJobRun,
   getJobRunById,
   getJobRunByIdForEmail,
@@ -24,13 +24,6 @@ export async function createPendingJob(
   input: EnqueueJobInput,
 ): Promise<{ job: JobRunRecord; snapshot: JobSnapshot; deduped: boolean }> {
   const { job, deduped } = await createJobRun(input);
-  if (!deduped) {
-    await appendJobEvent({
-      jobId: job.id,
-      eventType: "snapshot",
-      data: { job: toJobSnapshot(job) },
-    });
-  }
   return { job, snapshot: toJobSnapshot(job), deduped };
 }
 
@@ -69,16 +62,18 @@ export async function listOwnedJobSnapshots({
   return jobs.map(toJobSnapshot);
 }
 
+export async function claimPendingProviderJobs({
+  staleMs,
+  limit,
+}: {
+  staleMs: number;
+  limit: number;
+}): Promise<JobRunRecord[]> {
+  return claimQueuedJobRunsWithoutProviderId({ staleMs, limit });
+}
+
 export async function startJobRun(id: string): Promise<JobRunRecord | null> {
-  const job = await markJobRunStarted(id);
-  if (job) {
-    await appendJobEvent({
-      jobId: id,
-      eventType: "snapshot",
-      data: { job: toJobSnapshot(job) },
-    });
-  }
-  return job;
+  return markJobRunStarted(id);
 }
 
 export async function writeJobProgress({
@@ -94,15 +89,7 @@ export async function writeJobProgress({
   total?: number | null;
   label?: string | null;
 }): Promise<JobRunRecord | null> {
-  const job = await updateJobRunProgress({ id, phase, current, total, label });
-  if (job) {
-    await appendJobEvent({
-      jobId: id,
-      eventType: "progress",
-      data: { job: toJobSnapshot(job) },
-    });
-  }
-  return job;
+  return updateJobRunProgress({ id, phase, current, total, label });
 }
 
 export async function completeJobRun({
@@ -112,15 +99,7 @@ export async function completeJobRun({
   id: string;
   result?: Record<string, unknown> | null;
 }): Promise<JobRunRecord | null> {
-  const job = await markJobRunCompleted({ id, result });
-  if (job) {
-    await appendJobEvent({
-      jobId: id,
-      eventType: "complete",
-      data: { job: toJobSnapshot(job) },
-    });
-  }
-  return job;
+  return markJobRunCompleted({ id, result });
 }
 
 export async function failJobRun({
@@ -132,15 +111,7 @@ export async function failJobRun({
   errorCode: string;
   errorMessage?: string | null;
 }): Promise<JobRunRecord | null> {
-  const job = await markJobRunFailed({ id, errorCode, errorMessage });
-  if (job) {
-    await appendJobEvent({
-      jobId: id,
-      eventType: "failed",
-      data: { job: toJobSnapshot(job) },
-    });
-  }
-  return job;
+  return markJobRunFailed({ id, errorCode, errorMessage });
 }
 
 export async function replayJobEvents({

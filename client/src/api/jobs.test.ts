@@ -122,7 +122,7 @@ describe("jobs api", () => {
       .mockResolvedValueOnce({ ok: true, job: running })
       .mockResolvedValueOnce({ ok: true, job: completed });
 
-    const result = waitForJob("job-1");
+    const result = waitForJob("job-1", { timeoutMs: 0 });
     expect(requestApi.requestJson).not.toHaveBeenCalled();
 
     await Promise.resolve();
@@ -161,12 +161,48 @@ describe("jobs api", () => {
       .mockRejectedValueOnce(new Error("network"))
       .mockResolvedValueOnce({ ok: true, job: completed });
 
-    const result = waitForJob("job-1");
+    const result = waitForJob("job-1", { timeoutMs: 0 });
     await Promise.resolve();
     await vi.runOnlyPendingTimersAsync();
 
     await expect(result).resolves.toEqual(completed);
     expect(requestApi.requestJson).toHaveBeenCalledTimes(2);
+  });
+
+  test("waitForJob aborts SSE and rejects when the wait timeout expires", async () => {
+    vi.useFakeTimers();
+    eventSourceApi.fetchEventSource.mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
+    const result = waitForJob("job-1", { timeoutMs: 25 });
+    const expectation = expect(result).rejects.toThrow("job_wait_timeout");
+    await vi.advanceTimersByTimeAsync(25);
+
+    await expectation;
+    const options = eventSourceApi.fetchEventSource.mock.calls[0]?.[1] as {
+      signal?: AbortSignal;
+    };
+    expect(options.signal?.aborted).toBe(true);
+  });
+
+  test("waitForJob rejects with job_wait_aborted when caller aborts", async () => {
+    const controller = new AbortController();
+    eventSourceApi.fetchEventSource.mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
+    const result = waitForJob("job-1", {
+      signal: controller.signal,
+      timeoutMs: 0,
+    });
+    controller.abort();
+
+    await expect(result).rejects.toThrow("job_wait_aborted");
+    const options = eventSourceApi.fetchEventSource.mock.calls[0]?.[1] as {
+      signal?: AbortSignal;
+    };
+    expect(options.signal?.aborted).toBe(true);
   });
 
   test("subscribeJobEvents forwards valid job snapshots and ignores malformed events", async () => {

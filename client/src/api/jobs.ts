@@ -42,8 +42,11 @@ type EventStreamLike = {
 };
 type WaitForJobOptions = {
   signal?: AbortSignal;
+  timeoutMs?: number;
 };
 type JobSnapshotListener = (job: JobSnapshot) => void;
+
+const DEFAULT_JOB_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
 
 let fetchEventSourcePromise: Promise<
   EventStreamLike["fetchEventSource"]
@@ -169,17 +172,20 @@ async function waitForJob(
   options: WaitForJobOptions = {},
 ): Promise<JobSnapshot> {
   const controller = new AbortController();
-  const abortFromCaller = () => controller.abort();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_JOB_WAIT_TIMEOUT_MS;
+  let timeout: number | null = null;
   if (options.signal?.aborted) {
     throw new Error("job_wait_aborted");
   }
-  options.signal?.addEventListener("abort", abortFromCaller, { once: true });
 
   return new Promise<JobSnapshot>((resolve, reject) => {
     let settled = false;
     const settle = (job: JobSnapshot) => {
       if (settled) return;
       settled = true;
+      if (timeout !== null) {
+        window.clearTimeout(timeout);
+      }
       controller.abort();
       options.signal?.removeEventListener("abort", abortFromCaller);
       resolve(job);
@@ -187,10 +193,24 @@ async function waitForJob(
     const fail = (error: unknown) => {
       if (settled) return;
       settled = true;
+      if (timeout !== null) {
+        window.clearTimeout(timeout);
+      }
       controller.abort();
       options.signal?.removeEventListener("abort", abortFromCaller);
       reject(error);
     };
+    function abortFromCaller() {
+      fail(new Error("job_wait_aborted"));
+    }
+
+    options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+
+    if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+      timeout = window.setTimeout(() => {
+        fail(new Error("job_wait_timeout"));
+      }, timeoutMs);
+    }
 
     void subscribeJobEvents({
       id,

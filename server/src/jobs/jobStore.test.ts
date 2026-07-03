@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
 
 const dbApi = vi.hoisted(() => ({
-  appendJobEvent: vi.fn(),
+  claimQueuedJobRunsWithoutProviderId: vi.fn(),
   createJobRun: vi.fn(),
   getJobRunById: vi.fn(),
   getJobRunByIdForEmail: vi.fn(),
@@ -18,6 +18,7 @@ vi.mock("../db.js", () => dbApi);
 
 import {
   completeJobRun,
+  claimPendingProviderJobs,
   createPendingJob,
   failJobRun,
   getJobForWorker,
@@ -64,7 +65,7 @@ beforeEach(() => {
   }
 });
 
-test("createPendingJob appends an initial snapshot event only for newly created jobs", async () => {
+test("createPendingJob returns snapshots for new and deduped jobs", async () => {
   const job = jobRecord();
   dbApi.createJobRun.mockResolvedValueOnce({ job, deduped: false });
 
@@ -79,19 +80,44 @@ test("createPendingJob appends an initial snapshot event only for newly created 
     deduped: false,
     snapshot: { id: "job-1", status: "queued" },
   });
-  expect(dbApi.appendJobEvent).toHaveBeenCalledWith({
-    jobId: "job-1",
-    eventType: "snapshot",
-    data: { job: expect.objectContaining({ id: "job-1" }) },
-  });
 
   dbApi.createJobRun.mockResolvedValueOnce({ job, deduped: true });
+  await expect(
+    createPendingJob({
+      kind: "capsuleReportGenerate",
+      profileEmail: "person@example.com",
+      payload: {},
+    }),
+  ).resolves.toMatchObject({
+    deduped: true,
+    snapshot: { id: "job-1", status: "queued" },
+  });
+});
+
+test("jobStore claims stale providerless jobs for reconciliation", async () => {
+  dbApi.claimQueuedJobRunsWithoutProviderId.mockResolvedValueOnce([
+    jobRecord({ id: "job-1" }),
+  ]);
+
+  await expect(
+    claimPendingProviderJobs({ staleMs: 30_000, limit: 25 }),
+  ).resolves.toMatchObject([{ id: "job-1" }]);
+  expect(dbApi.claimQueuedJobRunsWithoutProviderId).toHaveBeenCalledWith({
+    staleMs: 30_000,
+    limit: 25,
+  });
+});
+
+test("createPendingJob does not write events outside the DB helper", async () => {
+  dbApi.createJobRun.mockResolvedValueOnce({
+    job: jobRecord(),
+    deduped: false,
+  });
   await createPendingJob({
     kind: "capsuleReportGenerate",
     profileEmail: "person@example.com",
     payload: {},
   });
-  expect(dbApi.appendJobEvent).toHaveBeenCalledTimes(1);
 });
 
 test("jobStore maps owned and worker reads to public snapshots or raw worker rows", async () => {
@@ -125,7 +151,7 @@ test("jobStore maps owned and worker reads to public snapshots or raw worker row
   ).resolves.toMatchObject([{ id: "job-1" }, { id: "job-2" }]);
 });
 
-test("jobStore writes replayable lifecycle events for start progress completion and failure", async () => {
+test("jobStore delegates lifecycle updates to atomic DB helpers", async () => {
   dbApi.markJobRunStarted.mockResolvedValue(
     jobRecord({ status: "running", phase: "running" }),
   );
@@ -166,8 +192,11 @@ test("jobStore writes replayable lifecycle events for start progress completion 
   });
 
   expect(
-    dbApi.appendJobEvent.mock.calls.map((call) => call[0].eventType),
-  ).toEqual(["snapshot", "progress", "complete", "failed"]);
+    dbApi.markJobRunStarted.mock.calls.length +
+      dbApi.updateJobRunProgress.mock.calls.length +
+      dbApi.markJobRunCompleted.mock.calls.length +
+      dbApi.markJobRunFailed.mock.calls.length,
+  ).toBe(4);
 });
 
 test("jobStore skips lifecycle events when updates do not find a job and replays raw events", async () => {
@@ -182,8 +211,6 @@ test("jobStore skips lifecycle events when updates do not find a job and replays
   await expect(
     failJobRun({ id: "missing", errorCode: "not_found" }),
   ).resolves.toBeNull();
-  expect(dbApi.appendJobEvent).not.toHaveBeenCalled();
-
   dbApi.listJobEventsAfter.mockResolvedValue([
     { id: 2, jobId: "job-1", eventType: "complete", data: {}, createdAt: "" },
   ]);

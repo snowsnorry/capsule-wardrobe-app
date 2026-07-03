@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
 
 const storeApi = vi.hoisted(() => ({
+  claimPendingProviderJobs: vi.fn(),
   createPendingJob: vi.fn(),
   failJobRun: vi.fn(),
   setProviderJobId: vi.fn(),
@@ -34,8 +35,55 @@ const snapshot = {
 
 beforeEach(() => {
   storeApi.createPendingJob.mockReset();
+  storeApi.claimPendingProviderJobs.mockReset();
   storeApi.failJobRun.mockReset();
   storeApi.setProviderJobId.mockReset();
+});
+
+test("job queue reconciles stale queued jobs without provider ids", async () => {
+  const backend = {
+    enqueue: vi.fn(async () => "provider-1"),
+    start: vi.fn(),
+    stop: vi.fn(),
+  };
+  storeApi.claimPendingProviderJobs.mockResolvedValueOnce([job]);
+
+  await expect(
+    createJobQueue({ backend }).reconcilePendingProviderJobs(),
+  ).resolves.toEqual({ failed: 0, reenqueued: 1 });
+
+  expect(storeApi.claimPendingProviderJobs).toHaveBeenCalledWith({
+    staleMs: 30_000,
+    limit: 25,
+  });
+  expect(backend.enqueue).toHaveBeenCalledWith({
+    jobId: "job-1",
+    kind: "capsuleReportGenerate",
+    payload: { capsuleId: "capsule-1" },
+  });
+  expect(storeApi.setProviderJobId).toHaveBeenCalledWith("job-1", "provider-1");
+});
+
+test("job queue marks reconciled jobs failed when provider enqueue is unavailable", async () => {
+  const backendError = new Error("provider_down");
+  const backend = {
+    enqueue: vi.fn(async () => {
+      throw backendError;
+    }),
+    start: vi.fn(),
+    stop: vi.fn(),
+  };
+  storeApi.claimPendingProviderJobs.mockResolvedValueOnce([job]);
+
+  await expect(
+    createJobQueue({ backend }).reconcilePendingProviderJobs(),
+  ).resolves.toEqual({ failed: 1, reenqueued: 0 });
+
+  expect(storeApi.failJobRun).toHaveBeenCalledWith({
+    id: "job-1",
+    errorCode: "queue_unavailable",
+    errorMessage: "provider_down",
+  });
 });
 
 test("job queue persists app-owned run before enqueuing provider work", async () => {

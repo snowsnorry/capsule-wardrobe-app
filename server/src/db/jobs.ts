@@ -1,7 +1,6 @@
 import { getFirstRow, getSqlClient, type SqlClientLike } from "./core.js";
 import type {
   EnqueueJobInput,
-  JobEntityType,
   JobEventRecord,
   JobKind,
   JobPayload,
@@ -12,127 +11,14 @@ import {
   cleanupStagedUploadFiles,
   type StagedUploadFile,
 } from "../jobs/stagedUploadStorage.js";
-
-type JobRunRow = {
-  id: string;
-  provider_job_id: string | null;
-  profile_email: string;
-  kind: string;
-  entity_type: string | null;
-  entity_id: string | null;
-  dedupe_key: string | null;
-  status: string;
-  phase: string | null;
-  progress_current: number | string | null;
-  progress_total: number | string | null;
-  progress_label: string | null;
-  payload: JobPayload | string | null;
-  result: Record<string, unknown> | string | null;
-  error_code: string | null;
-  error_message: string | null;
-  started_at: string | Date | null;
-  completed_at: string | Date | null;
-  failed_at: string | Date | null;
-  created_at: string | Date;
-  updated_at: string | Date;
-  expires_at: string | Date | null;
-};
-
-type JobEventRow = {
-  id: number | string;
-  job_id: string;
-  event_type: string;
-  data: Record<string, unknown> | string | null;
-  created_at: string | Date;
-};
-
-function normalizeEmail(email: unknown): string {
-  return String(email || "")
-    .trim()
-    .toLowerCase();
-}
-
-function parseJsonObject(value: unknown): Record<string, unknown> {
-  if (!value) {
-    return {};
-  }
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? parsed
-        : {};
-    } catch {
-      return {};
-    }
-  }
-  return typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function toNullableJsonObject(value: unknown): Record<string, unknown> | null {
-  if (!value) {
-    return null;
-  }
-  const parsed = parseJsonObject(value);
-  return Object.keys(parsed).length > 0 ? parsed : null;
-}
-
-function toIsoString(value: string | Date | null): string | null {
-  if (!value) {
-    return null;
-  }
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
-}
-
-function requireIsoString(value: string | Date): string {
-  return toIsoString(value) || new Date(0).toISOString();
-}
-
-function toJobRunRecord(row: JobRunRow): JobRunRecord {
-  return {
-    id: String(row.id),
-    providerJobId: row.provider_job_id,
-    profileEmail: row.profile_email,
-    kind: row.kind as JobKind,
-    entityType: row.entity_type as JobEntityType | null,
-    entityId: row.entity_id,
-    dedupeKey: row.dedupe_key,
-    status: row.status as JobStatus,
-    phase: row.phase,
-    progressCurrent: Number(row.progress_current) || 0,
-    progressTotal:
-      row.progress_total === null || row.progress_total === undefined
-        ? null
-        : Number(row.progress_total),
-    progressLabel: row.progress_label,
-    payload: parseJsonObject(row.payload),
-    result: toNullableJsonObject(row.result),
-    errorCode: row.error_code,
-    errorMessage: row.error_message,
-    startedAt: toIsoString(row.started_at),
-    completedAt: toIsoString(row.completed_at),
-    failedAt: toIsoString(row.failed_at),
-    createdAt: requireIsoString(row.created_at),
-    updatedAt: requireIsoString(row.updated_at),
-    expiresAt: toIsoString(row.expires_at),
-  };
-}
-
-function toJobEventRecord(row: JobEventRow): JobEventRecord {
-  return {
-    id: Number(row.id),
-    jobId: String(row.job_id),
-    eventType: String(row.event_type || ""),
-    data: parseJsonObject(row.data),
-    createdAt: requireIsoString(row.created_at),
-  };
-}
+import {
+  normalizeEmail,
+  parseJsonObject,
+  toJobEventRecord,
+  toJobRunRecord,
+  type JobEventRow,
+  type JobRunRow,
+} from "./jobRows.js";
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -190,31 +76,39 @@ export async function createJobRun(
   try {
     const row = getFirstRow(
       await sql<JobRunRow>`
-        insert into job_runs (
-          profile_email,
-          kind,
-          entity_type,
-          entity_id,
-          dedupe_key,
-          status,
-          phase,
-          progress_total,
-          progress_label,
-          payload
+        with inserted as (
+          insert into job_runs (
+            profile_email,
+            kind,
+            entity_type,
+            entity_id,
+            dedupe_key,
+            status,
+            phase,
+            progress_total,
+            progress_label,
+            payload
+          )
+          values (
+            ${profileEmail},
+            ${input.kind},
+            ${input.entity?.type || null},
+            ${input.entity?.id || null},
+            ${dedupeKey},
+            'queued',
+            ${input.phase || "queued"},
+            ${input.progressTotal ?? null},
+            ${input.progressLabel || null},
+            ${JSON.stringify(input.payload || {})}::jsonb
+          )
+          returning *
+        ),
+        event as (
+          insert into job_events (job_id, event_type, data)
+          select id, 'snapshot', jsonb_build_object('jobRun', to_jsonb(inserted))
+          from inserted
         )
-        values (
-          ${profileEmail},
-          ${input.kind},
-          ${input.entity?.type || null},
-          ${input.entity?.id || null},
-          ${dedupeKey},
-          'queued',
-          ${input.phase || "queued"},
-          ${input.progressTotal ?? null},
-          ${input.progressLabel || null},
-          ${JSON.stringify(input.payload || {})}::jsonb
-        )
-        returning *
+        select * from inserted
       `,
     );
     if (!row) {
@@ -255,6 +149,36 @@ export async function setJobRunProviderJobId({
     `,
   );
   return row ? toJobRunRecord(row) : null;
+}
+
+export async function claimQueuedJobRunsWithoutProviderId({
+  staleMs,
+  limit,
+}: {
+  staleMs: number;
+  limit: number;
+}): Promise<JobRunRecord[]> {
+  const sql = getSqlClient();
+  const rows = await sql<JobRunRow>`
+    with due as (
+      select id
+      from job_runs
+      where status = 'queued'
+        and provider_job_id is null
+        and updated_at <= now() - (${Math.max(0, staleMs)} * interval '1 millisecond')
+      order by updated_at asc
+      limit ${Math.max(1, limit)}
+      for update skip locked
+    ),
+    claimed as (
+      update job_runs
+      set updated_at = now()
+      where id in (select id from due)
+      returning *
+    )
+    select * from claimed
+  `;
+  return Array.isArray(rows) ? rows.map(toJobRunRecord) : [];
 }
 
 export async function getJobRunByIdForEmail({
@@ -329,15 +253,23 @@ export async function markJobRunStarted(
   const sql = getSqlClient();
   const row = getFirstRow(
     await sql<JobRunRow>`
-      update job_runs
-      set
-        status = 'running',
-        phase = coalesce(nullif(phase, 'queued'), 'running'),
-        started_at = coalesce(started_at, now()),
-        updated_at = now()
-      where id = ${id}
-        and status = 'queued'
-      returning *
+      with updated as (
+        update job_runs
+        set
+          status = 'running',
+          phase = coalesce(nullif(phase, 'queued'), 'running'),
+          started_at = coalesce(started_at, now()),
+          updated_at = now()
+        where id = ${id}
+          and status = 'queued'
+        returning *
+      ),
+      event as (
+        insert into job_events (job_id, event_type, data)
+        select id, 'snapshot', jsonb_build_object('jobRun', to_jsonb(updated))
+        from updated
+      )
+      select * from updated
     `,
   );
   return row ? toJobRunRecord(row) : null;
@@ -359,16 +291,24 @@ export async function updateJobRunProgress({
   const sql = getSqlClient();
   const row = getFirstRow(
     await sql<JobRunRow>`
-      update job_runs
-      set
-        phase = coalesce(${phase ?? null}, phase),
-        progress_current = coalesce(${current ?? null}, progress_current),
-        progress_total = coalesce(${total === undefined ? null : total}, progress_total),
-        progress_label = coalesce(${label ?? null}, progress_label),
-        updated_at = now()
-      where id = ${id}
-        and status = 'running'
-      returning *
+      with updated as (
+        update job_runs
+        set
+          phase = coalesce(${phase ?? null}, phase),
+          progress_current = coalesce(${current ?? null}, progress_current),
+          progress_total = coalesce(${total === undefined ? null : total}, progress_total),
+          progress_label = coalesce(${label ?? null}, progress_label),
+          updated_at = now()
+        where id = ${id}
+          and status = 'running'
+        returning *
+      ),
+      event as (
+        insert into job_events (job_id, event_type, data)
+        select id, 'progress', jsonb_build_object('jobRun', to_jsonb(updated))
+        from updated
+      )
+      select * from updated
     `,
   );
   return row ? toJobRunRecord(row) : null;
@@ -384,16 +324,24 @@ export async function markJobRunCompleted({
   const sql = getSqlClient();
   const row = getFirstRow(
     await sql<JobRunRow>`
-      update job_runs
-      set
-        status = 'completed',
-        phase = 'complete',
-        result = ${JSON.stringify(result || {})}::jsonb,
-        completed_at = now(),
-        updated_at = now()
-      where id = ${id}
-        and status = 'running'
-      returning *
+      with updated as (
+        update job_runs
+        set
+          status = 'completed',
+          phase = 'complete',
+          result = ${JSON.stringify(result || {})}::jsonb,
+          completed_at = now(),
+          updated_at = now()
+        where id = ${id}
+          and status = 'running'
+        returning *
+      ),
+      event as (
+        insert into job_events (job_id, event_type, data)
+        select id, 'complete', jsonb_build_object('jobRun', to_jsonb(updated))
+        from updated
+      )
+      select * from updated
     `,
   );
   return row ? toJobRunRecord(row) : null;
@@ -411,17 +359,25 @@ export async function markJobRunFailed({
   const sql = getSqlClient();
   const row = getFirstRow(
     await sql<JobRunRow>`
-      update job_runs
-      set
-        status = 'failed',
-        phase = 'failed',
-        error_code = ${errorCode},
-        error_message = ${errorMessage || null},
-        failed_at = now(),
-        updated_at = now()
-      where id = ${id}
-        and status in ('queued', 'running')
-      returning *
+      with updated as (
+        update job_runs
+        set
+          status = 'failed',
+          phase = 'failed',
+          error_code = ${errorCode},
+          error_message = ${errorMessage || null},
+          failed_at = now(),
+          updated_at = now()
+        where id = ${id}
+          and status in ('queued', 'running')
+        returning *
+      ),
+      event as (
+        insert into job_events (job_id, event_type, data)
+        select id, 'failed', jsonb_build_object('jobRun', to_jsonb(updated))
+        from updated
+      )
+      select * from updated
     `,
   );
   return row ? toJobRunRecord(row) : null;

@@ -258,11 +258,12 @@
    - Personal report ограничить hard cap, chunking или summary precomputation.
    - Ожидаемый эффект: ниже DB egress, Node memory, client parse/render time.
 
-4. [ ] Исправить job reliability.
+4. [x] Исправить job reliability.
    - Добавить transactional outbox/reconciler для `queued` jobs без provider id.
    - Сделать row state update + event append атомарными.
    - Добавить per-job deadline и довести `AbortSignal` до child process/LLM/image provider calls.
    - Ожидаемый эффект: меньше stuck jobs и предсказуемое освобождение worker slots.
+   - Статус 2026-07-03: `job_runs` используется как минимальный outbox для stale `queued` jobs без provider id, lifecycle state + SSE event пишутся атомарными CTE statements, worker получил per-job deadline и `AbortSignal` для queued upload child runners, client job waiter получил default timeout.
 
 5. [x] Закрыть MCP error boundary.
    - Не отбрасывать Promise в `/mcp` handler.

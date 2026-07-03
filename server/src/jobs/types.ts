@@ -91,6 +91,7 @@ export type JobEventRecord = {
 
 export type JobHandlerContext = {
   job: JobRunRecord;
+  signal?: AbortSignal;
   updateProgress: (update: {
     phase?: string | null;
     current?: number;

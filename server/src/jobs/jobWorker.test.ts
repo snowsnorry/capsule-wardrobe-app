@@ -30,6 +30,7 @@ const job = {
 } as JobRunRecord;
 
 beforeEach(() => {
+  vi.useRealTimers();
   storeApi.completeJobRun.mockReset();
   storeApi.failJobRun.mockReset();
   storeApi.startJobRun.mockReset();
@@ -51,7 +52,12 @@ test("job worker skips backend registration when disabled", async () => {
 
 test("job worker starts queued jobs, reports progress, and completes successful handlers", async () => {
   let workerHandler:
-    ((job: { data: Record<string, unknown> }) => Promise<void>) | null = null;
+    | ((job: {
+        data: Record<string, unknown>;
+        signal?: AbortSignal;
+      }) => Promise<void>)
+    | null = null;
+  const reconcilePendingProviderJobs = vi.fn(async () => undefined);
   const backend = {
     enqueue: vi.fn(),
     start: vi.fn(async (handler) => {
@@ -70,13 +76,15 @@ test("job worker starts queued jobs, reports progress, and completes successful 
     backend,
     deps: { marker: true },
     enabled: true,
+    reconcilePendingProviderJobs,
   }).start();
   await workerHandler?.({ data: { jobId: "job-1" } });
 
+  expect(reconcilePendingProviderJobs).toHaveBeenCalledTimes(1);
   expect(storeApi.startJobRun).toHaveBeenCalledWith("job-1");
   expect(handlerApi.runJobHandler).toHaveBeenCalledWith(
     { marker: true },
-    expect.objectContaining({ job }),
+    expect.objectContaining({ job, signal: expect.any(AbortSignal) }),
   );
   expect(storeApi.writeJobProgress).toHaveBeenCalledWith({
     id: "job-1",
@@ -91,7 +99,11 @@ test("job worker starts queued jobs, reports progress, and completes successful 
 
 test("job worker records coded handler failures for transitioned jobs", async () => {
   let workerHandler:
-    ((job: { data: Record<string, unknown> }) => Promise<void>) | null = null;
+    | ((job: {
+        data: Record<string, unknown>;
+        signal?: AbortSignal;
+      }) => Promise<void>)
+    | null = null;
   const backend = {
     enqueue: vi.fn(),
     start: vi.fn(async (handler) => {
@@ -116,9 +128,95 @@ test("job worker records coded handler failures for transitioned jobs", async ()
   });
 });
 
+test("job worker aborts handlers and records deadline failures", async () => {
+  vi.useFakeTimers();
+  let workerHandler:
+    | ((job: {
+        data: Record<string, unknown>;
+        signal?: AbortSignal;
+      }) => Promise<void>)
+    | null = null;
+  let handlerSignal: AbortSignal | undefined;
+  const backend = {
+    enqueue: vi.fn(),
+    start: vi.fn(async (handler) => {
+      workerHandler = handler;
+    }),
+    stop: vi.fn(),
+  };
+  storeApi.startJobRun.mockResolvedValue(job);
+  handlerApi.runJobHandler.mockImplementation((_deps, context) => {
+    handlerSignal = context.signal;
+    return new Promise(() => undefined);
+  });
+
+  await createJobWorker({
+    backend,
+    deps: {},
+    enabled: true,
+    jobRunTimeoutMs: 10,
+  }).start();
+
+  const result = workerHandler?.({ data: { jobId: "job-1" } });
+  const expectation = expect(result).rejects.toThrow("job_deadline_exceeded");
+  await vi.advanceTimersByTimeAsync(10);
+
+  await expectation;
+  expect(handlerSignal?.aborted).toBe(true);
+  expect(storeApi.failJobRun).toHaveBeenCalledWith({
+    id: "job-1",
+    errorCode: "job_deadline_exceeded",
+    errorMessage: "job_deadline_exceeded",
+  });
+});
+
+test("job worker forwards backend abort signals to handlers", async () => {
+  let workerHandler:
+    | ((job: {
+        data: Record<string, unknown>;
+        signal?: AbortSignal;
+      }) => Promise<void>)
+    | null = null;
+  let handlerSignal: AbortSignal | undefined;
+  const backendSignal = new AbortController();
+  const backend = {
+    enqueue: vi.fn(),
+    start: vi.fn(async (handler) => {
+      workerHandler = handler;
+    }),
+    stop: vi.fn(),
+  };
+  storeApi.startJobRun.mockResolvedValue(job);
+  handlerApi.runJobHandler.mockImplementation((_deps, context) => {
+    handlerSignal = context.signal;
+    return new Promise(() => undefined);
+  });
+
+  await createJobWorker({ backend, deps: {}, enabled: true }).start();
+
+  const result = workerHandler?.({
+    data: { jobId: "job-1" },
+    signal: backendSignal.signal,
+  });
+  await Promise.resolve();
+  backendSignal.abort();
+
+  await expect(result).rejects.toThrow("job_aborted");
+  expect(handlerSignal?.aborted).toBe(true);
+  expect(storeApi.failJobRun).toHaveBeenCalledWith({
+    id: "job-1",
+    errorCode: "job_aborted",
+    errorMessage: "job_aborted",
+  });
+});
+
 test("job worker ignores provider messages without resolvable job ids or rows", async () => {
   let workerHandler:
-    ((job: { data: Record<string, unknown> }) => Promise<void>) | null = null;
+    | ((job: {
+        data: Record<string, unknown>;
+        signal?: AbortSignal;
+      }) => Promise<void>)
+    | null = null;
   const backend = {
     enqueue: vi.fn(),
     start: vi.fn(async (handler) => {

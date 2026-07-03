@@ -449,6 +449,7 @@ function createJobDependencies(deps: Record<string, unknown>) {
     backend: queue.backend,
     deps,
     enabled: JOB_WORKER_ENABLED,
+    reconcilePendingProviderJobs: queue.reconcilePendingProviderJobs,
   });
   return {
     enqueueJobImpl: queue.enqueue,

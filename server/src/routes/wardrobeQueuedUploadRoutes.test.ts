@@ -106,11 +106,13 @@ test("queued URL upload processor saves sources, applies metadata result, and an
   const { processQueuedWardrobeUrlUpload } =
     await import("./wardrobeUrlUploadRoute.js");
   const context = createContext("url");
+  const signal = new AbortController().signal;
 
   await expect(
     processQueuedWardrobeUrlUpload({
       context,
       email: "person@example.com",
+      signal,
       urls: ["https://example.test/image.png"],
     }),
   ).resolves.toMatchObject({
@@ -130,6 +132,7 @@ test("queued URL upload processor saves sources, applies metadata result, and an
   expect(context.processWardrobeUploadUrlsInChildImpl).toHaveBeenCalledWith(
     expect.objectContaining({
       email: "person@example.com",
+      signal,
       urls: ["https://example.test/image.png"],
     }),
   );
@@ -237,11 +240,13 @@ test("queued file upload processor hydrates staged files, cleans up, and filters
   const { processQueuedWardrobeFileUploadImpl } =
     await import("./wardrobeFileUploadRoute.js");
   const context = createContext("file");
+  const signal = new AbortController().signal;
 
   await expect(
     processQueuedWardrobeFileUploadImpl({
       context,
       email: "person@example.com",
+      signal,
       stagedFiles: [
         {
           storage: "local",
@@ -272,6 +277,7 @@ test("queued file upload processor hydrates staged files, cleans up, and filters
           originalName: "source.png",
         },
       ],
+      signal,
     }),
   );
   expect(cleanup).toHaveBeenCalledTimes(1);

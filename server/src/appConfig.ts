@@ -107,3 +107,7 @@ export const JOB_WORKER_ENABLED = readBooleanEnv(
   process.env.JOB_WORKER_ENABLED,
   NODE_ENV !== "test" && !E2E_SERVER,
 );
+export const JOB_RUN_TIMEOUT_MS = readPositiveIntegerEnv(
+  process.env.JOB_RUN_TIMEOUT_MS,
+  15 * 60 * 1000,
+);
