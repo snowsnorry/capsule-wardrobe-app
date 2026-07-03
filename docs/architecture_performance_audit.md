@@ -271,10 +271,11 @@
    - Аккуратно проверять `headersSent` перед error JSON.
    - Ожидаемый эффект: меньше hung integration requests и unhandled rejections.
 
-6. [ ] Добавить production startup preflight.
+6. [x] Добавить production startup preflight.
    - Проверять `CLIENT_ORIGIN`, passkey origin/RP, `DATABASE_URL`, `AUTH_CODE_SECRET`, Resend config и OAuth config до `listen`.
    - Для production убрать localhost defaults или явно запрещать их.
    - Ожидаемый эффект: broken deploy падает сразу, а не в первом user flow.
+   - Статус 2026-07-03: production startup получил fail-fast preflight до `ensureTables`/`listen`; проверяются обязательные env, HTTPS non-local `CLIENT_ORIGIN`/`PASSKEY_ORIGIN`, совпадение passkey RP hostname и существующая MCP OAuth config validation.
 
 7. [ ] Разделить `/live` и `/ready`.
    - `/live` может оставаться cheap process health.

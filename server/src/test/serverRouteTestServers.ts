@@ -109,6 +109,7 @@ export async function startSpaFallbackTestServer(
       clientOrigin: TEST_CLIENT_ORIGIN,
       clientDistPath: tempDir,
       getSharedCapsuleOgMetadataImpl: deps.getSharedCapsuleOgMetadataImpl,
+      runProductionStartupPreflightImpl: () => {},
     }),
   );
 

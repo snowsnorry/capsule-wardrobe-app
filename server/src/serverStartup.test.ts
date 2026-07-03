@@ -2,6 +2,8 @@ import { test, expect, vi } from "vitest";
 import fs from "node:fs";
 import { createStartServer } from "./serverStartup.js";
 
+const skipProductionPreflight = () => {};
+
 function createAppRecorder() {
   const calls = [];
   const app = {
@@ -196,6 +198,7 @@ test("startup starts job workers after listen and stops them on server close", a
     },
     existsSyncImpl: () => false,
     logInfoImpl: () => {},
+    runProductionStartupPreflightImpl: skipProductionPreflight,
     startJobWorkersImpl,
     stopJobWorkersImpl,
   });
@@ -219,6 +222,7 @@ test("startup stops job workers and closes the server if worker start fails", as
       nodeEnv: "production",
       ensureTablesImpl: async () => undefined,
       existsSyncImpl: () => false,
+      runProductionStartupPreflightImpl: skipProductionPreflight,
       startJobWorkersImpl: async () => {
         throw new Error("worker_start_failed");
       },
@@ -228,6 +232,59 @@ test("startup stops job workers and closes the server if worker start fails", as
 
   expect(stopJobWorkersImpl).toHaveBeenCalledTimes(1);
   expect(close).toHaveBeenCalledTimes(1);
+});
+
+test("production startup preflight runs before database bootstrap and listen", async () => {
+  const calls: string[] = [];
+  const app = {
+    get: vi.fn(),
+    use: vi.fn(),
+    listen: vi.fn((port, callback) => {
+      calls.push(`listen:${port}`);
+      callback?.();
+      return { close() {}, on: vi.fn() };
+    }),
+  };
+
+  await createStartServer(app)({
+    nodeEnv: "production",
+    port: 4310,
+    ensureTablesImpl: async () => {
+      calls.push("ensure-tables");
+    },
+    existsSyncImpl: () => false,
+    logInfoImpl: () => {},
+    runProductionStartupPreflightImpl: ({ nodeEnv }) => {
+      expect(nodeEnv).toBe("production");
+      calls.push("preflight");
+    },
+  });
+
+  expect(calls).toEqual(["preflight", "ensure-tables", "listen:4310"]);
+});
+
+test("production startup preflight failure prevents database bootstrap and listen", async () => {
+  const app = {
+    get: vi.fn(),
+    use: vi.fn(),
+    listen: vi.fn(),
+  };
+  const ensureTablesImpl = vi.fn(async () => undefined);
+
+  await expect(
+    createStartServer(app)({
+      nodeEnv: "production",
+      ensureTablesImpl,
+      runProductionStartupPreflightImpl: () => {
+        throw new Error(
+          "production_startup_preflight_failed: DATABASE_URL is not set",
+        );
+      },
+    }),
+  ).rejects.toThrow(/production_startup_preflight_failed/);
+
+  expect(ensureTablesImpl).not.toHaveBeenCalled();
+  expect(app.listen).not.toHaveBeenCalled();
 });
 
 test("production startup serves static files, spa html, and api 404s when client dist exists", async () => {
@@ -257,6 +314,7 @@ test("production startup serves static files, spa html, and api 404s when client
       `${html}:meta:${req.path}`,
     isApiPathImpl: (requestPath) => requestPath.startsWith("/api"),
     logInfoImpl: () => {},
+    runProductionStartupPreflightImpl: skipProductionPreflight,
   });
 
   expect(staticCalls[0]).toEqual({
@@ -339,6 +397,7 @@ test("production startup forwards spa html read failures", async () => {
     },
     isApiPathImpl: () => false,
     logInfoImpl: () => {},
+    runProductionStartupPreflightImpl: skipProductionPreflight,
   });
 
   const handler = app.calls[2].args[1];
@@ -362,6 +421,7 @@ test("production startup skips spa fallback when client dist is absent", async (
     },
     existsSyncImpl: () => false,
     logInfoImpl: (message) => logMessages.push(message),
+    runProductionStartupPreflightImpl: skipProductionPreflight,
   });
 
   expect(ensureCalls).toEqual(["ensure"]);

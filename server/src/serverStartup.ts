@@ -13,6 +13,7 @@ import { getSharedCapsuleOgMetadata } from "./capsuleStore.js";
 import { isApiPath } from "./capsuleHttp.js";
 import { injectSharedCapsuleMetaTags } from "./sharedCapsuleMeta.js";
 import { logInfo } from "./logger.js";
+import { runProductionStartupPreflight } from "./startupPreflight.js";
 
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 const HTML_CACHE_CONTROL = "no-store";
@@ -194,6 +195,7 @@ function resolveStartServerOptions(app, options = {}) {
   return {
     appInstance: app,
     nodeEnv: NODE_ENV,
+    env: process.env,
     ensureTablesImpl: ensureTables,
     port: PORT,
     clientOrigin: CLIENT_ORIGIN,
@@ -207,6 +209,7 @@ function resolveStartServerOptions(app, options = {}) {
     injectSharedCapsuleMetaTagsImpl: injectSharedCapsuleMetaTags,
     isApiPathImpl: isApiPath,
     logInfoImpl: logInfo,
+    runProductionStartupPreflightImpl: runProductionStartupPreflight,
     startJobWorkersImpl: app.locals?.appDependencies?.startJobWorkersImpl,
     stopJobWorkersImpl: app.locals?.appDependencies?.stopJobWorkersImpl,
     ...options,
@@ -218,6 +221,7 @@ export function createStartServer(app) {
     const {
       appInstance,
       nodeEnv,
+      env,
       ensureTablesImpl,
       port,
       clientOrigin,
@@ -231,12 +235,19 @@ export function createStartServer(app) {
       injectSharedCapsuleMetaTagsImpl,
       isApiPathImpl,
       logInfoImpl,
+      runProductionStartupPreflightImpl,
       startJobWorkersImpl,
       stopJobWorkersImpl,
     } = resolveStartServerOptions(app, options);
 
     let server;
     try {
+      runProductionStartupPreflightImpl({
+        clientOrigin,
+        env,
+        nodeEnv,
+      });
+
       await ensureTablesImpl();
 
       await configureClientApp({
