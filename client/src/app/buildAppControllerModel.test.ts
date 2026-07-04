@@ -71,6 +71,7 @@ describe("buildAppControllerModel", () => {
       isWardrobePending: false,
       partialRegenerationPendingUrls: [],
       pendingImageSetIndexes: [],
+      personalItemsCount: 7,
       profileItems: [],
       profileCreated: true,
       profileOutfitSets: [],
@@ -176,6 +177,7 @@ describe("buildAppControllerModel", () => {
     expect(requestBrowserNotificationPermission).toHaveBeenCalledTimes(1);
     expect(sidebarActions.openSearchDialog).toHaveBeenCalledTimes(1);
     expect(model.shell.activeCapsuleId).toBe("capsule-1");
+    expect(model.shell.personalItemsCount).toBe(7);
     expect(model.route.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
     expect(model.dialogs.shareMetadata).toEqual({ id: "share-1" });
     expect(model.snackbars.notificationOpen).toBe(true);

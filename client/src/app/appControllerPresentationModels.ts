@@ -126,6 +126,7 @@ export function buildShellModel({
     outfitList: layout.outfitList,
     outfitPagination: layout.outfitPagination,
     outfitRouteId: layout.outfitRouteId,
+    personalItemsCount: layout.personalItemsCount,
     sessionInitialized: layout.sessionInitialized,
     settingsProfile: layout.settingsProfile,
     t: layout.t,
