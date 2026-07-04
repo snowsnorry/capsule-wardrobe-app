@@ -3,6 +3,7 @@ import {
   createJobRun,
   getJobRunById,
   getJobRunByIdForEmail,
+  getJobRunMetrics,
   listJobEventsAfter,
   listJobRunsForEmail,
   markJobRunCompleted,
@@ -11,14 +12,18 @@ import {
   setJobRunProviderJobId,
   updateJobRunProgress,
 } from "../db.js";
+import { JOB_RUN_TIMEOUT_MS } from "../appConfig.js";
 import { toJobSnapshot } from "./jobSnapshots.js";
 import type {
   EnqueueJobInput,
   JobEventRecord,
+  JobMetrics,
   JobRunRecord,
   JobSnapshot,
   JobStatus,
 } from "./types.js";
+
+const QUEUED_STUCK_MS = 5 * 60 * 1000;
 
 export async function createPendingJob(
   input: EnqueueJobInput,
@@ -122,4 +127,11 @@ export async function replayJobEvents({
   afterId?: number | null;
 }): Promise<JobEventRecord[]> {
   return listJobEventsAfter({ jobId, afterId });
+}
+
+export async function getJobMetrics(): Promise<JobMetrics> {
+  return getJobRunMetrics({
+    queuedStuckMs: QUEUED_STUCK_MS,
+    runningStuckMs: JOB_RUN_TIMEOUT_MS,
+  });
 }

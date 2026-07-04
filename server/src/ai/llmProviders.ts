@@ -90,14 +90,11 @@ function resolveLlmProvider(userProfile = null): LlmProviderResolution {
     return resolvedProvider;
   }
 
-  logWarn(
-    "[wardrobe-ai][llm-unknown-model]",
-    JSON.stringify({
-      requestedLlm: llm,
-      fallbackProvider: "openai",
-      fallbackModel: "gpt-5.5",
-    }),
-  );
+  logWarn("[wardrobe-ai][llm-unknown-model]", {
+    requestedLlm: llm,
+    fallbackProvider: "openai",
+    fallbackModel: "gpt-5.5",
+  });
 
   return {
     provider: "openai",

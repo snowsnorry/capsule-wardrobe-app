@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import {
@@ -5,12 +6,63 @@ import {
   parseCookies,
   readCsrfHeader,
 } from "./httpCookies.js";
-import { logError } from "./logger.js";
+import { logError, logInfo, runWithRequestLogContext } from "./logger.js";
+import { recordHttpRequestMetric } from "./observabilityMetrics.js";
 
 type SecurityMiddlewareOptions = {
   clientOrigin?: string;
   mcpOAuthIssuer?: string;
 };
+
+const REQUEST_ID_HEADER = "X-Request-Id";
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+
+function resolveRequestId(req): string {
+  const headerValue = req.get?.(REQUEST_ID_HEADER);
+  const requestId = String(
+    Array.isArray(headerValue) ? headerValue[0] : headerValue || "",
+  ).trim();
+  return REQUEST_ID_PATTERN.test(requestId) ? requestId : crypto.randomUUID();
+}
+
+function shouldLogHttpRequest({ method, path, statusCode }) {
+  return !(method === "GET" && path === "/health" && statusCode < 400);
+}
+
+export function applyObservabilityMiddleware(app) {
+  app.use((req, res, next) => {
+    const requestId = resolveRequestId(req);
+    const startedAt = process.hrtime.bigint();
+    res.setHeader(REQUEST_ID_HEADER, requestId);
+
+    return runWithRequestLogContext({ requestId }, () => {
+      res.on("finish", () => {
+        const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+        const roundedDurationMs = Math.round(durationMs * 100) / 100;
+        const method = String(req.method || "").toUpperCase();
+        const path = String(req.path || req.url || "").split("?")[0] || "/";
+        recordHttpRequestMetric({
+          durationMs: roundedDurationMs,
+          method,
+          statusCode: res.statusCode,
+        });
+        if (
+          !shouldLogHttpRequest({ method, path, statusCode: res.statusCode })
+        ) {
+          return;
+        }
+        logInfo("http_request", {
+          event: "http_request",
+          method,
+          path,
+          statusCode: res.statusCode,
+          durationMs: roundedDurationMs,
+        });
+      });
+      return next();
+    });
+  });
+}
 
 function resolveCspOrigin(value) {
   const rawValue = String(value || "").trim();

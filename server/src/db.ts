@@ -135,6 +135,7 @@ export {
   createJobRun,
   getJobRunById,
   getJobRunByIdForEmail,
+  getJobRunMetrics,
   listJobEventsAfter,
   listJobRunsForEmail,
   markJobRunCompleted,

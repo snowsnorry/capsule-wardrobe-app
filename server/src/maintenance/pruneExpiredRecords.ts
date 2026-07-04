@@ -4,7 +4,7 @@ import { logError, logInfo } from "../logger.js";
 
 async function main() {
   const result = await pruneExpiredRecords();
-  logInfo("[maintenance/prune-expired-records]", JSON.stringify(result));
+  logInfo("[maintenance/prune-expired-records]", result);
 }
 
 void main().catch((error) => {

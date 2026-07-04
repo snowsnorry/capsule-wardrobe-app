@@ -240,10 +240,9 @@ async function buildPromptDebugImagesInChild({
       });
       addTiming(result.timings, "debugSaveMs", debugSaveStartedAt);
     } catch (error) {
-      logWarn(
-        "[prompt-images][debug-save-failed]",
-        JSON.stringify({ message: getErrorMessage(error) }),
-      );
+      logWarn("[prompt-images][debug-save-failed]", {
+        message: getErrorMessage(error),
+      });
     }
   }
 

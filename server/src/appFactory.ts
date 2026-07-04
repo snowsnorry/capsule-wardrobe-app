@@ -1,6 +1,7 @@
 import express from "express";
 import {
   applyCorsMiddleware,
+  applyObservabilityMiddleware,
   applySecurityMiddleware,
 } from "./appMiddleware.js";
 import { createAppDependencies } from "./appDependencies.js";
@@ -10,6 +11,7 @@ import { registerAppRoutes } from "./appRoutes.js";
 function createExpressApp(deps) {
   const app = express();
   app.set("trust proxy", 1);
+  applyObservabilityMiddleware(app);
   app.use(express.json({ limit: "100kb" }));
   app.use(express.urlencoded({ extended: false, limit: "20kb" }));
   applySecurityMiddleware(app, deps.nodeEnv, {

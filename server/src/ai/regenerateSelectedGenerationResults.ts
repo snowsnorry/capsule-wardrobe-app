@@ -149,7 +149,7 @@ export function logEmptyRegenerationSelection(
 
   logWarn(
     "[wardrobe-ai][selected-json-empty]",
-    JSON.stringify(buildEmptySelectionLogPayload(selectionResponse)),
+    buildEmptySelectionLogPayload(selectionResponse),
   );
 }
 

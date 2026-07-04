@@ -159,7 +159,7 @@ function createRegenerateNonSwimwearProducts(
         logContext,
         deps: resolvedDeps,
       });
-    logInfo("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
+    logInfo("[wardrobe-ai][selected-json]", parsedSelection);
     logEmptyRegenerationSelection(parsedSelection, selectionResponse);
     return buildRegenerationResult({
       parsedSelection,

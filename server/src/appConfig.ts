@@ -111,3 +111,23 @@ export const JOB_RUN_TIMEOUT_MS = readPositiveIntegerEnv(
   process.env.JOB_RUN_TIMEOUT_MS,
   15 * 60 * 1000,
 );
+
+function readFirstNonEmptyEnv(names: string[]): string {
+  for (const name of names) {
+    const value = String(process.env[name] || "").trim();
+    if (value) {
+      return value;
+    }
+  }
+  return "";
+}
+
+export const RELEASE_METADATA = {
+  service: "capsule-wardrobe-server",
+  commit:
+    readFirstNonEmptyEnv([
+      "RENDER_GIT_COMMIT",
+      "COMMIT_SHA",
+      "SOURCE_VERSION",
+    ]) || "unknown",
+};

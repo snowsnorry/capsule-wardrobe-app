@@ -7,6 +7,7 @@ import {
 import { createInMemoryJobService } from "./jobs/inMemoryJobService.js";
 import { createJobQueue } from "./jobs/jobQueue.js";
 import {
+  getJobMetrics,
   getOwnedJobSnapshot,
   listOwnedJobSnapshots,
   replayJobEvents,
@@ -30,6 +31,7 @@ export function createJobDependencies(deps: Record<string, unknown>) {
   });
   return {
     enqueueJobImpl: queue.enqueue,
+    getJobMetricsImpl: getJobMetrics,
     getJobSnapshotImpl: getOwnedJobSnapshot,
     listJobEventsAfterImpl: replayJobEvents,
     listJobSnapshotsImpl: listOwnedJobSnapshots,

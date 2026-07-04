@@ -590,8 +590,9 @@ test("startWardrobeJob marks job failed when capsule generation returns no usabl
   }
 
   expect(calls.length).toBe(1);
-  expect(calls[0][0]).toBe("[wardrobe-ai]");
-  expect(String((calls[0][2] as Error | undefined)?.message || "")).toMatch(
+  const errorLog = JSON.parse(String(calls[0][0]));
+  expect(errorLog.message).toBe("[wardrobe-ai]");
+  expect(String(errorLog.values[2]?.message || "")).toMatch(
     /no valid wardrobe items/i,
   );
 });

@@ -87,7 +87,7 @@ export function createGenerateCapsuleWardrobe(
         logContext,
         deps: resolvedDeps,
       });
-    logInfo("[wardrobe-ai][selected-json]", JSON.stringify(parsedSelection));
+    logInfo("[wardrobe-ai][selected-json]", parsedSelection);
     logEmptySelectionResponse(parsedSelection, selectionResponse);
 
     return buildCapsuleGenerationResult({

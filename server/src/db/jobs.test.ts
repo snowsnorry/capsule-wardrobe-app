@@ -22,6 +22,7 @@ import {
   createJobRun,
   getJobRunById,
   getJobRunByIdForEmail,
+  getJobRunMetrics,
   listJobEventsAfter,
   listJobRunsForEmail,
   markJobRunCompleted,
@@ -338,4 +339,40 @@ test("job event helpers append replayable events and cleanup profile-owned rows"
       originalName: "source.png",
     },
   ]);
+});
+
+test("getJobRunMetrics maps aggregate counts and stuck jobs", async () => {
+  coreApi.sql
+    .mockResolvedValueOnce([
+      { kind: "capsuleReportGenerate", status: "queued", count: "2" },
+      { kind: "capsuleReportGenerate", status: "running", count: 1 },
+      { kind: "outfitReportGenerate", status: "failed", count: 1 },
+    ])
+    .mockResolvedValueOnce([
+      { status: "queued", count: 1 },
+      { status: "running", count: "2" },
+    ]);
+
+  await expect(
+    getJobRunMetrics({ queuedStuckMs: -1, runningStuckMs: 30_000 }),
+  ).resolves.toEqual({
+    total: 4,
+    byStatus: { queued: 2, running: 1, completed: 0, failed: 1 },
+    byKind: {
+      capsuleReportGenerate: {
+        queued: 2,
+        running: 1,
+        completed: 0,
+        failed: 0,
+      },
+      outfitReportGenerate: {
+        queued: 0,
+        running: 0,
+        completed: 0,
+        failed: 1,
+      },
+    },
+    stuck: { total: 3, queued: 1, running: 2 },
+  });
+  expect(getSqlText(1)).toContain("updated_at <= now()");
 });

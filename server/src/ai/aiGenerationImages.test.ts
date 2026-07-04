@@ -41,8 +41,10 @@ test("getPromptDebugImages falls back when image building throws a non-error", a
     categories: [],
     stitched: null,
   });
-  expect(console.warn).toHaveBeenCalledWith(
-    "[prompt-images][build-failed]",
-    JSON.stringify({ message: "unknown_error" }),
-  );
+  const warning = JSON.parse(String(vi.mocked(console.warn).mock.calls[0][0]));
+  expect(warning).toMatchObject({
+    level: "warn",
+    message: "[prompt-images][build-failed]",
+    values: ["[prompt-images][build-failed]", { message: "unknown_error" }],
+  });
 });

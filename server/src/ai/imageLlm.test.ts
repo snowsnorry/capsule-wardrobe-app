@@ -40,5 +40,11 @@ test("resolveImageLlmProvider warns and falls back for unknown image models", ()
   }
 
   expect(calls.length).toBe(1);
-  expect(calls[0][0]).toBe("[wardrobe-ai][image-llm-unknown-model]");
+  expect(JSON.parse(String(calls[0][0]))).toMatchObject({
+    message: "[wardrobe-ai][image-llm-unknown-model]",
+    values: [
+      "[wardrobe-ai][image-llm-unknown-model]",
+      expect.stringContaining('"requestedImageLlm":"unknown:model"'),
+    ],
+  });
 });

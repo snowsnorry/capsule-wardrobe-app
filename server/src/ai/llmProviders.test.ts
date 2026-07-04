@@ -70,7 +70,17 @@ test("resolveLlmProvider warns and falls back for unknown model", () => {
   }
 
   expect(calls.length).toBe(1);
-  expect(calls[0][0]).toBe("[wardrobe-ai][llm-unknown-model]");
+  expect(JSON.parse(String(calls[0][0]))).toMatchObject({
+    message: "[wardrobe-ai][llm-unknown-model]",
+    values: [
+      "[wardrobe-ai][llm-unknown-model]",
+      {
+        requestedLlm: "deepinfra:unknown-model",
+        fallbackProvider: "openai",
+        fallbackModel: "gpt-5.5",
+      },
+    ],
+  });
 });
 
 test("resolveLlmProvider warns and falls back for unknown claude model", () => {
@@ -90,5 +100,15 @@ test("resolveLlmProvider warns and falls back for unknown claude model", () => {
   }
 
   expect(calls.length).toBe(1);
-  expect(calls[0][0]).toBe("[wardrobe-ai][llm-unknown-model]");
+  expect(JSON.parse(String(calls[0][0]))).toMatchObject({
+    message: "[wardrobe-ai][llm-unknown-model]",
+    values: [
+      "[wardrobe-ai][llm-unknown-model]",
+      {
+        requestedLlm: "claude:unknown-model",
+        fallbackProvider: "openai",
+        fallbackModel: "gpt-5.5",
+      },
+    ],
+  });
 });

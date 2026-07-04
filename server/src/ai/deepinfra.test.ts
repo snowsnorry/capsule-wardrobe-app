@@ -141,10 +141,11 @@ test("buildChatMessages trims empty prompts and skips unusable image assets", ()
       type: "text",
       text: "Describe remaining images",
     });
-    expect(warn).toHaveBeenCalledWith(
-      "[deepinfra][image-skipped]",
-      expect.stringContaining('"filename":"missing.jpg"'),
-    );
+    const warning = JSON.parse(String(warn.mock.calls[0][0]));
+    expect(warning).toMatchObject({
+      message: "[deepinfra][image-skipped]",
+    });
+    expect(warning.values[1]).toContain('"filename":"missing.jpg"');
   } finally {
     warn.mockRestore();
   }

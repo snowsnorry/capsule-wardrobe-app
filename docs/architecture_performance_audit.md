@@ -140,7 +140,7 @@
 - В production есть localhost defaults для `CLIENT_ORIGIN`, `PASSKEY_RP_ID`, `PASSKEY_ORIGIN`; часть auth/email config падает lazy только в первом пользовательском flow.
 - Schema bootstrap выполняется перед `listen`, что удобно для dev, но может увеличивать cold start и скрывать migration latency.
 - Web process и pg-boss worker живут в одном service по умолчанию. AI/image/PDF jobs могут влиять на HTTP latency.
-- Observability минимальная: нет структурированных request logs, request id, latency metrics, queue metrics endpoint.
+- Статус 2026-07-04: добавлен observability baseline: request id, structured JSON logs, latency/status access logs, release metadata в health/startup logs, email masking + короткий hash в logger, internal metrics builder для request/upload/job counters и reserved `/internal/metrics` endpoint, который до появления admin-доступа возвращает 403.
 - Статус 2026-07-04: `quality:gate` включает production build; Render build использует lockfile-strict `npm ci --include=dev`.
 
 Последствие: deploy может быть "green", но фактически сломан по DB/auth; production incidents будет сложнее диагностировать; job bursts могут ухудшать HTTP.
@@ -322,11 +322,16 @@
    - SPA fallback: кэшировать base `index.html` template в памяти.
    - Статус 2026-07-04: Render web build переведен на `npm ci --include=dev && npm run build`, cron cleanup собирает только server workspace после `npm ci`, `quality:gate` запускает production build до coverage, production SPA fallback переиспользует memoized `index.html` template и сохраняет per-request metadata injection.
 
-7. [ ] Добавить observability baseline.
+7. [x] Добавить observability baseline.
    - Request id, structured JSON logs, latency/status logs.
    - Queue metrics: active/queued/failed/stuck jobs.
    - Build SHA/release version в logs/health.
    - Metrics или JSON endpoint для internal counters, включая upload/image/report timings.
+   - Статус 2026-07-04: Express middleware генерирует/переиспользует `X-Request-Id`, logger пишет JSON records и автоматически добавляет request id из async context, email-поля маскируются и получают короткий deterministic hash, `/health` и `/healthall` отдают release metadata, job metrics считаются из `job_runs` и in-memory e2e service, upload/request counters доступны через internal snapshot builder. `/internal/metrics` и `/api/internal/metrics` зарезервированы, но до admin access всегда возвращают 403.
+
+8. [ ] Открыть metrics endpoint через admin/internal access.
+   - Подключить `buildInternalMetricsSnapshotImpl` к endpoint только после появления admin/internal auth модели.
+   - Пересмотреть email hash policy перед выносом логов за доверенную границу: keyed HMAC или отказ от hash, если корреляция пользователя в логах не нужна.
 
 ## Остальное
 

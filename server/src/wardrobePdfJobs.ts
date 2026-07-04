@@ -135,10 +135,7 @@ async function buildAndStoreWardrobePdf({
   );
   const missingUrls = productUrls.filter((url) => !foundUrls.has(url));
   if (missingUrls.length > 0) {
-    logWarn(
-      "[wardrobe-pdf][missing-products]",
-      JSON.stringify({ email, missingUrls }),
-    );
+    logWarn("[wardrobe-pdf][missing-products]", { email, missingUrls });
   }
 
   if (products.length === 0) {

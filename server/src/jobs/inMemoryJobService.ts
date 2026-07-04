@@ -1,5 +1,9 @@
 import crypto from "node:crypto";
+import { JOB_RUN_TIMEOUT_MS } from "../appConfig.js";
 import type { EnqueueJobInput, JobSnapshot, JobStatus } from "./types.js";
+import { addJobMetricCount, createEmptyJobMetrics } from "./jobMetrics.js";
+
+const QUEUED_STUCK_MS = 5 * 60 * 1000;
 
 function now() {
   return new Date().toISOString();
@@ -30,6 +34,18 @@ function toSnapshot(input: EnqueueJobInput, id: string): JobSnapshot {
 
 function isActive(job: JobSnapshot) {
   return job.status === "queued" || job.status === "running";
+}
+
+function isStuck(job: JobSnapshot) {
+  const updatedAt = Date.parse(job.updatedAt);
+  if (!Number.isFinite(updatedAt)) {
+    return false;
+  }
+  const ageMs = Date.now() - updatedAt;
+  return (
+    (job.status === "queued" && ageMs >= QUEUED_STUCK_MS) ||
+    (job.status === "running" && ageMs >= JOB_RUN_TIMEOUT_MS)
+  );
 }
 
 function normalizeEmail(email: unknown) {
@@ -79,6 +95,24 @@ export function createInMemoryJobService() {
     },
     getJobSnapshotImpl: async ({ id, email }: { id: string; email: string }) =>
       owners.get(id) === normalizeEmail(email) ? jobs.get(id) || null : null,
+    getJobMetricsImpl: async () => {
+      const metrics = createEmptyJobMetrics();
+      for (const job of jobs.values()) {
+        addJobMetricCount({
+          count: 1,
+          kind: job.kind,
+          metrics,
+          status: job.status,
+        });
+        if (isStuck(job)) {
+          metrics.stuck.total += 1;
+          if (job.status === "queued" || job.status === "running") {
+            metrics.stuck[job.status] += 1;
+          }
+        }
+      }
+      return metrics;
+    },
     listJobSnapshotsImpl: async ({
       email,
       status,

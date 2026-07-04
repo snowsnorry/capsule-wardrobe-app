@@ -68,10 +68,9 @@ function logPromptImageBuildFailure(error, logContext) {
       logContext,
     );
   }
-  logWarn(
-    "[prompt-images][build-failed]",
-    JSON.stringify({ message: error?.message || "unknown_error" }),
-  );
+  logWarn("[prompt-images][build-failed]", {
+    message: error?.message || "unknown_error",
+  });
 }
 
 async function buildCurrentCapsuleCollage(
@@ -105,10 +104,9 @@ async function buildCurrentCapsuleCollage(
     );
     return currentCapsuleCollage;
   } catch (error) {
-    logWarn(
-      "[prompt-images][current-capsule-build-failed]",
-      JSON.stringify({ message: error?.message || "unknown_error" }),
-    );
+    logWarn("[prompt-images][current-capsule-build-failed]", {
+      message: error?.message || "unknown_error",
+    });
     return null;
   }
 }

@@ -169,7 +169,7 @@ function logEmptySelectionResponse(
 
   logWarn(
     "[wardrobe-ai][selected-json-empty]",
-    JSON.stringify(buildEmptySelectionLogPayload(selectionResponse)),
+    buildEmptySelectionLogPayload(selectionResponse),
   );
 }
 

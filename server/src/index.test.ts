@@ -31,7 +31,13 @@ test("index app wires representative registered routes", async (t) => {
 
   const health = await requestJson(baseUrl, "/health");
   expect(health.response.status).toBe(200);
-  expect(health.json).toEqual({ ok: true });
+  expect(health.json).toEqual({
+    ok: true,
+    release: {
+      service: "capsule-wardrobe-server",
+      commit: expect.any(String),
+    },
+  });
 
   const authorized = await requestJson(baseUrl, "/auth/me", {
     cookie: AUTH_COOKIE,

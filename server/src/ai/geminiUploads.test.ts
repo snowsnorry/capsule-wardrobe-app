@@ -157,11 +157,17 @@ test("uploadBufferToGemini skips missing buffers with a warning", async () => {
     );
 
     expect(uploaded).toBeNull();
-    expect(warnings[0][0]).toBe("[gemini][image-skipped]");
-    expect(JSON.parse(warnings[0][1])).toEqual({
-      category: "top",
-      filename: "top.jpg",
-      reason: "missing_buffer",
+    const warning = JSON.parse(String(warnings[0][0]));
+    expect(warning).toMatchObject({
+      message: "[gemini][image-skipped]",
+      values: [
+        "[gemini][image-skipped]",
+        {
+          category: "top",
+          filename: "top.jpg",
+          reason: "missing_buffer",
+        },
+      ],
     });
   } finally {
     console.warn = originalWarn;
@@ -205,10 +211,16 @@ test("cleanupUploadedGeminiFiles logs delete failures", async () => {
       [{ name: "files/fail" }],
     );
 
-    expect(warnings[0][0]).toBe("[gemini][file-delete-failed]");
-    expect(JSON.parse(warnings[0][1])).toEqual({
-      name: "files/fail",
-      message: "delete failed",
+    const warning = JSON.parse(String(warnings[0][0]));
+    expect(warning).toMatchObject({
+      message: "[gemini][file-delete-failed]",
+      values: [
+        "[gemini][file-delete-failed]",
+        {
+          name: "files/fail",
+          message: "delete failed",
+        },
+      ],
     });
   } finally {
     console.warn = originalWarn;

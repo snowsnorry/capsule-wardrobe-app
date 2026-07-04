@@ -149,6 +149,6 @@ test("streamCapsuleEventsHandler streams snapshots and maps unhandled errors", a
   );
   expect(headersAlreadySent.body).toBe(null);
   expect(errors.length).toBe(2);
-  expect(errors[0][0]).toBe("[capsules/events]");
-  expect(errors[1][0]).toBe("[capsules/events]");
+  expect(JSON.parse(String(errors[0][0])).message).toBe("[capsules/events]");
+  expect(JSON.parse(String(errors[1][0])).message).toBe("[capsules/events]");
 });

@@ -37,14 +37,11 @@ function getGeminiDisplayName(image: ImageAssetLike) {
 }
 
 function logSkippedGeminiImage(image: ImageAssetLike) {
-  logWarn(
-    "[gemini][image-skipped]",
-    JSON.stringify({
-      category: image?.category ?? null,
-      filename: image?.filename ?? null,
-      reason: "missing_buffer",
-    }),
-  );
+  logWarn("[gemini][image-skipped]", {
+    category: image?.category ?? null,
+    filename: image?.filename ?? null,
+    reason: "missing_buffer",
+  });
 }
 
 async function uploadBufferToGemini(
@@ -125,13 +122,10 @@ async function cleanupUploadedGeminiFiles(
     try {
       await client.files.delete({ name });
     } catch (error) {
-      logWarn(
-        "[gemini][file-delete-failed]",
-        JSON.stringify({
-          name,
-          message: error instanceof Error ? error.message : "unknown_error",
-        }),
-      );
+      logWarn("[gemini][file-delete-failed]", {
+        name,
+        message: error instanceof Error ? error.message : "unknown_error",
+      });
     }
   }
 }

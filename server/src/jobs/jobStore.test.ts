@@ -5,6 +5,7 @@ const dbApi = vi.hoisted(() => ({
   createJobRun: vi.fn(),
   getJobRunById: vi.fn(),
   getJobRunByIdForEmail: vi.fn(),
+  getJobRunMetrics: vi.fn(),
   listJobEventsAfter: vi.fn(),
   listJobRunsForEmail: vi.fn(),
   markJobRunCompleted: vi.fn(),
@@ -22,6 +23,7 @@ import {
   createPendingJob,
   failJobRun,
   getJobForWorker,
+  getJobMetrics,
   getOwnedJobSnapshot,
   listOwnedJobSnapshots,
   replayJobEvents,
@@ -217,4 +219,29 @@ test("jobStore skips lifecycle events when updates do not find a job and replays
   await expect(
     replayJobEvents({ jobId: "job-1", afterId: 1 }),
   ).resolves.toMatchObject([{ id: 2, eventType: "complete" }]);
+});
+
+test("jobStore reads aggregate job metrics with stuck thresholds", async () => {
+  dbApi.getJobRunMetrics.mockResolvedValueOnce({
+    total: 2,
+    byStatus: { queued: 1, running: 1, completed: 0, failed: 0 },
+    byKind: {
+      capsuleReportGenerate: {
+        queued: 1,
+        running: 1,
+        completed: 0,
+        failed: 0,
+      },
+    },
+    stuck: { total: 1, queued: 0, running: 1 },
+  });
+
+  await expect(getJobMetrics()).resolves.toMatchObject({
+    total: 2,
+    stuck: { running: 1 },
+  });
+  expect(dbApi.getJobRunMetrics).toHaveBeenCalledWith({
+    queuedStuckMs: 5 * 60 * 1000,
+    runningStuckMs: expect.any(Number),
+  });
 });

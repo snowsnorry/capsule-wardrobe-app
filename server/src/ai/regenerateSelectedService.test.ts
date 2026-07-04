@@ -224,8 +224,9 @@ test("regenerateSelectedWardrobeItems returns service_unavailable for failed job
   }
 
   expect(calls.length).toBe(1);
-  expect(calls[0][0]).toBe("[wardrobe-ai][regenerate-selected]");
-  expect(String((calls[0][1] as Error | undefined)?.message || "")).toMatch(
+  const errorLog = JSON.parse(String(calls[0][0]));
+  expect(errorLog.message).toBe("[wardrobe-ai][regenerate-selected]");
+  expect(String(errorLog.values[1]?.message || "")).toMatch(
     /DATABASE_URL is not set/i,
   );
 });
@@ -653,10 +654,9 @@ test("startPartialRegenerationJob reuses active pending job and marks failures",
   }
 
   expect(calls.length).toBe(1);
-  expect(calls[0][0]).toBe("[wardrobe-ai][regenerate-selected]");
-  expect(String((calls[0][1] as Error | undefined)?.message || "")).toMatch(
-    /regen_failed/i,
-  );
+  const errorLog = JSON.parse(String(calls[0][0]));
+  expect(errorLog.message).toBe("[wardrobe-ai][regenerate-selected]");
+  expect(String(errorLog.values[1]?.message || "")).toMatch(/regen_failed/i);
 });
 
 test("startPartialRegenerationJob stores recomputed outfit sets in the completed payload", async () => {

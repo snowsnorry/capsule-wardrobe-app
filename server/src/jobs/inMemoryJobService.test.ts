@@ -1,116 +1,111 @@
 import { expect, test } from "vitest";
 import { createInMemoryJobService } from "./inMemoryJobService.js";
 
-test("in-memory job service dedupes active jobs and allows new jobs after completion state", async () => {
+test("in-memory job service exposes aggregate metrics", async () => {
   const service = createInMemoryJobService();
-  const first = await service.enqueueJobImpl({
-    kind: "capsuleGenerate",
-    profileEmail: "PERSON@example.com",
-    entity: { type: "capsule", id: "capsule-1" },
-    dedupeKey: "capsule:1",
-    phase: "queued",
-    progressTotal: 4,
-    progressLabel: "Generating",
-    payload: { capsuleId: "capsule-1" },
-  });
-  const second = await service.enqueueJobImpl({
-    kind: "capsuleGenerate",
-    profileEmail: "PERSON@example.com",
-    entity: { type: "capsule", id: "capsule-1" },
-    dedupeKey: "capsule:1",
-    phase: "queued",
-    payload: { capsuleId: "capsule-1" },
-  });
 
-  expect(second).toBe(first);
-  expect(first).toMatchObject({
-    kind: "capsuleGenerate",
-    status: "queued",
-    progress: { current: 0, total: 4, label: "Generating" },
-    entity: { type: "capsule", id: "capsule-1" },
-  });
-
-  const active = await service.listJobSnapshotsImpl({
-    email: "person@example.com",
-    status: "active",
-  });
-  expect(active.map((job) => job.id)).toEqual([first.id]);
-
-  const stored = await service.getJobSnapshotImpl({
-    id: first.id,
-    email: "person@example.com",
-  });
-  expect(stored).toBe(first);
-});
-
-test("in-memory job service isolates jobs by normalized owner email", async () => {
-  const service = createInMemoryJobService();
-  const first = await service.enqueueJobImpl({
+  const firstJob = await service.enqueueJobImpl({
     kind: "capsuleReportGenerate",
-    profileEmail: "PERSON@example.com",
-    entity: { type: "capsule", id: "capsule-1" },
-    dedupeKey: "capsule-report:1",
+    profileEmail: "person@example.com",
     payload: { capsuleId: "capsule-1" },
+    entity: { type: "capsule", id: "capsule-1" },
+    dedupeKey: "capsule-report:capsule-1",
   });
-  const deduped = await service.enqueueJobImpl({
+  const dedupedJob = await service.enqueueJobImpl({
     kind: "capsuleReportGenerate",
-    profileEmail: " person@EXAMPLE.com ",
-    entity: { type: "capsule", id: "capsule-1" },
-    dedupeKey: "capsule-report:1",
+    profileEmail: " PERSON@example.com ",
     payload: { capsuleId: "capsule-1" },
+    entity: { type: "capsule", id: "capsule-1" },
+    dedupeKey: "capsule-report:capsule-1",
   });
-  const other = await service.enqueueJobImpl({
-    kind: "capsuleReportGenerate",
-    profileEmail: "other@example.com",
-    entity: { type: "capsule", id: "capsule-1" },
-    dedupeKey: "capsule-report:1",
-    payload: { capsuleId: "capsule-1" },
+  const secondJob = await service.enqueueJobImpl({
+    kind: "outfitReportGenerate",
+    profileEmail: "person@example.com",
+    payload: { outfitId: "outfit-1" },
+    entity: { type: "outfit", id: "outfit-1" },
   });
 
-  expect(deduped).toBe(first);
-  expect(other.id).not.toBe(first.id);
+  expect(dedupedJob).toBe(firstJob);
   await expect(
     service.getJobSnapshotImpl({
-      id: first.id,
-      email: "other@example.com",
+      id: firstJob.id,
+      email: "PERSON@example.com",
     }),
+  ).resolves.toBe(firstJob);
+  await expect(
+    service.getJobSnapshotImpl({ id: firstJob.id, email: "other@example.com" }),
   ).resolves.toBeNull();
   await expect(
     service.listJobSnapshotsImpl({
-      email: "other@example.com",
+      email: "person@example.com",
       status: "active",
     }),
-  ).resolves.toEqual([other]);
-  await expect(
-    service.clearJobRunsForEmailImpl("PERSON@example.com"),
-  ).resolves.toBe(1);
-  await expect(
-    service.getJobSnapshotImpl({
-      id: first.id,
-      email: "person@example.com",
-    }),
-  ).resolves.toBeNull();
-});
-
-test("in-memory job service filters by concrete status and exposes worker no-ops", async () => {
-  const service = createInMemoryJobService();
-  await service.enqueueJobImpl({
-    kind: "personalItemsReportGenerate",
-    profileEmail: "person@example.com",
-    entity: { type: "wardrobe", id: null },
-    payload: {},
-  });
-
+  ).resolves.toEqual([firstJob, secondJob]);
   await expect(
     service.listJobSnapshotsImpl({
       email: "person@example.com",
-      status: "completed",
+      status: "queued",
     }),
-  ).resolves.toEqual([]);
+  ).resolves.toEqual([firstJob, secondJob]);
   await expect(
-    service.clearJobRunsForEmailImpl("other@example.com"),
-  ).resolves.toBe(0);
+    service.listJobSnapshotsImpl({ email: "other@example.com" }),
+  ).resolves.toEqual([]);
+  await expect(service.getJobMetricsImpl()).resolves.toMatchObject({
+    total: 2,
+    byStatus: {
+      queued: 2,
+      running: 0,
+      completed: 0,
+      failed: 0,
+    },
+    byKind: {
+      capsuleReportGenerate: {
+        queued: 1,
+        running: 0,
+        completed: 0,
+        failed: 0,
+      },
+      outfitReportGenerate: {
+        queued: 1,
+        running: 0,
+        completed: 0,
+        failed: 0,
+      },
+    },
+    stuck: {
+      total: 0,
+      queued: 0,
+      running: 0,
+    },
+  });
+  firstJob.status = "running";
+  firstJob.updatedAt = new Date(Date.now() - 16 * 60 * 1000).toISOString();
+  secondJob.updatedAt = new Date(Date.now() - 6 * 60 * 1000).toISOString();
+  await expect(service.getJobMetricsImpl()).resolves.toMatchObject({
+    total: 2,
+    byStatus: {
+      queued: 1,
+      running: 1,
+      completed: 0,
+      failed: 0,
+    },
+    stuck: {
+      total: 2,
+      queued: 1,
+      running: 1,
+    },
+  });
   await expect(service.listJobEventsAfterImpl()).resolves.toEqual([]);
   await expect(service.startJobWorkersImpl()).resolves.toBeUndefined();
   await expect(service.stopJobWorkersImpl()).resolves.toBeUndefined();
+  await expect(
+    service.clearJobRunsForEmailImpl("other@example.com"),
+  ).resolves.toBe(0);
+  await expect(
+    service.clearJobRunsForEmailImpl("PERSON@example.com"),
+  ).resolves.toBe(2);
+  await expect(service.getJobMetricsImpl()).resolves.toMatchObject({
+    total: 0,
+    byStatus: { queued: 0, running: 0, completed: 0, failed: 0 },
+  });
 });

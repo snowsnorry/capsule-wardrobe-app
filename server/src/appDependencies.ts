@@ -133,6 +133,7 @@ import {
   PASSKEY_ORIGIN,
   PASSKEY_RP_ID,
   PASSKEY_RP_NAME,
+  RELEASE_METADATA,
 } from "./appConfig.js";
 import {
   copyImageObjectToR2,
@@ -153,6 +154,7 @@ import { createUploadedWardrobeItemEmbedding } from "./wardrobeSemanticEmbedding
 import { validateCapsuleAnchorItems } from "./capsuleAnchors.js";
 import { createMcpOAuthConfig } from "./mcp/oauthConfig.js";
 import { logInfo } from "./logger.js";
+import { buildInternalMetricsSnapshot } from "./observabilityMetrics.js";
 import { annotateLikedItems } from "./routes/likedItemsRoutes.js";
 import {
   createAccountCleanupDependencies,
@@ -163,13 +165,10 @@ import {
 import { createJobDependencies } from "./appDependencyJobs.js";
 
 const sharpConfig = configureSharp();
-logInfo(
-  "[sharp][configured]",
-  JSON.stringify({
-    cache: sharpConfig.cache,
-    concurrency: sharpConfig.concurrency,
-  }),
-);
+logInfo("[sharp][configured]", {
+  cache: sharpConfig.cache,
+  concurrency: sharpConfig.concurrency,
+});
 
 function resolveGoogleAuthClient({
   googleAuthClient,
@@ -207,6 +206,7 @@ function createRuntimeDependencies(googleClientId: string | null) {
     googleClientId,
     mcpOAuthConfig: createMcpOAuthConfig(),
     nodeEnv: NODE_ENV,
+    releaseMetadata: RELEASE_METADATA,
   };
 }
 
@@ -413,10 +413,18 @@ function createDefaultAppDependencies(googleClientId: string | null) {
     ...createWardrobeMediaDependencies(),
     ...createAccountCleanupDependencies(),
   };
-  return {
+  const deps = {
     ...baseDeps,
     ...createSearchCacheInvalidationDependencies(baseDeps),
     ...createJobDependencies(baseDeps),
+  };
+  return {
+    ...deps,
+    buildInternalMetricsSnapshotImpl: () =>
+      buildInternalMetricsSnapshot({
+        getJobMetricsImpl: deps.getJobMetricsImpl,
+        releaseMetadata: deps.releaseMetadata,
+      }),
   };
 }
 

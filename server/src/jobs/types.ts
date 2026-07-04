@@ -99,3 +99,14 @@ export type JobHandlerContext = {
     label?: string | null;
   }) => Promise<void>;
 };
+
+export type JobMetrics = {
+  total: number;
+  byStatus: Record<JobStatus, number>;
+  byKind: Partial<Record<JobKind, Record<JobStatus, number>>>;
+  stuck: {
+    total: number;
+    queued: number;
+    running: number;
+  };
+};

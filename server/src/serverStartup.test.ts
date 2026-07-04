@@ -81,7 +81,7 @@ test("development startup wires Vite middleware and serves transformed capsule h
     injectSharedCapsuleMetaTagsImpl: async (html, req) =>
       `${html}:meta:${req.path}`,
     isApiPathImpl: (requestPath) => requestPath.startsWith("/api"),
-    logInfoImpl: (message) => logMessages.push(message),
+    logInfoImpl: (...values) => logMessages.push(values),
   });
 
   expect(viteOptions[0].server.middlewareMode).toEqual(true);
@@ -92,7 +92,18 @@ test("development startup wires Vite middleware and serves transformed capsule h
   expect(app.calls[2].type).toBe("use");
   expect(app.calls[2].args[0]).toEqual(expect.any(Function));
   expect(app.calls.at(-1)).toEqual({ type: "listen", port: 4123 });
-  expect(logMessages).toEqual(["Server listening on http://localhost:4123"]);
+  expect(logMessages).toEqual([
+    [
+      "server_listening",
+      expect.objectContaining({
+        port: 4123,
+        url: "http://localhost:4123",
+        release: expect.objectContaining({
+          service: "capsule-wardrobe-server",
+        }),
+      }),
+    ],
+  ]);
 
   const rootRedirect = app.calls[0].args[1];
   const rootResponse = createResponse();
@@ -516,11 +527,19 @@ test("production startup skips spa fallback when client dist is absent", async (
       ensureCalls.push("ensure");
     },
     existsSyncImpl: () => false,
-    logInfoImpl: (message) => logMessages.push(message),
+    logInfoImpl: (...values) => logMessages.push(values),
     runProductionStartupPreflightImpl: skipProductionPreflight,
   });
 
   expect(ensureCalls).toEqual(["ensure"]);
   expect(app.calls).toEqual([{ type: "listen", port: 5310 }]);
-  expect(logMessages).toEqual(["Server listening on http://localhost:5310"]);
+  expect(logMessages).toEqual([
+    [
+      "server_listening",
+      expect.objectContaining({
+        port: 5310,
+        url: "http://localhost:5310",
+      }),
+    ],
+  ]);
 });

@@ -8,6 +8,7 @@ import {
   CLIENT_ROOT,
   NODE_ENV,
   PORT,
+  RELEASE_METADATA,
 } from "./appConfig.js";
 import { getSharedCapsuleOgMetadata } from "./capsuleStore.js";
 import { isApiPath } from "./capsuleHttp.js";
@@ -218,6 +219,7 @@ function resolveStartServerOptions(app, options = {}) {
     injectSharedCapsuleMetaTagsImpl: injectSharedCapsuleMetaTags,
     isApiPathImpl: isApiPath,
     logInfoImpl: logInfo,
+    releaseMetadata: RELEASE_METADATA,
     runProductionStartupPreflightImpl: runProductionStartupPreflight,
     startJobWorkersImpl: app.locals?.appDependencies?.startJobWorkersImpl,
     stopJobWorkersImpl: app.locals?.appDependencies?.stopJobWorkersImpl,
@@ -248,6 +250,7 @@ export function createStartServer(app) {
       injectSharedCapsuleMetaTagsImpl,
       isApiPathImpl,
       logInfoImpl,
+      releaseMetadata,
       runProductionStartupPreflightImpl,
       startJobWorkersImpl,
       stopJobWorkersImpl,
@@ -281,7 +284,11 @@ export function createStartServer(app) {
       });
 
       server = appInstance.listen(port, () => {
-        logInfoImpl(`Server listening on http://localhost:${port}`);
+        logInfoImpl("server_listening", {
+          port,
+          url: `http://localhost:${port}`,
+          release: releaseMetadata,
+        });
       });
       if (typeof server.on === "function") {
         server.on("close", () => {

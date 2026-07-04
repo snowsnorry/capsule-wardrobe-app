@@ -54,7 +54,7 @@ function logPromptImageBuildFailure(
   if (message.startsWith("prompt_images_child_exit:")) {
     logWardrobeInfo("capsule-images-child-exit", { message }, logContext);
   }
-  logWarn("[prompt-images][build-failed]", JSON.stringify({ message }));
+  logWarn("[prompt-images][build-failed]", { message });
 }
 
 export { getPromptDebugImages };
