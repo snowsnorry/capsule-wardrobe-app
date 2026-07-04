@@ -5,7 +5,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 8
+    open-pull-requests-limit: 12
 
     groups:
       react-ui:
