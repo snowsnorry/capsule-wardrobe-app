@@ -68,14 +68,7 @@ import {
 } from "./searchStore.js";
 import { createSearchCacheInvalidationService } from "./searchCacheInvalidation.js";
 import { runMcpProductSearch } from "./mcp/productSearch.js";
-import {
-  clearWardrobeJobsForEmail,
-  getWardrobeJob,
-  regenerateCapsuleWardrobe,
-} from "./ai/ai.js";
-import { clearPartialRegenerationJobsForEmail } from "./ai/partialRegenerationJobs.js";
-import { clearOutfitSetImageJobsForEmail } from "./ai/outfitSetImageJobs.js";
-import { clearOutfitImageJobsForEmail } from "./ai/outfitImageJobs.js";
+import { getWardrobeJob, regenerateCapsuleWardrobe } from "./ai/ai.js";
 import { getOutfitImageJob } from "./ai/outfitImageJobs.js";
 import {
   getPartialRegenerationJob,
@@ -87,17 +80,12 @@ import {
   getOutfitSetImageJob,
 } from "./ai/outfitSetImages.js";
 import { deleteOutfitImage, generateOutfitImage } from "./ai/outfitImages.js";
-import { generateOutfitReport } from "./ai/outfitReportService.js";
-import { generateCapsuleReport } from "./ai/capsuleReportService.js";
-import { generatePersonalItemsReport } from "./ai/personalItemsReportService.js";
 import { capsuleEventHub } from "./ai/capsuleEvents.js";
 import { outfitEventHub } from "./ai/outfitEvents.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
-import { deleteWardrobePdfJob } from "./wardrobePdfJobRegistry.js";
 import {
   checkDatabaseConnection,
   consumeMcpAuthorizationCode,
-  clearJobRunsForEmail,
   consumePasskeyChallenge,
   deletePasskeyByIdForEmail,
   deleteLikedItemByUrl,
@@ -126,13 +114,12 @@ import {
   listLikedItemUrlsByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
-  upsertPersonalItemsReportByEmail,
   updateUploadedWardrobeItemDetailsById,
   updateUploadedWardrobeItemMetadataById,
   listPasskeysByEmail,
   updatePasskeyAuthentication,
-  upsertMcpGrant,
   upsertLikedItemByUrl,
+  upsertMcpGrant,
   revokeMcpRefreshToken,
   rotateMcpRefreshToken,
 } from "./db.js";
@@ -142,8 +129,6 @@ import {
   CLIENT_ORIGIN,
   E2E_SERVER,
   GOOGLE_CLIENT_ID,
-  JOB_QUEUE_BACKEND,
-  JOB_WORKER_ENABLED,
   NODE_ENV,
   PASSKEY_ORIGIN,
   PASSKEY_RP_ID,
@@ -169,14 +154,13 @@ import { validateCapsuleAnchorItems } from "./capsuleAnchors.js";
 import { createMcpOAuthConfig } from "./mcp/oauthConfig.js";
 import { logInfo } from "./logger.js";
 import { annotateLikedItems } from "./routes/likedItemsRoutes.js";
-import { createJobQueue } from "./jobs/jobQueue.js";
-import { createJobWorker } from "./jobs/jobWorker.js";
 import {
-  getOwnedJobSnapshot,
-  listOwnedJobSnapshots,
-  replayJobEvents,
-} from "./jobs/jobStore.js";
-import { createInMemoryJobService } from "./jobs/inMemoryJobService.js";
+  createAccountCleanupDependencies,
+  generateCapsuleReportWithStoreLookups,
+  generateOutfitReportWithStoreLookups,
+  generatePersonalItemsReportWithStoreLookups,
+} from "./appDependencyReports.js";
+import { createJobDependencies } from "./appDependencyJobs.js";
 
 const sharpConfig = configureSharp();
 logInfo(
@@ -414,73 +398,6 @@ function createWardrobeMediaDependencies() {
       processQueuedWardrobeFileUploadImpl({ context: deps, ...input }),
     processQueuedWardrobeUrlUploadImpl: (input) =>
       processQueuedWardrobeUrlUpload({ context: deps, ...input }),
-  };
-}
-
-async function clearAccountTransientState(email: string) {
-  clearWardrobeJobsForEmail(email);
-  clearPartialRegenerationJobsForEmail(email);
-  clearOutfitSetImageJobsForEmail(email);
-  clearOutfitImageJobsForEmail(email);
-  deleteWardrobePdfJob(email);
-  await clearJobRunsForEmail(email);
-}
-
-function generateOutfitReportWithStoreLookups(email: string, outfitId: string) {
-  return generateOutfitReport(email, outfitId, {
-    getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
-    listWardrobeItemsByUrlsImpl: listWardrobeItemsByUrlsForEmail,
-    updateOutfitReportImpl: updateOutfitReport,
-  });
-}
-
-function generateCapsuleReportWithStoreLookups(
-  email: string,
-  capsuleId: string,
-) {
-  return generateCapsuleReport(email, capsuleId, {
-    updateCapsuleReportImpl: updateCapsuleReport,
-  });
-}
-
-function generatePersonalItemsReportWithStoreLookups(
-  email: string,
-  personalItemsContext?: string | null,
-) {
-  return generatePersonalItemsReport(email, personalItemsContext, {
-    listWardrobeItemsImpl: listWardrobeItemsByEmail,
-    upsertPersonalItemsReportImpl: upsertPersonalItemsReportByEmail,
-  });
-}
-
-function createAccountCleanupDependencies() {
-  return {
-    clearAccountTransientStateImpl: clearAccountTransientState,
-  };
-}
-
-function createJobDependencies(deps: Record<string, unknown>) {
-  if (NODE_ENV === "test" || E2E_SERVER) {
-    return createInMemoryJobService();
-  }
-  if (JOB_QUEUE_BACKEND !== "pg_boss") {
-    throw new Error(`unsupported_job_queue_backend:${JOB_QUEUE_BACKEND}`);
-  }
-
-  const queue = createJobQueue();
-  const worker = createJobWorker({
-    backend: queue.backend,
-    deps,
-    enabled: JOB_WORKER_ENABLED,
-    reconcilePendingProviderJobs: queue.reconcilePendingProviderJobs,
-  });
-  return {
-    enqueueJobImpl: queue.enqueue,
-    getJobSnapshotImpl: getOwnedJobSnapshot,
-    listJobEventsAfterImpl: replayJobEvents,
-    listJobSnapshotsImpl: listOwnedJobSnapshots,
-    startJobWorkersImpl: worker.start,
-    stopJobWorkersImpl: worker.stop,
   };
 }
 
