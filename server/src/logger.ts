@@ -186,10 +186,6 @@ export function runWithRequestLogContext<T>(
   return requestLogStorage.run(context, callback);
 }
 
-export function getRequestLogContext(): RequestLogContext | undefined {
-  return requestLogStorage.getStore();
-}
-
 export function sanitizeForLog(value: unknown): unknown {
   return sanitizeLogValue(value);
 }
