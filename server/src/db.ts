@@ -130,7 +130,6 @@ export {
   rotateMcpRefreshToken,
 } from "./db/mcpOAuthRefreshTokens.js";
 export {
-  appendJobEvent,
   claimQueuedJobRunsWithoutProviderId,
   clearJobRunsForEmail,
   createJobRun,

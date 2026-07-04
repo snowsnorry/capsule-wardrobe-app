@@ -292,9 +292,5 @@ function createSearchCacheInvalidationService({
   return { start, stop };
 }
 
-export {
-  SEARCH_PRODUCT_OPTIONS_CHANNEL,
-  SEARCH_PRODUCT_OPTIONS_STALE_INTERVAL_MS,
-  createSearchCacheInvalidationService,
-};
-export type { SearchCacheInvalidationService, SearchCacheListenerClient };
+export { SEARCH_PRODUCT_OPTIONS_CHANNEL, createSearchCacheInvalidationService };
+export type { SearchCacheListenerClient };

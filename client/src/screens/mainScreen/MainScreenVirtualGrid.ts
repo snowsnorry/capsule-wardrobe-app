@@ -129,13 +129,11 @@ export {
   VIRTUAL_GRID_FOUR_COLUMN_MIN_WIDTH,
   VIRTUAL_GRID_SM_MIN_WIDTH,
   VIRTUAL_GRID_THREE_COLUMN_MIN_WIDTH,
-  VIRTUAL_WARDROBE_GRID_ITEM_THRESHOLD,
   buildWardrobeGridEntries,
   buildWardrobeGridRows,
   getVirtualWardrobeGridColumnCount,
   getVirtualWardrobeGridGapPx,
   getVirtualWardrobeGridRowEstimate,
-  getWardrobeItemKey,
   shouldVirtualizeWardrobeGrid,
 };
 export type { WardrobeGridEntry };

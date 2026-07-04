@@ -312,4 +312,3 @@ function createSearchOptionsCache(
 }
 
 export { createSearchOptionsCache };
-export type { ProductSearchOptions, SearchOptionsCacheDeps };
