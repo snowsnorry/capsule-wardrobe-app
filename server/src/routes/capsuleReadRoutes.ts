@@ -1,65 +1,22 @@
 import type { ErrorWithCode } from "../ai/types.js";
 import { logError } from "../logger.js";
-import { buildWardrobeFilters } from "./wardrobeFilters.js";
 import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
 
 export function registerCapsuleReadRoutes(app, context) {
-  registerCapsuleBootstrapRoutes(app, context);
+  registerCapsuleListRoutes(app, context);
   registerCapsuleLookupRoutes(app, context);
   registerCapsuleShareRoutes(app, context);
   registerCapsuleActionRoutes(app, context);
 }
 
-function registerCapsuleBootstrapRoutes(app, context) {
+function registerCapsuleListRoutes(app, context) {
   const {
     countCapsulesImpl,
-    getProfileImpl,
     listRecentCapsulesImpl,
     requireAuth,
     searchCapsulesImpl,
     toCapsuleSummary,
-    toProfileResponse,
   } = context;
-
-  app.get("/capsules/bootstrap", requireAuth, async (req, res) => {
-    try {
-      const profile = await getProfileImpl(req.user.email);
-      if (!profile) {
-        return res.json({
-          ok: true,
-          hasProfile: false,
-          profile: null,
-          activeCapsule: null,
-          activeSnapshot: null,
-          capsules: [],
-        });
-      }
-      const paginationRequest = normalizeCapsulePaginationRequest();
-      const recentCapsules = await listRecentCapsulesImpl(
-        req.user.email,
-        paginationRequest.limit,
-        paginationRequest.offset,
-      );
-      const total = await countCapsulesImpl(req.user.email);
-      const wardrobeFilters = await buildWardrobeFilters(
-        context,
-        req.user.email,
-      );
-      return res.json({
-        ok: true,
-        hasProfile: true,
-        profile: toProfileResponse(profile),
-        activeCapsule: null,
-        activeSnapshot: null,
-        capsules: recentCapsules.map(toCapsuleSummary),
-        pagination: buildCapsulePaginationResponse(paginationRequest, total),
-        wardrobeFilters,
-      });
-    } catch (error) {
-      logError("[capsules/bootstrap]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
 
   app.get("/capsules/recent", requireAuth, async (req, res) => {
     try {
@@ -104,7 +61,7 @@ function normalizeIntegerParam(value: unknown, fallback: number) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
-function normalizeCapsulePaginationRequest(
+export function normalizeCapsulePaginationRequest(
   query: Record<string, unknown> = {},
 ) {
   const limit = Math.min(
@@ -115,7 +72,7 @@ function normalizeCapsulePaginationRequest(
   return { limit, offset };
 }
 
-function buildCapsulePaginationResponse(
+export function buildCapsulePaginationResponse(
   { limit, offset }: { limit: number; offset: number },
   total: number,
 ) {
@@ -141,6 +98,10 @@ function registerCapsuleLookupRoutes(app, context) {
   } = context;
 
   app.get("/capsules/:id", requireAuth, async (req, res) => {
+    if (req.params.id === "bootstrap") {
+      return res.status(404).json({ error: "not_found" });
+    }
+
     try {
       const capsule = await getCapsuleImpl(req.user.email, req.params.id);
       if (!capsule) {

@@ -15,6 +15,8 @@ import { sortWardrobeItems } from "../../shared/wardrobeOrder.js";
 const NO_GENERATED_OUTFITS_MESSAGE =
   "No generated outfit sets were provided for this capsule.";
 const API_PATH_PREFIXES = [
+  "/api",
+  "/app",
   "/auth",
   "/capsules",
   "/outfits",

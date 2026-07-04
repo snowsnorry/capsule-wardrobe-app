@@ -45,13 +45,17 @@
 - `client/src/screens/WardrobeGrid.tsx`
 - `client/src/screens/WardrobeScreen.tsx`
 
-Риски:
+Сделано:
+
+- `listWardrobeItemsByEmail` больше не выбирает `embedding` для `/wardrobe/items`.
+- `/wardrobe/items` проходит через lightweight display projection: наружу не отдаются `embedding`, profile/product internals, timestamps и raw image fallback.
+- Sidebar bootstrap объединен в `GET /app/bootstrap`: один запрос возвращает capsules, outfits, `wardrobeFilters` и `wardrobeCount`, поэтому count больше не получает полный список personal items ради `items.length`.
+
+Осталось:
 
 - `/wardrobe/items` возвращает весь профиль без pagination/cursor.
-- `listWardrobeItemsByEmail` выбирает `embedding` и полные rows, хотя наружу embedding не отдается.
 - Personal report строит prompt/collage/context по всему wardrobe без жесткого лимита или chunking.
-- Sidebar count получает полный список personal items только ради `items.length`.
-- Frontend grid мапит весь список карточек без virtualization/windowing.
+- Personal wardrobe grid (`client/src/screens/WardrobeGrid.tsx`) мапит весь список карточек без virtualization/windowing. Уже сделанная virtualization относится к capsule generation grid (`client/src/screens/mainScreen/MainScreenVirtualWardrobeGrid.tsx`) и не закрывает этот экран.
 
 Последствие: большие wardrobe-профили будут давать рост DB egress, памяти Node, времени JSON parse на клиенте, DOM/render cost и риск LLM failures из-за token/image payload.
 
@@ -254,9 +258,10 @@
    - Facet stats переработать без потери UI-функциональности: сначала ограничить DB parallelism, затем рассмотреть rollup/materialized tables; exact `total` и полный interactive facet behavior сохранить для текущего statistics UI.
    - Ожидаемый эффект: меньше повторных full scans по `products`, меньше DB spikes от stats, без потери доступных фильтров, точных totals и интерактивности charts.
 
-3. [ ] Ввести pagination/cursor и lightweight projections для wardrobe.
-   - `/wardrobe/items` должен иметь paginated/list projection без `embedding`.
-   - Sidebar count заменить на lightweight count endpoint/bootstrap field.
+3. [ ] Завершить pagination/cursor и limits для wardrobe.
+   - [x] `/wardrobe/items` имеет list projection без `embedding` и без внутренних display fields.
+   - [x] Sidebar count заменен на `wardrobeCount` в unified `/app/bootstrap`; старые `/capsules/bootstrap` и `/outfits/bootstrap` удалены.
+   - [ ] `/wardrobe/items` должен получить pagination/cursor.
    - Personal report ограничить hard cap, chunking или summary precomputation.
    - Ожидаемый эффект: ниже DB egress, Node memory, client parse/render time.
 
@@ -300,7 +305,8 @@
    - Разделить route-level state так, чтобы dialogs/shell не получали лишние changing references.
 
 2. [x] Виртуализировать карточки в длинных списках.
-   - Wardrobe grid и другие card-based lists: windowing/virtualization или server-side pagination.
+   - Сделано для capsule generation grid (`MainScreenVirtualWardrobeGrid`).
+   - Оставшийся gap: personal wardrobe grid (`WardrobeGrid.tsx`) все еще требует windowing/virtualization или server-side pagination.
 
 3. [x] Сделать bounded client cache.
    - Для `getCachedJson` добавить max size и LRU/TTL eviction.
@@ -361,7 +367,7 @@
 
 - Load test для `/search/run`, `/search/stats`, `/wardrobe/items`, `/jobs/:id/events` на realistic catalog/profile sizes.
 - DB `EXPLAIN (ANALYZE, BUFFERS)` для search/count/stats queries.
-- Browser profiling для wardrobe grid на 500/1000/3000 personal items.
+- Browser profiling для personal wardrobe grid (`WardrobeGrid.tsx`) на 500/1000/3000 personal items.
 - Failure-injection тесты для job enqueue crash window, worker timeout, SSE disconnect/reconnect и profile delete cleanup failure.
 - Production config preflight tests для missing/misconfigured env.
 

@@ -22,13 +22,16 @@ const authApi = vi.hoisted(() => ({
   verifyLoginCode: vi.fn(),
 }));
 
+const appBootstrapApi = vi.hoisted(() => ({
+  fetchAppBootstrap: vi.fn(),
+}));
+
 const capsulesApi = vi.hoisted(() => ({
   createCapsule: vi.fn(),
   deleteCapsule: vi.fn(),
   downloadCapsulePdf: vi.fn(),
   duplicateCapsule: vi.fn(),
   fetchCapsule: vi.fn(),
-  fetchCapsuleBootstrap: vi.fn(),
   fetchRecentCapsules: vi.fn(),
   fetchSharedCapsule: vi.fn(),
   importSharedCapsule: vi.fn(),
@@ -64,6 +67,7 @@ const wardrobeApi = vi.hoisted(() => ({
 }));
 
 vi.mock("./api/auth", () => authApi);
+vi.mock("./api/appBootstrap", () => appBootstrapApi);
 vi.mock("./api/capsules", () => capsulesApi);
 vi.mock("./api/profileOptionsCache", () => profileOptionsApi);
 vi.mock("./api/wardrobe", () => wardrobeApi);
@@ -192,6 +196,10 @@ function createBootstrapResponse({
     activeCapsule,
     activeSnapshot,
     capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
+    capsulePagination: { limit: 10, offset: 0, total: 1, hasMore: false },
+    outfits: [],
+    outfitPagination: { limit: 10, offset: 0, total: 0, hasMore: false },
+    wardrobeCount: 3,
     wardrobeFilters: {
       formalityLevels: ["casual", "smart_casual", "formal"],
       styles: ["minimalistic"],
@@ -223,7 +231,7 @@ describe("App", () => {
     window.localStorage.clear();
     window.history.replaceState({}, "", "/");
     mockProfileOptions();
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
+    appBootstrapApi.fetchAppBootstrap.mockResolvedValue(
       createBootstrapResponse(),
     );
     capsulesApi.fetchRecentCapsules.mockResolvedValue({
@@ -249,7 +257,7 @@ describe("App", () => {
 
     expect(await screen.findByTestId("sign-in-screen")).toBeInTheDocument();
     expect(screen.getByTestId("locale-switcher")).toBeInTheDocument();
-    expect(capsulesApi.fetchCapsuleBootstrap).not.toHaveBeenCalled();
+    expect(appBootstrapApi.fetchAppBootstrap).not.toHaveBeenCalled();
   });
 
   test("bootstraps an existing profile and switches between app routes", async () => {
@@ -262,7 +270,7 @@ describe("App", () => {
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
-      expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalled();
+      expect(appBootstrapApi.fetchAppBootstrap).toHaveBeenCalled();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "open-explore" }));
@@ -280,7 +288,7 @@ describe("App", () => {
     authApi.fetchCurrentUser.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
+    appBootstrapApi.fetchAppBootstrap.mockResolvedValue(
       createBootstrapResponse({
         activeSnapshot: {
           status: "ready",
@@ -299,7 +307,7 @@ describe("App", () => {
 
     expect(await screen.findByTestId("main-screen")).toBeInTheDocument();
     await waitFor(() => {
-      expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalledTimes(1);
+      expect(appBootstrapApi.fetchAppBootstrap).toHaveBeenCalledTimes(1);
     });
     expect(capsulesApi.fetchCapsule).not.toHaveBeenCalled();
     expect(capsulesApi.fetchRecentCapsules).not.toHaveBeenCalled();
@@ -321,7 +329,7 @@ describe("App", () => {
     authApi.fetchCurrentUser.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
+    appBootstrapApi.fetchAppBootstrap.mockResolvedValue(
       createBootstrapResponse({ locale: "ru" }),
     );
 
@@ -336,7 +344,7 @@ describe("App", () => {
     authApi.verifyLoginCode.mockResolvedValue({
       user: { email: "person@example.com" },
     });
-    capsulesApi.fetchCapsuleBootstrap
+    appBootstrapApi.fetchAppBootstrap
       .mockRejectedValueOnce(new Error("temporary"))
       .mockRejectedValueOnce(new Error("temporary"))
       .mockResolvedValue(createBootstrapResponse());
@@ -348,7 +356,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("wardrobe-screen")).toBeInTheDocument();
     });
-    expect(capsulesApi.fetchCapsuleBootstrap).toHaveBeenCalledTimes(3);
+    expect(appBootstrapApi.fetchAppBootstrap).toHaveBeenCalledTimes(3);
   });
 
   test("auto-initializes first-login users and creates a blank capsule on capsule route", async () => {
@@ -367,7 +375,7 @@ describe("App", () => {
         fullname: "",
       },
     });
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
+    appBootstrapApi.fetchAppBootstrap.mockResolvedValue({
       hasProfile: false,
       profile: null,
       activeCapsule: null,

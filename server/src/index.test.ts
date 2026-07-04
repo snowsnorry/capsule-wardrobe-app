@@ -61,6 +61,24 @@ test("index app exposes client api-prefixed routes before spa fallback", async (
   expect(searchOptions.json.audience).toEqual(["woman", "man", "all"]);
 });
 
+test("app api namespace misses return json instead of spa html", async (t) => {
+  const { baseUrl } = await startSpaFallbackTestServer(t);
+
+  const missing = await requestJson(baseUrl, "/app/missing", {
+    cookie: AUTH_COOKIE,
+  });
+
+  expect(missing.response.status).toBe(404);
+  expect(missing.json).toEqual({ error: "not_found" });
+
+  const apiMissing = await requestJson(baseUrl, "/api/app/missing", {
+    cookie: AUTH_COOKIE,
+  });
+
+  expect(apiMissing.response.status).toBe(404);
+  expect(apiMissing.json).toEqual({ error: "not_found" });
+});
+
 test("image cache path is no longer treated as an api path by spa fallback", async (t) => {
   const { baseUrl } = await startSpaFallbackTestServer(t);
 

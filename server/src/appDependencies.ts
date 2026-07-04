@@ -87,6 +87,7 @@ import {
   checkDatabaseConnection,
   consumeMcpAuthorizationCode,
   consumePasskeyChallenge,
+  countWardrobeItemsByEmail,
   deletePasskeyByIdForEmail,
   deleteLikedItemByUrl,
   deletePersonalItemsReportByEmail,
@@ -360,6 +361,7 @@ function createPasskeyOAuthDependencies() {
 function createWardrobeMediaDependencies() {
   const deps = {
     buildWardrobePdfInChildImpl: buildWardrobePdfInChild,
+    countWardrobeItemsImpl: countWardrobeItemsByEmail,
     copyImageObjectToR2Impl: copyImageObjectToR2,
     deleteLikedItemImpl: deleteLikedItemByUrl,
     deletePersonalItemsReportImpl: deletePersonalItemsReportByEmail,

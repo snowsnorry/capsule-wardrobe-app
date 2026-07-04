@@ -1,5 +1,5 @@
-import { fetchCapsule, fetchCapsuleBootstrap } from "../api/capsules";
-import { fetchOutfitBootstrap } from "../api/outfits";
+import { fetchAppBootstrap } from "../api/appBootstrap";
+import { fetchCapsule } from "../api/capsules";
 import { useRef } from "react";
 import { buildDefaultActionContext } from "./buildDefaultActionContext";
 import { buildDraftSnapshotFromState } from "./capsuleState";
@@ -18,10 +18,17 @@ import type { useAppState } from "./useAppState";
 import type { useProfileOptions } from "./useProfileOptions";
 import type { useShareRoute } from "./useShareRoute";
 import type {
-  CapsuleBootstrapResponse,
+  AppBootstrapResponse,
   CapsuleMeta,
-  OutfitBootstrapResponse,
+  CapsulePagination,
 } from "./appTypes";
+
+const EMPTY_SIDEBAR_PAGINATION: CapsulePagination = {
+  limit: 10,
+  offset: 0,
+  total: 0,
+  hasMore: false,
+};
 
 export function useAppControllerOperations({
   appState,
@@ -133,9 +140,35 @@ function assignAppControllerOperations({
   };
   operations.startCapsuleEventStream = (capsuleId) =>
     startWardrobeEventStream(operations.getAppActionContext(), capsuleId);
-  operations.bootstrapCapsules = async (email = appState.user?.email) => {
-    const result = (await fetchCapsuleBootstrap()) as CapsuleBootstrapResponse;
+  operations.bootstrapCapsules = buildBootstrapCapsulesOperation({
+    appState,
+    operations,
+    profileOptions,
+    setLocale,
+  });
+}
+
+function buildBootstrapCapsulesOperation({
+  appState,
+  operations,
+  profileOptions,
+  setLocale,
+}: {
+  appState: ReturnType<typeof useAppState>;
+  operations: AppControllerOperations;
+  profileOptions: ReturnType<typeof useProfileOptions>;
+  setLocale: (locale: string) => void;
+}): AppControllerOperations["bootstrapCapsules"] {
+  return async (email = appState.user?.email) => {
+    const result = (await fetchAppBootstrap()) as AppBootstrapResponse;
     if (!result.hasProfile) {
+      appState.setPersonalItemsCount(0);
+      operations.applyCapsuleState(null, {
+        capsules: [],
+        pagination: EMPTY_SIDEBAR_PAGINATION,
+      });
+      appState.setOutfitList([]);
+      appState.setOutfitPagination(EMPTY_SIDEBAR_PAGINATION);
       return {
         ...normalizeProfileSettings({}, email),
         hasProfile: false,
@@ -150,9 +183,15 @@ function assignAppControllerOperations({
     }
     operations.applyCapsuleState(result.activeCapsule, {
       capsules: result.capsules || [],
-      pagination: result.pagination || null,
+      pagination: result.capsulePagination || null,
     });
-    await bootstrapOutfitList(appState);
+    appState.setOutfitList(result.outfits || []);
+    if (result.outfitPagination) {
+      appState.setOutfitPagination(result.outfitPagination);
+    }
+    appState.setPersonalItemsCount(
+      typeof result.wardrobeCount === "number" ? result.wardrobeCount : null,
+    );
     await restoreCapsuleSnapshot(operations, result);
     return { ...normalizedProfile, hasProfile: true, optionsLoaded };
   };
@@ -169,18 +208,6 @@ function clearActiveOutfitState(
   }
   if (options?.pagination) {
     appState.setOutfitPagination(options.pagination);
-  }
-}
-
-async function bootstrapOutfitList(appState: ReturnType<typeof useAppState>) {
-  try {
-    const result = (await fetchOutfitBootstrap()) as OutfitBootstrapResponse;
-    appState.setOutfitList(result.outfits || []);
-    if (result.pagination) {
-      appState.setOutfitPagination(result.pagination);
-    }
-  } catch {
-    appState.setOutfitList([]);
   }
 }
 
@@ -303,7 +330,7 @@ function buildWardrobeSnapshotContext({
 
 async function restoreCapsuleSnapshot(
   operations: AppControllerOperations,
-  result: CapsuleBootstrapResponse,
+  result: AppBootstrapResponse,
 ) {
   if (!result.activeSnapshot) return;
   await operations.applyWardrobeSnapshot(

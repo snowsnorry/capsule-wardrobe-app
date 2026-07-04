@@ -11,7 +11,6 @@ import {
   isFullScreenAppShellRoute,
 } from "./AppShellRouteLayout";
 import { getActiveSidebarApp } from "./appRouting";
-import { usePersonalItemsCount } from "./personalItemsCount";
 import { useSidebarCapsuleSearch } from "./useSidebarCapsuleSearch";
 import type { AppShellCapsuleActionMenuController } from "./AppShellCapsuleActionMenu";
 import type { AppShellOutfitActionMenuController } from "./AppShellOutfitActionMenu";
@@ -70,7 +69,6 @@ function getSidebarOutfitMeta(
 function useAppShellSidebarPanelModel(props: AppShellContentProps) {
   const activeSidebarApp = getActiveSidebarApp(props.appRoute);
   const userEmail = getUserEmail(props.user);
-  const personalItemsCount = usePersonalItemsCount(userEmail);
   const usesCapsuleLayout = isFullScreenAppShellRoute(props);
   const sidebarSearch = useSidebarCapsuleSearch(props.onSearchCapsules);
   const outfitSidebarSearch = useSidebarCapsuleSearch(
@@ -101,7 +99,7 @@ function useAppShellSidebarPanelModel(props: AppShellContentProps) {
     highlightedOutfitId: getHighlightedOutfitId(activeSidebarApp, props),
     outfitActionMenuControllerRef,
     outfitSidebarSearch,
-    personalItemsCount,
+    personalItemsCount: props.personalItemsCount ?? null,
     registerCapsuleActionMenuController,
     registerOutfitActionMenuController,
     sidebarCapsuleMeta: getSidebarCapsuleMeta(activeSidebarApp, props),

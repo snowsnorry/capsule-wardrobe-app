@@ -416,19 +416,17 @@ export type AuthResultResponse = {
   expiresInMs?: number;
 };
 
-export type CapsuleBootstrapResponse = {
+export type AppBootstrapResponse = {
   hasProfile?: boolean;
-  profile?: Partial<ProfileSettings>;
+  profile?: Partial<ProfileSettings> | null;
   activeCapsule?: CapsuleMeta | null;
+  activeSnapshot?: WardrobeSnapshot | null;
   capsules?: CapsuleMeta[];
-  pagination?: CapsulePagination;
-  activeSnapshot?: WardrobeSnapshot;
-  wardrobeFilters?: WardrobeFiltersResponse | null;
-};
-
-export type OutfitBootstrapResponse = {
+  capsulePagination?: CapsulePagination | null;
   outfits?: OutfitMeta[];
-  pagination?: CapsulePagination;
+  outfitPagination?: CapsulePagination | null;
+  wardrobeFilters?: WardrobeFiltersResponse | null;
+  wardrobeCount?: number | null;
 };
 
 export type CapsuleBootstrapResult = ProfileSettings & {

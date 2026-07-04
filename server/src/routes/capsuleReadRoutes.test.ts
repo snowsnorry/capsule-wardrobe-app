@@ -161,7 +161,7 @@ test("share routes create, read, import, and enforce auth boundaries", async (t)
   ]);
 });
 
-test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks", async (t) => {
+test("capsule read routes expose recent, search, and lookup fallbacks", async (t) => {
   const calls: unknown[] = [];
   const { baseUrl } = await startTestServer(t, {
     overrides: {
@@ -175,29 +175,6 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
         return [{ id: "capsule-2", name: "Office edit", status: "saved" }];
       },
     },
-  });
-
-  const bootstrap = await requestJson(baseUrl, "/capsules/bootstrap", {
-    cookie: AUTH_COOKIE,
-  });
-  expect(bootstrap.response.status).toBe(200);
-  expect(bootstrap.json.ok).toBe(true);
-  expect(bootstrap.json.hasProfile).toBe(true);
-  expect(bootstrap.json.activeCapsule).toBe(null);
-  expect(bootstrap.json.activeSnapshot).toBe(null);
-  expect(bootstrap.json.pagination).toEqual({
-    limit: 10,
-    offset: 0,
-    total: 12,
-    hasMore: true,
-  });
-  expect(bootstrap.json.wardrobeFilters).toEqual({
-    formalityLevels: ["casual", "formal"],
-    styles: ["minimalistic", "sporty"],
-    occasions: ["office", "date_night"],
-    seasons: ["spring", "summer"],
-    audience: ["man", "woman", "any"],
-    patterns: ["striped", "plain"],
   });
 
   const recent = await requestJson(baseUrl, "/capsules/recent", {
@@ -257,60 +234,14 @@ test("capsule read routes expose bootstrap, recent, search, and lookup fallbacks
 
   expect(calls).toEqual([
     { type: "recent", limit: 10, offset: 0 },
-    { type: "recent", limit: 10, offset: 0 },
     { type: "recent", limit: 50, offset: 10 },
     { type: "recent", limit: 25, offset: undefined },
     { type: "search", query: "office", limit: 25 },
   ]);
 });
 
-test("capsule bootstrap returns missing profile status without capsule lookups", async (t) => {
-  const calls: unknown[] = [];
-  const { baseUrl } = await startTestServer(t, {
-    overrides: {
-      getProfileImpl: async () => null,
-      listRecentCapsulesImpl: async () => {
-        calls.push({ type: "recent" });
-        return [];
-      },
-    },
-  });
-
-  const bootstrap = await requestJson(baseUrl, "/capsules/bootstrap", {
-    cookie: AUTH_COOKIE,
-  });
-
-  expect(bootstrap.response.status).toBe(200);
-  expect(bootstrap.json).toEqual({
-    ok: true,
-    hasProfile: false,
-    profile: null,
-    activeCapsule: null,
-    activeSnapshot: null,
-    capsules: [],
-  });
-  expect(calls).toEqual([]);
-});
-
 test("capsule read and share routes map missing records and service failures", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
-
-  const failingBootstrapServer = await startTestServer(t, {
-    overrides: {
-      listRecentCapsulesImpl: async () => {
-        throw new Error("capsule_store_down");
-      },
-    },
-  });
-  const bootstrapFailure = await requestJson(
-    failingBootstrapServer.baseUrl,
-    "/capsules/bootstrap",
-    {
-      cookie: AUTH_COOKIE,
-    },
-  );
-  expect(bootstrapFailure.response.status).toBe(503);
-  expect(bootstrapFailure.json).toEqual({ error: "service_unavailable" });
 
   const failingRecentServer = await startTestServer(t, {
     overrides: {

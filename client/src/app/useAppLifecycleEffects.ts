@@ -1,8 +1,15 @@
 import { useEffect } from "react";
+import { fetchAppBootstrap } from "../api/appBootstrap";
 import { updateProfileLocale } from "../api/auth";
+import { addPersonalItemsChangedListener } from "./personalItemsCount";
 import type { useAppState } from "./useAppState";
 
 type AppState = ReturnType<typeof useAppState>;
+
+function getPersonalItemsCountFromBootstrap(response: unknown) {
+  const count = (response as { wardrobeCount?: unknown })?.wardrobeCount;
+  return typeof count === "number" && Number.isFinite(count) ? count : null;
+}
 
 export function useAppLifecycleEffects({
   appState,
@@ -83,5 +90,52 @@ export function useAppLifecycleEffects({
     profileCreated,
     isMountedRef,
     setSettingsProfile,
+  ]);
+
+  usePersonalItemsCountRefreshEffect(appState);
+}
+
+function usePersonalItemsCountRefreshEffect(appState: AppState) {
+  const {
+    hasProfile,
+    profileCreated,
+    sessionInitialized,
+    setPersonalItemsCount,
+    user,
+  } = appState;
+
+  useEffect(() => {
+    if (!sessionInitialized || !user || !(hasProfile || profileCreated)) {
+      return undefined;
+    }
+
+    let isActive = true;
+    const refreshPersonalItemsCount = () => {
+      void fetchAppBootstrap()
+        .then((response) => {
+          if (isActive) {
+            setPersonalItemsCount(getPersonalItemsCountFromBootstrap(response));
+          }
+        })
+        .catch(() => {
+          if (isActive) {
+            setPersonalItemsCount(null);
+          }
+        });
+    };
+
+    const removeListener = addPersonalItemsChangedListener(
+      refreshPersonalItemsCount,
+    );
+    return () => {
+      isActive = false;
+      removeListener();
+    };
+  }, [
+    hasProfile,
+    profileCreated,
+    sessionInitialized,
+    setPersonalItemsCount,
+    user,
   ]);
 }

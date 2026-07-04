@@ -171,6 +171,7 @@ export function buildLayout(input: ControllerModelInput) {
     capsulePagination: state.capsulePagination,
     outfitList: state.outfitList,
     outfitPagination: state.outfitPagination,
+    personalItemsCount: state.personalItemsCount,
     cardPadding: input.cardPadding,
     currentView: state.currentView,
     hasBrandedPanelHeader: viewState.hasBrandedPanelHeader,

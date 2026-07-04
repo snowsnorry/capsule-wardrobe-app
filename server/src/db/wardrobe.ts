@@ -61,6 +61,26 @@ export async function listWardrobeItemsByEmail({
   return rows.map(toWardrobeUiItem);
 }
 
+export async function countWardrobeItemsByEmail({
+  email,
+  source,
+}: {
+  email: string;
+  source?: UserWardrobeSource | null;
+}): Promise<number> {
+  const sql = getSqlClient();
+  const normalizedSource = normalizeWardrobeSource(source);
+  const row = getFirstRow(
+    await sql<{ count: string | number }>`
+    select count(*) as count
+    from wardrobe
+    where profile_email = ${email}
+      and (${normalizedSource}::text is null or source = ${normalizedSource})
+  `,
+  );
+  return Number(row?.count || 0);
+}
+
 export async function getUploadedWardrobeItemById({
   email,
   id,

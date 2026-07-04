@@ -50,6 +50,7 @@ export {
 } from "./db/searchPersistence.js";
 export { searchProductStats } from "./db/searchStats.js";
 export {
+  countWardrobeItemsByEmail,
   deleteWardrobeItemFromCatalogByUrl,
   getUploadedWardrobeItemById,
   listWardrobeItemsByIdsForEmail,

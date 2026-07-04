@@ -1,5 +1,6 @@
 import { registerPasskeyRoutes } from "./routes/passkeyRoutes.js";
 import { registerProfileReadRoutes } from "./routes/profileReadRoutes.js";
+import { registerAppBootstrapRoutes } from "./routes/appBootstrapRoutes.js";
 import { registerCapsuleReadRoutes } from "./routes/capsuleReadRoutes.js";
 import { registerCapsuleMutationRoutes } from "./routes/capsuleMutationRoutes.js";
 import { registerOutfitRoutes } from "./routes/outfitRoutes.js";
@@ -22,6 +23,7 @@ function registerDomainRoutes(app, routeContext) {
   registerMcpOAuthRoutes(app, routeContext);
   registerMcpRoutes(app, routeContext);
   registerProfileReadRoutes(app, routeContext);
+  registerAppBootstrapRoutes(app, routeContext);
   registerJobRoutes(app, routeContext);
   registerLikedItemsRoutes(app, routeContext);
   registerWardrobeRoutes(app, routeContext);

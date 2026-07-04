@@ -11,7 +11,9 @@ function normalizeIntegerParam(value: unknown, fallback: number) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
-function normalizeOutfitPaginationRequest(query: Record<string, unknown> = {}) {
+export function normalizeOutfitPaginationRequest(
+  query: Record<string, unknown> = {},
+) {
   const limit = Math.min(
     MAX_OUTFIT_PAGE_LIMIT,
     Math.max(1, normalizeIntegerParam(query.limit, DEFAULT_OUTFIT_PAGE_LIMIT)),
@@ -20,7 +22,7 @@ function normalizeOutfitPaginationRequest(query: Record<string, unknown> = {}) {
   return { limit, offset };
 }
 
-function buildOutfitPaginationResponse(
+export function buildOutfitPaginationResponse(
   { limit, offset }: { limit: number; offset: number },
   total: number,
 ) {
@@ -30,34 +32,6 @@ function buildOutfitPaginationResponse(
     total,
     hasMore: offset + limit < total,
   };
-}
-
-function registerOutfitBootstrapRoute(app, context) {
-  const {
-    countOutfitsImpl,
-    listRecentOutfitsImpl,
-    requireAuth,
-    toOutfitSummary,
-  } = context;
-  app.get("/outfits/bootstrap", requireAuth, async (req, res) => {
-    try {
-      const paginationRequest = normalizeOutfitPaginationRequest();
-      const outfits = await listRecentOutfitsImpl(
-        req.user.email,
-        paginationRequest.limit,
-        paginationRequest.offset,
-      );
-      const total = await countOutfitsImpl(req.user.email);
-      return res.json({
-        ok: true,
-        outfits: outfits.map(toOutfitSummary),
-        pagination: buildOutfitPaginationResponse(paginationRequest, total),
-      });
-    } catch (error) {
-      logError("[outfits/bootstrap]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
 }
 
 function registerOutfitRecentRoute(app, context) {
@@ -151,6 +125,10 @@ function registerOutfitGetRoute(app, context) {
   const { getOutfitImpl, requireAuth } = context;
 
   app.get("/outfits/:id", requireAuth, async (req, res) => {
+    if (req.params.id === "bootstrap") {
+      return res.status(404).json({ error: "not_found" });
+    }
+
     try {
       const outfit = await getOutfitImpl(req.user.email, req.params.id);
       if (!outfit) {
@@ -168,7 +146,6 @@ function registerOutfitGetRoute(app, context) {
 }
 
 function registerOutfitReadRoutes(app, context) {
-  registerOutfitBootstrapRoute(app, context);
   registerOutfitRecentRoute(app, context);
   registerOutfitSearchRoute(app, context);
   registerOutfitEventRoute(app, context);

@@ -25,6 +25,7 @@ export type AppShellContentProps = {
   capsulePagination: CapsulePagination;
   outfitList?: OutfitMeta[];
   outfitPagination?: CapsulePagination;
+  personalItemsCount?: number | null;
   cardPadding: number;
   children: ReactNode;
   currentView: string;

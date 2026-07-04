@@ -139,18 +139,6 @@ test("outfit read routes return paginated, searched, and annotated outfits", asy
     },
   });
 
-  const bootstrap = await requestJson(baseUrl, "/outfits/bootstrap", {
-    cookie: AUTH_COOKIE,
-  });
-  expect(bootstrap.response.status).toBe(200);
-  expect(bootstrap.json).toMatchObject({
-    ok: true,
-    pagination: { limit: 10, offset: 0, total: 12, hasMore: true },
-  });
-  expect(bootstrap.json.outfits).toEqual([
-    expect.objectContaining({ id: "outfit-1", itemCount: 2 }),
-  ]);
-
   const recent = await requestJson(
     baseUrl,
     "/outfits/recent?limit=100&offset=bad",

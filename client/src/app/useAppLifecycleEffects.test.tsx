@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { fetchAppBootstrap } from "../api/appBootstrap";
 import { updateProfileLocale } from "../api/auth";
+import { notifyPersonalItemsChanged } from "./personalItemsCount";
 import { useAppLifecycleEffects } from "./useAppLifecycleEffects";
 import { createTestProfile } from "./testUtils";
 
+vi.mock("../api/appBootstrap", () => ({
+  fetchAppBootstrap: vi.fn(),
+}));
 vi.mock("../api/auth", () => ({
   updateProfileLocale: vi.fn(),
 }));
@@ -22,6 +27,7 @@ function createAppState(overrides: Record<string, unknown> = {}) {
     pendingRegenerationUrlsRef: { current: [] },
     profileCreated: false,
     sessionInitialized: true,
+    setPersonalItemsCount: vi.fn(),
     setSettingsProfile: vi.fn(),
     settingsProfile: createTestProfile({ locale: "en" }),
     user: { email: "person@example.com" },
@@ -78,5 +84,38 @@ describe("useAppLifecycleEffects", () => {
       expect(updateProfileLocale).toHaveBeenCalledWith("ru");
     });
     expect(setSettingsProfile).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  test("refreshes personal items count from app bootstrap after wardrobe changes", async () => {
+    vi.mocked(fetchAppBootstrap).mockResolvedValue({ wardrobeCount: 4 });
+    const setPersonalItemsCount = vi.fn();
+    const appState = createAppState({ setPersonalItemsCount });
+
+    renderHook(() =>
+      useAppLifecycleEffects({ appState: appState as never, locale: "en" }),
+    );
+
+    notifyPersonalItemsChanged();
+
+    await waitFor(() => {
+      expect(fetchAppBootstrap).toHaveBeenCalledTimes(1);
+    });
+    expect(setPersonalItemsCount).toHaveBeenCalledWith(4);
+  });
+
+  test("keeps personal items count unknown when app bootstrap count is null", async () => {
+    vi.mocked(fetchAppBootstrap).mockResolvedValue({ wardrobeCount: null });
+    const setPersonalItemsCount = vi.fn();
+    const appState = createAppState({ setPersonalItemsCount });
+
+    renderHook(() =>
+      useAppLifecycleEffects({ appState: appState as never, locale: "en" }),
+    );
+
+    notifyPersonalItemsChanged();
+
+    await waitFor(() => {
+      expect(setPersonalItemsCount).toHaveBeenCalledWith(null);
+    });
   });
 });

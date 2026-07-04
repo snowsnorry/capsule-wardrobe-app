@@ -23,6 +23,10 @@ const authApi = vi.hoisted(() => ({
   clearRequestCache: vi.fn(),
 }));
 
+const appBootstrapApi = vi.hoisted(() => ({
+  fetchAppBootstrap: vi.fn(),
+}));
+
 const profileOptionsApi = vi.hoisted(() => ({
   clearProfileOptionsCache: vi.fn(),
   loadProfileOptions: vi.fn(),
@@ -81,7 +85,6 @@ const capsulesApi = vi.hoisted(() => ({
   downloadCapsulePdf: vi.fn(),
   duplicateCapsule: vi.fn(),
   fetchCapsule: vi.fn(),
-  fetchCapsuleBootstrap: vi.fn(),
   fetchRecentCapsules: vi.fn(),
   renameCapsule: vi.fn(),
   revertCapsule: vi.fn(),
@@ -93,6 +96,7 @@ const capsulesApi = vi.hoisted(() => ({
 }));
 
 vi.mock("./api/auth", () => authApi);
+vi.mock("./api/appBootstrap", () => appBootstrapApi);
 vi.mock("./api/profileOptionsCache", () => profileOptionsApi);
 vi.mock("./api/wardrobe", () => wardrobeApi);
 vi.mock("./api/capsules", () => capsulesApi);
@@ -257,6 +261,10 @@ function createBootstrapResponse({
       status: "new",
     },
     capsules: [{ id: "capsule-1", name: "Spring edit", status: "new" }],
+    capsulePagination: { limit: 10, offset: 0, total: 1, hasMore: false },
+    outfits: [],
+    outfitPagination: { limit: 10, offset: 0, total: 0, hasMore: false },
+    wardrobeCount: 3,
     wardrobeFilters: {
       formalityLevels: ["casual", "smart_casual", "formal"],
       styles: ["minimalistic"],
@@ -274,7 +282,7 @@ function mockFirstLoginAuthFlow() {
   authApi.verifyLoginCode.mockResolvedValue({
     user: { email: "flow@example.com" },
   });
-  capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
+  appBootstrapApi.fetchAppBootstrap.mockResolvedValue({
     hasProfile: false,
     profile: null,
     activeCapsule: null,
@@ -316,6 +324,7 @@ describe("App e2e-style flows", () => {
     authApi.verifyLoginCode.mockReset();
     authApi.signInWithGoogle.mockReset();
     authApi.clearRequestCache.mockReset();
+    appBootstrapApi.fetchAppBootstrap.mockReset();
 
     profileOptionsApi.clearProfileOptionsCache.mockReset();
     profileOptionsApi.loadProfileOptions.mockReset();
@@ -350,7 +359,7 @@ describe("App e2e-style flows", () => {
     });
 
     authApi.updateProfileLocale.mockResolvedValue({});
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue(
+    appBootstrapApi.fetchAppBootstrap.mockResolvedValue(
       createBootstrapResponse(),
     );
     capsulesApi.fetchRecentCapsules.mockResolvedValue({
@@ -434,7 +443,7 @@ describe("App e2e-style flows", () => {
     authApi.verifyLoginCode.mockResolvedValue({
       user: { email: "flow@example.com" },
     });
-    capsulesApi.fetchCapsuleBootstrap.mockResolvedValue({
+    appBootstrapApi.fetchAppBootstrap.mockResolvedValue({
       hasProfile: false,
       profile: null,
       activeCapsule: null,

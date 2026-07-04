@@ -135,6 +135,9 @@ export function useCapsuleAppState() {
   const [isOutfitImagePending, setIsOutfitImagePending] = useState(false);
   const [isOutfitReportPending, setIsOutfitReportPending] = useState(false);
   const [isCapsuleReportPending, setIsCapsuleReportPending] = useState(false);
+  const [personalItemsCount, setPersonalItemsCount] = useState<number | null>(
+    null,
+  );
 
   return {
     activeCapsuleId,
@@ -151,6 +154,7 @@ export function useCapsuleAppState() {
     isLoadingItems,
     outfitList,
     outfitPagination,
+    personalItemsCount,
     profileItems,
     profileOutfitSets,
     setActiveCapsuleId,
@@ -167,6 +171,7 @@ export function useCapsuleAppState() {
     setIsLoadingItems,
     setOutfitList,
     setOutfitPagination,
+    setPersonalItemsCount,
     setProfileItems,
     setProfileOutfitSets,
   };

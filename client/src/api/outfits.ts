@@ -25,12 +25,6 @@ type OutfitImageSourceInput = {
   sourceSetIndex?: number;
 };
 
-async function fetchOutfitBootstrap(): Promise<OutfitResponse> {
-  return requestJson(outfitUrl("/bootstrap"), {
-    credentials: "include",
-  });
-}
-
 async function fetchRecentOutfits(
   options: OutfitListOptions = {},
 ): Promise<OutfitResponse> {
@@ -232,7 +226,6 @@ export {
   deleteOutfitReport,
   duplicateOutfit,
   fetchOutfit,
-  fetchOutfitBootstrap,
   fetchRecentOutfits,
   generateOutfitImage,
   renameOutfit,

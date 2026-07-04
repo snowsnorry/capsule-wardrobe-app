@@ -8,7 +8,10 @@ import {
   normalizeUrlSet,
   registerPersonalItemsReportRoutes,
 } from "./personalItemsReportRoutes.js";
-import { filterWardrobeItemForDisplay } from "../wardrobeItemDisplay.js";
+import {
+  filterWardrobeItemForDisplay,
+  filterWardrobeListItemForDisplay,
+} from "../wardrobeItemDisplay.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
 
 function getHttpUrl(value: unknown): string {
@@ -56,7 +59,7 @@ function registerWardrobeListRoute(app, context) {
       const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
       const displayItems = Array.isArray(items)
         ? context.annotateLikedItems(
-            items.map(filterWardrobeItemForDisplay),
+            items.map(filterWardrobeListItemForDisplay),
             likedUrls,
           )
         : items;

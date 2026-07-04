@@ -21,7 +21,6 @@ import {
   deleteCapsuleReport,
   duplicateCapsule,
   fetchCapsule,
-  fetchCapsuleBootstrap,
   fetchRecentCapsules,
   fetchSharedCapsule,
   generateCapsuleReport,
@@ -116,7 +115,6 @@ describe("capsules api", () => {
   });
 
   test("read helpers use capsule collection routes", async () => {
-    await fetchCapsuleBootstrap();
     await fetchRecentCapsules();
     await fetchRecentCapsules({ limit: 10, offset: 20 });
     await fetchCapsule("capsule-1");
@@ -125,41 +123,34 @@ describe("capsules api", () => {
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,
-      "https://api.example.test/capsules/bootstrap",
-      {
-        credentials: "include",
-      },
-    );
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      2,
       "https://api.example.test/capsules/recent",
       {
         credentials: "include",
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      3,
+      2,
       "https://api.example.test/capsules/recent?limit=10&offset=20",
       {
         credentials: "include",
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      4,
+      3,
       "https://api.example.test/capsules/capsule-1",
       {
         credentials: "include",
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      5,
+      4,
       "https://api.example.test/capsules/search?q=linen%20jacket",
       {
         credentials: "include",
       },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      6,
+      5,
       "https://api.example.test/capsules/search",
       {
         credentials: "include",

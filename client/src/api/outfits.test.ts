@@ -23,7 +23,6 @@ import {
   downloadOutfitPdf,
   duplicateOutfit,
   fetchOutfit,
-  fetchOutfitBootstrap,
   fetchRecentOutfits,
   generateOutfitImage,
   generateOutfitReport,
@@ -118,8 +117,7 @@ describe("outfits api", () => {
     vi.unstubAllGlobals();
   });
 
-  test("reads outfit bootstrap, recent pages, search, and detail routes", async () => {
-    await fetchOutfitBootstrap();
+  test("reads outfit recent pages, search, and detail routes", async () => {
     await fetchRecentOutfits({ limit: 10, offset: 20 });
     await fetchRecentOutfits();
     await searchOutfits(" linen jacket ");
@@ -128,31 +126,26 @@ describe("outfits api", () => {
 
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
       1,
-      "https://api.example.test/outfits/bootstrap",
-      { credentials: "include" },
-    );
-    expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      2,
       "https://api.example.test/outfits/recent?limit=10&offset=20",
       { credentials: "include" },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      3,
+      2,
       "https://api.example.test/outfits/recent",
       { credentials: "include" },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      4,
+      3,
       "https://api.example.test/outfits/search?q=linen%20jacket",
       { credentials: "include" },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      5,
+      4,
       "https://api.example.test/outfits/search",
       { credentials: "include" },
     );
     expect(requestApi.requestJson).toHaveBeenNthCalledWith(
-      6,
+      5,
       "https://api.example.test/outfits/outfit%201",
       { credentials: "include" },
     );

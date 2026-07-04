@@ -10,17 +10,6 @@ import {
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider } from "@mui/material/styles";
 import { createAppTheme } from "../theme";
-import { notifyPersonalItemsChanged } from "./personalItemsCount";
-
-const personalItemsApi = vi.hoisted(() => ({
-  fetchPersonalItems: vi.fn(() =>
-    Promise.resolve({
-      items: [{ id: "item-1" }, { id: "item-2" }, { id: "item-3" }],
-    }),
-  ),
-}));
-
-vi.mock("../api/personalItems", () => personalItemsApi);
 
 vi.mock("../components/AppSidebarNavigation", () => ({
   default: ({
@@ -232,7 +221,6 @@ const theme = createAppTheme("light");
 
 afterEach(() => {
   cleanup();
-  personalItemsApi.fetchPersonalItems.mockClear();
 });
 
 function createProps(
@@ -309,6 +297,7 @@ function createProps(
     onRequestSignOut: vi.fn(),
     onSaveSettings: vi.fn(() => Promise.resolve()),
     openSearchDialog: vi.fn(),
+    personalItemsCount: 3,
     ...overrides,
   };
 }
@@ -571,45 +560,9 @@ describe("AppShellContent", () => {
   test("passes the loaded personal items count to the sidebar", async () => {
     renderShellContent();
 
-    await waitFor(() =>
-      expect(
-        screen.getByTestId("sidebar-personal-items-count"),
-      ).toHaveTextContent("3"),
-    );
-    expect(personalItemsApi.fetchPersonalItems).toHaveBeenCalledWith();
-  });
-
-  test("refreshes the personal items count after wardrobe mutations", async () => {
-    personalItemsApi.fetchPersonalItems
-      .mockResolvedValueOnce({
-        items: [{ id: "item-1" }, { id: "item-2" }, { id: "item-3" }],
-      })
-      .mockResolvedValueOnce({
-        items: [
-          { id: "item-1" },
-          { id: "item-2" },
-          { id: "item-3" },
-          { id: "item-4" },
-        ],
-      });
-    renderShellContent();
-
-    await waitFor(() =>
-      expect(
-        screen.getByTestId("sidebar-personal-items-count"),
-      ).toHaveTextContent("3"),
-    );
-
-    notifyPersonalItemsChanged();
-
-    await waitFor(() =>
-      expect(
-        screen.getByTestId("sidebar-personal-items-count"),
-      ).toHaveTextContent("4"),
-    );
-    expect(personalItemsApi.fetchPersonalItems).toHaveBeenLastCalledWith({
-      force: true,
-    });
+    expect(
+      screen.getByTestId("sidebar-personal-items-count"),
+    ).toHaveTextContent("3");
   });
 
   test("wires sidebar capsule header and capsule navigation actions", () => {

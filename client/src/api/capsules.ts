@@ -47,12 +47,6 @@ function getDownloadFilenameFromDisposition(
   );
 }
 
-export async function fetchCapsuleBootstrap(): Promise<CapsuleResponse> {
-  return requestJson(capsuleUrl("/bootstrap"), {
-    credentials: "include",
-  });
-}
-
 function buildCapsuleListQuery({ limit, offset }: CapsuleListOptions = {}) {
   const params = new URLSearchParams();
   if (typeof limit === "number") {

@@ -119,9 +119,11 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
           {
             createdAt: "2026-05-01T00:00:00.000Z",
             email: "person@example.com",
+            embedding: [0.1, 0.2],
             id: "wardrobe-1",
             productId: "product-1",
             profileEmail: "person@example.com",
+            rawImageUrl: "https://example.com/raw.jpg",
             url: "https://example.com/1",
             source: "from_catalog",
             updatedAt: "2026-05-01T00:00:00.000Z",
