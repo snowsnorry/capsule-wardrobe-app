@@ -310,9 +310,10 @@
    - Upload, report/generate enqueue, `/oauth/token`, `/mcp` initialize, `/auth/google`.
    - Для SSE: max stream duration, per-user/session cap, active stream metrics.
 
-5. [ ] Перейти к stream-friendly upload/proxy paths.
+5. [x] Перейти к stream-friendly upload/proxy paths.
    - R2 staging: заменить `readFile` на stream body, ограничить concurrent staging.
    - `client/render-server.js`, если используется, должен passthrough-stream SSE/download endpoints.
+   - Статус 2026-07-04: R2 staging отправляет `createReadStream` body с `ContentLength`, R2 staging upload ограничен 2 concurrent sends на процесс, client-only Render proxy passthrough-streams SSE/PDF/attachment responses без buffered response cap.
 
 6. [ ] Улучшить deployment pipeline.
    - Render build: `npm ci --include=dev`.

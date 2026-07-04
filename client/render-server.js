@@ -39,6 +39,13 @@ export class UpstreamResponseTooLargeError extends Error {
   }
 }
 
+class DownstreamClosedError extends Error {
+  constructor(message = "Downstream response closed") {
+    super(message);
+    this.name = "DownstreamClosedError";
+  }
+}
+
 export function normalizeUpstreamOrigin(value) {
   const originText = String(value || "").trim();
   if (!originText) {
@@ -131,6 +138,23 @@ export function readSetCookieHeaders(headers) {
   return single ? [single] : [];
 }
 
+export function shouldPassthroughStreamResponse(response) {
+  const contentType = String(response.headers.get("content-type") || "")
+    .toLowerCase()
+    .trim();
+  const contentDisposition = String(
+    response.headers.get("content-disposition") || "",
+  )
+    .toLowerCase()
+    .trim();
+
+  return (
+    contentType.includes("text/event-stream") ||
+    contentType.includes("application/pdf") ||
+    contentDisposition.includes("attachment")
+  );
+}
+
 export async function readLimitedResponseBody(
   response,
   limitBytes = UPSTREAM_RESPONSE_BODY_LIMIT_BYTES,
@@ -162,6 +186,72 @@ export async function readLimitedResponseBody(
   return Buffer.concat(chunks, totalBytes);
 }
 
+function applyUpstreamResponseHeaders(upstreamResponse, res) {
+  const responseHeaders = filterResponseHeaders(upstreamResponse.headers);
+  const setCookies = readSetCookieHeaders(upstreamResponse.headers);
+  delete responseHeaders["set-cookie"];
+
+  for (const [key, value] of Object.entries(responseHeaders)) {
+    res.setHeader(key, value);
+  }
+
+  if (setCookies.length > 0) {
+    res.setHeader("set-cookie", setCookies);
+  }
+}
+
+function waitForDrainOrClose(res) {
+  if (res.destroyed || res.writableEnded) {
+    return Promise.reject(new DownstreamClosedError());
+  }
+
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      res.off("drain", onDrain);
+      res.off("close", onClose);
+      res.off("error", onError);
+    };
+    const onDrain = () => {
+      cleanup();
+      resolve();
+    };
+    const onClose = () => {
+      cleanup();
+      reject(new DownstreamClosedError());
+    };
+    const onError = (error) => {
+      cleanup();
+      reject(error);
+    };
+
+    res.once("drain", onDrain);
+    res.once("close", onClose);
+    res.once("error", onError);
+  });
+}
+
+export async function sendPassthroughResponse(upstreamResponse, res) {
+  applyUpstreamResponseHeaders(upstreamResponse, res);
+  res.status(upstreamResponse.status);
+
+  if (!upstreamResponse.body) {
+    return res.end();
+  }
+
+  for await (const chunk of upstreamResponse.body) {
+    if (res.destroyed || res.writableEnded) {
+      throw new DownstreamClosedError();
+    }
+
+    const canContinue = res.write(Buffer.from(chunk));
+    if (!canContinue) {
+      await waitForDrainOrClose(res);
+    }
+  }
+
+  return res.end();
+}
+
 export function buildDefaultAppRedirectPath(req) {
   const queryStartIndex = String(req.originalUrl || "").indexOf("?");
   return `${DEFAULT_APP_PATH}${
@@ -181,6 +271,11 @@ export function createRenderApp({
   app.use("/api", express.raw({ type: "*/*", limit: REQUEST_BODY_LIMIT }));
 
   app.use("/api", async (req, res) => {
+    const upstreamAbortController = new AbortController();
+    const abortUpstream = () => upstreamAbortController.abort();
+    res.once("close", abortUpstream);
+    res.once("error", abortUpstream);
+
     let upstreamResponse;
     try {
       upstreamResponse = await fetchImpl(
@@ -192,9 +287,16 @@ export function createRenderApp({
             ? undefined
             : req.body,
           redirect: "manual",
+          signal: upstreamAbortController.signal,
         },
       );
     } catch (error) {
+      res.off("close", abortUpstream);
+      res.off("error", abortUpstream);
+      if (upstreamAbortController.signal.aborted || res.destroyed) {
+        return;
+      }
+
       if (error instanceof InvalidProxyPathError) {
         return res.status(400).json({ error: "invalid_proxy_path" });
       }
@@ -203,31 +305,42 @@ export function createRenderApp({
       return res.status(502).json({ error: "upstream_unavailable" });
     }
 
-    let responseBody;
     try {
-      responseBody = await readLimitedResponseBody(upstreamResponse);
+      if (shouldPassthroughStreamResponse(upstreamResponse)) {
+        return await sendPassthroughResponse(upstreamResponse, res);
+      }
+
+      let responseBody;
+      try {
+        responseBody = await readLimitedResponseBody(upstreamResponse);
+      } catch (error) {
+        if (error instanceof UpstreamResponseTooLargeError) {
+          return res.status(502).json({ error: "upstream_response_too_large" });
+        }
+
+        throw error;
+      }
+
+      applyUpstreamResponseHeaders(upstreamResponse, res);
+      return res.status(upstreamResponse.status).send(responseBody);
     } catch (error) {
-      if (error instanceof UpstreamResponseTooLargeError) {
-        return res.status(502).json({ error: "upstream_response_too_large" });
+      if (
+        error instanceof DownstreamClosedError ||
+        upstreamAbortController.signal.aborted ||
+        res.destroyed
+      ) {
+        return;
       }
 
       console.error("[render-bff]", error);
-      return res.status(502).json({ error: "upstream_unavailable" });
+      if (!res.headersSent) {
+        return res.status(502).json({ error: "upstream_unavailable" });
+      }
+      return res.destroy(error);
+    } finally {
+      res.off("close", abortUpstream);
+      res.off("error", abortUpstream);
     }
-
-    const responseHeaders = filterResponseHeaders(upstreamResponse.headers);
-    const setCookies = readSetCookieHeaders(upstreamResponse.headers);
-    delete responseHeaders["set-cookie"];
-
-    for (const [key, value] of Object.entries(responseHeaders)) {
-      res.setHeader(key, value);
-    }
-
-    if (setCookies.length > 0) {
-      res.setHeader("set-cookie", setCookies);
-    }
-
-    return res.status(upstreamResponse.status).send(responseBody);
   });
 
   app.use(express.static(distDir, { index: false }));

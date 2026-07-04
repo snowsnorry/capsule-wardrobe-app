@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -11,6 +11,8 @@ import {
 } from "@aws-sdk/client-s3";
 import { buildR2Endpoint, getR2Config } from "../r2Storage.js";
 import { NODE_ENV } from "../appConfig.js";
+
+const R2_STAGING_UPLOAD_CONCURRENCY = 2;
 
 export type StagedUploadFile = {
   storage: "local" | "r2";
@@ -49,6 +51,41 @@ function canUseR2(env: NodeJS.ProcessEnv) {
   );
 }
 
+let activeR2StagingUploads = 0;
+const pendingR2StagingUploads: Array<() => void> = [];
+
+function releaseR2StagingUploadSlot() {
+  activeR2StagingUploads -= 1;
+  const next = pendingR2StagingUploads.shift();
+  if (next) {
+    next();
+  }
+}
+
+async function acquireR2StagingUploadSlot(): Promise<() => void> {
+  if (activeR2StagingUploads < R2_STAGING_UPLOAD_CONCURRENCY) {
+    activeR2StagingUploads += 1;
+    return releaseR2StagingUploadSlot;
+  }
+
+  await new Promise<void>((resolve) => {
+    pendingR2StagingUploads.push(() => {
+      activeR2StagingUploads += 1;
+      resolve();
+    });
+  });
+  return releaseR2StagingUploadSlot;
+}
+
+async function withR2StagingUploadSlot<T>(task: () => Promise<T>): Promise<T> {
+  const release = await acquireR2StagingUploadSlot();
+  try {
+    return await task();
+  } finally {
+    release();
+  }
+}
+
 async function stageFileToR2({
   filePath,
   jobId,
@@ -65,14 +102,18 @@ async function stageFileToR2({
   const config = getR2Config();
   const client = createR2Client(config);
   const key = `job-staging/${sanitizeSegment(jobId, "job")}/${index}-${sanitizeSegment(originalName, "image")}`;
-  await client.send(
-    new PutObjectCommand({
-      Bucket: config.bucketName,
-      Key: key,
-      Body: await readFile(filePath),
-      ContentType: mimeType,
-    }),
-  );
+  await withR2StagingUploadSlot(async () => {
+    const { size } = await stat(filePath);
+    await client.send(
+      new PutObjectCommand({
+        Bucket: config.bucketName,
+        Key: key,
+        Body: createReadStream(filePath),
+        ContentLength: size,
+        ContentType: mimeType,
+      }),
+    );
+  });
   return { storage: "r2", key, mimeType, originalName };
 }
 

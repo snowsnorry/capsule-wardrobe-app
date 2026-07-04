@@ -19,6 +19,27 @@ async function createTempFile(contents = "image-bytes") {
   };
 }
 
+async function waitForCondition(
+  condition: () => boolean,
+  message = "condition was not met",
+) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (condition()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error(message);
+}
+
+async function readStreamBody(body: unknown) {
+  let result = "";
+  for await (const chunk of body as Readable) {
+    result += String(chunk);
+  }
+  return result;
+}
+
 test("stageUploadFile stores local originals with sanitized durable job-scoped names", async () => {
   const {
     cleanupStagedUploadFiles,
@@ -94,8 +115,12 @@ test("stageUploadFile fails closed in production when durable R2 staging is unav
   }
 });
 
-test("R2 staging uploads originals and hydrates them back for queued processing", async () => {
-  const sends: Array<{ command: string; input: Record<string, unknown> }> = [];
+test("R2 staging streams originals and hydrates them back for queued processing", async () => {
+  const sends: Array<{
+    bodyText?: string;
+    command: string;
+    input: Record<string, unknown>;
+  }> = [];
   vi.doMock("../appConfig.js", () => ({ NODE_ENV: "production" }));
   vi.doMock("../r2Storage.js", () => ({
     buildR2Endpoint: (accountId: string) =>
@@ -134,12 +159,20 @@ test("R2 staging uploads originals and hydrates them back for queued processing"
       async send(
         command: PutObjectCommand | GetObjectCommand | DeleteObjectCommand,
       ) {
-        sends.push({
+        const record: {
+          bodyText?: string;
+          command: string;
+          input: Record<string, unknown>;
+        } = {
           command: command.constructor.name,
           input: command.input,
-        });
+        };
+        sends.push(record);
         if (command instanceof GetObjectCommand) {
           return { Body: Readable.from(["hydrated-bytes"]) };
+        }
+        if (command instanceof PutObjectCommand) {
+          record.bodyText = await readStreamBody(command.input.Body);
         }
         return {};
       }
@@ -182,10 +215,13 @@ test("R2 staging uploads originals and hydrates them back for queued processing"
       command: "PutObjectCommand",
       input: {
         Bucket: "bucket",
+        ContentLength: 8,
         ContentType: "image/png",
         Key: "job-staging/job-1/0-look-1.png",
       },
     });
+    expect(typeof (sends[0].input.Body as Readable).pipe).toBe("function");
+    expect(sends[0].bodyText).toBe("r2-bytes");
 
     const hydrated = await hydrateStagedUploadFiles([staged]);
     await expect(readFile(hydrated.files[0].filePath, "utf-8")).resolves.toBe(
@@ -213,5 +249,118 @@ test("R2 staging uploads originals and hydrates them back for queued processing"
     });
   } finally {
     await tempFile.cleanup();
+  }
+});
+
+test("R2 staging limits concurrent upload sends per process", async () => {
+  let activeUploads = 0;
+  let maxActiveUploads = 0;
+  let startedUploads = 0;
+  const releaseUploads: Array<() => void> = [];
+  vi.doMock("../appConfig.js", () => ({ NODE_ENV: "production" }));
+  vi.doMock("../r2Storage.js", () => ({
+    buildR2Endpoint: (accountId: string) =>
+      `https://${accountId}.r2.cloudflarestorage.com`,
+    getR2Config: () => ({
+      accountId: "account",
+      accessKeyId: "access",
+      bucketName: "bucket",
+      publicBaseUrl: "https://cdn.example.test",
+      secretAccessKey: "secret",
+    }),
+  }));
+  vi.doMock("@aws-sdk/client-s3", () => {
+    class DeleteObjectCommand {
+      input: Record<string, unknown>;
+
+      constructor(input: Record<string, unknown>) {
+        this.input = input;
+      }
+    }
+    class PutObjectCommand {
+      input: Record<string, unknown>;
+
+      constructor(input: Record<string, unknown>) {
+        this.input = input;
+      }
+    }
+    class GetObjectCommand {
+      input: Record<string, unknown>;
+
+      constructor(input: Record<string, unknown>) {
+        this.input = input;
+      }
+    }
+    class S3Client {
+      async send(
+        command: PutObjectCommand | GetObjectCommand | DeleteObjectCommand,
+      ) {
+        if (!(command instanceof PutObjectCommand)) {
+          return {};
+        }
+
+        activeUploads += 1;
+        startedUploads += 1;
+        maxActiveUploads = Math.max(maxActiveUploads, activeUploads);
+        try {
+          await new Promise<void>((resolve) => releaseUploads.push(resolve));
+        } finally {
+          activeUploads -= 1;
+          (command.input.Body as Readable | undefined)?.destroy();
+        }
+        return {};
+      }
+    }
+    return {
+      DeleteObjectCommand,
+      GetObjectCommand,
+      PutObjectCommand,
+      S3Client,
+    };
+  });
+  vi.stubEnv("R2_ACCOUNT_ID", "account");
+  vi.stubEnv("R2_BUCKET_NAME", "bucket");
+  vi.stubEnv("R2_ACCESS_KEY_ID", "access");
+  vi.stubEnv("R2_SECRET_ACCESS_KEY", "secret");
+  vi.stubEnv("R2_PUBLIC_BASE_URL", "https://cdn.example.test");
+
+  const { stageUploadFile } = await import("./stagedUploadStorage.js");
+  const tempFiles = await Promise.all([
+    createTempFile("one"),
+    createTempFile("two"),
+    createTempFile("three"),
+  ]);
+
+  try {
+    const uploads = tempFiles.map((tempFile, index) =>
+      stageUploadFile({
+        filePath: tempFile.filePath,
+        jobId: "job-1",
+        index,
+        mimeType: "image/png",
+        originalName: `Look ${index}.PNG`,
+      }),
+    );
+
+    await waitForCondition(
+      () => releaseUploads.length === 2,
+      "first two uploads did not start",
+    );
+    expect(activeUploads).toBe(2);
+    expect(maxActiveUploads).toBe(2);
+
+    releaseUploads.shift()?.();
+    await waitForCondition(
+      () => startedUploads === 3,
+      "third upload did not start after one slot was released",
+    );
+    expect(maxActiveUploads).toBe(2);
+
+    releaseUploads.splice(0).forEach((release) => release());
+    await Promise.all(uploads);
+    expect(maxActiveUploads).toBe(2);
+  } finally {
+    releaseUploads.splice(0).forEach((release) => release());
+    await Promise.all(tempFiles.map((tempFile) => tempFile.cleanup()));
   }
 });
