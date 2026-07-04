@@ -8,6 +8,7 @@ type RequestError = Error & {
 };
 type CacheEntry = {
   timestamp: number;
+  ttlMs: number;
   value: JsonObject;
 };
 type CachedJsonOptions = RequestInit & {
@@ -21,10 +22,65 @@ type ResponseLike = Pick<Response, "ok" | "status" | "text"> & {
 const inFlight = new Map<string, Promise<JsonObject>>();
 const cache = new Map<string, CacheEntry>();
 const CSRF_HEADER = "X-CSRF-Token";
+const MAX_CACHE_ENTRIES = 200;
 
 function getCacheKey(url: string, options?: RequestInit) {
   const method = options?.method || "GET";
   return `${method}:${url}`;
+}
+
+function isCacheEntryFresh(
+  entry: CacheEntry,
+  now: number,
+  ttlMs = entry.ttlMs,
+) {
+  return now - entry.timestamp < ttlMs;
+}
+
+function getFreshCachedValue(key: string, now: number): JsonObject | null {
+  const cached = cache.get(key);
+  if (!cached) {
+    return null;
+  }
+
+  if (!isCacheEntryFresh(cached, now)) {
+    cache.delete(key);
+    return null;
+  }
+
+  cache.delete(key);
+  cache.set(key, cached);
+  return cached.value;
+}
+
+function pruneExpiredCacheEntries(now: number) {
+  for (const [key, entry] of cache) {
+    if (!isCacheEntryFresh(entry, now)) {
+      cache.delete(key);
+    }
+  }
+}
+
+function trimCacheToMaxSize() {
+  while (cache.size > MAX_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey === undefined) {
+      return;
+    }
+    cache.delete(oldestKey);
+  }
+}
+
+function setCachedValue(
+  key: string,
+  value: JsonObject,
+  timestamp: number,
+  ttlMs: number,
+) {
+  cache.delete(key);
+  cache.set(key, { value, timestamp, ttlMs });
+  pruneExpiredCacheEntries(timestamp);
+  trimCacheToMaxSize();
 }
 
 function tryParseJson(text: string): JsonValue | null {
@@ -150,16 +206,18 @@ async function getCachedJson(
 ): Promise<JsonObject> {
   const key = getCacheKey(url, options);
   const now = Date.now();
-  const cached = cache.get(key);
-  if (!force && cached && now - cached.timestamp < ttlMs) {
-    return cached.value;
+  if (!force) {
+    const cachedValue = getFreshCachedValue(key, now);
+    if (cachedValue) {
+      return cachedValue;
+    }
   }
 
   if (force || !inFlight.has(key)) {
     const promise = requestJson(url, options)
       .then((value) => {
         if (inFlight.get(key) === promise) {
-          cache.set(key, { value, timestamp: Date.now() });
+          setCachedValue(key, value, Date.now(), ttlMs);
         }
         return value;
       })
@@ -171,7 +229,7 @@ async function getCachedJson(
     inFlight.set(key, promise);
   }
 
-  return inFlight.get(key);
+  return inFlight.get(key) as Promise<JsonObject>;
 }
 
 function clearRequestCache() {

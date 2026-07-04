@@ -49,6 +49,7 @@ describe("request api", () => {
 
   afterEach(() => {
     clearRequestCache();
+    vi.useRealTimers();
   });
 
   test("request injects csrf header for state-changing methods", async () => {
@@ -147,6 +148,138 @@ describe("request api", () => {
       getCachedJson("/profile/me", { ttlMs: 1000 }),
     ).resolves.toEqual({ hasProfile: false });
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("getCachedJson evicts expired entries before serving cache hits", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        createResponse({
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ version: 1 }),
+        }) as Response,
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ version: 2 }),
+        }) as Response,
+      );
+
+    await expect(getCachedJson("/profile/me", { ttlMs: 100 })).resolves.toEqual(
+      { version: 1 },
+    );
+
+    vi.setSystemTime(1_150);
+
+    await expect(getCachedJson("/profile/me", { ttlMs: 100 })).resolves.toEqual(
+      { version: 2 },
+    );
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("getCachedJson preserves valid long ttl entries while pruning expired short ttl entries", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    vi.mocked(fetch).mockImplementation(
+      async (url) =>
+        createResponse({
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ url: String(url) }),
+        }) as Response,
+    );
+
+    await getCachedJson("/search/product?url=one", { ttlMs: 60_000 });
+    await getCachedJson("/search/options", { ttlMs: 100 });
+
+    vi.setSystemTime(1_150);
+    await getCachedJson("/jobs?status=active", { ttlMs: 500 });
+    await getCachedJson("/search/product?url=one", { ttlMs: 60_000 });
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  test("getCachedJson uses the stored ttl for cache hits", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        createResponse({
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ version: 1 }),
+        }) as Response,
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ version: 2 }),
+        }) as Response,
+      );
+
+    await getCachedJson("/profile/me", { ttlMs: 100 });
+
+    vi.setSystemTime(1_150);
+
+    await expect(
+      getCachedJson("/profile/me", { ttlMs: 60_000 }),
+    ).resolves.toEqual({ version: 2 });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("getCachedJson promotes cache hits and evicts least recently used entries", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    vi.mocked(fetch).mockImplementation(
+      async (url) =>
+        createResponse({
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ url: String(url) }),
+        }) as Response,
+    );
+
+    for (let index = 0; index < 200; index += 1) {
+      await getCachedJson(`/cached/${index}`, { ttlMs: 60_000 });
+    }
+    expect(fetch).toHaveBeenCalledTimes(200);
+
+    await getCachedJson("/cached/0", { ttlMs: 60_000 });
+    expect(fetch).toHaveBeenCalledTimes(200);
+
+    await getCachedJson("/cached/200", { ttlMs: 60_000 });
+    expect(fetch).toHaveBeenCalledTimes(201);
+
+    await getCachedJson("/cached/1", { ttlMs: 60_000 });
+    expect(fetch).toHaveBeenCalledTimes(202);
+
+    await getCachedJson("/cached/0", { ttlMs: 60_000 });
+    expect(fetch).toHaveBeenCalledTimes(202);
+  });
+
+  test("getCachedJson promotes forced refreshes before trimming the cache", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    vi.mocked(fetch).mockImplementation(
+      async (url) =>
+        createResponse({
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ url: String(url) }),
+        }) as Response,
+    );
+
+    for (let index = 0; index < 200; index += 1) {
+      await getCachedJson(`/cached/${index}`, { ttlMs: 60_000 });
+    }
+    expect(fetch).toHaveBeenCalledTimes(200);
+
+    await getCachedJson("/cached/0", { force: true, ttlMs: 60_000 });
+    expect(fetch).toHaveBeenCalledTimes(201);
+
+    await getCachedJson("/cached/200", { ttlMs: 60_000 });
+    expect(fetch).toHaveBeenCalledTimes(202);
+
+    await getCachedJson("/cached/0", { ttlMs: 60_000 });
+    expect(fetch).toHaveBeenCalledTimes(202);
   });
 
   test("getCachedJson force bypasses stale in-flight requests", async () => {

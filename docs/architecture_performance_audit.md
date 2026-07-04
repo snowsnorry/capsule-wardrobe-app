@@ -302,7 +302,7 @@
 2. [x] Виртуализировать карточки в длинных списках.
    - Wardrobe grid и другие card-based lists: windowing/virtualization или server-side pagination.
 
-3. [ ] Сделать bounded client cache.
+3. [x] Сделать bounded client cache.
    - Для `getCachedJson` добавить max size и LRU/TTL eviction.
    - Ключ расширить только тогда, когда появятся GET-варианты с разными headers/options.
 
