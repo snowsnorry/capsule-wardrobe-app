@@ -351,7 +351,7 @@ MCP OAuth state is persisted in Postgres through `mcp_oauth_authorization_codes`
 
 This repo supports a single Render web service that builds the client and serves it from the Express backend.
 
-- build command: `npm install --include=dev && npm run build`
+- build command: `npm ci --include=dev && npm run build`
 - start command: `npm run start`
 - health check path: `/health`
 

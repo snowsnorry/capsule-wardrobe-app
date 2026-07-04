@@ -379,6 +379,7 @@ test("production startup serves static files, spa html, and api 404s when client
   const assetStaticMiddleware = (_req, _res, next) => next();
   const staticMiddleware = (_req, _res, next) => next();
   const staticCalls = [];
+  const readFilePaths: string[] = [];
 
   await createStartServer(app)({
     nodeEnv: "production",
@@ -393,6 +394,7 @@ test("production startup serves static files, spa html, and api 404s when client
         : staticMiddleware;
     },
     readFileImpl: (async (filePath) => {
+      readFilePaths.push(filePath);
       expect(filePath).toBe("/dist/client/index.html");
       return "<html>";
     }) as unknown as typeof fs.promises.readFile,
@@ -465,6 +467,14 @@ test("production startup serves static files, spa html, and api 404s when client
     "Content-Type": "text/html",
   });
   expect(pageResponse.body).toBe("<html>:meta:/share/abc");
+
+  const outfitResponse = createResponse();
+  await handler({ path: "/outfit/saved-1" }, outfitResponse, (error) =>
+    nextCalls.push(error),
+  );
+  expect(outfitResponse.statusCode).toBe(200);
+  expect(outfitResponse.body).toBe("<html>:meta:/outfit/saved-1");
+  expect(readFilePaths).toEqual(["/dist/client/index.html"]);
   expect(nextCalls).toEqual([]);
 });
 

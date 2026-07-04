@@ -141,7 +141,7 @@
 - Schema bootstrap выполняется перед `listen`, что удобно для dev, но может увеличивать cold start и скрывать migration latency.
 - Web process и pg-boss worker живут в одном service по умолчанию. AI/image/PDF jobs могут влиять на HTTP latency.
 - Observability минимальная: нет структурированных request logs, request id, latency metrics, queue metrics endpoint.
-- `quality:gate` не включает production build; Render build использует `npm install --include=dev` вместо lockfile-strict `npm ci --include=dev`.
+- Статус 2026-07-04: `quality:gate` включает production build; Render build использует lockfile-strict `npm ci --include=dev`.
 
 Последствие: deploy может быть "green", но фактически сломан по DB/auth; production incidents будет сложнее диагностировать; job bursts могут ухудшать HTTP.
 
@@ -315,11 +315,12 @@
    - `client/render-server.js`, если используется, должен passthrough-stream SSE/download endpoints.
    - Статус 2026-07-04: R2 staging отправляет `createReadStream` body с `ContentLength`, R2 staging upload ограничен 2 concurrent sends на процесс, client-only Render proxy passthrough-streams SSE/PDF/attachment responses без buffered response cap.
 
-6. [ ] Улучшить deployment pipeline.
+6. [x] Улучшить deployment pipeline.
    - Render build: `npm ci --include=dev`.
    - Cron cleanup: server-only build или общий artifact.
    - CI/quality gate: добавить production build.
    - SPA fallback: кэшировать base `index.html` template в памяти.
+   - Статус 2026-07-04: Render web build переведен на `npm ci --include=dev && npm run build`, cron cleanup собирает только server workspace после `npm ci`, `quality:gate` запускает production build до coverage, production SPA fallback переиспользует memoized `index.html` template и сохраняет per-request metadata injection.
 
 7. [ ] Добавить observability baseline.
    - Request id, structured JSON logs, latency/status logs.

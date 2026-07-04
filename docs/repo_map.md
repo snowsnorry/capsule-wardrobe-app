@@ -265,7 +265,7 @@ The Playwright auth state is generated at `tests/e2e/.auth/user.json` and is int
 - `npm run quality:unused` — unused file/dependency/export checks
 - `npm run quality:large-files` — list largest source files
 - `npm run quality:large-files:strict` — fail on files over configured size thresholds
-- `npm run quality:gate` — strict lint, typecheck, coverage, dependency checks, large-file strict check, format check, unused-code check, and Playwright e2e tests
+- `npm run quality:gate` — strict lint, typecheck, production build, coverage, dependency checks, large-file strict check, format check, unused-code check, and Playwright e2e tests
 - `npm run quality` — full quality gate plus the large-file report
 - `npm run security:audit` — npm audit with high severity threshold
 - `npm run screenshots` — capture desktop and mobile screenshots against the isolated e2e server

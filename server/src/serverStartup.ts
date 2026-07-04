@@ -102,6 +102,18 @@ function configureProductionApp({
   isApiPathImpl,
   readFileImpl,
 }) {
+  const indexHtmlPath = path.join(clientDistPath, "index.html");
+  let indexHtmlTemplatePromise: Promise<string> | null = null;
+  const readIndexHtmlTemplate = () => {
+    indexHtmlTemplatePromise ??= readFileImpl(indexHtmlPath, "utf-8").catch(
+      (error) => {
+        indexHtmlTemplatePromise = null;
+        throw error;
+      },
+    );
+    return indexHtmlTemplatePromise;
+  };
+
   appInstance.use(
     "/assets",
     expressStaticImpl(path.join(clientDistPath, "assets"), {
@@ -126,10 +138,7 @@ function configureProductionApp({
       return res.status(404).json({ error: "not_found" });
     }
     try {
-      const html = await readFileImpl(
-        path.join(clientDistPath, "index.html"),
-        "utf-8",
-      );
+      const html = await readIndexHtmlTemplate();
       const htmlWithMetaTags = await injectSharedCapsuleMetaTagsImpl(
         html,
         req,
