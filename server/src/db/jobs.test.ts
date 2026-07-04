@@ -270,6 +270,22 @@ test("job mutation helpers update lifecycle state and parse nullable JSON object
   expect(getSqlText(3)).toContain("insert into job_events");
 });
 
+test("job mutation helpers return null when lifecycle transitions are not applicable", async () => {
+  coreApi.sql.mockResolvedValueOnce([]);
+  await expect(markJobRunStarted("job-1")).resolves.toBeNull();
+
+  coreApi.sql.mockResolvedValueOnce([]);
+  await expect(updateJobRunProgress({ id: "job-1" })).resolves.toBeNull();
+
+  coreApi.sql.mockResolvedValueOnce([]);
+  await expect(markJobRunCompleted({ id: "job-1" })).resolves.toBeNull();
+
+  coreApi.sql.mockResolvedValueOnce([]);
+  await expect(
+    markJobRunFailed({ id: "job-1", errorCode: "not_running" }),
+  ).resolves.toBeNull();
+});
+
 test("job event helpers append replayable events and cleanup profile-owned rows", async () => {
   coreApi.sql.mockResolvedValueOnce([eventRow()]);
   await expect(
@@ -339,6 +355,16 @@ test("job event helpers append replayable events and cleanup profile-owned rows"
       originalName: "source.png",
     },
   ]);
+});
+
+test("job event helpers handle empty append and replay results", async () => {
+  coreApi.sql.mockResolvedValueOnce([]);
+  await expect(
+    appendJobEvent({ jobId: "job-1", eventType: "progress" }),
+  ).resolves.toBeNull();
+
+  coreApi.sql.mockResolvedValueOnce(null);
+  await expect(listJobEventsAfter({ jobId: "job-1" })).resolves.toEqual([]);
 });
 
 test("getJobRunMetrics maps aggregate counts and stuck jobs", async () => {
