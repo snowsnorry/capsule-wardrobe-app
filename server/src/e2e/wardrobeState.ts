@@ -91,6 +91,10 @@ class E2eWardrobeMemory {
     return source === "from_catalog" ? [] : deepClone(this.uploadedItems);
   }
 
+  countItems(source: unknown) {
+    return this.listItems(source).length;
+  }
+
   updateMetadata(payload) {
     const id = String(payload?.id || "").trim();
     const index = this.uploadedItems.findIndex((item) => item.id === id);
@@ -208,7 +212,10 @@ function buildE2eUrlProcessingResult(url: unknown, inputIndex: number) {
 
 function createE2ePersistenceDependencies(memory: E2eWardrobeMemory) {
   return {
+    countWardrobeItemsImpl: async (payload) =>
+      memory.countItems(payload?.source),
     listWardrobeItemsImpl: async (payload) => memory.listItems(payload?.source),
+    listWardrobeItemsPageImpl: undefined,
     saveUploadedWardrobeItemsImpl: async (payload) =>
       memory.saveUploadedItems(
         String(payload?.email || E2E_EMAIL),
