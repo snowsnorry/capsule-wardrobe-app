@@ -67,6 +67,7 @@ async function applyCapsuleFilters(context: AppActionContext) {
     const result = (await updateCapsuleFilters(capsuleId, draft.filters, {
       regenerate: true,
     })) as CapsuleMutationResponse;
+    throwIfFilterRegenerationFailed(result);
     applyFilterUpdateResult(context, result, draft, capsuleId);
     await refreshCapsuleList(context);
     startFilterRegeneration(context, result, capsuleId);
@@ -98,6 +99,17 @@ async function applyCapsuleFilters(context: AppActionContext) {
       "setIsContentOperationLoading",
     )(false);
   }
+}
+
+function throwIfFilterRegenerationFailed(result: CapsuleMutationResponse) {
+  if (result?.job?.status !== "failed") return;
+  throw new Error(result.job.error?.code || "service_unavailable");
+}
+
+function shouldStartFilterRegenerationStream(result: CapsuleMutationResponse) {
+  if (result?.status === "pending") return true;
+  const job = result?.job;
+  return Boolean(job && job.kind === "capsuleGenerate");
 }
 
 function applyFilterUpdateResult(
@@ -139,7 +151,7 @@ function startFilterRegeneration(
   capsuleId: string,
 ) {
   fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(true);
-  if (result?.status === "pending") {
+  if (shouldStartFilterRegenerationStream(result)) {
     fromContext<(kind: string) => void>(
       context,
       "startPendingNotificationFlow",

@@ -15,6 +15,7 @@ vi.mock("./config", () => ({
 }));
 vi.mock("@microsoft/fetch-event-source", () => eventSourceApi);
 
+import { addJobSnapshotListener } from "./jobs";
 import {
   createCapsule,
   deleteCapsule,
@@ -36,12 +37,12 @@ import {
   updateCapsuleRejectedUrls,
 } from "./capsules";
 
-function createJobResponse(id = "job-1") {
+function createJobResponse(id = "job-1", kind = "capsuleReportGenerate") {
   return {
     ok: true,
     job: {
       id,
-      kind: "capsuleReportGenerate",
+      kind,
       status: "queued",
       phase: "queued",
       progress: { current: 0, total: null, label: null },
@@ -190,11 +191,47 @@ describe("capsules api", () => {
   });
 
   test("updateCapsuleFilters appends only regenerate query flag when requested", async () => {
-    await updateCapsuleFilters(
-      "capsule-1",
-      { audience: "woman" },
-      { regenerate: true },
+    requestApi.requestJson.mockResolvedValueOnce(
+      createJobResponse("job-1", "capsuleGenerate"),
     );
+    const onSnapshot = vi.fn();
+    const unsubscribe = addJobSnapshotListener(onSnapshot);
+
+    await expect(
+      updateCapsuleFilters(
+        "capsule-1",
+        { audience: "woman" },
+        { regenerate: true },
+      ),
+    ).resolves.toEqual(createJobResponse("job-1", "capsuleGenerate"));
+    unsubscribe();
+
+    expect(onSnapshot).toHaveBeenCalledWith(
+      createJobResponse("job-1", "capsuleGenerate").job,
+    );
+    expect(requestApi.requestJson).toHaveBeenCalledWith(
+      "https://api.example.test/capsules/capsule-1/filters?regenerate=true",
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filters: { audience: "woman" },
+        }),
+      },
+    );
+  });
+
+  test("updateCapsuleFilters preserves non-job mutation responses", async () => {
+    requestApi.requestJson.mockResolvedValueOnce({ ok: true });
+
+    await expect(
+      updateCapsuleFilters(
+        "capsule-1",
+        { audience: "woman" },
+        { regenerate: true },
+      ),
+    ).resolves.toEqual({ ok: true });
 
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/capsules/capsule-1/filters?regenerate=true",

@@ -1,5 +1,11 @@
 import { expect, test } from "./test";
 
+const readyProducts = [
+  "E2E Ready linen blazer",
+  "E2E Ready tailored trousers",
+  "E2E Ready almond loafers",
+];
+
 test("wardrobe regeneration uses mocked server response", async ({
   page,
   resetAndLogin,
@@ -13,7 +19,9 @@ test("wardrobe regeneration uses mocked server response", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "Regenerate" }).click();
 
-  await expect(
-    page.getByRole("button", { name: "Navy relaxed shirt", exact: true }),
-  ).toBeVisible();
+  for (const productName of readyProducts) {
+    await expect(
+      page.getByRole("button", { name: productName, exact: true }),
+    ).toBeVisible();
+  }
 });

@@ -60,20 +60,46 @@ function applyReadyWardrobeFixture(
   );
 }
 
-function codedError(code: string) {
-  const error = new Error(code) as Error & { code?: string };
+function codedError(
+  code: string,
+  options: { suppressJobHandlerLog?: boolean } = {},
+) {
+  const error = new Error(code) as Error & {
+    code?: string;
+    suppressJobHandlerLog?: boolean;
+  };
   error.code = code;
+  if (options.suppressJobHandlerLog) {
+    error.suppressJobHandlerLog = true;
+  }
   return error;
 }
 
 async function runCapsuleGenerationJobImpl(
   state: E2eSearchAndGenerationState,
-  { capsuleId }: { capsuleId: unknown },
+  { capsuleId, email }: { capsuleId: unknown; email?: unknown },
 ) {
   const failure = state.generationMemory.consumeFailureOnce();
   if (failure) {
-    throw codedError("service_unavailable");
+    throw codedError("service_unavailable", { suppressJobHandlerLog: true });
   }
+
+  if (state.generationMemory.mode === "pending") {
+    const job = state.generationMemory.createPendingWardrobeJob({
+      capsuleMemory: state.capsuleMemory,
+      capsuleId,
+      email,
+    });
+    if (!job) {
+      throw codedError("not_found");
+    }
+    return {
+      capsuleId: normalizeCapsuleId(capsuleId),
+      pendingStage: "capsule",
+      status: "pending",
+    };
+  }
+
   const capsule = applyReadyWardrobeFixture(state, capsuleId);
   if (!capsule) {
     throw codedError("not_found");

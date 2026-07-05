@@ -447,6 +447,12 @@ export type OutfitListResponse = {
 export type CapsuleMutationResponse = {
   capsule?: CapsuleMeta | null;
   activeCapsule?: CapsuleMeta | null;
+  job?: {
+    error?: { code?: string | null; message?: string | null } | null;
+    id?: string;
+    kind?: string;
+    status?: string;
+  } | null;
   status?: string;
 };
 

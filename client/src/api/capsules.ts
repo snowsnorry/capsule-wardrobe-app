@@ -111,13 +111,14 @@ async function updateCapsuleFilters(
   id: string,
   filters: CapsuleFilters,
   options: CapsuleFiltersOptions = {},
-): Promise<CapsuleResponse> {
-  return requestJson(buildCapsuleFiltersUrl(id, options), {
+): Promise<CapsuleResponse | JobResponse> {
+  const response = await requestJson(buildCapsuleFiltersUrl(id, options), {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filters }),
   });
+  return response?.job ? parseTrackedJobResponse(response) : response;
 }
 
 function buildCapsuleFiltersUrl(

@@ -59,12 +59,12 @@ vi.mock("../api/capsules", () => ({
   updateCapsuleFilters: vi.fn(),
 }));
 
-function createJobResponse(id = "job-1") {
+function createJobResponse(id = "job-1", kind = "capsuleReportGenerate") {
   return {
     ok: true,
     job: {
       id,
-      kind: "capsuleReportGenerate",
+      kind,
       status: "queued",
       phase: "queued",
       progress: { current: 0, total: null, label: null },
@@ -442,8 +442,7 @@ describe("capsuleActions", () => {
 
   test("applyCapsuleFilters handles pending and failing regeneration", async () => {
     vi.mocked(updateCapsuleFilters).mockResolvedValueOnce({
-      status: "pending",
-      capsule: createTestCapsule(),
+      ...createJobResponse("job-1", "capsuleGenerate"),
     });
     const context = createActionContext();
 
