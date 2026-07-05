@@ -1,5 +1,6 @@
 import { requestJson } from "./request";
 import type { JsonObject } from "./request";
+import { parseTrackedJobResponse, type JobResponse } from "./jobs";
 import {
   buildOutfitListQuery,
   outfitIdPath,
@@ -198,11 +199,14 @@ async function deleteOutfit(id: string): Promise<OutfitResponse> {
   });
 }
 
-async function generateOutfitImage(id: string): Promise<OutfitResponse> {
-  return requestJson(outfitUrl(`${outfitIdPath(id)}/image`), {
+async function generateOutfitImage(
+  id: string,
+): Promise<OutfitResponse | JobResponse> {
+  const response = await requestJson(outfitUrl(`${outfitIdPath(id)}/image`), {
     method: "POST",
     credentials: "include",
   });
+  return response?.job ? parseTrackedJobResponse(response) : response;
 }
 
 async function deleteOutfitImage(id: string): Promise<OutfitResponse> {

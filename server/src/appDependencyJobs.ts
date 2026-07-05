@@ -9,6 +9,8 @@ import { createJobQueue } from "./jobs/jobQueue.js";
 import {
   getJobMetrics,
   getOwnedJobSnapshot,
+  listActiveJobsForEntity,
+  listActiveJobSnapshotsForEntity,
   listOwnedJobSnapshots,
   replayJobEvents,
 } from "./jobs/jobStore.js";
@@ -28,11 +30,14 @@ export function createJobDependencies(deps: Record<string, unknown>) {
     deps,
     enabled: JOB_WORKER_ENABLED,
     reconcilePendingProviderJobs: queue.reconcilePendingProviderJobs,
+    reconcileStaleRunningJobs: queue.reconcileStaleRunningJobs,
   });
   return {
     enqueueJobImpl: queue.enqueue,
     getJobMetricsImpl: getJobMetrics,
     getJobSnapshotImpl: getOwnedJobSnapshot,
+    listActiveJobsForEntityImpl: listActiveJobsForEntity,
+    listActiveJobSnapshotsForEntityImpl: listActiveJobSnapshotsForEntity,
     listJobEventsAfterImpl: replayJobEvents,
     listJobSnapshotsImpl: listOwnedJobSnapshots,
     startJobWorkersImpl: worker.start,

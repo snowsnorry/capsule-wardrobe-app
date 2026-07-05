@@ -244,6 +244,36 @@ function capsuleDependencies(state: E2eState) {
   };
 }
 
+function createE2eGenerateOutfitImageHandler(state: E2eState) {
+  return async (req, res) => {
+    const outfitId = String(req.params?.id || "").trim();
+    const image = e2eImageUrl(
+      `generated-saved-outfit-${outfitId}-${state.outfitImageCounter + 1}`,
+    );
+    state.outfitImageCounter += 1;
+    const outfit = state.outfitMemory.setImage(outfitId, image, false);
+    if (!outfit) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.json({ ok: true, status: "ready", image });
+  };
+}
+
+async function runE2eOutfitImageGenerationJob(state: E2eState, outfitId) {
+  const normalizedOutfitId = String(outfitId || "").trim();
+  const image = e2eImageUrl(
+    `generated-saved-outfit-${normalizedOutfitId}-${state.outfitImageCounter + 1}`,
+  );
+  state.outfitImageCounter += 1;
+  const outfit = state.outfitMemory.setImage(normalizedOutfitId, image, false);
+  if (!outfit) {
+    const error = new Error("not_found") as Error & { code?: string };
+    error.code = "not_found";
+    throw error;
+  }
+  return { outfitId: normalizedOutfitId };
+}
+
 function outfitDependencies(state: E2eState) {
   return {
     listRecentOutfitsImpl: async (_email, limit = 10, offset = 0) =>
@@ -267,18 +297,9 @@ function outfitDependencies(state: E2eState) {
     duplicateOutfitImpl: async (_email, id, name) =>
       state.outfitMemory.duplicate(id, name),
     deleteOutfitImpl: async (_email, id) => state.outfitMemory.delete(id),
-    generateOutfitImageHandler: async (req, res) => {
-      const outfitId = String(req.params?.id || "").trim();
-      const image = e2eImageUrl(
-        `generated-saved-outfit-${outfitId}-${state.outfitImageCounter + 1}`,
-      );
-      state.outfitImageCounter += 1;
-      const outfit = state.outfitMemory.setImage(outfitId, image, false);
-      if (!outfit) {
-        return res.status(404).json({ error: "not_found" });
-      }
-      return res.json({ ok: true, status: "ready", image });
-    },
+    generateOutfitImageHandler: createE2eGenerateOutfitImageHandler(state),
+    runOutfitImageGenerationJobImpl: async ({ outfitId }) =>
+      runE2eOutfitImageGenerationJob(state, outfitId),
     deleteOutfitImageHandler: async (req, res) => {
       const outfit = state.outfitMemory.setImage(req.params?.id, null, false);
       if (!outfit) {

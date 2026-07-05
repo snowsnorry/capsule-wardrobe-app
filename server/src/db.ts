@@ -138,10 +138,12 @@ export {
   getJobRunByIdForEmail,
   getJobRunMetrics,
   listJobEventsAfter,
+  listActiveJobRunsForEntity,
   listJobRunsForEmail,
   markJobRunCompleted,
   markJobRunFailed,
   markJobRunStarted,
+  markStaleRunningJobRunsFailed,
   setJobRunProviderJobId,
   updateJobRunProgress,
 } from "./db/jobs.js";

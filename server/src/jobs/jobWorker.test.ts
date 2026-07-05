@@ -67,6 +67,7 @@ test("job worker starts queued jobs, reports progress, and completes successful 
   };
   storeApi.startJobRun.mockResolvedValue(job);
   storeApi.writeJobProgress.mockResolvedValue(job);
+  const reconcileStaleRunningJobs = vi.fn(async () => undefined);
   handlerApi.runJobHandler.mockImplementation(async (_deps, context) => {
     await context.updateProgress({ phase: "running", current: 1 });
     return { ok: true };
@@ -77,10 +78,15 @@ test("job worker starts queued jobs, reports progress, and completes successful 
     deps: { marker: true },
     enabled: true,
     reconcilePendingProviderJobs,
+    reconcileStaleRunningJobs,
   }).start();
   await workerHandler?.({ data: { jobId: "job-1" } });
 
   expect(reconcilePendingProviderJobs).toHaveBeenCalledTimes(1);
+  expect(reconcileStaleRunningJobs).toHaveBeenCalledTimes(1);
+  expect(reconcileStaleRunningJobs.mock.invocationCallOrder[0]).toBeLessThan(
+    reconcilePendingProviderJobs.mock.invocationCallOrder[0],
+  );
   expect(storeApi.startJobRun).toHaveBeenCalledWith("job-1");
   expect(handlerApi.runJobHandler).toHaveBeenCalledWith(
     { marker: true },

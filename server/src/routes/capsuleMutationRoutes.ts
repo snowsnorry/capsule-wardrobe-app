@@ -1,4 +1,6 @@
 import { logError } from "../logger.js";
+import { hashCapsuleContent } from "../db.js";
+import { getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
 import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
 import { registerCapsuleLifecycleRoutes } from "./capsuleLifecycleRoutes.js";
 import { registerCapsulePdfRoute } from "./capsulePdfRoute.js";
@@ -30,6 +32,12 @@ function isInvalidPayloadError(error) {
   return (
     error?.code === "invalid_payload" || error?.message === "invalid_payload"
   );
+}
+
+function buildCapsuleGenerateDedupeKey(capsuleId, capsule) {
+  return `capsuleGenerate:${capsuleId}:${hashCapsuleContent(
+    getEffectiveCapsuleSnapshot(capsule),
+  )}`;
 }
 
 async function handleCapsuleCreate(req, res, context) {
@@ -99,7 +107,16 @@ async function handleCapsuleFiltersUpdate(req, res, context) {
     }
 
     if (context.isTruthyQueryFlag(req.query?.regenerate)) {
-      return context.regenerateCapsuleWardrobeHandler(req, res);
+      const job = await enqueueRouteJob(context, {
+        kind: "capsuleGenerate",
+        profileEmail: req.user.email,
+        entity: { type: "capsule", id: String(req.params.id || "") },
+        dedupeKey: buildCapsuleGenerateDedupeKey(req.params.id, capsule),
+        phase: "queued",
+        payload: { capsuleId: req.params.id },
+        progressLabel: "Generating capsule",
+      });
+      return sendQueuedJob(res, job);
     }
 
     return sendCapsuleMutationResponse(req, res, capsule, context);

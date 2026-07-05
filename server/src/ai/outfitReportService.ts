@@ -20,6 +20,7 @@ import {
 } from "./outfitReportServiceDeps.js";
 import type { OutfitReport, OutfitReportItem } from "./outfitReportTypes.js";
 import { parseOutfitReportLlmOutput } from "./outfitReportValidation.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 const OUTFIT_REPORT_SCHEMA_VERSION = 1;
 
@@ -155,16 +156,20 @@ async function generateAndPersistReport({
   context,
   deps,
   email,
+  signal,
 }: {
   context: OutfitReportContext;
   deps: OutfitReportServiceDeps;
   email: string;
+  signal?: AbortSignal | null;
 }) {
+  throwIfAborted(signal);
   const { normalizedOutfitId, profile, reportItems } = context;
   const collage = await buildOutfitReportCollage({
     items: context.items,
     deps,
   });
+  throwIfAborted(signal);
   const prompt = renderOutfitReportPrompt(reportItems);
   deps.saveLastPromptArtifactsImpl({
     prompt,
@@ -179,8 +184,10 @@ async function generateAndPersistReport({
     userProfile: profile,
     format: buildOutfitReportFormat(),
     images: [collage],
+    signal,
     systemPrompt: OUTFIT_REPORT_SYSTEM_PROMPT,
   });
+  throwIfAborted(signal);
   const parsedReport = parseOutfitReportLlmOutput(json, {
     itemCount: reportItems.length,
     itemIds: reportItems.map((item) => item.id),
@@ -213,6 +220,7 @@ async function generateOutfitReport(
   email: string,
   outfitId: string,
   deps: OutfitReportServiceDepsOverrides = {},
+  options: { signal?: AbortSignal | null } = {},
 ): Promise<OutfitReport> {
   const resolvedDeps = createOutfitReportServiceDeps(deps);
   const context = await buildOutfitReportContext({
@@ -225,6 +233,7 @@ async function generateOutfitReport(
       context,
       deps: resolvedDeps,
       email,
+      signal: options.signal,
     });
   } catch (error) {
     if (isOutfitReportDomainError(error)) throw error;

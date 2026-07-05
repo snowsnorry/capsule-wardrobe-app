@@ -27,6 +27,7 @@ type WardrobeServiceDependencies = {
   generateCapsuleWardrobeImpl?: (
     userProfile?: UserProfileLike | null,
     logContext?: LogContextLike | null,
+    options?: { signal?: AbortSignal | null },
   ) => Promise<WardrobeGenerationResult>;
   shouldGenerateSwimwearImpl?: typeof shouldGenerateSwimwear;
   shouldCompleteSelectedSwimwearImpl?: typeof shouldCompleteSelectedSwimwear;

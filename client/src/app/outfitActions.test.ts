@@ -460,6 +460,66 @@ describe("outfitActions", () => {
     });
   });
 
+  test("waits for queued saved outfit image jobs and refreshes on completion", async () => {
+    vi.mocked(generateOutfitImage).mockResolvedValueOnce({
+      ok: true,
+      job: { id: "image-job-1", status: "queued" },
+    });
+    vi.mocked(fetchOutfit).mockResolvedValue({ outfit });
+    const context = createActionContext({
+      activeOutfitId: "outfit-1",
+      setActiveOutfitId: vi.fn(),
+      setActiveOutfitMeta: vi.fn(),
+      setIsOutfitImagePending: vi.fn(),
+      setOutfitList: vi.fn(),
+      setOutfitPagination: vi.fn(),
+      waitForJobCompletion: vi.fn(async () => ({ status: "completed" })),
+    });
+
+    await generateCurrentOutfitImage(context, "outfit-1");
+
+    expect(context.waitForJobCompletion).toHaveBeenCalledWith("image-job-1");
+    await vi.waitFor(() => {
+      expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
+    });
+    expect(context.setActiveOutfitMeta).toHaveBeenCalledWith(outfit);
+    expect(context.setIsOutfitImagePending).toHaveBeenNthCalledWith(1, true);
+    await vi.waitFor(() => {
+      expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
+    });
+  });
+
+  test("reports queued saved outfit image job failures", async () => {
+    vi.mocked(generateOutfitImage).mockResolvedValueOnce({
+      ok: true,
+      job: { id: "image-job-1", status: "queued" },
+    });
+    const context = createActionContext({
+      resolveErrorMessage: vi.fn(() => "image failed"),
+      setIsOutfitImagePending: vi.fn(),
+      setStatus: vi.fn(),
+      waitForJobCompletion: vi.fn(async () => ({
+        status: "failed",
+        error: { code: "image_failed" },
+      })),
+    });
+
+    await generateCurrentOutfitImage(context, "outfit-1");
+
+    expect(context.waitForJobCompletion).toHaveBeenCalledWith("image-job-1");
+    await vi.waitFor(() => {
+      expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
+    });
+    expect(fetchOutfit).not.toHaveBeenCalled();
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-1)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "image failed",
+    });
+    expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
+  });
+
   test("generates and deletes outfit reports with pending state and errors", async () => {
     vi.mocked(generateOutfitReport).mockResolvedValueOnce({
       ...createJobResponse(),

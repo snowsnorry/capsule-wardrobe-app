@@ -32,6 +32,47 @@ import { createCapsuleEventHandlers } from "./capsuleEventHttp.js";
 import { createRateLimiters, createRequestGuards } from "./appMiddleware.js";
 import { annotateLikedItems } from "./routes/likedItemsRoutes.js";
 
+function createGetPersistedCapsuleJob(listActiveJobSnapshotsForEntityImpl) {
+  return async (email, capsuleId, kinds) => {
+    const jobs = await listActiveJobSnapshotsForEntityImpl({
+      email,
+      entityType: "capsule",
+      entityId: capsuleId,
+      kinds,
+    });
+    return jobs[0] || null;
+  };
+}
+
+function createGetPersistedOutfitJob(listActiveJobSnapshotsForEntityImpl) {
+  return async (email, outfitId, kinds) => {
+    const jobs = await listActiveJobSnapshotsForEntityImpl({
+      email,
+      entityType: "outfit",
+      entityId: outfitId,
+      kinds,
+    });
+    return jobs[0] || null;
+  };
+}
+
+function createGetPersistedOutfitSetImageJob(listActiveJobsForEntityImpl) {
+  return async (email, capsuleId) => {
+    const jobs = await listActiveJobsForEntityImpl({
+      email,
+      entityType: "capsule",
+      entityId: capsuleId,
+      kinds: ["outfitSetImageGenerate"],
+    });
+    const pendingSetIndexes = jobs
+      .map((job) => Number.parseInt(String(job.payload?.setIndex), 10))
+      .filter((value) => Number.isInteger(value) && value >= 0);
+    return pendingSetIndexes.length > 0
+      ? { status: "pending", pendingSetIndexes }
+      : null;
+  };
+}
+
 export function createAppRouteContext(deps) {
   const limiters = createRateLimiters();
   const guards = createRequestGuards({
@@ -39,12 +80,32 @@ export function createAppRouteContext(deps) {
     clientOrigin: deps.clientOrigin,
     getSessionImpl: deps.getSessionImpl,
   });
+  const listActiveJobSnapshotsForEntityImpl =
+    deps.listActiveJobSnapshotsForEntityImpl || (async () => []);
+  const listActiveJobsForEntityImpl =
+    deps.listActiveJobsForEntityImpl || (async () => []);
+  const getPersistedCapsuleJob = createGetPersistedCapsuleJob(
+    listActiveJobSnapshotsForEntityImpl,
+  );
+  const getPersistedOutfitJob = createGetPersistedOutfitJob(
+    listActiveJobSnapshotsForEntityImpl,
+  );
   const eventHandlers = createCapsuleEventHandlers({
     annotateLikedItems,
     getCapsuleImpl: deps.getCapsuleImpl,
-    getOutfitSetImageJobImpl: deps.getOutfitSetImageJobImpl,
-    getPartialRegenerationJobImpl: deps.getPartialRegenerationJobImpl,
-    getWardrobeJobImpl: deps.getWardrobeJobImpl,
+    getOutfitSetImageJobImpl:
+      deps.getOutfitSetImageJobImpl ||
+      createGetPersistedOutfitSetImageJob(listActiveJobsForEntityImpl),
+    getPartialRegenerationJobImpl:
+      deps.getPartialRegenerationJobImpl ||
+      ((email, capsuleId) =>
+        getPersistedCapsuleJob(email, capsuleId, [
+          "capsuleRegenerateSelected",
+        ])),
+    getWardrobeJobImpl:
+      deps.getWardrobeJobImpl ||
+      ((email, capsuleId) =>
+        getPersistedCapsuleJob(email, capsuleId, ["capsuleGenerate"])),
     listLikedItemUrlsImpl: deps.listLikedItemUrlsImpl,
     streamCapsuleEventsImpl: deps.streamCapsuleEventsImpl,
     updateCapsuleSnapshotImpl: deps.updateCapsuleSnapshotImpl,
@@ -52,6 +113,10 @@ export function createAppRouteContext(deps) {
 
   return {
     ...deps,
+    getOutfitImageJobImpl:
+      deps.getOutfitImageJobImpl ||
+      ((email, outfitId) =>
+        getPersistedOutfitJob(email, outfitId, ["outfitImageGenerate"])),
     ...limiters,
     ...guards,
     ...eventHandlers,

@@ -96,12 +96,14 @@ export function createJobWorker({
   enabled,
   jobRunTimeoutMs = JOB_RUN_TIMEOUT_MS,
   reconcilePendingProviderJobs,
+  reconcileStaleRunningJobs,
 }: {
   backend: QueueBackend;
   deps: Record<string, unknown>;
   enabled: boolean;
   jobRunTimeoutMs?: number;
   reconcilePendingProviderJobs?: () => Promise<unknown>;
+  reconcileStaleRunningJobs?: () => Promise<unknown>;
 }): JobWorker {
   return {
     async start() {
@@ -110,6 +112,7 @@ export function createJobWorker({
         return;
       }
 
+      await reconcileStaleRunningJobs?.();
       await reconcilePendingProviderJobs?.();
 
       await backend.start(async ({ data, signal }) => {

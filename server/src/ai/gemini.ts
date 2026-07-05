@@ -18,6 +18,7 @@ import type {
   GeminiGenerateContentResponseLike,
   GeminiUploadedFileLike,
 } from "./geminiTypes.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 const DEFAULT_CHAT_MODEL = "gemini-2.5-pro";
 const ALLOWED_CHAT_MODELS = ["gemini-2.5-pro"];
@@ -219,6 +220,7 @@ function createGeminiClient({
       images = [],
       systemPrompt: systemPromptOverride = null,
       onPayloadBuilt = null,
+      signal = null,
     } = options;
     const client = getGeminiClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
@@ -239,6 +241,7 @@ function createGeminiClient({
     const contents = buildGeminiContents(user, uploadedFiles);
     releaseImageBuffers(images);
     onPayloadBuilt?.();
+    throwIfAborted(signal);
 
     const requestPayload = buildGeminiRequestPayload({
       userProfile,
@@ -248,6 +251,7 @@ function createGeminiClient({
     });
     try {
       const response = await client.models.generateContent(requestPayload);
+      throwIfAborted(signal);
       logGeminiFinishReason(response);
       const json = parseGeminiJsonResponse(response, zodSchema);
       return buildGeminiGenerationResult(response, json);

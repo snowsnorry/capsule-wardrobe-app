@@ -37,6 +37,7 @@ describe("createAppDependencies outfit report wiring", () => {
         listWardrobeItemsByUrlsImpl: expect.any(Function),
         updateOutfitReportImpl: expect.any(Function),
       }),
+      {},
     );
   });
 
@@ -52,6 +53,7 @@ describe("createAppDependencies outfit report wiring", () => {
       expect.objectContaining({
         updateCapsuleReportImpl: expect.any(Function),
       }),
+      {},
     );
     expect(generatePersonalItemsReport).toHaveBeenCalledWith(
       "person@example.com",
@@ -60,6 +62,7 @@ describe("createAppDependencies outfit report wiring", () => {
         listWardrobeItemsImpl: expect.any(Function),
         upsertPersonalItemsReportImpl: expect.any(Function),
       }),
+      {},
     );
   });
 

@@ -81,6 +81,47 @@ export async function generateCurrentOutfitImage(
     const response = (await generateOutfitImage(
       outfitId,
     )) as OutfitMutationResponse;
+    if (response?.job && typeof response.job.id === "string") {
+      const waitForJobCompletion = fromContext<
+        (jobId: string) => Promise<{
+          status: string;
+          error?: { code?: string | null } | null;
+        }>
+      >(context, "waitForJobCompletion");
+      void waitForJobCompletion(response.job.id)
+        .then(async (finishedJob) => {
+          if (finishedJob.status === "completed") {
+            await refreshActiveOutfit(context, outfitId, {
+              onlyIfActive: true,
+            });
+            return;
+          }
+          throw new Error(finishedJob.error?.code || "service_unavailable");
+        })
+        .catch((error) => {
+          if (
+            !fromContext<{ current: boolean }>(context, "isMountedRef").current
+          )
+            return;
+          fromContext<(updater: (current: unknown) => unknown) => void>(
+            context,
+            "setStatus",
+          )((current) => ({
+            ...(current as object),
+            error: fromContext<(error: unknown) => string>(
+              context,
+              "resolveErrorMessage",
+            )(error),
+          }));
+        })
+        .finally(() => {
+          if (
+            fromContext<{ current: boolean }>(context, "isMountedRef").current
+          )
+            setOutfitImagePending(context, false);
+        });
+      return;
+    }
     if (response?.status === "pending") {
       void subscribeUntilOutfitImageReady(context, outfitId);
       return;

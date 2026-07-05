@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { throwIfAborted } from "./abortSignal.js";
 
 const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image";
 const DEFAULT_API_VERSION = "v1beta";
@@ -176,7 +177,12 @@ function createGeminiImageClient({
 
   async function generateImageWithGemini(
     prompt,
-    { images = [], model = DEFAULT_IMAGE_MODEL, onPayloadBuilt = null } = {},
+    {
+      images = [],
+      model = DEFAULT_IMAGE_MODEL,
+      onPayloadBuilt = null,
+      signal = null,
+    } = {},
   ) {
     const client = getGeminiImageClient();
     const promptParts = buildGeminiImagePromptParts(prompt, images);
@@ -189,8 +195,10 @@ function createGeminiImageClient({
     };
 
     onPayloadBuilt?.(requestPayload);
+    throwIfAborted(signal);
 
     const response = await client.models.generateContent(requestPayload);
+    throwIfAborted(signal);
 
     return {
       response,

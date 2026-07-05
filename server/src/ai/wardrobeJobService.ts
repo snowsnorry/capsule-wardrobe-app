@@ -1,4 +1,5 @@
 import {
+  buildCapsuleSnapshotWithRegeneration,
   buildProfileCapsuleContext,
   getEffectiveCapsuleSnapshot,
 } from "../capsuleStore.js";
@@ -24,6 +25,7 @@ import {
   publishWardrobeSnapshot,
   updateWardrobeCapsuleSnapshot,
 } from "./wardrobeJobSnapshots.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 
@@ -31,6 +33,8 @@ type WardrobeJobRunInput = StartWardrobeJobInput & {
   deps: WardrobeServiceRuntimeDeps;
   job: WardrobeJobState;
   jobKey: string;
+  rethrowErrors?: boolean;
+  signal?: AbortSignal | null;
 };
 
 type BaseWardrobeResult = {
@@ -135,6 +139,7 @@ async function generateBaseWardrobe(
   logContext: LogContextLike,
 ): Promise<BaseWardrobeResult> {
   const { deps, email, capsuleId, profile, capsule, options = {} } = input;
+  throwIfAborted(input.signal);
   const baseSnapshot = getEffectiveCapsuleSnapshot(capsule);
   const generationProfile = buildProfileCapsuleContext(profile, capsule, {
     forceEmptyWardrobe: Boolean(options.forceEmptyWardrobe),
@@ -142,7 +147,9 @@ async function generateBaseWardrobe(
   const wardrobe = await deps.generateCapsuleWardrobeImpl(
     generationProfile,
     logContext,
+    { signal: input.signal },
   );
+  throwIfAborted(input.signal);
   const items = wardrobe.items;
 
   if (items.length === 0) {
@@ -162,6 +169,7 @@ async function generateBaseWardrobe(
     baseSnapshot,
     payload,
   });
+  throwIfAborted(input.signal);
   currentCapsule = await applyWardrobeAutoRename({
     deps,
     email,
@@ -212,12 +220,14 @@ async function addSwimwearIfNeeded(
   );
 
   try {
+    throwIfAborted(input.signal);
     const swimwear = await deps.generateSwimwearAdditionImpl({
       userProfile: baseResult.generationProfile,
       selectedCapsuleItems: baseResult.wardrobe.selectedItems,
       promptEmbeddings: baseResult.wardrobe.promptEmbeddings,
       logContext,
     });
+    throwIfAborted(input.signal);
     return await applySwimwearAddition(input, baseResult, swimwear, logContext);
   } catch (error) {
     logError(
@@ -303,16 +313,16 @@ async function markWardrobeJobFailed(
   logContext: LogContextLike,
 ) {
   const { deps, email, capsuleId, job } = input;
+  const errorCode = String(error?.code || error?.message || "");
   job.status = "failed";
   job.phase = "failed";
   job.updatedAt = deps.nowMsImpl();
   job.error = error;
   logError("[wardrobe-ai]", buildErrorLogContext(logContext), error);
-  const restoredCapsule = await restoreRollbackSnapshot(
-    input,
-    currentCapsule,
-    logContext,
-  );
+  const restoredCapsule =
+    errorCode === "job_aborted" || errorCode === "job_deadline_exceeded"
+      ? currentCapsule
+      : await restoreRollbackSnapshot(input, currentCapsule, logContext);
   publishWardrobeSnapshot(deps, email, capsuleId, restoredCapsule, job);
 }
 
@@ -335,9 +345,128 @@ async function runWardrobeJob(input: WardrobeJobRunInput) {
     );
   } catch (error) {
     await markWardrobeJobFailed(input, currentCapsule, error, logContext);
+    if (input.rethrowErrors) {
+      throw error;
+    }
   } finally {
-    scheduleWardrobeJobCleanup(input.deps, input.jobKey, input.job);
+    if (input.jobKey) {
+      scheduleWardrobeJobCleanup(input.deps, input.jobKey, input.job);
+    }
   }
+}
+
+async function preparePersistedWardrobeGenerationJob(
+  deps: WardrobeServiceRuntimeDeps,
+  email: string,
+  capsuleId: string,
+) {
+  const profile = await deps.getProfileImpl(email);
+  const capsule = await deps.getCapsuleImpl(email, capsuleId);
+  if (!capsule) {
+    const error = new Error("not_found") as Error & { code?: string };
+    error.code = "not_found";
+    throw error;
+  }
+
+  const requestId = deps.randomUuidImpl();
+  const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+  const pendingSnapshot = buildCapsuleSnapshotWithRegeneration(
+    effectiveSnapshot,
+    {
+      status: "pending",
+      kind: "full",
+      startedAt: new Date().toISOString(),
+      requestId,
+    },
+  );
+  const updatedCapsule = await deps.updateCapsuleSnapshotImpl(
+    email,
+    capsuleId,
+    pendingSnapshot,
+  );
+  return {
+    capsule,
+    effectiveSnapshot,
+    generationCapsule: {
+      ...capsule,
+      ...(updatedCapsule || {}),
+      draft: pendingSnapshot,
+    },
+    profile,
+    requestId,
+  };
+}
+
+export async function runPersistedWardrobeGenerationJobForService(
+  deps: WardrobeServiceRuntimeDeps,
+  {
+    email,
+    capsuleId,
+    signal = null,
+    updateProgress = async () => undefined,
+  }: {
+    email: string;
+    capsuleId: string;
+    signal?: AbortSignal | null;
+    updateProgress?: (update: {
+      phase?: string | null;
+      current?: number;
+      total?: number | null;
+      label?: string | null;
+    }) => Promise<void>;
+  },
+) {
+  const prepared = await preparePersistedWardrobeGenerationJob(
+    deps,
+    email,
+    capsuleId,
+  );
+  const job: WardrobeJobState = {
+    capsuleRequestId: prepared.requestId,
+    status: "pending",
+    startedAt: deps.nowMsImpl(),
+    updatedAt: deps.nowMsImpl(),
+    promise: null,
+    phase: "capsule",
+    result: null,
+  };
+  deps.publishSnapshotImpl(
+    email,
+    capsuleId,
+    deps.buildCapsuleEventSnapshotImpl({
+      capsule: prepared.generationCapsule,
+      activeJob: job,
+    }),
+  );
+  await updateProgress({
+    phase: "capsule",
+    current: 0,
+    label: "Generating capsule",
+  });
+  await runWardrobeJob({
+    email,
+    capsuleId,
+    profile: prepared.profile,
+    capsule: prepared.generationCapsule,
+    logContext: { capsuleRequestId: prepared.requestId },
+    options: {
+      allowAutoRename: isFirstContentGenerationForNewCapsule(
+        prepared.capsule,
+        prepared.effectiveSnapshot,
+      ),
+      forceEmptyWardrobe: true,
+      rollbackSnapshot: buildCapsuleSnapshotWithRegeneration(
+        prepared.effectiveSnapshot,
+        null,
+      ),
+    },
+    deps,
+    job,
+    jobKey: "",
+    rethrowErrors: true,
+    signal,
+  });
+  return { capsuleId };
 }
 
 export function startWardrobeJobForService(

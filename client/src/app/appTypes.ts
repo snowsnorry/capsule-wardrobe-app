@@ -451,6 +451,7 @@ export type CapsuleMutationResponse = {
 };
 
 export type OutfitMutationResponse = {
+  job?: { id?: string; status?: string } | null;
   outfit?: OutfitMeta | null;
   status?: string;
 };
@@ -464,6 +465,7 @@ export type ShareMetadata = {
 export type WardrobeMutationResponse = {
   image?: string | null;
   items?: WardrobeItem[];
+  job?: { id?: string; status?: string } | null;
   outfitSets?: OutfitSetSnapshot[];
   status?: string;
 };

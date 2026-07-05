@@ -116,3 +116,44 @@ export async function listJobRunsForEmail({
           `;
   return Array.isArray(rows) ? rows.map(toJobRunRecord) : [];
 }
+
+export async function listActiveJobRunsForEntity({
+  email,
+  entityType,
+  entityId,
+  kinds,
+}: {
+  email: string;
+  entityType: string;
+  entityId?: string | null;
+  kinds?: string[] | null;
+}): Promise<JobRunRecord[]> {
+  const sql = getSqlClient();
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedKinds = Array.isArray(kinds)
+    ? kinds.map((kind) => String(kind || "").trim()).filter(Boolean)
+    : [];
+  const normalizedEntityId = String(entityId || "").trim();
+  const rows =
+    normalizedKinds.length > 0
+      ? await sql<JobRunRow>`
+          select * from job_runs
+          where profile_email = ${normalizedEmail}
+            and entity_type = ${entityType}
+            and (${normalizedEntityId || null}::text is null or entity_id = ${normalizedEntityId || null})
+            and kind = any(${normalizedKinds})
+            and status in ('queued', 'running')
+          order by created_at desc
+          limit 50
+        `
+      : await sql<JobRunRow>`
+          select * from job_runs
+          where profile_email = ${normalizedEmail}
+            and entity_type = ${entityType}
+            and (${normalizedEntityId || null}::text is null or entity_id = ${normalizedEntityId || null})
+            and status in ('queued', 'running')
+          order by created_at desc
+          limit 50
+        `;
+  return Array.isArray(rows) ? rows.map(toJobRunRecord) : [];
+}

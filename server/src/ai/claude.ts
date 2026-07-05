@@ -14,6 +14,7 @@ import type {
   ParsedGenerationError,
   UserProfileLike,
 } from "./types.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 const DEFAULT_CHAT_MODEL = "claude-opus-4-7";
 const ALLOWED_CHAT_MODELS = ["claude-opus-4-7"];
@@ -58,6 +59,7 @@ type ClaudeClientLike = {
   messages: {
     create: (
       payload: ClaudeMessagesCreatePayload,
+      options?: { signal?: AbortSignal },
     ) => Promise<ClaudeResponseLike>;
   };
 };
@@ -308,6 +310,7 @@ function createClaudeClient({
       images = [],
       systemPrompt: systemPromptOverride = null,
       onPayloadBuilt = null,
+      signal = null,
     } = options;
     const client = getClaudeClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
@@ -320,14 +323,19 @@ function createClaudeClient({
     const outputConfig = buildClaudeOutputConfig(format, userProfile);
     releaseImageBuffers(images);
     onPayloadBuilt?.();
+    throwIfAborted(signal);
 
-    const response = await client.messages.create({
-      model: resolveChatModel(userProfile),
-      system: systemPrompt || undefined,
-      messages,
-      output_config: outputConfig,
-      max_tokens: 8000,
-    });
+    const response = await client.messages.create(
+      {
+        model: resolveChatModel(userProfile),
+        system: systemPrompt || undefined,
+        messages,
+        output_config: outputConfig,
+        max_tokens: 8000,
+      },
+      signal ? { signal } : undefined,
+    );
+    throwIfAborted(signal);
 
     const json = parseClaudeJsonResponse(response);
 

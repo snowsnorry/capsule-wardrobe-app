@@ -11,6 +11,7 @@ import type {
   ParsedGenerationError,
   UserProfileLike,
 } from "./types.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 const DEFAULT_CHAT_MODEL = "gpt-5.5";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
@@ -109,6 +110,26 @@ function buildResponsesPayload(user: string, images: ImageAssetLike[] = []) {
   return input;
 }
 
+function buildOpenAiResponsesRequest({
+  format,
+  input,
+  systemPrompt,
+  userProfile,
+}) {
+  return {
+    model: DEFAULT_CHAT_MODEL,
+    instructions: systemPrompt || undefined,
+    input,
+    reasoning: { effort: "low" },
+    // temperature: 0.2,
+    // top_p: 0.9,
+    max_output_tokens: 10000,
+    text: {
+      format: format || buildJsonObjectFormat(userProfile),
+    },
+  };
+}
+
 async function getPromptEmbeddingsWithClient(client, prompt: string) {
   const response = await client.embeddings.create({
     model: DEFAULT_EMBEDDING_MODEL,
@@ -140,6 +161,7 @@ async function generateJsonWithLlmWithClient(
     images = [],
     systemPrompt: systemPromptOverride = null,
     onPayloadBuilt = null,
+    signal = null,
   } = options;
   const { system, user } = splitSystemAndUserPrompt(prompt);
   const systemPrompt = buildOpenAiSystemPrompt(
@@ -149,22 +171,21 @@ async function generateJsonWithLlmWithClient(
   );
   const input = buildResponsesPayload(user, images);
   onPayloadBuilt?.();
+  throwIfAborted(signal);
   const requestStartedAt = Date.now();
   let response;
 
   try {
-    response = await client.responses.create({
-      model: DEFAULT_CHAT_MODEL,
-      instructions: systemPrompt || undefined,
-      input,
-      reasoning: { effort: "low" },
-      // temperature: 0.2,
-      // top_p: 0.9,
-      max_output_tokens: 10000,
-      text: {
-        format: format || buildJsonObjectFormat(userProfile),
-      },
-    });
+    response = await client.responses.create(
+      buildOpenAiResponsesRequest({
+        format,
+        input,
+        systemPrompt,
+        userProfile,
+      }),
+      signal ? { signal } : undefined,
+    );
+    throwIfAborted(signal);
   } catch (error) {
     logError(
       "[openai][request-failed]",

@@ -137,3 +137,43 @@ export async function markJobRunFailed({
   );
   return row ? toJobRunRecord(row) : null;
 }
+
+export async function markStaleRunningJobRunsFailed({
+  staleMs,
+  limit,
+}: {
+  staleMs: number;
+  limit: number;
+}): Promise<JobRunRecord[]> {
+  const sql = getSqlClient();
+  const rows = await sql<JobRunRow>`
+    with due as (
+      select id
+      from job_runs
+      where status = 'running'
+        and updated_at <= now() - (${Math.max(0, staleMs)} * interval '1 millisecond')
+      order by updated_at asc
+      limit ${Math.max(1, limit)}
+      for update skip locked
+    ),
+    updated as (
+      update job_runs
+      set
+        status = 'failed',
+        phase = 'failed',
+        error_code = 'job_stale_after_crash',
+        error_message = 'Job was running before worker recovery and exceeded its deadline.',
+        failed_at = now(),
+        updated_at = now()
+      where id in (select id from due)
+      returning *
+    ),
+    event as (
+      insert into job_events (job_id, event_type, data)
+      select id, 'failed', jsonb_build_object('jobRun', to_jsonb(updated))
+      from updated
+    )
+    select * from updated
+  `;
+  return Array.isArray(rows) ? rows.map(toJobRunRecord) : [];
+}

@@ -596,3 +596,34 @@ test("startWardrobeJob marks job failed when capsule generation returns no usabl
     /no valid wardrobe items/i,
   );
 });
+
+test("startWardrobeJob does not rollback capsule snapshots after abort", async () => {
+  const updates = [];
+  const abortError = new Error("job_aborted") as Error & { code?: string };
+  abortError.code = "job_aborted";
+  const rollbackSnapshot = buildCapsuleSnapshot({
+    data: { wardrobe: null, rejectedUrls: ["https://example.com/old"] },
+  });
+  const service = createWardrobeService({
+    generateCapsuleWardrobeImpl: async () => {
+      throw abortError;
+    },
+    updateCapsuleSnapshotImpl: async (_email, capsuleId, draft) => {
+      updates.push({ capsuleId, draft });
+      return buildNormalizedCapsuleRecord({ id: capsuleId, draft });
+    },
+    jobs: new Map(),
+  });
+
+  const job = service.startWardrobeJob(
+    "person@example.com",
+    "capsule-1",
+    buildNormalizedProfileRecord({ locale: "en" }),
+    createCapsuleWithWardrobe(null),
+    { rollbackSnapshot },
+  );
+  await job.promise;
+
+  expect(job.status).toBe("failed");
+  expect(updates).toEqual([]);
+});

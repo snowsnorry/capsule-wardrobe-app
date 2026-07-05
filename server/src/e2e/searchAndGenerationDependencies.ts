@@ -60,6 +60,80 @@ function applyReadyWardrobeFixture(
   );
 }
 
+function codedError(code: string) {
+  const error = new Error(code) as Error & { code?: string };
+  error.code = code;
+  return error;
+}
+
+async function runCapsuleGenerationJobImpl(
+  state: E2eSearchAndGenerationState,
+  { capsuleId }: { capsuleId: unknown },
+) {
+  const failure = state.generationMemory.consumeFailureOnce();
+  if (failure) {
+    throw codedError("service_unavailable");
+  }
+  const capsule = applyReadyWardrobeFixture(state, capsuleId);
+  if (!capsule) {
+    throw codedError("not_found");
+  }
+  return { capsuleId: normalizeCapsuleId(capsuleId) };
+}
+
+async function runSelectedRegenerationJobImpl(
+  state: E2eSearchAndGenerationState,
+  {
+    capsuleId,
+    itemUrls,
+  }: {
+    capsuleId: unknown;
+    itemUrls?: unknown;
+  },
+) {
+  const result = state.capsuleMemory.regenerateSelectedItems(
+    capsuleId,
+    itemUrls,
+  );
+  switch (result.status) {
+    case "missing-capsule":
+    case "missing-wardrobe":
+      throw codedError("not_found");
+    case "invalid-selection":
+      throw codedError("invalid_payload");
+    case "updated":
+      return {
+        capsuleId: normalizeCapsuleId(capsuleId),
+        itemUrls: result.selectedItemUrls,
+      };
+    default:
+      throw codedError("service_unavailable");
+  }
+}
+
+async function runOutfitSetImageGenerationJobImpl(
+  state: E2eSearchAndGenerationState,
+  {
+    capsuleId,
+    setIndex,
+  }: {
+    capsuleId: unknown;
+    setIndex: unknown;
+  },
+) {
+  const normalizedCapsuleId = normalizeCapsuleId(capsuleId);
+  const normalizedSetIndex = parseSetIndex(setIndex);
+  const result = state.capsuleMemory.setOutfitSetImage(
+    normalizedCapsuleId,
+    normalizedSetIndex,
+    state.nextOutfitImageUrl(normalizedCapsuleId, normalizedSetIndex),
+  );
+  if (result.status === "missing-capsule" || result.status === "missing-set") {
+    throw codedError("not_found");
+  }
+  return { capsuleId: normalizedCapsuleId, setIndex: normalizedSetIndex };
+}
+
 function selectedRegenerationHandler(state: E2eSearchAndGenerationState) {
   return async (req, res) => {
     const selectedItemUrls = Array.isArray(req.body?.itemUrls)
@@ -239,6 +313,12 @@ export function searchAndGenerationDependencies(
     regenerateCapsuleWardrobeHandler: regenerateCapsuleWardrobeHandler(state),
     regenerateSelectedCapsuleItemsHandler: selectedRegenerationHandler(state),
     generateOutfitSetImageHandler: generateOutfitSetImageHandler(state),
+    runCapsuleGenerationJobImpl: async (input) =>
+      runCapsuleGenerationJobImpl(state, input),
+    runSelectedRegenerationJobImpl: async (input) =>
+      runSelectedRegenerationJobImpl(state, input),
+    runOutfitSetImageGenerationJobImpl: async (input) =>
+      runOutfitSetImageGenerationJobImpl(state, input),
     deleteOutfitSetImageHandler: deleteOutfitSetImageHandler(state),
     buildWardrobePdfInChildImpl: async () => Buffer.from("e2e-pdf"),
     getProductsByUrlsInOrderImpl: async () => buildE2eWardrobeItems(),

@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { OAuth2Client } from "google-auth-library";
 import {
   generateAuthenticationOptions,
@@ -68,20 +69,26 @@ import {
 } from "./searchStore.js";
 import { createSearchCacheInvalidationService } from "./searchCacheInvalidation.js";
 import { runMcpProductSearch } from "./mcp/productSearch.js";
-import { getWardrobeJob, regenerateCapsuleWardrobe } from "./ai/ai.js";
-import { getOutfitImageJob } from "./ai/outfitImageJobs.js";
-import {
-  getPartialRegenerationJob,
-  regenerateSelectedWardrobeItems,
-} from "./ai/regenerateSelected.js";
+import { generateCapsuleWardrobe } from "./ai/aiGeneration.js";
+import { runPersistedWardrobeGenerationJobForService } from "./ai/wardrobeJobService.js";
+import { runPersistedPartialRegenerationJobForService } from "./ai/regenerateSelectedServiceJobs.js";
 import {
   deleteOutfitSetImage,
-  generateOutfitSetImage,
-  getOutfitSetImageJob,
+  runOutfitSetImageGenerationJob,
 } from "./ai/outfitSetImages.js";
-import { deleteOutfitImage, generateOutfitImage } from "./ai/outfitImages.js";
+import {
+  deleteOutfitImage,
+  runOutfitImageGenerationJob,
+} from "./ai/outfitImages.js";
 import { capsuleEventHub } from "./ai/capsuleEvents.js";
 import { outfitEventHub } from "./ai/outfitEvents.js";
+import {
+  generateSwimwearAddition,
+  shouldCompleteSelectedSwimwear,
+  shouldGenerateSwimwear,
+} from "./ai/swimwear.js";
+import { buildCapsuleEventSnapshot } from "./ai/capsuleEvents.js";
+import { regenerateCapsuleWardrobe } from "./ai/regenerateSelectedGeneration.js";
 import { buildWardrobePdfInChild } from "./wardrobePdf.js";
 import {
   checkDatabaseConnection,
@@ -250,8 +257,6 @@ function createCapsuleDependencies() {
     getSharedCapsuleImpl: getSharedCapsule,
     importSharedCapsuleImpl: importSharedCapsule,
     listRecentCapsulesImpl: listRecentCapsules,
-    regenerateCapsuleWardrobeHandler: regenerateCapsuleWardrobe,
-    regenerateSelectedCapsuleItemsHandler: regenerateSelectedWardrobeItems,
     renameCapsuleImpl: renameCapsule,
     revertCapsuleImpl: revertCapsule,
     saveCapsuleImpl: saveCapsule,
@@ -280,12 +285,8 @@ function createOutfitDependencies() {
     deleteOutfitImageHandler: deleteOutfitImage,
     deleteOutfitSetImageHandler: deleteOutfitSetImage,
     duplicateOutfitImpl: duplicateOutfit,
-    generateOutfitImageHandler: generateOutfitImage,
     generateOutfitReportImpl: generateOutfitReportWithStoreLookups,
-    generateOutfitSetImageHandler: generateOutfitSetImage,
     getOutfitImpl: getOutfit,
-    getOutfitImageJobImpl: getOutfitImageJob,
-    getOutfitSetImageJobImpl: getOutfitSetImageJob,
     listRecentOutfitsImpl: listRecentOutfits,
     renameOutfitImpl: renameOutfit,
     revertOutfitImpl: revertOutfit,
@@ -368,14 +369,14 @@ function createWardrobeMediaDependencies() {
     deleteWardrobeItemFromCatalogImpl: deleteWardrobeItemFromCatalogByUrl,
     generatePersonalItemsReportImpl:
       generatePersonalItemsReportWithStoreLookups,
+    generateCapsuleWardrobeImpl: generateCapsuleWardrobe,
+    generateSwimwearAdditionImpl: generateSwimwearAddition,
     getPersonalItemsReportImpl: getPersonalItemsReportByEmail,
-    getPartialRegenerationJobImpl: getPartialRegenerationJob,
     getProductByIdForEmailImpl: getProductByIdForEmail,
     getProductByUrlForEmailImpl: getProductByUrlForEmail,
     getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
     getProductsByUrlsInOrderImpl: getProductsByUrlsInOrder,
     getUploadedWardrobeItemImpl: getUploadedWardrobeItemById,
-    getWardrobeJobImpl: getWardrobeJob,
     listLikedItemUrlsImpl: listLikedItemUrlsByEmail,
     listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
     listWardrobeItemsByUrlsImpl: listWardrobeItemsByUrlsForEmail,
@@ -387,6 +388,15 @@ function createWardrobeMediaDependencies() {
     processWardrobeUploadUrlsInChildImpl: processWardrobeUploadUrlsInChild,
     saveUploadedWardrobeItemsImpl: saveUploadedWardrobeItemsByEmail,
     saveWardrobeItemFromCatalogImpl: saveWardrobeItemFromCatalogByUrl,
+    shouldCompleteSelectedSwimwearImpl: shouldCompleteSelectedSwimwear,
+    shouldGenerateSwimwearImpl: shouldGenerateSwimwear,
+    buildCapsuleEventSnapshotImpl: buildCapsuleEventSnapshot,
+    publishSnapshotImpl: (email, capsuleId, snapshot) =>
+      capsuleEventHub.publish(email, capsuleId, snapshot),
+    randomUuidImpl: () => crypto.randomUUID(),
+    regenerateCapsuleWardrobeImpl: regenerateCapsuleWardrobe,
+    setTimeoutImpl: setTimeout,
+    nowMsImpl: () => Date.now(),
     updateUploadedWardrobeItemDetailsImpl:
       updateUploadedWardrobeItemDetailsById,
     updateUploadedWardrobeItemMetadataImpl:
@@ -400,6 +410,12 @@ function createWardrobeMediaDependencies() {
       processQueuedWardrobeFileUploadImpl({ context: deps, ...input }),
     processQueuedWardrobeUrlUploadImpl: (input) =>
       processQueuedWardrobeUrlUpload({ context: deps, ...input }),
+    runCapsuleGenerationJobImpl: (input) =>
+      runPersistedWardrobeGenerationJobForService(input.deps, input),
+    runOutfitImageGenerationJobImpl: runOutfitImageGenerationJob,
+    runOutfitSetImageGenerationJobImpl: runOutfitSetImageGenerationJob,
+    runSelectedRegenerationJobImpl: (input) =>
+      runPersistedPartialRegenerationJobForService(input.deps, input),
   };
 }
 

@@ -101,7 +101,10 @@ function registerOutfitEventRoute(app, context) {
           const latestOutfit =
             (await getOutfitImpl(req.user.email, req.params.id)) || outfit;
           const pendingImage = Boolean(
-            context.getOutfitImageJobImpl?.(req.user.email, req.params.id),
+            await context.getOutfitImageJobImpl?.(
+              req.user.email,
+              req.params.id,
+            ),
           );
           return {
             status: pendingImage ? "pending" : "ready",

@@ -4,7 +4,9 @@ export type JobKind =
   | "capsuleGenerate"
   | "capsuleRegenerateSelected"
   | "capsuleReportGenerate"
+  | "outfitImageGenerate"
   | "outfitReportGenerate"
+  | "outfitSetImageGenerate"
   | "personalItemsReportGenerate"
   | "personalItemUploadFiles"
   | "personalItemUploadUrls";

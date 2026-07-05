@@ -6,11 +6,13 @@ const dbApi = vi.hoisted(() => ({
   getJobRunById: vi.fn(),
   getJobRunByIdForEmail: vi.fn(),
   getJobRunMetrics: vi.fn(),
+  listActiveJobRunsForEntity: vi.fn(),
   listJobEventsAfter: vi.fn(),
   listJobRunsForEmail: vi.fn(),
   markJobRunCompleted: vi.fn(),
   markJobRunFailed: vi.fn(),
   markJobRunStarted: vi.fn(),
+  markStaleRunningJobRunsFailed: vi.fn(),
   setJobRunProviderJobId: vi.fn(),
   updateJobRunProgress: vi.fn(),
 }));
@@ -21,10 +23,13 @@ import {
   completeJobRun,
   claimPendingProviderJobs,
   createPendingJob,
+  failStaleRunningJobs,
   failJobRun,
   getJobForWorker,
   getJobMetrics,
   getOwnedJobSnapshot,
+  listActiveJobsForEntity,
+  listActiveJobSnapshotsForEntity,
   listOwnedJobSnapshots,
   replayJobEvents,
   setProviderJobId,
@@ -108,6 +113,43 @@ test("jobStore claims stale providerless jobs for reconciliation", async () => {
     staleMs: 30_000,
     limit: 25,
   });
+});
+
+test("jobStore reconciles stale running jobs and exposes active jobs by entity", async () => {
+  dbApi.markStaleRunningJobRunsFailed.mockResolvedValueOnce([
+    jobRecord({ id: "stale", status: "failed" }),
+  ]);
+  await expect(
+    failStaleRunningJobs({ staleMs: 600_000, limit: 50 }),
+  ).resolves.toMatchObject([{ id: "stale" }]);
+  expect(dbApi.markStaleRunningJobRunsFailed).toHaveBeenCalledWith({
+    staleMs: 600_000,
+    limit: 50,
+  });
+
+  dbApi.listActiveJobRunsForEntity.mockResolvedValueOnce([
+    jobRecord({ id: "job-active", status: "running" }),
+  ]);
+  await expect(
+    listActiveJobsForEntity({
+      email: "person@example.com",
+      entityType: "capsule",
+      entityId: "capsule-1",
+      kinds: ["capsuleGenerate"],
+    }),
+  ).resolves.toMatchObject([{ id: "job-active" }]);
+
+  dbApi.listActiveJobRunsForEntity.mockResolvedValueOnce([
+    jobRecord({ id: "job-active", status: "running" }),
+  ]);
+  await expect(
+    listActiveJobSnapshotsForEntity({
+      email: "person@example.com",
+      entityType: "capsule",
+      entityId: "capsule-1",
+      kinds: ["capsuleGenerate"],
+    }),
+  ).resolves.toMatchObject([{ id: "job-active", status: "running" }]);
 });
 
 test("createPendingJob does not write events outside the DB helper", async () => {

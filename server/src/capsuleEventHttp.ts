@@ -18,7 +18,9 @@ export function createCapsuleEventHandlers({
 }) {
   async function getCapsuleEventSnapshot(email, capsule) {
     const capsuleId = String(capsule?.id || "").trim();
-    const activeJob = capsuleId ? getWardrobeJobImpl(email, capsuleId) : null;
+    const activeJob = capsuleId
+      ? await getWardrobeJobImpl(email, capsuleId)
+      : null;
     let snapshotCapsule = capsule;
 
     if (
@@ -42,7 +44,7 @@ export function createCapsuleEventHandlers({
         },
         partialRegenerationJob: null,
         outfitSetImageJob: capsuleId
-          ? getOutfitSetImageJobImpl(email, capsuleId)
+          ? await getOutfitSetImageJobImpl(email, capsuleId)
           : null,
       });
     }
@@ -51,10 +53,10 @@ export function createCapsuleEventHandlers({
       capsule: snapshotCapsule,
       activeJob,
       partialRegenerationJob: capsuleId
-        ? getPartialRegenerationJobImpl(email, capsuleId)
+        ? await getPartialRegenerationJobImpl(email, capsuleId)
         : null,
       outfitSetImageJob: capsuleId
-        ? getOutfitSetImageJobImpl(email, capsuleId)
+        ? await getOutfitSetImageJobImpl(email, capsuleId)
         : null,
     });
   }

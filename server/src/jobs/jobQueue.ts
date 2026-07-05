@@ -2,17 +2,21 @@ import { createPgBossQueueBackend } from "./pgBossQueueBackend.js";
 import {
   claimPendingProviderJobs,
   createPendingJob,
+  failStaleRunningJobs,
   failJobRun,
   setProviderJobId,
 } from "./jobStore.js";
+import { JOB_RUN_TIMEOUT_MS } from "../appConfig.js";
 import type { QueueBackend } from "./queueBackend.js";
 import type { EnqueueJobInput, JobRunRecord, JobSnapshot } from "./types.js";
 
 const PROVIDER_RECONCILE_STALE_MS = 30_000;
 const PROVIDER_RECONCILE_LIMIT = 25;
+const RUNNING_RECONCILE_LIMIT = 50;
 
 export type JobQueue = {
   enqueue: (input: EnqueueJobInput) => Promise<JobSnapshot>;
+  reconcileStaleRunningJobs: () => Promise<{ failed: number }>;
   reconcilePendingProviderJobs: () => Promise<{
     failed: number;
     reenqueued: number;
@@ -84,6 +88,13 @@ export function createJobQueue({
         }
       }
       return { failed, reenqueued };
+    },
+    async reconcileStaleRunningJobs() {
+      const jobs = await failStaleRunningJobs({
+        staleMs: JOB_RUN_TIMEOUT_MS,
+        limit: RUNNING_RECONCILE_LIMIT,
+      });
+      return { failed: jobs.length };
     },
   };
 }

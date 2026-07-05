@@ -4,28 +4,6 @@ import type { JobHandlerContext, JobRunRecord } from "./types.js";
 
 type HandlerDeps = Record<string, unknown>;
 
-type FakeResponse = {
-  body: unknown;
-  statusCode: number;
-  json: (body: unknown) => FakeResponse;
-  status: (statusCode: number) => FakeResponse;
-};
-
-function createFakeResponse(): FakeResponse {
-  return {
-    body: null,
-    statusCode: 200,
-    json(body: unknown) {
-      this.body = body;
-      return this;
-    },
-    status(statusCode: number) {
-      this.statusCode = statusCode;
-      return this;
-    },
-  };
-}
-
 function getErrorCode(error: unknown): string {
   const code = String((error as { code?: unknown } | null)?.code || "").trim();
   if (code) {
@@ -35,134 +13,170 @@ function getErrorCode(error: unknown): string {
   return message || "service_unavailable";
 }
 
-function assertFakeResponseOk(res: FakeResponse) {
-  if (res.statusCode >= 400) {
-    const body = res.body as {
-      error?: unknown;
-      suppressJobHandlerLog?: unknown;
-    } | null;
-    const error = new Error(String(body?.error || "job_failed"));
-    const handlerError = error as Error & {
-      code?: string;
-      suppressJobHandlerLog?: boolean;
-    };
-    handlerError.code = String(body?.error || "job_failed");
-    if (body?.suppressJobHandlerLog === true) {
-      handlerError.suppressJobHandlerLog = true;
-    }
-    throw error;
-  }
-}
-
-async function waitForLegacyJob(job: unknown) {
-  const promise = (job as { promise?: Promise<unknown> | null } | null)
-    ?.promise;
-  if (promise) {
-    await promise;
-  }
-  const status = String((job as { status?: unknown } | null)?.status || "");
-  if (status === "failed") {
-    const error =
-      (job as { error?: Error | null } | null)?.error ||
-      new Error("service_unavailable");
-    throw error;
-  }
-}
-
 function getPayloadString(job: JobRunRecord, key: string): string {
   return String(job.payload?.[key] || "").trim();
 }
 
-async function runLegacyCapsuleGeneration(
+async function runCapsuleGeneration(
   deps: HandlerDeps,
   job: JobRunRecord,
+  context: JobHandlerContext,
 ) {
-  const email = job.profileEmail;
   const capsuleId = job.entityId || getPayloadString(job, "capsuleId");
-  const req = {
-    body: {},
-    params: { id: capsuleId },
-    query: {},
-    user: { email },
-  };
-  const res = createFakeResponse();
-  const handler = deps.regenerateCapsuleWardrobeHandler as
-    ((req: unknown, res: unknown) => Promise<unknown>) | undefined;
+  const handler = deps.runCapsuleGenerationJobImpl as
+    | ((input: {
+        deps: HandlerDeps;
+        email: string;
+        capsuleId: string;
+        signal?: AbortSignal;
+        updateProgress: JobHandlerContext["updateProgress"];
+      }) => Promise<Record<string, unknown>>)
+    | undefined;
   if (!handler) {
     throw new Error("capsule_generation_handler_missing");
   }
-
-  await handler(req, res);
-  assertFakeResponseOk(res);
-  const legacyJob = (
-    deps.getWardrobeJobImpl as
-      ((email: string, capsuleId: string) => unknown) | undefined
-  )?.(email, capsuleId);
-  await waitForLegacyJob(legacyJob);
+  return handler({
+    deps,
+    email: job.profileEmail,
+    capsuleId,
+    signal: context.signal,
+    updateProgress: context.updateProgress,
+  });
 }
 
-async function runLegacySelectedRegeneration(
+async function runSelectedRegeneration(
   deps: HandlerDeps,
   job: JobRunRecord,
+  context: JobHandlerContext,
 ) {
-  const email = job.profileEmail;
   const capsuleId = job.entityId || getPayloadString(job, "capsuleId");
-  const req = {
-    body: {
-      itemUrls: Array.isArray(job.payload.itemUrls) ? job.payload.itemUrls : [],
-    },
-    params: { id: capsuleId },
-    query: {},
-    user: { email },
-  };
-  const res = createFakeResponse();
-  const handler = deps.regenerateSelectedCapsuleItemsHandler as
-    ((req: unknown, res: unknown) => Promise<unknown>) | undefined;
+  const handler = deps.runSelectedRegenerationJobImpl as
+    | ((input: {
+        deps: HandlerDeps;
+        email: string;
+        capsuleId: string;
+        itemUrls: unknown;
+        signal?: AbortSignal;
+        updateProgress: JobHandlerContext["updateProgress"];
+      }) => Promise<Record<string, unknown>>)
+    | undefined;
   if (!handler) {
     throw new Error("capsule_selected_regeneration_handler_missing");
   }
-
-  await handler(req, res);
-  assertFakeResponseOk(res);
-  const legacyJob = (
-    deps.getPartialRegenerationJobImpl as
-      ((email: string, capsuleId: string) => unknown) | undefined
-  )?.(email, capsuleId);
-  await waitForLegacyJob(legacyJob);
+  return handler({
+    deps,
+    email: job.profileEmail,
+    capsuleId,
+    itemUrls: job.payload.itemUrls,
+    signal: context.signal,
+    updateProgress: context.updateProgress,
+  });
 }
 
-async function runCapsuleReport(deps: HandlerDeps, job: JobRunRecord) {
+async function runCapsuleReport(
+  deps: HandlerDeps,
+  job: JobRunRecord,
+  signal?: AbortSignal,
+) {
   const capsuleId = job.entityId || getPayloadString(job, "capsuleId");
   const report = await (
     deps.generateCapsuleReportImpl as (
       email: string,
       capsuleId: string,
+      options?: { signal?: AbortSignal | null },
     ) => Promise<unknown>
-  )(job.profileEmail, capsuleId);
+  )(job.profileEmail, capsuleId, { signal });
   return { report };
 }
 
-async function runOutfitReport(deps: HandlerDeps, job: JobRunRecord) {
+async function runOutfitReport(
+  deps: HandlerDeps,
+  job: JobRunRecord,
+  signal?: AbortSignal,
+) {
   const outfitId = job.entityId || getPayloadString(job, "outfitId");
   const report = await (
     deps.generateOutfitReportImpl as (
       email: string,
       outfitId: string,
+      options?: { signal?: AbortSignal | null },
     ) => Promise<unknown>
-  )(job.profileEmail, outfitId);
+  )(job.profileEmail, outfitId, { signal });
   return { report };
 }
 
-async function runPersonalItemsReport(deps: HandlerDeps, job: JobRunRecord) {
+async function runPersonalItemsReport(
+  deps: HandlerDeps,
+  job: JobRunRecord,
+  signal?: AbortSignal,
+) {
   const context =
     typeof job.payload.context === "string" ? job.payload.context : null;
   const result = await (
     deps.generatePersonalItemsReportImpl as (
       email: string,
       personalItemsContext?: string | null,
+      options?: { signal?: AbortSignal | null },
     ) => Promise<Record<string, unknown>>
-  )(job.profileEmail, context);
+  )(job.profileEmail, context, { signal });
   return result || {};
+}
+
+async function runOutfitImage(
+  deps: HandlerDeps,
+  job: JobRunRecord,
+  signal?: AbortSignal,
+) {
+  const outfitId = job.entityId || getPayloadString(job, "outfitId");
+  const result = await (
+    deps.runOutfitImageGenerationJobImpl as
+      | ((input: {
+          deps: HandlerDeps;
+          email: string;
+          outfitId: string;
+          signal?: AbortSignal;
+        }) => Promise<Record<string, unknown>>)
+      | undefined
+  )?.({
+    deps,
+    email: job.profileEmail,
+    outfitId,
+    signal,
+  });
+  if (!result) {
+    throw new Error("outfit_image_handler_missing");
+  }
+  return result;
+}
+
+async function runOutfitSetImage(
+  deps: HandlerDeps,
+  job: JobRunRecord,
+  signal?: AbortSignal,
+) {
+  const capsuleId = job.entityId || getPayloadString(job, "capsuleId");
+  const setIndex = Number.parseInt(String(job.payload.setIndex ?? ""), 10);
+  const result = await (
+    deps.runOutfitSetImageGenerationJobImpl as
+      | ((input: {
+          deps: HandlerDeps;
+          email: string;
+          capsuleId: string;
+          setIndex: number;
+          signal?: AbortSignal;
+        }) => Promise<Record<string, unknown>>)
+      | undefined
+  )?.({
+    deps,
+    email: job.profileEmail,
+    capsuleId,
+    setIndex,
+    signal,
+  });
+  if (!result) {
+    throw new Error("outfit_set_image_handler_missing");
+  }
+  return result;
 }
 
 async function runUploadUrls(
@@ -231,17 +245,19 @@ export async function runJobHandler(
   try {
     switch (job.kind) {
       case "capsuleGenerate":
-        await runLegacyCapsuleGeneration(deps, job);
-        return {};
+        return await runCapsuleGeneration(deps, job, context);
       case "capsuleRegenerateSelected":
-        await runLegacySelectedRegeneration(deps, job);
-        return {};
+        return await runSelectedRegeneration(deps, job, context);
       case "capsuleReportGenerate":
-        return await runCapsuleReport(deps, job);
+        return await runCapsuleReport(deps, job, context.signal);
+      case "outfitImageGenerate":
+        return await runOutfitImage(deps, job, context.signal);
       case "outfitReportGenerate":
-        return await runOutfitReport(deps, job);
+        return await runOutfitReport(deps, job, context.signal);
+      case "outfitSetImageGenerate":
+        return await runOutfitSetImage(deps, job, context.signal);
       case "personalItemsReportGenerate":
-        return await runPersonalItemsReport(deps, job);
+        return await runPersonalItemsReport(deps, job, context.signal);
       case "personalItemUploadUrls":
         return await runUploadUrls(deps, job, context.signal);
       case "personalItemUploadFiles":

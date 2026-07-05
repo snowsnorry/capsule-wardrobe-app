@@ -13,6 +13,7 @@ import {
 } from "./deepinfraResponse.js";
 import type { LlmGenerateOptions, UserProfileLike } from "./types.js";
 import { logWarn } from "../logger.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 const OPENAI_BASE_URL = "https://api.deepinfra.com/v1/openai";
 const DEFAULT_CHAT_MODEL = "google/gemma-4-31B-it";
@@ -50,6 +51,7 @@ type DeepInfraChatCompletionRequest = Omit<
 type DeepInfraChatCompletionsClient = {
   create: (
     payload: DeepInfraChatCompletionPayload,
+    options?: { signal?: AbortSignal },
   ) => Promise<AsyncIterable<unknown>>;
 };
 
@@ -176,12 +178,13 @@ function createSdkDeepInfraClient({
     },
     chat: {
       completions: {
-        create: (payload) =>
+        create: (payload, options) =>
           sdkClient.chat.completions
             .create(
               payload as Parameters<
                 typeof sdkClient.chat.completions.create
               >[0],
+              options,
             )
             .then((response) => response as AsyncIterable<unknown>),
       },
@@ -263,6 +266,7 @@ function createDeepInfraClient({
       images = [],
       systemPrompt: systemPromptOverride = null,
       onPayloadBuilt = null,
+      signal = null,
     } = options;
     const client = getOpenAiClient();
     const { system, user } = splitSystemAndUserPrompt(prompt);
@@ -279,16 +283,19 @@ function createDeepInfraClient({
     const requestStartedAt = nowImpl();
     releaseImageBuffers(images);
     onPayloadBuilt?.();
+    throwIfAborted(signal);
     const stream = await createDeepInfraResponseStream(client, payload, {
       imageCount: Array.isArray(images) ? images.length : 0,
       model,
       nowImpl,
       payloadBytes,
       requestStartedAt,
+      signal,
       warnImpl,
     });
 
     const content = await collectStreamText(stream);
+    throwIfAborted(signal);
     const response = buildDeepInfraTextResponse(content);
     const json = parseDeepInfraJsonResponse(content);
 
@@ -317,15 +324,21 @@ function buildDeepInfraTextResponse(content: string) {
 async function createDeepInfraResponseStream(
   client: DeepInfraClientLike,
   payload: ReturnType<typeof buildDeepInfraPayload>,
-  logContext: Omit<DeepInfraRequestLogContext, "error">,
+  logContext: Omit<DeepInfraRequestLogContext, "error"> & {
+    signal?: AbortSignal | null;
+  },
 ) {
+  const { signal, ...requestLogContext } = logContext;
   try {
-    return await client.chat.completions.create({
-      ...payload,
-      stream: true,
-    });
+    return await client.chat.completions.create(
+      {
+        ...payload,
+        stream: true,
+      },
+      signal ? { signal } : undefined,
+    );
   } catch (error) {
-    logDeepInfraRequestFailure({ error, ...logContext });
+    logDeepInfraRequestFailure({ error, ...requestLogContext });
     throw error;
   }
 }

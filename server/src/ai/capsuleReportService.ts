@@ -33,6 +33,7 @@ import type {
   CapsuleReportItem,
 } from "./capsuleReportTypes.js";
 import { parseCapsuleReportLlmOutput } from "./capsuleReportValidation.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 const CAPSULE_REPORT_SCHEMA_VERSION = 1;
 
@@ -132,15 +133,19 @@ async function generateAndPersistReport({
   context,
   deps,
   email,
+  signal,
 }: {
   context: CapsuleReportContext;
   deps: CapsuleReportServiceDeps;
   email: string;
+  signal?: AbortSignal | null;
 }) {
+  throwIfAborted(signal);
   const collage = await buildCapsuleReportCollage({
     deps,
     items: context.items,
   });
+  throwIfAborted(signal);
   const prompt = renderCapsuleReportPrompt({
     filters: context.effectiveSnapshot.filters,
     generatedOutfits: context.generatedOutfits,
@@ -159,8 +164,10 @@ async function generateAndPersistReport({
     userProfile: context.profile,
     format: buildCapsuleReportFormat(),
     images: [collage],
+    signal,
     systemPrompt: CAPSULE_REPORT_SYSTEM_PROMPT,
   });
+  throwIfAborted(signal);
   const parsedReport = parseCapsuleReportLlmOutput(json, {
     generatedOutfitIds: context.generatedOutfits.map((outfit) => outfit.id),
     itemCount: context.reportItems.length,
@@ -195,6 +202,7 @@ async function generateCapsuleReport(
   email: string,
   capsuleId: string,
   deps: CapsuleReportServiceDepsOverrides = {},
+  options: { signal?: AbortSignal | null } = {},
 ): Promise<CapsuleReport> {
   const resolvedDeps = createCapsuleReportServiceDeps(deps);
   const context = await buildCapsuleReportContext({
@@ -207,6 +215,7 @@ async function generateCapsuleReport(
       context,
       deps: resolvedDeps,
       email,
+      signal: options.signal,
     });
   } catch (error) {
     if (isCapsuleReportDomainError(error)) throw error;

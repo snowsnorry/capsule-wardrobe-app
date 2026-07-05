@@ -54,82 +54,177 @@ function normalizeEmail(email: unknown) {
     .toLowerCase();
 }
 
+async function clearJobRunsForEmail({
+  dedupe,
+  email,
+  jobs,
+  owners,
+}: {
+  dedupe: Map<string, string>;
+  email: string;
+  jobs: Map<string, JobSnapshot>;
+  owners: Map<string, string>;
+}) {
+  const normalizedEmail = normalizeEmail(email);
+  let deleted = 0;
+  for (const [id, owner] of owners.entries()) {
+    if (owner !== normalizedEmail) continue;
+    jobs.delete(id);
+    owners.delete(id);
+    deleted += 1;
+  }
+  for (const [key, id] of dedupe.entries()) {
+    if (!jobs.has(id)) {
+      dedupe.delete(key);
+    }
+  }
+  return deleted;
+}
+
+async function enqueueInMemoryJob({
+  dedupe,
+  input,
+  jobs,
+  owners,
+}: {
+  dedupe: Map<string, string>;
+  input: EnqueueJobInput;
+  jobs: Map<string, JobSnapshot>;
+  owners: Map<string, string>;
+}) {
+  const profileEmail = normalizeEmail(input.profileEmail);
+  const dedupeKey = `${profileEmail}:${input.kind}:${input.dedupeKey || ""}`;
+  const existingId = input.dedupeKey ? dedupe.get(dedupeKey) : "";
+  const existing = existingId ? jobs.get(existingId) : null;
+  if (existing && isActive(existing)) {
+    return existing;
+  }
+
+  const job = toSnapshot(input, crypto.randomUUID());
+  jobs.set(job.id, job);
+  owners.set(job.id, profileEmail);
+  if (input.dedupeKey) {
+    dedupe.set(dedupeKey, job.id);
+  }
+  return job;
+}
+
+function listActiveJobSnapshotsForEntity({
+  email,
+  entityId,
+  entityType,
+  jobs,
+  kinds,
+  owners,
+}: {
+  email: string;
+  entityId?: string | null;
+  entityType: string;
+  jobs: Map<string, JobSnapshot>;
+  kinds?: string[] | null;
+  owners: Map<string, string>;
+}) {
+  const kindSet = new Set(
+    Array.isArray(kinds)
+      ? kinds.map((kind) => String(kind || "").trim()).filter(Boolean)
+      : [],
+  );
+  return Array.from(jobs.values()).filter((job) => {
+    if (owners.get(job.id) !== normalizeEmail(email) || !isActive(job)) {
+      return false;
+    }
+    if (job.entity?.type !== entityType) {
+      return false;
+    }
+    if (entityId && job.entity.id !== entityId) {
+      return false;
+    }
+    return kindSet.size === 0 || kindSet.has(job.kind);
+  });
+}
+
+function listJobSnapshots({
+  email,
+  jobs,
+  owners,
+  status,
+}: {
+  email: string;
+  jobs: Map<string, JobSnapshot>;
+  owners: Map<string, string>;
+  status?: "active" | JobStatus | null;
+}) {
+  return Array.from(jobs.values()).filter((job) => {
+    if (owners.get(job.id) !== normalizeEmail(email)) {
+      return false;
+    }
+    return status === "active"
+      ? isActive(job)
+      : status
+        ? job.status === status
+        : true;
+  });
+}
+
+function buildJobMetrics(jobs: Map<string, JobSnapshot>) {
+  const metrics = createEmptyJobMetrics();
+  for (const job of jobs.values()) {
+    addJobMetricCount({
+      count: 1,
+      kind: job.kind,
+      metrics,
+      status: job.status,
+    });
+    if (isStuck(job)) {
+      metrics.stuck.total += 1;
+      if (job.status === "queued" || job.status === "running") {
+        metrics.stuck[job.status] += 1;
+      }
+    }
+  }
+  return metrics;
+}
+
 export function createInMemoryJobService() {
   const jobs = new Map<string, JobSnapshot>();
   const owners = new Map<string, string>();
   const dedupe = new Map<string, string>();
 
   return {
-    clearJobRunsForEmailImpl: async (email: string) => {
-      const normalizedEmail = normalizeEmail(email);
-      let deleted = 0;
-      for (const [id, owner] of owners.entries()) {
-        if (owner !== normalizedEmail) continue;
-        jobs.delete(id);
-        owners.delete(id);
-        deleted += 1;
-      }
-      for (const [key, id] of dedupe.entries()) {
-        if (!jobs.has(id)) {
-          dedupe.delete(key);
-        }
-      }
-      return deleted;
-    },
-    enqueueJobImpl: async (input: EnqueueJobInput) => {
-      const profileEmail = normalizeEmail(input.profileEmail);
-      const dedupeKey = `${profileEmail}:${input.kind}:${input.dedupeKey || ""}`;
-      const existingId = input.dedupeKey ? dedupe.get(dedupeKey) : "";
-      const existing = existingId ? jobs.get(existingId) : null;
-      if (existing && isActive(existing)) {
-        return existing;
-      }
-
-      const job = toSnapshot(input, crypto.randomUUID());
-      jobs.set(job.id, job);
-      owners.set(job.id, profileEmail);
-      if (input.dedupeKey) {
-        dedupe.set(dedupeKey, job.id);
-      }
-      return job;
-    },
+    clearJobRunsForEmailImpl: async (email: string) =>
+      clearJobRunsForEmail({ dedupe, email, jobs, owners }),
+    enqueueJobImpl: async (input: EnqueueJobInput) =>
+      enqueueInMemoryJob({ dedupe, input, jobs, owners }),
     getJobSnapshotImpl: async ({ id, email }: { id: string; email: string }) =>
       owners.get(id) === normalizeEmail(email) ? jobs.get(id) || null : null,
-    getJobMetricsImpl: async () => {
-      const metrics = createEmptyJobMetrics();
-      for (const job of jobs.values()) {
-        addJobMetricCount({
-          count: 1,
-          kind: job.kind,
-          metrics,
-          status: job.status,
-        });
-        if (isStuck(job)) {
-          metrics.stuck.total += 1;
-          if (job.status === "queued" || job.status === "running") {
-            metrics.stuck[job.status] += 1;
-          }
-        }
-      }
-      return metrics;
-    },
+    listActiveJobsForEntityImpl: async () => [],
+    listActiveJobSnapshotsForEntityImpl: async ({
+      email,
+      entityType,
+      entityId,
+      kinds,
+    }: {
+      email: string;
+      entityType: string;
+      entityId?: string | null;
+      kinds?: string[] | null;
+    }) =>
+      listActiveJobSnapshotsForEntity({
+        email,
+        entityId,
+        entityType,
+        jobs,
+        kinds,
+        owners,
+      }),
+    getJobMetricsImpl: async () => buildJobMetrics(jobs),
     listJobSnapshotsImpl: async ({
       email,
       status,
     }: {
       email: string;
       status?: "active" | JobStatus | null;
-    }) =>
-      Array.from(jobs.values()).filter((job) => {
-        if (owners.get(job.id) !== normalizeEmail(email)) {
-          return false;
-        }
-        return status === "active"
-          ? isActive(job)
-          : status
-            ? job.status === status
-            : true;
-      }),
+    }) => listJobSnapshots({ email, jobs, owners, status }),
     listJobEventsAfterImpl: async () => [],
     startJobWorkersImpl: async () => {},
     stopJobWorkersImpl: async () => {},

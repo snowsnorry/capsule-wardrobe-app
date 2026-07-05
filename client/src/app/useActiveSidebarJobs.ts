@@ -14,6 +14,7 @@ import {
   fetchJob,
   getJobEntityKey,
   subscribeJobEvents,
+  waitForJob,
   type JobSnapshot,
 } from "../api/jobs";
 
@@ -115,10 +116,26 @@ function useWaitForJobCompletion({
       if (existingJob && isTerminalJob(existingJob)) {
         return Promise.resolve(existingJob);
       }
-      return new Promise<JobSnapshot>((resolve, reject) => {
+      const waiter: JobWaiter = {
+        reject: () => undefined,
+        resolve: () => undefined,
+      };
+      const trackedPromise = new Promise<JobSnapshot>((resolve, reject) => {
+        waiter.reject = reject;
+        waiter.resolve = resolve;
         const waiters = waitersRef.current.get(jobId) || [];
-        waiters.push({ reject, resolve });
+        waiters.push(waiter);
         waitersRef.current.set(jobId, waiters);
+      });
+      return Promise.race([trackedPromise, waitForJob(jobId)]).finally(() => {
+        const waiters = waitersRef.current.get(jobId);
+        if (!waiters) return;
+        const nextWaiters = waiters.filter((item) => item !== waiter);
+        if (nextWaiters.length > 0) {
+          waitersRef.current.set(jobId, nextWaiters);
+        } else {
+          waitersRef.current.delete(jobId);
+        }
       });
     },
     [jobsRef, waitersRef],

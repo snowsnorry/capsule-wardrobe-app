@@ -23,6 +23,7 @@ import type {
   PersonalItemsReportItem,
 } from "./personalItemsReportTypes.js";
 import { parsePersonalItemsReportLlmOutput } from "./personalItemsReportValidation.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 const PERSONAL_ITEMS_REPORT_SCHEMA_VERSION = 1;
 
@@ -129,16 +130,20 @@ async function generateAndPersistReport({
   deps,
   email,
   personalItemsContext,
+  signal,
 }: {
   context: PersonalItemsReportContext;
   deps: PersonalItemsReportServiceDeps;
   email: string;
   personalItemsContext?: string | null;
+  signal?: AbortSignal | null;
 }): Promise<PersonalItemsReportGenerationResult> {
+  throwIfAborted(signal);
   const collage = await buildPersonalItemsReportCollage({
     deps,
     items: context.sourceItems,
   });
+  throwIfAborted(signal);
   const prompt = renderPersonalItemsReportPrompt({
     context: personalItemsContext,
     items: context.reportItems,
@@ -156,8 +161,10 @@ async function generateAndPersistReport({
     userProfile: context.profile,
     format: buildPersonalItemsReportFormat(),
     images: [collage],
+    signal,
     systemPrompt: PERSONAL_ITEMS_REPORT_SYSTEM_PROMPT,
   });
+  throwIfAborted(signal);
   const parsedReport = parsePersonalItemsReportLlmOutput(json, {
     itemCategories: context.reportItems.map((item) => item.category),
     itemCount: context.reportItems.length,
@@ -192,6 +199,7 @@ async function generatePersonalItemsReport(
   email: string,
   personalItemsContext?: string | null,
   deps: PersonalItemsReportServiceDepsOverrides = {},
+  options: { signal?: AbortSignal | null } = {},
 ): Promise<PersonalItemsReportGenerationResult> {
   const resolvedDeps = createPersonalItemsReportServiceDeps(deps);
   const context = await buildPersonalItemsReportContext({
@@ -204,6 +212,7 @@ async function generatePersonalItemsReport(
       deps: resolvedDeps,
       email,
       personalItemsContext,
+      signal: options.signal,
     });
   } catch (error) {
     if (isPersonalItemsReportDomainError(error)) throw error;

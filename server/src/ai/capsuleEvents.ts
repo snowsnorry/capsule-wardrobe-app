@@ -115,7 +115,11 @@ function getPendingRegenerationUrls(partialRegenerationJob) {
     ? partialRegenerationJob.pendingItemUrls
         .map((itemUrl) => String(itemUrl || "").trim())
         .filter(Boolean)
-    : [];
+    : Array.isArray(partialRegenerationJob?.payload?.itemUrls)
+      ? partialRegenerationJob.payload.itemUrls
+          .map((itemUrl) => String(itemUrl || "").trim())
+          .filter(Boolean)
+      : [];
 }
 
 function getStoredWardrobeSnapshotFields(storedWardrobe) {
@@ -184,7 +188,11 @@ function buildReadySnapshot(pendingImageSetIndexes, storedWardrobeFields) {
 }
 
 function isPartialRegenerationPending(partialRegenerationJob) {
-  return partialRegenerationJob?.status === "pending";
+  return (
+    partialRegenerationJob?.status === "pending" ||
+    partialRegenerationJob?.status === "queued" ||
+    partialRegenerationJob?.status === "running"
+  );
 }
 
 function isPartialRegenerationFailed(partialRegenerationJob) {
@@ -193,9 +201,17 @@ function isPartialRegenerationFailed(partialRegenerationJob) {
 
 function isActiveExtrasPendingWithItems(activeJob, storedWardrobe) {
   return (
-    activeJob?.status === "pending" &&
+    isActiveJobPending(activeJob) &&
     activeJob.phase === "extras" &&
     Boolean(storedWardrobe?.items?.length)
+  );
+}
+
+function isActiveJobPending(activeJob) {
+  return (
+    activeJob?.status === "pending" ||
+    activeJob?.status === "queued" ||
+    activeJob?.status === "running"
   );
 }
 
@@ -205,7 +221,7 @@ function isActiveJobFailed(activeJob) {
 
 function isCapsulePending(activeJob, fullRegenerationMarker) {
   return (
-    activeJob?.status === "pending" ||
+    isActiveJobPending(activeJob) ||
     fullRegenerationMarker?.status === "pending"
   );
 }

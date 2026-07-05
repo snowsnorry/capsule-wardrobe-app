@@ -2,6 +2,7 @@ import { test, expect } from "vitest";
 import {
   buildPromptFromTemplate,
   createOutfitSetImageService,
+  runOutfitSetImageGenerationJob,
 } from "./outfitSetImages.js";
 import {
   clearOutfitSetImageJobsForEmail,
@@ -755,6 +756,161 @@ test("outfitSetImage service reuses an active pending image job", async () => {
   expect(secondRes.statusCode).toBe(202);
   expect(secondRes.body).toEqual({ ok: true, status: "pending" });
   expect(generationCalls).toBe(0);
+});
+
+test("persisted outfit-set image job runs without process-local state and propagates abort signals", async () => {
+  const signal = new AbortController().signal;
+  const updates = [];
+  const providerSignals = [];
+  const result = await runOutfitSetImageGenerationJob({
+    deps: {
+      getCapsuleImpl: async () => createCapsule(),
+      getProfileImpl: async () =>
+        buildNormalizedProfileRecord({
+          imageLlm: "openai:gpt-image-2",
+        }),
+      buildCapsuleEventSnapshotImpl: (payload) => payload,
+      publishSnapshotImpl: () => undefined,
+      generateImageWithOpenAiImpl: async (_prompt, options) => {
+        providerSignals.push(options.signal);
+        return {
+          response: null,
+          image: {
+            base64: "generated-base64",
+            mimeType: "image/png",
+          },
+        };
+      },
+      uploadImageToR2Impl: async () => ({
+        key: "outfit-set-images/generated/capsule-1/0/digest.png",
+        url: "https://images.example.com/generated.png",
+        digest: "digest",
+      }),
+      downloadProductImageAssetsImpl: async () => ({
+        "top-1": {
+          buffer: Buffer.from("top"),
+          mimeType: "image/jpeg",
+          source: "download",
+          imageUrl: "https://example.com/top.jpg",
+          originalImageUrl: "https://example.com/top.jpg",
+          width: 100,
+          height: 100,
+        },
+        "bottom-1": {
+          buffer: Buffer.from("bottom"),
+          mimeType: "image/jpeg",
+          source: "download",
+          imageUrl: "https://example.com/bottom.jpg",
+          originalImageUrl: "https://example.com/bottom.jpg",
+          width: 100,
+          height: 100,
+        },
+        "bag-1": {
+          buffer: Buffer.from("bag"),
+          mimeType: "image/jpeg",
+          source: "download",
+          imageUrl: "https://example.com/bag.jpg",
+          originalImageUrl: "https://example.com/bag.jpg",
+          width: 100,
+          height: 100,
+        },
+      }),
+      updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => {
+        updates.push(draft);
+        return buildNormalizedCapsuleRecord({
+          ...createCapsule(),
+          draft,
+        });
+      },
+    },
+    email: "person@example.com",
+    capsuleId: "capsule-1",
+    setIndex: 0,
+    signal,
+  });
+
+  expect(result).toEqual({ capsuleId: "capsule-1", setIndex: 0 });
+  expect(providerSignals).toEqual([signal]);
+  expect(updates).toHaveLength(1);
+  expect(updates[0].data.wardrobe.outfitSets[0].image).toBe(
+    "https://images.example.com/generated.png",
+  );
+});
+
+test("persisted outfit-set image job does not persist after abort", async () => {
+  const controller = new AbortController();
+  const updates = [];
+
+  await expect(
+    runOutfitSetImageGenerationJob({
+      deps: {
+        getCapsuleImpl: async () => createCapsule(),
+        getProfileImpl: async () =>
+          buildNormalizedProfileRecord({
+            imageLlm: "openai:gpt-image-2",
+          }),
+        buildCapsuleEventSnapshotImpl: (payload) => payload,
+        publishSnapshotImpl: () => undefined,
+        generateImageWithOpenAiImpl: async () => {
+          controller.abort();
+          return {
+            response: null,
+            image: {
+              base64: "generated-base64",
+              mimeType: "image/png",
+            },
+          };
+        },
+        uploadImageToR2Impl: async () => ({
+          key: "outfit-set-images/generated/capsule-1/0/digest.png",
+          url: "https://images.example.com/generated.png",
+          digest: "digest",
+        }),
+        downloadProductImageAssetsImpl: async () => ({
+          "top-1": {
+            buffer: Buffer.from("top"),
+            mimeType: "image/jpeg",
+            source: "download",
+            imageUrl: "https://example.com/top.jpg",
+            originalImageUrl: "https://example.com/top.jpg",
+            width: 100,
+            height: 100,
+          },
+          "bottom-1": {
+            buffer: Buffer.from("bottom"),
+            mimeType: "image/jpeg",
+            source: "download",
+            imageUrl: "https://example.com/bottom.jpg",
+            originalImageUrl: "https://example.com/bottom.jpg",
+            width: 100,
+            height: 100,
+          },
+          "bag-1": {
+            buffer: Buffer.from("bag"),
+            mimeType: "image/jpeg",
+            source: "download",
+            imageUrl: "https://example.com/bag.jpg",
+            originalImageUrl: "https://example.com/bag.jpg",
+            width: 100,
+            height: 100,
+          },
+        }),
+        updateCapsuleSnapshotImpl: async (_email, _capsuleId, draft) => {
+          updates.push(draft);
+          return buildNormalizedCapsuleRecord({
+            ...createCapsule(),
+            draft,
+          });
+        },
+      },
+      email: "person@example.com",
+      capsuleId: "capsule-1",
+      setIndex: 0,
+      signal: controller.signal,
+    }),
+  ).rejects.toMatchObject({ code: "job_aborted" });
+
+  expect(updates).toEqual([]);
 });
 
 test("deleteOutfitSetImage clears stored image and publishes updated snapshot", async () => {

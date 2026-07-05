@@ -1,6 +1,12 @@
 import type { ErrorWithCode } from "../ai/types.js";
 import { logError } from "../logger.js";
+import { hashCapsuleContent } from "../db.js";
 import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
+import { getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
+import {
+  getOutfitSetsFromSnapshot,
+  resolveTargetSetItems,
+} from "../ai/outfitSetImageSnapshots.js";
 
 export function registerCapsuleReadRoutes(app, context) {
   registerCapsuleListRoutes(app, context);
@@ -54,6 +60,30 @@ function registerCapsuleListRoutes(app, context) {
 
 const DEFAULT_CAPSULE_PAGE_LIMIT = 10;
 const MAX_CAPSULE_PAGE_LIMIT = 50;
+
+function buildCapsuleGenerateDedupeKey(capsuleId, capsule) {
+  return `capsuleGenerate:${capsuleId}:${hashCapsuleContent(
+    getEffectiveCapsuleSnapshot(capsule),
+  )}`;
+}
+
+function buildSelectedRegenerationDedupeKey(capsuleId, capsule, itemUrls) {
+  return `capsuleRegenerateSelected:${capsuleId}:${hashCapsuleContent({
+    itemUrls,
+    snapshot: getEffectiveCapsuleSnapshot(capsule),
+  })}`;
+}
+
+function buildOutfitSetImageDedupeKey(capsuleId, setIndex, setItems) {
+  return `outfitSetImage:${capsuleId}:${setIndex}:${hashCapsuleContent(
+    setItems.map((item) => ({
+      id: item?.id ?? null,
+      source: item?.source ?? null,
+      url: item?.url ?? null,
+      imageUrl: item?.imageUrl ?? item?.image_url ?? null,
+    })),
+  )}`;
+}
 
 function normalizeIntegerParam(value: unknown, fallback: number) {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -244,11 +274,53 @@ function sendCapsuleShareErrorResponse(res, error) {
   return null;
 }
 
+function getOutfitSetImageRouteInput(req) {
+  const capsuleId = String(req.params.id || "").trim();
+  const setIndex = Number.parseInt(String(req.params.setIndex ?? ""), 10);
+  return { capsuleId, setIndex };
+}
+
+async function sendQueuedOutfitSetImageJob(context, req, res) {
+  const { capsuleId, setIndex } = getOutfitSetImageRouteInput(req);
+  if (!capsuleId || !Number.isInteger(setIndex) || setIndex < 0) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  const capsule = await context.getCapsuleImpl(req.user.email, capsuleId);
+  if (!capsule) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+  const { wardrobe, outfitSets } = getOutfitSetsFromSnapshot(effectiveSnapshot);
+  const targetSet = outfitSets[setIndex];
+  if (!targetSet) {
+    return res.status(404).json({ error: "not_found" });
+  }
+  if (typeof targetSet?.image === "string" && targetSet.image.trim()) {
+    return res.json({ ok: true, status: "ready" });
+  }
+
+  const setItems = resolveTargetSetItems(wardrobe, setIndex);
+  if (!Array.isArray(setItems) || setItems.length < 3) {
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+  const job = await enqueueRouteJob(context, {
+    kind: "outfitSetImageGenerate",
+    profileEmail: req.user.email,
+    entity: { type: "capsule", id: capsuleId },
+    dedupeKey: buildOutfitSetImageDedupeKey(capsuleId, setIndex, setItems),
+    phase: "queued",
+    payload: { capsuleId, setIndex },
+    progressLabel: "Generating outfit set image",
+  });
+  return sendQueuedJob(res, job);
+}
+
 // eslint-disable-next-line max-lines-per-function
 function registerCapsuleActionRoutes(app, context) {
   const {
     deleteOutfitSetImageHandler,
-    generateOutfitSetImageHandler,
     requireAuth,
     requireCsrf,
     requireTrustedOrigin,
@@ -272,7 +344,7 @@ function registerCapsuleActionRoutes(app, context) {
           kind: "capsuleGenerate",
           profileEmail: req.user.email,
           entity: { type: "capsule", id: String(req.params.id || "") },
-          dedupeKey: `capsuleGenerate:${req.params.id}`,
+          dedupeKey: buildCapsuleGenerateDedupeKey(req.params.id, capsule),
           phase: "queued",
           payload: { capsuleId: req.params.id },
           progressLabel: "Building capsule",
@@ -312,7 +384,11 @@ function registerCapsuleActionRoutes(app, context) {
           kind: "capsuleRegenerateSelected",
           profileEmail: req.user.email,
           entity: { type: "capsule", id: String(req.params.id || "") },
-          dedupeKey: `capsuleRegenerateSelected:${req.params.id}:${itemUrls.join("|")}`,
+          dedupeKey: buildSelectedRegenerationDedupeKey(
+            req.params.id,
+            capsule,
+            itemUrls,
+          ),
           phase: "queued",
           payload: { capsuleId: req.params.id, itemUrls },
           progressLabel: "Regenerating selected items",
@@ -330,7 +406,14 @@ function registerCapsuleActionRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
-    generateOutfitSetImageHandler,
+    async (req, res) => {
+      try {
+        return await sendQueuedOutfitSetImageJob(context, req, res);
+      } catch (error) {
+        logError("[capsules/outfit-set-image][enqueue]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
   );
 
   app.delete(

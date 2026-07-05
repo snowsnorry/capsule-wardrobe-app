@@ -11,6 +11,7 @@ const jobsApi = vi.hoisted(() => ({
       : `${job.entity?.type}:${job.entity?.id}`,
   ),
   subscribeJobEvents: vi.fn(),
+  waitForJob: vi.fn(),
 }));
 
 vi.mock("../api/jobs", () => jobsApi);
@@ -62,6 +63,8 @@ beforeEach(() => {
   jobsApi.subscribeJobEvents.mockImplementation(
     () => new Promise(() => undefined),
   );
+  jobsApi.waitForJob.mockReset();
+  jobsApi.waitForJob.mockImplementation(() => new Promise(() => undefined));
 });
 
 afterEach(() => {
@@ -292,6 +295,28 @@ test("useJobTracker keeps active UI and waiters when disappeared job reconciles 
   expect(onResolved).not.toHaveBeenCalled();
   expect(result.current.jobs).toEqual([running]);
   expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
+});
+
+test("useJobTracker waitForJobCompletion delegates to shared job watchdog", async () => {
+  const queued = createJob();
+  const failed = createJob({
+    status: "failed",
+    error: { code: "timeout", message: "Timed out" },
+    failedAt: "2026-01-01T00:01:00.000Z",
+  });
+  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
+  jobsApi.waitForJob.mockResolvedValue(failed);
+
+  const { result } = renderHook(() => useJobTracker("person@test.com"));
+
+  await act(async () => {
+    await flushPromises();
+  });
+
+  await expect(result.current.waitForJobCompletion("job-1")).resolves.toEqual(
+    failed,
+  );
+  expect(jobsApi.waitForJob).toHaveBeenCalledWith("job-1");
 });
 
 test("useJobTracker does not fetch job details when SSE fails for a still-active job", async () => {

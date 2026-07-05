@@ -160,14 +160,15 @@ async function regenerateSelectedWardrobeItems({
 async function generateOutfitSetImage({
   capsuleId,
   setIndex,
-}: OutfitSetMutationInput): Promise<WardrobeResponse> {
-  return requestJson(
+}: OutfitSetMutationInput): Promise<WardrobeResponse | JobResponse> {
+  const response = await requestJson(
     `${API_BASE_URL}/capsules/${String(capsuleId || "").trim()}/outfit-sets/${Number.parseInt(String(setIndex ?? ""), 10)}/image`,
     {
       method: "POST",
       credentials: "include",
     },
   );
+  return response?.job ? parseTrackedJobResponse(response) : response;
 }
 
 async function deleteOutfitSetImage({

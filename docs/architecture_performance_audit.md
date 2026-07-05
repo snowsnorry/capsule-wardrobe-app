@@ -10,8 +10,8 @@ Goal: reassess the architecture decisions, load resilience, edge-case behavior, 
 - Most previous P1 items are closed or materially reduced: product options are no longer scanned before every search, stats have bounded TTL/in-flight cache and concurrency limits, job state + event append are atomic, providerless queued jobs have a reconciler, the MCP handler has an error boundary, production startup has fail-fast preflight, and the Render build/quality gate/streaming proxy/R2 staging/observability baseline have improved.
 - The main remaining performance risk is large user-owned lists: Personal items are still loaded and rendered in full, and Personal items report builds the prompt/collage from the whole wardrobe in one pass. Because the report evaluates wardrobe completeness, it must keep full wardrobe coverage; the missing piece is a scalable full-coverage pipeline, not dropping items from the analysis.
 - Search/stats no longer look like an immediate architectural defect, but a cold cache miss for stats is still expensive, and the `products` performance contract is not an executable migration and is not backed by an automated plan/benchmark guard.
-- Jobs are more reliable across the enqueue/start/progress/terminal lifecycle, but real gaps remain: stale `running` jobs after a crash are not reconciled, the deadline does not cancel report/provider/legacy side effects without deeper `AbortSignal` propagation, some AI/image jobs remain process-local, and SSE still polls the DB for each stream.
-- Production readiness is better because of preflight and structured logs, but the Render health check is still the shallow `/health`; `/ready`/`/live`, scoped limits, SSE caps, and admin/internal metrics access are not complete.
+- Jobs now use `job_runs` as the durable source of truth for capsule generation, selected regeneration, reports, uploads, outfit image generation, outfit-set image generation, crash recovery, cancellation, and client waiting. The remaining job/SSE risk is DB polling cost per stream and broader queue/load policy, not legacy process-local execution state.
+- Production readiness is better because of preflight and structured logs, but the Render health check is still the shallow `/health`; `/ready`/`/live`, scoped limits beyond job-event stream caps, and admin/internal metrics access are not complete.
 
 ## What Was Actually Closed Since the Previous Audit
 
@@ -21,6 +21,10 @@ Goal: reassess the architecture decisions, load resilience, edge-case behavior, 
 - `server/src/db/wardrobe.ts`, `server/src/wardrobeItemDisplay.ts`: `/wardrobe/items` no longer selects `embedding` and returns a list/display projection instead of internal fields.
 - `server/src/routes/appBootstrapRoutes.ts`: sidebar bootstrap uses `wardrobeCount`, not the full wardrobe list.
 - `server/src/jobs/jobQueue.ts`, `server/src/db/jobRunCreation.ts`, `server/src/db/jobRunLifecycle.ts`: providerless queued jobs, state transitions, and job events are covered by a minimal outbox/reconciler and atomic SQL CTEs.
+- `server/src/jobs/jobQueue.ts`, `server/src/jobs/jobWorker.ts`, `server/src/db/jobRunLifecycle.ts`: stale `running` jobs are failed on worker startup with replayable events, unblocking active dedupe after a crash without automatic retry.
+- `server/src/jobs/jobHandlers.ts`, `server/src/ai/*ReportService.ts`, AI/LLM/image provider adapters, generation/image runners: job handlers receive cooperative `AbortSignal`, pass it to supported providers, and gate final domain writes after abort/deadline.
+- `server/src/jobs/jobHandlers.ts`, `server/src/ai/wardrobeJobService.ts`, `server/src/ai/regenerateSelectedServiceJobs.ts`, `server/src/ai/outfitImages.ts`, `server/src/ai/outfitSetImages.ts`, route modules: capsule generation, selected regeneration, outfit image generation, and outfit-set image generation execute as durable `job_runs`; production wiring no longer depends on process-local AI/image job maps.
+- `server/src/routes/jobRoutes.ts`, `client/src/app/useActiveSidebarJobs.ts`: job event streams have server-side max duration/per-user caps, and app-level waiting delegates to the shared timed `waitForJob` watchdog.
 - `server/src/jobs/jobWorker.ts`, upload handlers/runners: the worker deadline and `AbortSignal` now reach queued upload child runners.
 - `server/src/mcp/mcpRoutes.ts`: the MCP route no longer discards the Promise; `createMcpServer` and transport handling are inside an error boundary.
 - `server/src/startupPreflight.ts`, `server/src/serverStartup.ts`: production preflight runs before `ensureTables`/`listen` and validates critical configuration.
@@ -91,7 +95,7 @@ Remaining:
 
 Impact: p95/p99 should already be better than in the first audit, but with a large catalog and active statistics UI load, the database still remains the main bottleneck.
 
-### 3. Jobs are more reliable, but crash/cancellation/SSE gaps remain
+### 3. Jobs crash/cancellation and legacy process-local execution state are closed
 
 Key areas:
 
@@ -103,30 +107,35 @@ Key areas:
 - `server/src/db/jobRunQueries.ts`
 - `server/src/db/sql/schema/105_create_job_runs_active_dedupe_index.sql`
 - `server/src/ai/wardrobeJobService.ts`
-- `server/src/ai/partialRegenerationJobs.ts`
-- `server/src/ai/outfitImageJobs.ts`
-- `server/src/ai/outfitSetImageJobs.ts`
+- `server/src/ai/regenerateSelectedServiceJobs.ts`
+- `server/src/ai/outfitImages.ts`
+- `server/src/ai/outfitSetImages.ts`
 - `client/src/app/useActiveSidebarJobs.ts`
 
 Done:
 
 - The crash window between `job_runs` create and provider enqueue is covered by a reconciler for stale queued jobs without a provider id.
+- Stale `running` jobs are reconciled to terminal `failed` rows with `job_stale_after_crash` and replayable events on worker startup. They are not automatically retried, avoiding duplicate side effects while unblocking active dedupe.
 - State update and event append are now atomic.
 - The worker got a per-job deadline.
-- Upload child runners receive `AbortSignal` and can exit on abort/timeout.
+- Upload child runners, report generation, capsule generation, selected regeneration, outfit image generation, outfit-set image generation, and supported LLM/image provider adapters receive `AbortSignal` and check abort before final writes.
+- Full capsule abort/deadline failure no longer writes rollback snapshots after the durable job has already terminalized, preventing old timed-out handlers from overwriting newer state.
+- Capsule generation and selected regeneration no longer route production execution through legacy HTTP handlers/process-local generation promises; durable handler functions load state, publish snapshots, update progress, and persist final domain state directly.
+- Outfit image and outfit-set image generation are persisted job kinds (`outfitImageGenerate`, `outfitSetImageGenerate`), with route-level queued responses and active dedupe.
+- Active dedupe keys for generation/image work include input-state hashes, so changed filters/items do not bind new requests to an older active job for stale inputs.
+- Capsule/outfit pending image state is derived from active persisted jobs in production route context, not in-memory registries.
+- Account cleanup relies on persisted job cleanup for transient AI/image jobs instead of clearing production legacy maps.
+- `/jobs/:id/events` has server-side max stream duration and a per-user active stream cap.
 - The client `waitForJob` helper got a default timeout and server status reconciliation.
+- `useActiveSidebarJobs.waitForJobCompletion` delegates to the shared timed `waitForJob` watchdog so local stream/discovery gaps do not hang forever.
 
 Remaining:
 
-- There is no reconciliation for stale `running` jobs. If the process crashes after `markJobRunStarted`, the row remains `running`, the active dedupe index keeps blocking repeats, and redelivery will be skipped because `startJobRun` accepts only `queued`.
-- Worker deadline uses `Promise.race`; if the handler/provider call does not accept a signal, the job can be marked failed while the actual work continues and later performs domain side effects.
-- `AbortSignal` is not propagated to capsule/outfit/personal report LLM calls and legacy generation branches.
-- Capsule generation and selected regeneration are enqueued as persisted `job_runs`, but their persisted handlers still call legacy handlers that create process-local `WardrobeJobState` / `PartialRegenerationJobState` maps and promises. The outer job is persisted; the inner execution state still is not fully durable or cancellable.
-- Outfit image and outfit-set image jobs remain process-local/fire-and-forget without persisted `job_runs`.
-- `/jobs/:id/events` does DB polling once per second for each SSE stream, without server-side max duration, per-user/session cap, or active stream metrics.
-- App-level `waitForJobCompletion` in `useActiveSidebarJobs` depends on stream/discovery/signout and has no own timeout/watchdog, although the shared `waitForJob` helper is more reliable now.
+- `/jobs/:id/events` still polls the DB once per second per accepted stream. Stream caps bound exposure, but a future push/event-notify path would reduce DB pressure.
+- Some legacy service modules and process-local registries remain for old service/test entry points, but they are no longer used by production dependency wiring for AI/image execution.
+- Provider SDKs that do not support abort still cannot always stop the remote call itself; final writes are guarded by cooperative abort checks.
 
-Impact: the regular happy path is more resilient, but a crash during a running job, provider hang, or many open tabs can still cause stuck UI, a dedupe lock, and DB/socket pressure.
+Impact: the regular happy path and crash/timeout recovery are now production-ready for the current single-service architecture. The remaining concern is operational load/backpressure, not correctness of durable job state.
 
 ### 4. Production readiness/API integration remains partially incomplete
 
@@ -154,7 +163,7 @@ Remaining:
 - `/internal/metrics` and `/api/internal/metrics` are reserved, but always return 403; there is no admin/internal auth model for metrics yet.
 - Production CORS allow-headers include only `Content-Type, X-CSRF-Token`; browser-based MCP clients with `Authorization`, `Mcp-Session-Id`, `Mcp-Protocol-Version` may fail preflight.
 - SPA fallback whitelist does not include all integration prefixes (`/oauth`, `/.well-known`, `/mcp`, `/jobs`), so an integration route miss can return HTML 200 instead of JSON/404.
-- Scoped rate limits exist for auth/passkey/oauth register, but there are no separate limits/caps for `/oauth/token`, `/mcp`, report/generate enqueue, and SSE streams.
+- Scoped rate limits exist for auth/passkey/oauth register, and job-event SSE streams now have active caps. There are still no separate limits for `/oauth/token`, `/mcp`, report/generate enqueue, or broader queue backpressure.
 
 Impact: deploy is now less likely to start with invalid production config, but it can still be "green" during a runtime dependency problem; browser MCP/integration diagnostics can be noisy.
 
@@ -192,15 +201,7 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
 
 ### P1
 
-1. A stale `running` job can block dedupe forever.
-   - Files: `server/src/db/jobRunLifecycle.ts`, `server/src/jobs/jobWorker.ts`, `server/src/db/sql/schema/105_create_job_runs_active_dedupe_index.sql`
-   - Summary: a crash after `markJobRunStarted` leaves status `running`; active dedupe keeps considering the job active, and the worker will not start it again.
-
-2. Job deadline does not cancel side effects in handlers without signal.
-   - Files: `server/src/jobs/jobWorker.ts`, `server/src/jobs/jobHandlers.ts`, `server/src/ai/*`
-   - Summary: `Promise.race` completes the persisted job as failed, but report/provider/legacy work can continue running.
-
-3. The `personalItemsReport` dedupe key can be too long.
+1. The `personalItemsReport` dedupe key can be too long.
    - File: `server/src/routes/personalItemsReportRoutes.ts`
    - Summary: raw user context is included in `dedupeKey`; this risks DB index bloat/error and unnecessary exposure of user text in job metadata.
 
@@ -218,9 +219,9 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
    - File: `server/src/appMiddleware.ts`
    - Risk: a browser client with bearer token/session headers will not pass preflight.
 
-4. SSE streams have no server-side caps.
+4. Job-event SSE streams still poll per stream.
    - File: `server/src/routes/jobRoutes.ts`
-   - Risk: multiple tabs and jobs create constant DB QPS and socket pressure.
+   - Risk: caps limit active streams, but accepted streams still create constant DB QPS and socket pressure.
 
 5. Remaining `localStorage` helpers can throw.
    - Files: `client/src/i18n/LocaleProvider.tsx`, `client/src/screens/mainScreen/MainScreenHelpers.tsx`, `client/src/screens/outfitScreen/outfitCardLayoutStorage.ts`, `client/src/app/usePasskeyPrompt.ts`
@@ -239,24 +240,19 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
    - For the report path, preserve analysis over the complete wardrobe while using chunking, per-category/per-attribute aggregation, summary precomputation, or staged generation.
    - Remove the double unbounded read on initial Personal items screen load: stale check should use a cheap fingerprint/count/version, not the full list.
 
-2. Finish the job crash/cancellation model.
-   - Add reconciliation for stale `running` jobs: timeout-to-failed/retry policy with idempotency in mind.
-   - Propagate `AbortSignal` to report generation, LLM/image provider calls, and legacy branches.
-   - For handlers that cannot be cancelled, do not rely only on `Promise.race`: either isolate side effects or check terminal state before final writes.
-
-3. Close legacy process-local AI/image job state.
-   - For capsule generation and selected regeneration, remove the inner process-local `WardrobeJobState` / `PartialRegenerationJobState` layer or make it a thin persisted-job progress adapter with proper cancellation/recovery semantics.
-   - Move outfit image and outfit-set image flows into persisted jobs, or add honest TTL/deadline/recovery semantics.
-   - Make sure multi-instance deployment does not depend on process-local maps.
-
-4. Apply and control the `products` performance contract.
+2. Apply and control the `products` performance contract.
    - Apply indexes on a staging/temporary branch and then production after separate approval.
    - Add plan/benchmark smoke checks for search/count/stats on a representative catalog size.
    - For stats, consider a rollup/materialized path or batched query plan if cold misses remain expensive.
 
-5. Limit `personalItemsReport` dedupe/context and improve freshness.
+3. Limit `personalItemsReport` dedupe/context and improve freshness.
    - Add hash/length cap for the dedupe key.
    - Store a report item fingerprint by id/source/updatedAt/category/image metadata instead of a URL-only set.
+
+Done in this pass:
+
+- Finish the job crash/cancellation model.
+- Close legacy process-local AI/image job state from production paths.
 
 ### P2 - After Hot Paths Stabilize
 
@@ -275,7 +271,7 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
 
 4. Add scoped rate limits and active caps.
    - `/oauth/token`, `/mcp` initialize/session requests, report/generate enqueue, upload enqueue.
-   - For SSE: max stream duration, per-user/session cap, active stream metrics.
+   - For SSE: active stream metrics and, if DB polling cost becomes material, a lower-QPS event delivery model.
 
 5. Virtualize the Personal items screen grid.
    - Use the existing `MainScreenVirtualWardrobeGrid` approach or server-side pagination/windowing.
@@ -307,14 +303,13 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
 - Load test for `/search/run`, `/search/stats`, `/wardrobe/items`, `/wardrobe/items/report`, `/jobs/:id/events` on realistic catalog/profile sizes.
 - DB `EXPLAIN (ANALYZE, BUFFERS)` for search/count/stats queries after applying `products` indexes.
 - Browser profiling for Personal items screen grid with 500/1000/3000 personal items.
-- Failure-injection tests for a stale `running` job, worker timeout with an uncancellable provider, SSE disconnect/reconnect, and profile delete cleanup failure.
+- Failure-injection tests for worker timeout with an uncancellable provider, SSE disconnect/reconnect, profile delete cleanup failure, and high-concurrency job-event streams.
 - Production readiness tests for `/live`/`/ready` and missing/misconfigured env.
 
 ## Recommended Work Order
 
 1. Wardrobe pagination/cursor + full-coverage report chunking/aggregation/fingerprint.
-2. Job stale-running reconciliation + deeper cancellation + legacy job migration.
-3. Products index rollout + search/stats plan/benchmark guard.
-4. Readiness/metrics/admin + CORS/fallback integration fixes.
-5. SSE/rate-limit/backpressure caps.
-6. Personal items screen grid virtualization after API pagination.
+2. Products index rollout + search/stats plan/benchmark guard.
+3. Readiness/metrics/admin + CORS/fallback integration fixes.
+4. SSE/rate-limit/backpressure metrics and lower-QPS delivery if needed.
+5. Personal items screen grid virtualization after API pagination.

@@ -63,6 +63,7 @@ type LlmGenerateOptions = {
   images?: ImageAssetLike[];
   systemPrompt?: string | null;
   onPayloadBuilt?: (() => void) | null;
+  signal?: AbortSignal | null;
 };
 
 type LlmUsageLike = {

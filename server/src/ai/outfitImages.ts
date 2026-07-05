@@ -30,6 +30,7 @@ import {
 } from "./outfitImageJobs.js";
 import { downloadProductImageAssets } from "./promptImages.js";
 import { buildOutfitEventSnapshot, outfitEventHub } from "./outfitEvents.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 function getOutfitImageRequestContext(req) {
   return {
@@ -95,7 +96,13 @@ function buildOutfitGeneratedImage(result, { uploadImageToR2Impl, outfitId }) {
     : null;
 }
 
-async function generateOutfitImageAsset({ deps, email, outfitId, items }) {
+async function generateOutfitImageAsset({
+  deps,
+  email,
+  outfitId,
+  items,
+  signal,
+}) {
   const {
     buildOutfitSetDescriptionImpl,
     downloadProductImageAssetsImpl,
@@ -109,6 +116,7 @@ async function generateOutfitImageAsset({ deps, email, outfitId, items }) {
   });
   saveOutfitSetDebugArtifacts({ prompt });
   const imageAssetsById = await downloadProductImageAssetsImpl(items);
+  throwIfAborted(signal);
   const images = items
     .map((item) => imageAssetsById[String(item?.id || "").trim()] || null)
     .filter(Boolean);
@@ -122,7 +130,9 @@ async function generateOutfitImageAsset({ deps, email, outfitId, items }) {
   const result = await generateImageImpl(prompt, {
     images,
     model: imageLlmResolution.model,
+    signal,
   });
+  throwIfAborted(signal);
   const generatedImage = await buildOutfitGeneratedImage(result, {
     uploadImageToR2Impl,
     outfitId,
@@ -138,6 +148,33 @@ async function generateOutfitImageAsset({ deps, email, outfitId, items }) {
   return generatedImage;
 }
 
+async function persistGeneratedOutfitImage({
+  deps,
+  email,
+  outfitId,
+  effectiveSnapshot,
+  generatedImage,
+}) {
+  const latestOutfit = await deps.getOutfitImpl(email, outfitId);
+  if (!latestOutfit) {
+    return null;
+  }
+  const latestEffectiveSnapshot = getEffectiveOutfitSnapshot(latestOutfit);
+  return deps.updateOutfitSnapshotImpl(
+    email,
+    outfitId,
+    buildOutfitImageSnapshotUpdate(
+      latestEffectiveSnapshot,
+      generatedImage?.url || null,
+      Boolean(generatedImage?.url) &&
+        !areOutfitSnapshotItemsEqual(
+          effectiveSnapshot,
+          latestEffectiveSnapshot,
+        ),
+    ),
+  );
+}
+
 async function runOutfitImageJob({
   deps,
   email,
@@ -146,42 +183,38 @@ async function runOutfitImageJob({
   effectiveSnapshot,
   items,
   jobKey,
+  rethrowErrors = false,
+  signal,
 }) {
-  const { getOutfitImpl, publishSnapshotImpl, updateOutfitSnapshotImpl } = deps;
+  const { publishSnapshotImpl } = deps;
   let currentOutfit = outfit;
 
   try {
+    throwIfAborted(signal);
     const generatedImage = await generateOutfitImageAsset({
       deps,
       email,
       outfitId,
       items,
+      signal,
     });
-    const latestOutfit = await getOutfitImpl(email, outfitId);
-    if (!latestOutfit) {
-      currentOutfit = null;
-      return;
-    }
-    const latestEffectiveSnapshot = getEffectiveOutfitSnapshot(latestOutfit);
-    currentOutfit = await updateOutfitSnapshotImpl(
+    throwIfAborted(signal);
+    currentOutfit = await persistGeneratedOutfitImage({
+      deps,
       email,
       outfitId,
-      buildOutfitImageSnapshotUpdate(
-        latestEffectiveSnapshot,
-        generatedImage?.url || null,
-        Boolean(generatedImage?.url) &&
-          !areOutfitSnapshotItemsEqual(
-            effectiveSnapshot,
-            latestEffectiveSnapshot,
-          ),
-      ),
-    );
+      effectiveSnapshot,
+      generatedImage,
+    });
   } catch (error) {
     logError("[outfit-image]", {
       message: error?.message || "unknown_error",
       stack: typeof error?.stack === "string" ? error.stack : null,
       outfitId,
     });
+    if (rethrowErrors) {
+      throw error;
+    }
   } finally {
     deleteOutfitImageJob(jobKey);
     publishOutfitImageSnapshot({
@@ -191,6 +224,44 @@ async function runOutfitImageJob({
       publishSnapshotImpl,
     });
   }
+}
+
+async function runOutfitImageGenerationJob({ deps, email, outfitId, signal }) {
+  const { getOutfitImpl, getOutfitItemsImpl } = deps;
+  if (!outfitId) {
+    const error = new Error("invalid_payload") as Error & { code?: string };
+    error.code = "invalid_payload";
+    throw error;
+  }
+  const outfit = await getOutfitImpl(email, outfitId);
+  if (!outfit) {
+    const error = new Error("not_found") as Error & { code?: string };
+    error.code = "not_found";
+    throw error;
+  }
+  const effectiveSnapshot = getEffectiveOutfitSnapshot(outfit);
+  const items = await getOutfitItemsImpl(outfit, {
+    email,
+    getProductsByUrlsForEmailImpl: deps.getProductsByUrlsForEmailImpl,
+    listWardrobeItemsByUrlsImpl: deps.listWardrobeItemsByUrlsImpl,
+  });
+  if (!Array.isArray(items) || items.length < 3) {
+    const error = new Error("invalid_payload") as Error & { code?: string };
+    error.code = "invalid_payload";
+    throw error;
+  }
+  await runOutfitImageJob({
+    deps,
+    email,
+    outfitId,
+    outfit,
+    effectiveSnapshot,
+    items,
+    jobKey: "",
+    rethrowErrors: true,
+    signal,
+  });
+  return { outfitId };
 }
 
 function createDeleteOutfitImage(deps) {
@@ -280,6 +351,7 @@ function createGenerateOutfitImage(deps) {
       effectiveSnapshot,
       items,
       jobKey,
+      signal: null,
     });
 
     return res.status(202).json({ ok: true, status: "pending" });
@@ -315,7 +387,7 @@ function createOutfitImageService(deps = {}) {
 
 const outfitImageService = createOutfitImageService();
 
-export { createOutfitImageService };
+export { createOutfitImageService, runOutfitImageGenerationJob };
 
 export const deleteOutfitImage = outfitImageService.deleteOutfitImage;
 export const generateOutfitImage = outfitImageService.generateOutfitImage;

@@ -19,6 +19,17 @@ function getOutfitReportErrorStatus(error) {
   }
 }
 
+function buildOutfitImageDedupeKey(outfitId, items) {
+  return `outfitImage:${outfitId}:${hashCapsuleContent(
+    items.map((item) => ({
+      id: item?.id ?? null,
+      source: item?.source ?? null,
+      url: item?.url ?? null,
+      imageUrl: item?.imageUrl ?? item?.image_url ?? null,
+    })),
+  )}`;
+}
+
 function registerOutfitReportRoute(app, context) {
   const { requireTrustedOrigin, requireAuth, requireCsrf } = context;
 
@@ -87,7 +98,45 @@ function registerOutfitImageRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
-    context.generateOutfitImageHandler,
+    async (req, res) => {
+      try {
+        const outfitId = String(req.params.id || "").trim();
+        if (!outfitId) {
+          return res.status(400).json({ error: "invalid_payload" });
+        }
+        const outfit = await context.getOutfitImpl(req.user.email, outfitId);
+        if (!outfit) {
+          return res.status(404).json({ error: "not_found" });
+        }
+        const effectiveSnapshot = getEffectiveOutfitSnapshot(outfit);
+        if (
+          typeof effectiveSnapshot?.image === "string" &&
+          effectiveSnapshot.image.trim().length > 0
+        ) {
+          return res.json({ ok: true, status: "ready" });
+        }
+        const items = await context.getOutfitItems(
+          outfit,
+          buildOutfitHydrationContext(req, context),
+        );
+        if (!Array.isArray(items) || items.length < 3) {
+          return res.status(400).json({ error: "invalid_payload" });
+        }
+        const job = await enqueueRouteJob(context, {
+          kind: "outfitImageGenerate",
+          profileEmail: req.user.email,
+          entity: { type: "outfit", id: outfitId },
+          dedupeKey: buildOutfitImageDedupeKey(outfitId, items),
+          phase: "queued",
+          payload: { outfitId },
+          progressLabel: "Generating outfit image",
+        });
+        return sendQueuedJob(res, job);
+      } catch (error) {
+        logError("[outfits/image][enqueue]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
   );
 
   app.delete(

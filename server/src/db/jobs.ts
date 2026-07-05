@@ -2,11 +2,13 @@ export {
   claimQueuedJobRunsWithoutProviderId,
   getJobRunById,
   getJobRunByIdForEmail,
+  listActiveJobRunsForEntity,
   listJobRunsForEmail,
   setJobRunProviderJobId,
 } from "./jobRunQueries.js";
 export { createJobRun } from "./jobRunCreation.js";
 export {
+  markStaleRunningJobRunsFailed,
   markJobRunCompleted,
   markJobRunFailed,
   markJobRunStarted,

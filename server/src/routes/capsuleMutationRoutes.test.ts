@@ -71,6 +71,43 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
 
   const { baseUrl } = await startTestServer(t, {
     overrides: {
+      getCapsuleImpl: async () => ({
+        id: "capsule-1",
+        name: "New capsule",
+        draft: {
+          filters: {},
+          data: {
+            wardrobe: {
+              items: [
+                {
+                  id: "top-1",
+                  category: "top",
+                  url: "https://example.com/top-1",
+                  source: "from_catalog",
+                },
+                {
+                  id: "bottom-1",
+                  category: "bottom",
+                  url: "https://example.com/bottom-1",
+                  source: "from_catalog",
+                },
+                {
+                  id: "bag-1",
+                  category: "bag",
+                  url: "https://example.com/bag-1",
+                  source: "from_catalog",
+                },
+              ],
+              outfitSets: [
+                { itemIds: ["top-1", "bottom-1", "bag-1"], image: null },
+              ],
+            },
+            rejectedUrls: [],
+          },
+        },
+        saved: null,
+        status: "new",
+      }),
       streamCapsuleEventsImpl: async (_req, res, { snapshot }) => {
         wardrobeCalled = true;
         res.json({ ok: true, snapshot });
@@ -89,6 +126,28 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
         pdfOptions = options;
         return Buffer.from("pdf");
       },
+      getProductsByUrlsInOrderImpl: async (urls: string[]) =>
+        urls.map((url) => ({
+          url,
+          source: "from_catalog",
+          category: url.includes("bottom")
+            ? "bottom"
+            : url.includes("bag")
+              ? "bag"
+              : "top",
+          name: url,
+        })),
+      getProductsByUrlsForEmailImpl: async ({ urls }: { urls: string[] }) =>
+        urls.map((url) => ({
+          url,
+          source: "from_catalog",
+          category: url.includes("bottom")
+            ? "bottom"
+            : url.includes("bag")
+              ? "bag"
+              : "top",
+          name: url,
+        })),
     },
   });
 
@@ -147,8 +206,10 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
       csrfToken: CSRF_TOKEN,
     },
   );
-  expect(outfitSetImage.response.status).toBe(202);
-  expect(outfitSetImage.json).toEqual({ ok: true, status: "pending" });
+  expectQueuedJob(outfitSetImage, "outfitSetImageGenerate", {
+    type: "capsule",
+    id: "capsule-1",
+  });
 
   const removedWardrobeRoute = await requestJson(
     baseUrl,
@@ -171,8 +232,8 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
     `attachment; filename="New-capsule.pdf"; filename*=UTF-8''${encodeURIComponent("New capsule.pdf")}`,
   );
   expect(pdfOptions).toBeUndefined();
-  expect(pdfProducts).toHaveLength(1);
-  expect(pdfProducts?.[0]).toMatchObject({ url: "https://example.com/1" });
+  expect(pdfProducts).toHaveLength(3);
+  expect(pdfProducts?.[0]).toMatchObject({ url: "https://example.com/top-1" });
 });
 
 test("capsule report route delegates to generator and maps report errors", async (t) => {
@@ -849,15 +910,30 @@ test("filters patch rejects invalid anchor refs", async (t) => {
 
 test("filters patch can trigger regenerate via query flag after saving filters", async (t) => {
   const calls = [];
+  const enqueuedJobs = [];
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       updateCapsuleSnapshotImpl: async (_email, _id, draft) => {
         calls.push({ type: "update", draft });
         return { id: "capsule-1", draft, saved: null, status: "new" };
       },
-      regenerateCapsuleWardrobeHandler: async (req, res) => {
-        calls.push({ type: "regenerate", query: req.query });
-        return res.status(202).json({ ok: true, status: "pending" });
+      enqueueJobImpl: async (input) => {
+        enqueuedJobs.push(input);
+        return {
+          id: "job-1",
+          kind: input.kind,
+          status: "queued",
+          phase: input.phase,
+          progress: { current: 0, total: null, label: input.progressLabel },
+          entity: input.entity,
+          result: null,
+          error: null,
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString(),
+          startedAt: null,
+          completedAt: null,
+          failedAt: null,
+        };
       },
     },
   });
@@ -880,6 +956,17 @@ test("filters patch can trigger regenerate via query flag after saving filters",
   );
 
   expect(result.response.status).toBe(202);
+  expect(result.json).toMatchObject({
+    ok: true,
+    job: {
+      kind: "capsuleGenerate",
+      status: "queued",
+      entity: { type: "capsule", id: "capsule-1" },
+    },
+  });
+  expect(enqueuedJobs[0]?.dedupeKey).toMatch(
+    /^capsuleGenerate:capsule-1:[a-f0-9]{64}$/,
+  );
   expect(calls).toEqual([
     {
       type: "update",
@@ -900,12 +987,6 @@ test("filters patch can trigger regenerate via query flag after saving filters",
           wardrobe: null,
           rejectedUrls: [],
         },
-      },
-    },
-    {
-      type: "regenerate",
-      query: {
-        regenerate: "true",
       },
     },
   ]);

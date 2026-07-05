@@ -14,6 +14,112 @@ function clearNotificationFlow(context: AppActionContext) {
   fromContext<() => void>(context, "closeNotificationPrompt")();
 }
 
+function startImageNotificationFlow(context: AppActionContext) {
+  fromContext<(kind: string, llm?: string) => void>(
+    context,
+    "startPendingNotificationFlow",
+  )(
+    "image",
+    fromContext<{ imageLlm: string }>(context, "settingsProfile").imageLlm,
+  );
+}
+
+function setStatusError(context: AppActionContext, error: unknown) {
+  fromContext<(updater: (current: unknown) => unknown) => void>(
+    context,
+    "setStatus",
+  )((current) => ({
+    ...(current as object),
+    error: fromContext<(error: unknown) => string>(
+      context,
+      "resolveErrorMessage",
+    )(error),
+  }));
+}
+
+function handleOutfitSetImageError(
+  context: AppActionContext,
+  setIndex: number,
+  error: unknown,
+) {
+  if (!fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+    return;
+  }
+  clearPendingImage(context, setIndex);
+  clearNotificationFlow(context);
+  setStatusError(context, error);
+}
+
+function waitForQueuedOutfitSetImage(
+  context: AppActionContext,
+  capsuleId: string,
+  setIndex: number,
+  jobId: string,
+) {
+  startImageNotificationFlow(context);
+  const waitForJobCompletion = fromContext<
+    (jobId: string) => Promise<{
+      status: string;
+      error?: { code?: string | null } | null;
+    }>
+  >(context, "waitForJobCompletion");
+  void waitForJobCompletion(jobId)
+    .then((finishedJob) => {
+      if (finishedJob.status !== "completed") {
+        throw new Error(finishedJob.error?.code || "service_unavailable");
+      }
+      startCapsuleEventStream(context, capsuleId);
+    })
+    .catch((error) => {
+      handleOutfitSetImageError(context, setIndex, error);
+    });
+}
+
+function applyReadyOutfitSetImage(
+  context: AppActionContext,
+  setIndex: number,
+  image: string,
+) {
+  fromContext<
+    (updater: (current: OutfitSetSnapshot[]) => OutfitSetSnapshot[]) => void
+  >(
+    context,
+    "setProfileOutfitSets",
+  )((current) =>
+    current.map((set, index) =>
+      index === setIndex
+        ? { ...set, image: image || null, imageObsolete: false }
+        : set,
+    ),
+  );
+}
+
+function handleOutfitSetImageGenerationResponse({
+  capsuleId,
+  context,
+  response,
+  setIndex,
+}: {
+  capsuleId: string;
+  context: AppActionContext;
+  response: WardrobeMutationResponse;
+  setIndex: number;
+}) {
+  if (response?.job && typeof response.job.id === "string") {
+    waitForQueuedOutfitSetImage(context, capsuleId, setIndex, response.job.id);
+    return;
+  }
+  if (response?.status === "pending") {
+    startImageNotificationFlow(context);
+    startCapsuleEventStream(context, capsuleId);
+    return;
+  }
+  if (typeof response?.image === "string") {
+    applyReadyOutfitSetImage(context, setIndex, response.image);
+  }
+  clearPendingImage(context, setIndex);
+}
+
 export async function generateOutfitSetImage(
   context: AppActionContext,
   setIndex: number | string | null | undefined,
@@ -33,47 +139,14 @@ export async function generateOutfitSetImage(
       capsuleId,
       setIndex: normalizedSetIndex,
     })) as WardrobeMutationResponse;
-    if (response?.status === "pending") {
-      fromContext<(kind: string, llm?: string) => void>(
-        context,
-        "startPendingNotificationFlow",
-      )(
-        "image",
-        fromContext<{ imageLlm: string }>(context, "settingsProfile").imageLlm,
-      );
-      startCapsuleEventStream(context, capsuleId);
-      return;
-    }
-    if (typeof response?.image === "string") {
-      fromContext<
-        (updater: (current: OutfitSetSnapshot[]) => OutfitSetSnapshot[]) => void
-      >(
-        context,
-        "setProfileOutfitSets",
-      )((current) =>
-        current.map((set, index) =>
-          index === normalizedSetIndex
-            ? { ...set, image: response.image || null, imageObsolete: false }
-            : set,
-        ),
-      );
-    }
-    clearPendingImage(context, normalizedSetIndex);
-  } catch (error) {
-    if (!fromContext<{ current: boolean }>(context, "isMountedRef").current)
-      return;
-    clearPendingImage(context, normalizedSetIndex);
-    clearNotificationFlow(context);
-    fromContext<(updater: (current: unknown) => unknown) => void>(
+    handleOutfitSetImageGenerationResponse({
+      capsuleId,
       context,
-      "setStatus",
-    )((current) => ({
-      ...(current as object),
-      error: fromContext<(error: unknown) => string>(
-        context,
-        "resolveErrorMessage",
-      )(error),
-    }));
+      response,
+      setIndex: normalizedSetIndex,
+    });
+  } catch (error) {
+    handleOutfitSetImageError(context, normalizedSetIndex, error);
   }
 }
 

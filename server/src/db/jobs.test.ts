@@ -24,10 +24,12 @@ import {
   getJobRunByIdForEmail,
   getJobRunMetrics,
   listJobEventsAfter,
+  listActiveJobRunsForEntity,
   listJobRunsForEmail,
   markJobRunCompleted,
   markJobRunFailed,
   markJobRunStarted,
+  markStaleRunningJobRunsFailed,
   setJobRunProviderJobId,
   updateJobRunProgress,
 } from "./jobs.js";
@@ -156,6 +158,34 @@ test("claimQueuedJobRunsWithoutProviderId conditionally claims stale providerles
   expect(getSqlText(0)).toContain("for update skip locked");
 });
 
+test("markStaleRunningJobRunsFailed terminalizes stale running jobs with events", async () => {
+  coreApi.sql.mockResolvedValueOnce([
+    jobRow({
+      id: "job-stale",
+      status: "failed",
+      phase: "failed",
+      error_code: "job_stale_after_crash",
+      error_message:
+        "Job was running before worker recovery and exceeded its deadline.",
+      failed_at: "2026-01-01T00:02:00.000Z",
+    }),
+  ]);
+
+  await expect(
+    markStaleRunningJobRunsFailed({ staleMs: 600_000, limit: 50 }),
+  ).resolves.toMatchObject([
+    {
+      id: "job-stale",
+      status: "failed",
+      errorCode: "job_stale_after_crash",
+    },
+  ]);
+
+  expect(getSqlText(0)).toContain("status = 'running'");
+  expect(getSqlText(0)).toContain("for update skip locked");
+  expect(getSqlText(0)).toContain("insert into job_events");
+});
+
 test("job query helpers enforce ownership and status filtering", async () => {
   coreApi.sql.mockResolvedValueOnce([jobRow({ provider_job_id: "provider" })]);
   await expect(
@@ -193,6 +223,39 @@ test("job query helpers enforce ownership and status filtering", async () => {
   await expect(
     listJobRunsForEmail({ email: "person@example.com" }),
   ).resolves.toMatchObject([{ id: "any-status" }]);
+
+  coreApi.sql.mockResolvedValueOnce([
+    jobRow({
+      id: "active-image",
+      kind: "outfitSetImageGenerate",
+      status: "running",
+    }),
+  ]);
+  await expect(
+    listActiveJobRunsForEntity({
+      email: "PERSON@example.com",
+      entityType: "capsule",
+      entityId: "capsule-1",
+      kinds: ["outfitSetImageGenerate", ""],
+    }),
+  ).resolves.toMatchObject([
+    { id: "active-image", kind: "outfitSetImageGenerate", status: "running" },
+  ]);
+  let latestSql = getSqlText(coreApi.sql.mock.calls.length - 1);
+  expect(latestSql).toContain("status in ('queued', 'running')");
+  expect(latestSql).toContain("kind = any");
+
+  coreApi.sql.mockResolvedValueOnce([jobRow({ id: "active-any-kind" })]);
+  await expect(
+    listActiveJobRunsForEntity({
+      email: "person@example.com",
+      entityType: "capsule",
+      entityId: null,
+      kinds: [],
+    }),
+  ).resolves.toMatchObject([{ id: "active-any-kind" }]);
+  latestSql = getSqlText(coreApi.sql.mock.calls.length - 1);
+  expect(latestSql).not.toContain("kind = any");
 });
 
 test("job mutation helpers update lifecycle state and parse nullable JSON objects", async () => {

@@ -1,5 +1,8 @@
 import { test, expect, vi } from "vitest";
-import { createOutfitImageService } from "./outfitImages.js";
+import {
+  createOutfitImageService,
+  runOutfitImageGenerationJob,
+} from "./outfitImages.js";
 import { normalizeOutfitRecord } from "../outfitStoreModel.js";
 import { buildNormalizedProfileRecord } from "../test/domainFixtures.js";
 
@@ -304,4 +307,92 @@ test("outfit image service can generate with gemini image provider", async () =>
 
   expect(res.statusCode).toBe(202);
   expect(generateImageWithGeminiImpl).toHaveBeenCalledOnce();
+});
+
+test("persisted outfit image job runs without process-local state and propagates abort signals", async () => {
+  const signal = new AbortController().signal;
+  const updates: unknown[] = [];
+  const providerSignals: unknown[] = [];
+  const result = await runOutfitImageGenerationJob({
+    deps: {
+      getOutfitImpl: async () => createOutfit(),
+      getOutfitItemsImpl: async () => outfitItems,
+      getProfileImpl: async () =>
+        buildNormalizedProfileRecord({ imageLlm: "openai:gpt-image-2" }),
+      downloadProductImageAssetsImpl: async () => ({}),
+      generateImageWithOpenAiImpl: async (_prompt, options) => {
+        providerSignals.push(options.signal);
+        return {
+          response: {} as never,
+          image: {
+            base64: Buffer.from("image").toString("base64"),
+            mimeType: "image/png",
+          },
+        };
+      },
+      uploadImageToR2Impl: async () => ({
+        key: "outfits/outfit-1.png",
+        url: "https://images.example.com/outfit-1.png",
+        digest: "digest",
+      }),
+      updateOutfitSnapshotImpl: async (_email, _outfitId, draft) => {
+        updates.push(draft);
+        return normalizeOutfitRecord({ ...createOutfit(), draft })!;
+      },
+      publishSnapshotImpl: () => undefined,
+    },
+    email: "person@example.com",
+    outfitId: "outfit-1",
+    signal,
+  });
+
+  expect(result).toEqual({ outfitId: "outfit-1" });
+  expect(providerSignals).toEqual([signal]);
+  expect(updates).toHaveLength(1);
+  expect(updates[0]).toMatchObject({
+    image: "https://images.example.com/outfit-1.png",
+    imageObsolete: false,
+  });
+});
+
+test("persisted outfit image job does not persist after abort", async () => {
+  const controller = new AbortController();
+  const updates: unknown[] = [];
+
+  await expect(
+    runOutfitImageGenerationJob({
+      deps: {
+        getOutfitImpl: async () => createOutfit(),
+        getOutfitItemsImpl: async () => outfitItems,
+        getProfileImpl: async () =>
+          buildNormalizedProfileRecord({ imageLlm: "openai:gpt-image-2" }),
+        downloadProductImageAssetsImpl: async () => ({}),
+        generateImageWithOpenAiImpl: async () => {
+          controller.abort();
+          return {
+            response: {} as never,
+            image: {
+              base64: Buffer.from("image").toString("base64"),
+              mimeType: "image/png",
+            },
+          };
+        },
+        uploadImageToR2Impl: async () => ({
+          key: "outfits/outfit-1.png",
+          url: "https://images.example.com/outfit-1.png",
+          digest: "digest",
+        }),
+        updateOutfitSnapshotImpl: async (_email, _outfitId, draft) => {
+          updates.push(draft);
+          return normalizeOutfitRecord({ ...createOutfit(), draft })!;
+        },
+        publishSnapshotImpl: () => undefined,
+      },
+      email: "person@example.com",
+      outfitId: "outfit-1",
+      signal: controller.signal,
+    }),
+  ).rejects.toMatchObject({ code: "job_aborted" });
+
+  expect(updates).toEqual([]);
 });

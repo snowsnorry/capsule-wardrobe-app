@@ -4,11 +4,13 @@ import {
   getJobRunById,
   getJobRunByIdForEmail,
   getJobRunMetrics,
+  listActiveJobRunsForEntity,
   listJobEventsAfter,
   listJobRunsForEmail,
   markJobRunCompleted,
   markJobRunFailed,
   markJobRunStarted,
+  markStaleRunningJobRunsFailed,
   setJobRunProviderJobId,
   updateJobRunProgress,
 } from "../db.js";
@@ -75,6 +77,55 @@ export async function claimPendingProviderJobs({
   limit: number;
 }): Promise<JobRunRecord[]> {
   return claimQueuedJobRunsWithoutProviderId({ staleMs, limit });
+}
+
+export async function failStaleRunningJobs({
+  staleMs,
+  limit,
+}: {
+  staleMs: number;
+  limit: number;
+}): Promise<JobRunRecord[]> {
+  return markStaleRunningJobRunsFailed({ staleMs, limit });
+}
+
+export async function listActiveJobSnapshotsForEntity({
+  email,
+  entityType,
+  entityId,
+  kinds,
+}: {
+  email: string;
+  entityType: string;
+  entityId?: string | null;
+  kinds?: string[] | null;
+}): Promise<JobSnapshot[]> {
+  const jobs = await listActiveJobRunsForEntity({
+    email,
+    entityType,
+    entityId,
+    kinds,
+  });
+  return jobs.map(toJobSnapshot);
+}
+
+export async function listActiveJobsForEntity({
+  email,
+  entityType,
+  entityId,
+  kinds,
+}: {
+  email: string;
+  entityType: string;
+  entityId?: string | null;
+  kinds?: string[] | null;
+}): Promise<JobRunRecord[]> {
+  return listActiveJobRunsForEntity({
+    email,
+    entityType,
+    entityId,
+    kinds,
+  });
 }
 
 export async function startJobRun(id: string): Promise<JobRunRecord | null> {

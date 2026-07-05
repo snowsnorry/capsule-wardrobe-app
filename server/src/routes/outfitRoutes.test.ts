@@ -603,17 +603,51 @@ test("outfit mutation routes validate payloads and mutate profile-owned outfits"
   expect(missingDelete.response.status).toBe(404);
 });
 
-test("outfit image routes delegate to generated image handlers", async (t) => {
-  const generateOutfitImageHandler = vi.fn(async (_req, res) =>
-    res.status(202).json({ ok: true, status: "pending" }),
-  );
+test("outfit image routes enqueue persisted jobs and delegate deletes", async (t) => {
   const deleteOutfitImageHandler = vi.fn(async (_req, res) =>
     res.json({ ok: true, status: "ready" }),
   );
+  const enqueuedJobs = [];
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      generateOutfitImageHandler,
       deleteOutfitImageHandler,
+      getOutfitImpl: async () => ({
+        ...outfit,
+        draft: {
+          items: [
+            { url: "https://example.com/top", source: "from_catalog" },
+            { url: "https://example.com/bottom", source: "from_catalog" },
+            { url: "https://example.com/bag", source: "from_catalog" },
+          ],
+        },
+        effective: {
+          items: [
+            { url: "https://example.com/top", source: "from_catalog" },
+            { url: "https://example.com/bottom", source: "from_catalog" },
+            { url: "https://example.com/bag", source: "from_catalog" },
+          ],
+        },
+      }),
+      getProductsByUrlsForEmailImpl: async ({ urls }: { urls: string[] }) =>
+        urls.map((url) => ({ url, category: "top", name: url })),
+      enqueueJobImpl: async (input) => {
+        enqueuedJobs.push(input);
+        return {
+          id: "job-1",
+          kind: input.kind,
+          status: "queued",
+          phase: input.phase,
+          progress: { current: 0, total: null, label: input.progressLabel },
+          entity: input.entity,
+          result: null,
+          error: null,
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString(),
+          startedAt: null,
+          completedAt: null,
+          failedAt: null,
+        };
+      },
     },
   });
 
@@ -623,7 +657,17 @@ test("outfit image routes delegate to generated image handlers", async (t) => {
     authenticatedMutationOptions(),
   );
   expect(generated.response.status).toBe(202);
-  expect(generateOutfitImageHandler).toHaveBeenCalledTimes(1);
+  expect(generated.json).toMatchObject({
+    ok: true,
+    job: {
+      kind: "outfitImageGenerate",
+      status: "queued",
+      entity: { type: "outfit", id: "outfit-1" },
+    },
+  });
+  expect(enqueuedJobs[0]?.dedupeKey).toMatch(
+    /^outfitImage:outfit-1:[a-f0-9]{64}$/,
+  );
 
   const deleted = await requestJson(baseUrl, "/outfits/outfit-1/image", {
     method: "DELETE",

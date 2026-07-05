@@ -1,6 +1,7 @@
 import OpenAI, { toFile } from "openai";
 import type { ImageAssetLike } from "./types.js";
 import { logWarn } from "../logger.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 const DEFAULT_IMAGE_MODEL = "gpt-image-2";
 const DEFAULT_OUTPUT_MIME_TYPE = "image/png";
@@ -20,8 +21,12 @@ type OpenAiImageClientLike = {
   images: {
     generate: (
       payload: Record<string, unknown>,
+      options?: { signal?: AbortSignal },
     ) => Promise<OpenAiImageResponse>;
-    edit: (payload: Record<string, unknown>) => Promise<OpenAiImageResponse>;
+    edit: (
+      payload: Record<string, unknown>,
+      options?: { signal?: AbortSignal },
+    ) => Promise<OpenAiImageResponse>;
   };
 };
 
@@ -142,10 +147,12 @@ function createOpenAiImageClient({
       images = [],
       model = DEFAULT_IMAGE_MODEL,
       onPayloadBuilt = null,
+      signal = null,
     }: {
       images?: ImageAssetLike[];
       model?: string;
       onPayloadBuilt?: ((payload: Record<string, unknown>) => void) | null;
+      signal?: AbortSignal | null;
     } = {},
   ) {
     const client = getOpenAiImageClient();
@@ -165,11 +172,19 @@ function createOpenAiImageClient({
           };
 
     onPayloadBuilt?.(requestPayload);
+    throwIfAborted(signal);
 
     const response =
       imageFiles.length > 0
-        ? await client.images.edit(requestPayload)
-        : await client.images.generate(requestPayload);
+        ? await client.images.edit(
+            requestPayload,
+            signal ? { signal } : undefined,
+          )
+        : await client.images.generate(
+            requestPayload,
+            signal ? { signal } : undefined,
+          );
+    throwIfAborted(signal);
 
     return {
       response,

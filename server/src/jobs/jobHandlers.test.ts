@@ -66,6 +66,7 @@ test("job handler dispatches report and upload jobs to worker dependencies", asy
   expect(generateCapsuleReportImpl).toHaveBeenCalledWith(
     "person@example.com",
     "capsule-1",
+    { signal: undefined },
   );
 
   await expect(
@@ -80,6 +81,7 @@ test("job handler dispatches report and upload jobs to worker dependencies", asy
   expect(generateOutfitReportImpl).toHaveBeenCalledWith(
     "person@example.com",
     "outfit-1",
+    { signal: undefined },
   );
 
   await expect(
@@ -94,6 +96,7 @@ test("job handler dispatches report and upload jobs to worker dependencies", asy
   expect(generatePersonalItemsReportImpl).toHaveBeenCalledWith(
     "person@example.com",
     "office",
+    { signal: undefined },
   );
 
   await expect(
@@ -136,22 +139,14 @@ test("job handler dispatches report and upload jobs to worker dependencies", asy
   });
 });
 
-test("job handler normalizes legacy job failures into error codes", async () => {
-  vi.spyOn(console, "error").mockImplementation(() => {});
+test("job handler dispatches capsule generation jobs directly with signal", async () => {
   const updateProgress = vi.fn(async () => {});
-  const failure = new Error("legacy_failed");
-  const regenerateCapsuleWardrobeHandler = vi.fn(async (_req, res) => {
-    (res as { json: (body: unknown) => unknown }).json({
-      ok: true,
-      status: "pending",
-    });
-  });
+  const signal = new AbortController().signal;
+  const runCapsuleGenerationJobImpl = vi.fn(async () => ({
+    capsuleId: "capsule-1",
+  }));
   const deps = {
-    regenerateCapsuleWardrobeHandler,
-    getWardrobeJobImpl: () => ({
-      error: failure,
-      status: "failed",
-    }),
+    runCapsuleGenerationJobImpl,
   };
 
   await expect(
@@ -160,105 +155,86 @@ test("job handler normalizes legacy job failures into error codes", async () => 
         kind: "capsuleGenerate",
         entityId: "capsule-1",
       }),
+      signal,
       updateProgress,
     }),
-  ).rejects.toMatchObject({
-    code: "legacy_failed",
-    message: "legacy_failed",
-  });
-  expect(regenerateCapsuleWardrobeHandler).toHaveBeenCalledWith(
+  ).resolves.toEqual({ capsuleId: "capsule-1" });
+  expect(runCapsuleGenerationJobImpl).toHaveBeenCalledWith(
     expect.objectContaining({
-      params: { id: "capsule-1" },
-      user: { email: "person@example.com" },
+      capsuleId: "capsule-1",
+      email: "person@example.com",
+      signal,
+      updateProgress,
     }),
-    expect.any(Object),
   );
 });
 
-test("job handler waits for selected-regeneration legacy jobs and maps handler errors", async () => {
+test("job handler dispatches selected-regeneration and image jobs directly", async () => {
   const updateProgress = vi.fn(async () => {});
-  const regenerateSelectedCapsuleItemsHandler = vi.fn(async (_req, res) => {
-    (res as { status: (code: number) => { json: (body: unknown) => void } })
-      .status(400)
-      .json({ error: "invalid_payload" });
-  });
+  const signal = new AbortController().signal;
+  const runSelectedRegenerationJobImpl = vi.fn(async () => ({
+    capsuleId: "capsule-1",
+  }));
+  const runOutfitImageGenerationJobImpl = vi.fn(async () => ({
+    outfitId: "outfit-1",
+  }));
+  const runOutfitSetImageGenerationJobImpl = vi.fn(async () => ({
+    capsuleId: "capsule-1",
+    setIndex: 2,
+  }));
 
   await expect(
     runJobHandler(
-      { regenerateSelectedCapsuleItemsHandler },
+      { runSelectedRegenerationJobImpl },
       {
         job: buildJob({
           kind: "capsuleRegenerateSelected",
           entityId: "capsule-1",
           payload: { itemUrls: ["https://example.com/item"] },
         }),
+        signal,
         updateProgress,
       },
     ),
-  ).rejects.toMatchObject({
-    code: "invalid_payload",
-    message: "invalid_payload",
-  });
-  expect(regenerateSelectedCapsuleItemsHandler).toHaveBeenCalledWith(
+  ).resolves.toEqual({ capsuleId: "capsule-1" });
+  expect(runSelectedRegenerationJobImpl).toHaveBeenCalledWith(
     expect.objectContaining({
-      body: { itemUrls: ["https://example.com/item"] },
-      params: { id: "capsule-1" },
-      user: { email: "person@example.com" },
+      capsuleId: "capsule-1",
+      email: "person@example.com",
+      itemUrls: ["https://example.com/item"],
+      signal,
     }),
-    expect.any(Object),
   );
 
-  const successfulHandler = vi.fn(async (_req, res) => {
-    (res as { json: (body: unknown) => void }).json({ ok: true });
-  });
   await expect(
     runJobHandler(
-      {
-        regenerateSelectedCapsuleItemsHandler: successfulHandler,
-        getPartialRegenerationJobImpl: () => ({
-          promise: Promise.resolve(),
-          status: "completed",
-        }),
-      },
+      { runOutfitImageGenerationJobImpl },
       {
         job: buildJob({
-          kind: "capsuleRegenerateSelected",
-          payload: { capsuleId: "capsule-1", itemUrls: "not-an-array" },
+          kind: "outfitImageGenerate",
+          entityId: "outfit-1",
+          payload: { outfitId: "outfit-1" },
         }),
+        signal,
         updateProgress,
       },
     ),
-  ).resolves.toEqual({});
-});
-
-test("job handler can suppress logs for expected legacy handler failures", async () => {
-  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-  const updateProgress = vi.fn(async () => {});
-  const regenerateCapsuleWardrobeHandler = vi.fn(async (_req, res) => {
-    (res as { status: (code: number) => { json: (body: unknown) => void } })
-      .status(503)
-      .json({
-        error: "service_unavailable",
-        suppressJobHandlerLog: true,
-      });
-  });
+  ).resolves.toEqual({ outfitId: "outfit-1" });
 
   await expect(
     runJobHandler(
-      { regenerateCapsuleWardrobeHandler },
+      { runOutfitSetImageGenerationJobImpl },
       {
         job: buildJob({
-          kind: "capsuleGenerate",
+          kind: "outfitSetImageGenerate",
           entityId: "capsule-1",
+          payload: { capsuleId: "capsule-1", setIndex: 2 },
         }),
+        signal,
         updateProgress,
       },
     ),
-  ).rejects.toMatchObject({
-    code: "service_unavailable",
-    message: "service_unavailable",
-  });
-  expect(consoleError).not.toHaveBeenCalled();
+  ).resolves.toEqual({ capsuleId: "capsule-1", setIndex: 2 });
 });
 
 test("job handler rejects missing handlers and unsupported kinds with stable codes", async () => {

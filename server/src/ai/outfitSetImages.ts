@@ -39,6 +39,7 @@ import {
 import { downloadProductImageAssets } from "./promptImages.js";
 import { uploadImageToR2 } from "../r2Storage.js";
 import { logError } from "../logger.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 function publishOutfitSetSnapshot({
   email,
@@ -126,6 +127,7 @@ async function generateOutfitSetImageAsset({
   capsuleId,
   setIndex,
   setItems,
+  signal,
 }) {
   const {
     buildOutfitSetDescriptionImpl,
@@ -140,6 +142,7 @@ async function generateOutfitSetImageAsset({
   });
   saveOutfitSetDebugArtifacts({ prompt });
   const imageAssetsById = await downloadProductImageAssetsImpl(setItems);
+  throwIfAborted(signal);
   const images = setItems
     .map((item) => imageAssetsById[String(item?.id || "").trim()] || null)
     .filter(Boolean);
@@ -153,7 +156,9 @@ async function generateOutfitSetImageAsset({
   const result = await generateImageImpl(prompt, {
     images,
     model: imageLlmResolution.model,
+    signal,
   });
+  throwIfAborted(signal);
   const generatedImage = await buildOutfitSetGeneratedImage(result, {
     uploadImageToR2Impl,
     capsuleId,
@@ -179,6 +184,8 @@ async function runOutfitSetImageJob({
   outfitSets,
   setItems,
   jobKey,
+  rethrowErrors = false,
+  signal,
 }) {
   const {
     buildCapsuleEventSnapshotImpl,
@@ -190,13 +197,16 @@ async function runOutfitSetImageJob({
   let currentCapsule = capsule;
 
   try {
+    throwIfAborted(signal);
     const generatedImage = await generateOutfitSetImageAsset({
       deps,
       email,
       capsuleId,
       setIndex,
       setItems,
+      signal,
     });
+    throwIfAborted(signal);
     const latestCapsule = await getCapsuleImpl(email, capsuleId);
     if (!latestCapsule) {
       currentCapsule = null;
@@ -240,6 +250,9 @@ async function runOutfitSetImageJob({
       capsuleId,
       setIndex,
     });
+    if (rethrowErrors) {
+      throw error;
+    }
   } finally {
     deleteOutfitSetImageJob(jobKey);
     publishOutfitSetSnapshot({
@@ -250,6 +263,53 @@ async function runOutfitSetImageJob({
       buildCapsuleEventSnapshotImpl,
     });
   }
+}
+
+async function runOutfitSetImageGenerationJob({
+  deps,
+  email,
+  capsuleId,
+  setIndex,
+  signal,
+}) {
+  const { getCapsuleImpl } = deps;
+  if (!isValidOutfitSetImageRequest({ capsuleId, setIndex })) {
+    const error = new Error("invalid_payload") as Error & { code?: string };
+    error.code = "invalid_payload";
+    throw error;
+  }
+  const capsule = await getCapsuleImpl(email, capsuleId);
+  if (!capsule) {
+    const error = new Error("not_found") as Error & { code?: string };
+    error.code = "not_found";
+    throw error;
+  }
+  const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
+  const { wardrobe, outfitSets } = getOutfitSetsFromSnapshot(effectiveSnapshot);
+  if (!outfitSets[setIndex]) {
+    const error = new Error("not_found") as Error & { code?: string };
+    error.code = "not_found";
+    throw error;
+  }
+  const setItems = resolveTargetSetItems(wardrobe, setIndex);
+  if (!Array.isArray(setItems) || setItems.length < 3) {
+    const error = new Error("invalid_payload") as Error & { code?: string };
+    error.code = "invalid_payload";
+    throw error;
+  }
+  await runOutfitSetImageJob({
+    deps,
+    email,
+    capsuleId,
+    setIndex,
+    capsule,
+    outfitSets,
+    setItems,
+    jobKey: "",
+    rethrowErrors: true,
+    signal,
+  });
+  return { capsuleId, setIndex };
 }
 
 function createGenerateOutfitSetImage(deps) {
@@ -314,6 +374,7 @@ function createGenerateOutfitSetImage(deps) {
       outfitSets,
       setItems,
       jobKey,
+      signal: null,
     });
 
     return res.status(202).json({ ok: true, status: "pending" });
@@ -372,6 +433,7 @@ export {
   buildPromptFromTemplate,
   createOutfitSetImageService,
   getOutfitSetImageJob,
+  runOutfitSetImageGenerationJob,
 };
 
 export const deleteOutfitSetImage = outfitSetImageService.deleteOutfitSetImage;

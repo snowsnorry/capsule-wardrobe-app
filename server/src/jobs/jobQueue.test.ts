@@ -3,6 +3,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 const storeApi = vi.hoisted(() => ({
   claimPendingProviderJobs: vi.fn(),
   createPendingJob: vi.fn(),
+  failStaleRunningJobs: vi.fn(),
   failJobRun: vi.fn(),
   setProviderJobId: vi.fn(),
 }));
@@ -36,8 +37,26 @@ const snapshot = {
 beforeEach(() => {
   storeApi.createPendingJob.mockReset();
   storeApi.claimPendingProviderJobs.mockReset();
+  storeApi.failStaleRunningJobs.mockReset();
   storeApi.failJobRun.mockReset();
   storeApi.setProviderJobId.mockReset();
+});
+
+test("job queue reconciles stale running jobs without retrying them", async () => {
+  storeApi.failStaleRunningJobs.mockResolvedValueOnce([
+    { id: "stale-running" },
+  ]);
+
+  await expect(
+    createJobQueue({
+      backend: { enqueue: vi.fn(), start: vi.fn(), stop: vi.fn() },
+    }).reconcileStaleRunningJobs(),
+  ).resolves.toEqual({ failed: 1 });
+
+  expect(storeApi.failStaleRunningJobs).toHaveBeenCalledWith({
+    staleMs: expect.any(Number),
+    limit: 50,
+  });
 });
 
 test("job queue reconciles stale queued jobs without provider ids", async () => {
