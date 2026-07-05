@@ -68,15 +68,10 @@ async function updateOutfitSetImageSnapshot({
     : updateCapsuleSnapshotImpl(email, capsuleId, nextSnapshot);
 }
 
-function resolveSnapshotUpdater(impl, fallback) {
-  return impl || fallback;
-}
-
 export {
   areOutfitSetItemIdsEqual,
   buildOutfitSetSnapshotUpdate,
   getOutfitSetsFromSnapshot,
-  resolveSnapshotUpdater,
   resolveTargetSetItems,
   updateOutfitSetImageSnapshot,
 };

@@ -1,19 +1,4 @@
-import { createPartialRegenerationService } from "./regenerateSelectedService.js";
-
-const partialRegenerationService = createPartialRegenerationService();
-const {
-  getPartialRegenerationJob,
-  startPartialRegenerationJob,
-  regenerateSelectedWardrobeItems,
-} = partialRegenerationService;
-
 export {
-  buildRegenerateSelectedSystemPrompt,
   buildRegenerateSelectedPrompt,
+  buildRegenerateSelectedSystemPrompt,
 } from "./regenerateSelectedPrompt.js";
-export { createPartialRegenerationService };
-export {
-  getPartialRegenerationJob,
-  regenerateSelectedWardrobeItems,
-  startPartialRegenerationJob,
-};

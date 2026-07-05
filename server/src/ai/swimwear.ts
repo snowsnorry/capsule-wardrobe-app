@@ -27,6 +27,7 @@ import {
 } from "./swimwearState.js";
 import { createSwimwearDeps } from "./swimwearDeps.js";
 import type { SwimwearDepsOverrides } from "./swimwearDeps.js";
+import { throwIfAborted } from "./abortSignal.js";
 
 function getSingleViableFemaleSwimwearOption(
   candidates: SwimwearCandidate[],
@@ -147,8 +148,10 @@ async function generateFemaleSwimwearWithLlm({
   llmResolution,
   logContext,
   selectedCapsuleItems,
+  signal,
   userProfile,
 }) {
+  throwIfAborted(signal);
   const prompt = getSwimwearPrompt(selectedCapsuleItems, candidates);
   const llmStartedAt = Date.now();
   const generateJsonWithLlm = deps.getGenerateJsonWithLlmImpl(userProfile);
@@ -160,7 +163,9 @@ async function generateFemaleSwimwearWithLlm({
       buildSwimwearSchema(),
     ),
     systemPrompt: getSwimwearSystemPrompt(),
+    signal,
   });
+  throwIfAborted(signal);
   logWardrobeInfo(
     "swimwear-llm-completed",
     {
@@ -197,6 +202,7 @@ async function generateFemaleSwimwear({
   promptEmbeddings,
   desiredType = null,
   logContext = null,
+  signal = null,
   deps = createSwimwearDeps(),
 }: {
   userProfile: UserProfileLike | null;
@@ -204,8 +210,10 @@ async function generateFemaleSwimwear({
   promptEmbeddings: number[];
   desiredType?: string | null;
   logContext?: { capsuleRequestId?: string | null } | null;
+  signal?: AbortSignal | null;
   deps?: ReturnType<typeof createSwimwearDeps>;
 }) {
+  throwIfAborted(signal);
   const llmResolution = deps.resolveLlmProviderImpl(userProfile);
   const { candidates, normalizedDesiredType } =
     await getFemaleSwimwearCandidates({
@@ -216,6 +224,7 @@ async function generateFemaleSwimwear({
       selectedCapsuleItems,
       userProfile,
     });
+  throwIfAborted(signal);
 
   if (candidates.length === 0) {
     return buildEmptySwimwearResult();
@@ -245,6 +254,7 @@ async function generateFemaleSwimwear({
     llmResolution,
     logContext,
     selectedCapsuleItems,
+    signal,
     userProfile,
   });
 }
@@ -274,8 +284,10 @@ async function generateMaleSwimwear({
   promptEmbeddings,
   resolvedDeps,
   selectedCapsuleItems,
+  signal,
   userProfile,
 }) {
+  throwIfAborted(signal);
   const items = await selectMaleSwimwear({
     sql: resolvedDeps.getSqlClientImpl(),
     targetStyle: userProfile?.style ?? null,
@@ -285,6 +297,7 @@ async function generateMaleSwimwear({
     profileEmail: getProfileEmail(userProfile),
     logContext,
   });
+  throwIfAborted(signal);
   const selectedItems = items.length > 0 ? [items[0]] : [];
   logWardrobeInfo(
     "swimwear-completed",
@@ -311,13 +324,16 @@ function createGenerateSwimwearAddition(deps: SwimwearDepsOverrides = {}) {
     promptEmbeddings,
     force = false,
     logContext = null,
+    signal = null,
   }: {
     userProfile: UserProfileLike | null;
     selectedCapsuleItems: SwimwearCandidate[];
     promptEmbeddings: number[];
     force?: boolean;
     logContext?: { capsuleRequestId?: string | null } | null;
+    signal?: AbortSignal | null;
   }) {
+    throwIfAborted(signal);
     const swimwearState = getSelectedSwimwearState(selectedCapsuleItems);
 
     if (shouldSkipSwimwearAddition({ force, swimwearState, userProfile })) {
@@ -331,6 +347,7 @@ function createGenerateSwimwearAddition(deps: SwimwearDepsOverrides = {}) {
         promptEmbeddings,
         desiredType: swimwearState.missingType,
         logContext,
+        signal,
         deps: resolvedDeps,
       });
     }
@@ -340,6 +357,7 @@ function createGenerateSwimwearAddition(deps: SwimwearDepsOverrides = {}) {
       promptEmbeddings,
       resolvedDeps,
       selectedCapsuleItems,
+      signal,
       userProfile,
     });
   };

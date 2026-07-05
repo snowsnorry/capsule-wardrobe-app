@@ -18,7 +18,7 @@ import type {
   WardrobeJobState,
 } from "./types.js";
 import type {
-  StartWardrobeJobInput,
+  StartWardrobeJobOptions,
   WardrobeServiceRuntimeDeps,
 } from "./wardrobeServiceTypes.js";
 import {
@@ -27,67 +27,25 @@ import {
 } from "./wardrobeJobSnapshots.js";
 import { throwIfAborted } from "./abortSignal.js";
 
-const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
-
-type WardrobeJobRunInput = StartWardrobeJobInput & {
+type WardrobeJobRunInput = {
   deps: WardrobeServiceRuntimeDeps;
+  email: string;
+  capsuleId: string;
+  profile: Awaited<ReturnType<WardrobeServiceRuntimeDeps["getProfileImpl"]>>;
+  capsule: Awaited<ReturnType<WardrobeServiceRuntimeDeps["getCapsuleImpl"]>>;
+  logContext?: LogContextLike | null;
+  options?: StartWardrobeJobOptions;
   job: WardrobeJobState;
-  jobKey: string;
   rethrowErrors?: boolean;
   signal?: AbortSignal | null;
 };
 
 type BaseWardrobeResult = {
-  currentCapsule: StartWardrobeJobInput["capsule"];
+  currentCapsule: WardrobeJobRunInput["capsule"];
   generationProfile: ReturnType<typeof buildProfileCapsuleContext>;
   items: WardrobeGenerationResult["items"];
   wardrobe: WardrobeGenerationResult;
 };
-
-export function createWardrobeJobKey(email, capsuleId) {
-  const normalizedEmail = String(email || "")
-    .trim()
-    .toLowerCase();
-  const normalizedCapsuleId = String(capsuleId || "").trim();
-  return normalizedCapsuleId
-    ? `${normalizedEmail}::${normalizedCapsuleId}`
-    : normalizedEmail;
-}
-
-export function getWardrobeJobForService(
-  deps: WardrobeServiceRuntimeDeps,
-  email: string,
-  capsuleId: string,
-) {
-  const jobKey = createWardrobeJobKey(email, capsuleId);
-  const job = deps.jobs.get(jobKey);
-  if (!job) {
-    return null;
-  }
-
-  if (
-    job.status !== "pending" &&
-    deps.nowMsImpl() - job.updatedAt > COMPLETED_JOB_TTL_MS
-  ) {
-    deps.jobs.delete(jobKey);
-    return null;
-  }
-
-  return job;
-}
-
-function scheduleWardrobeJobCleanup(
-  deps: WardrobeServiceRuntimeDeps,
-  jobKey: string,
-  job: WardrobeJobState,
-) {
-  const cleanupTimer = deps.setTimeoutImpl(() => {
-    if (deps.jobs.get(jobKey) === job && job.status !== "pending") {
-      deps.jobs.delete(jobKey);
-    }
-  }, COMPLETED_JOB_TTL_MS);
-  cleanupTimer?.unref?.();
-}
 
 function isFirstContentGenerationForNewCapsule(capsule, baseSnapshot) {
   const storedWardrobe = getStoredWardrobePayload({
@@ -226,10 +184,15 @@ async function addSwimwearIfNeeded(
       selectedCapsuleItems: baseResult.wardrobe.selectedItems,
       promptEmbeddings: baseResult.wardrobe.promptEmbeddings,
       logContext,
+      signal: input.signal,
     });
     throwIfAborted(input.signal);
     return await applySwimwearAddition(input, baseResult, swimwear, logContext);
   } catch (error) {
+    const errorCode = String(error?.code || error?.message || "");
+    if (errorCode === "job_aborted" || errorCode === "job_deadline_exceeded") {
+      throw error;
+    }
     logError(
       "[wardrobe-ai][swimwear]",
       buildErrorLogContext(logContext),
@@ -348,10 +311,6 @@ async function runWardrobeJob(input: WardrobeJobRunInput) {
     if (input.rethrowErrors) {
       throw error;
     }
-  } finally {
-    if (input.jobKey) {
-      scheduleWardrobeJobCleanup(input.deps, input.jobKey, input.job);
-    }
   }
 }
 
@@ -462,35 +421,8 @@ export async function runPersistedWardrobeGenerationJobForService(
     },
     deps,
     job,
-    jobKey: "",
     rethrowErrors: true,
     signal,
   });
   return { capsuleId };
-}
-
-export function startWardrobeJobForService(
-  deps: WardrobeServiceRuntimeDeps,
-  input: StartWardrobeJobInput,
-) {
-  const jobKey = createWardrobeJobKey(input.email, input.capsuleId);
-  const existing = getWardrobeJobForService(deps, input.email, input.capsuleId);
-  if (existing?.status === "pending") {
-    return existing;
-  }
-
-  const startedAt = deps.nowMsImpl();
-  const job: WardrobeJobState = {
-    capsuleRequestId:
-      input.logContext?.capsuleRequestId || deps.randomUuidImpl(),
-    status: "pending",
-    startedAt,
-    updatedAt: deps.nowMsImpl(),
-    promise: null,
-    phase: "capsule",
-    result: null,
-  };
-  deps.jobs.set(jobKey, job);
-  job.promise = runWardrobeJob({ ...input, deps, job, jobKey });
-  return job;
 }

@@ -125,6 +125,7 @@ Done:
 - Active dedupe keys for generation/image work include input-state hashes, so changed filters/items do not bind new requests to an older active job for stale inputs.
 - Capsule/outfit pending image state is derived from active persisted jobs in production route context, not in-memory registries.
 - Account cleanup relies on persisted job cleanup for transient AI/image jobs instead of clearing production legacy maps.
+- Legacy server-side service factories, process-local pending registries, and direct execution handlers for capsule generation, selected regeneration, outfit image generation, and outfit-set image generation were removed from production modules. Test/e2e in-memory adapters remain isolated in test/e2e layers.
 - `/jobs/:id/events` has server-side max stream duration and a per-user active stream cap.
 - The client `waitForJob` helper got a default timeout and server status reconciliation.
 - `useActiveSidebarJobs.waitForJobCompletion` delegates to the shared timed `waitForJob` watchdog so local stream/discovery gaps do not hang forever.
@@ -132,7 +133,6 @@ Done:
 Remaining:
 
 - `/jobs/:id/events` still polls the DB once per second per accepted stream. Stream caps bound exposure, but a future push/event-notify path would reduce DB pressure.
-- Some legacy service modules and process-local registries remain for old service/test entry points, but they are no longer used by production dependency wiring for AI/image execution.
 - Provider SDKs that do not support abort still cannot always stop the remote call itself; final writes are guarded by cooperative abort checks.
 
 Impact: the regular happy path and crash/timeout recovery are now production-ready for the current single-service architecture. The remaining concern is operational load/backpressure, not correctness of durable job state.
@@ -252,7 +252,7 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
 Done in this pass:
 
 - Finish the job crash/cancellation model.
-- Close legacy process-local AI/image job state from production paths.
+- Close legacy process-local AI/image job state from production code and remove obsolete server-side legacy service modules.
 
 ### P2 - After Hot Paths Stabilize
 

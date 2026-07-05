@@ -1,14 +1,3 @@
-import { createWardrobeService } from "./aiService.js";
-
-const wardrobeService = createWardrobeService();
-const {
-  clearWardrobeJobsForEmail,
-  getCapsuleItems,
-  getWardrobeJob,
-  regenerateCapsuleWardrobe,
-  startWardrobeJob,
-} = wardrobeService;
-
 export {
   countItemsByKey,
   extractLlmUsage,
@@ -20,12 +9,4 @@ export {
   getWardrobeSelectionPrompt,
   toWardrobeUiItem,
 } from "./aiSelectionPrompt.js";
-export { createWardrobeService };
-export {
-  clearWardrobeJobsForEmail,
-  getCapsuleItems,
-  getWardrobeJob,
-  regenerateCapsuleWardrobe,
-  startWardrobeJob,
-};
 export { getStoredWardrobePayload } from "./capsuleEvents.js";

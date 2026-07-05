@@ -134,6 +134,7 @@ async function runOutfitImage(
           deps: HandlerDeps;
           email: string;
           outfitId: string;
+          jobId?: string;
           signal?: AbortSignal;
         }) => Promise<Record<string, unknown>>)
       | undefined
@@ -141,6 +142,7 @@ async function runOutfitImage(
     deps,
     email: job.profileEmail,
     outfitId,
+    jobId: job.id,
     signal,
   });
   if (!result) {
@@ -163,6 +165,7 @@ async function runOutfitSetImage(
           email: string;
           capsuleId: string;
           setIndex: number;
+          jobId?: string;
           signal?: AbortSignal;
         }) => Promise<Record<string, unknown>>)
       | undefined
@@ -171,6 +174,7 @@ async function runOutfitSetImage(
     email: job.profileEmail,
     capsuleId,
     setIndex,
+    jobId: job.id,
     signal,
   });
   if (!result) {

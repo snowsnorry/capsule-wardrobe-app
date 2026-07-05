@@ -1,25 +1,7 @@
-import { test, expect, vi } from "vitest";
-import {
-  createOutfitImageService,
-  runOutfitImageGenerationJob,
-} from "./outfitImages.js";
+import { test, expect } from "vitest";
+import { runOutfitImageGenerationJob } from "./outfitImages.js";
 import { normalizeOutfitRecord } from "../outfitStoreModel.js";
 import { buildNormalizedProfileRecord } from "../test/domainFixtures.js";
-
-function createResponseRecorder() {
-  return {
-    statusCode: 200,
-    body: null,
-    status(code) {
-      this.statusCode = code;
-      return this;
-    },
-    json(payload) {
-      this.body = payload;
-      return this;
-    },
-  };
-}
 
 const defaultOutfitItemRefs = [
   { url: "https://example.com/top", source: "from_catalog" as const },
@@ -53,15 +35,17 @@ const outfitItems = [
   { id: "bag-1", category: "bag", imageUrl: "https://example.com/bag.jpg" },
 ];
 
-test("outfit image service starts job and persists generated image", async () => {
-  const updates: unknown[] = [];
-  const published: unknown[] = [];
-  const service = createOutfitImageService({
+function createRunnerDeps(overrides = {}) {
+  return {
     getOutfitImpl: async () => createOutfit(),
     getOutfitItemsImpl: async () => outfitItems,
     getProfileImpl: async () =>
       buildNormalizedProfileRecord({ imageLlm: "openai:gpt-image-2" }),
     downloadProductImageAssetsImpl: async () => ({}),
+    generateImageWithGeminiImpl: async () => ({
+      response: {} as never,
+      image: null,
+    }),
     generateImageWithOpenAiImpl: async () => ({
       response: {} as never,
       image: {
@@ -74,252 +58,19 @@ test("outfit image service starts job and persists generated image", async () =>
       url: "https://images.example.com/outfit-1.png",
       digest: "digest",
     }),
-    updateOutfitSnapshotImpl: async (_email, _outfitId, draft) => {
-      updates.push(draft);
-      return normalizeOutfitRecord({ ...createOutfit(), draft })!;
-    },
-    publishSnapshotImpl: (_email, _outfitId, snapshot) => {
-      published.push(snapshot);
-    },
-  });
-  const res = createResponseRecorder();
-
-  await service.generateOutfitImage(
-    {
-      user: { email: "person@example.com" },
-      params: { id: "outfit-1" },
-    },
-    res,
-  );
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  expect(res.statusCode).toBe(202);
-  expect(res.body).toEqual({ ok: true, status: "pending" });
-  expect(updates[0]).toMatchObject({
-    image: "https://images.example.com/outfit-1.png",
-    imageObsolete: false,
-  });
-  expect(published).toHaveLength(2);
-});
-
-test("outfit image service preserves newer item edits when a pending job completes", async () => {
-  const updates: unknown[] = [];
-  const changedItems = [
-    ...defaultOutfitItemRefs.slice(0, 2),
-    { url: "https://example.com/hat", source: "from_catalog" as const },
-  ];
-  let getOutfitCallCount = 0;
-  const service = createOutfitImageService({
-    getOutfitImpl: async () =>
-      getOutfitCallCount++ === 0
-        ? createOutfit()
-        : createOutfit(null, changedItems),
-    getOutfitItemsImpl: async () => outfitItems,
-    getProfileImpl: async () =>
-      buildNormalizedProfileRecord({ imageLlm: "openai:gpt-image-2" }),
-    downloadProductImageAssetsImpl: async () => ({}),
-    generateImageWithOpenAiImpl: async () => ({
-      response: {} as never,
-      image: {
-        base64: Buffer.from("image").toString("base64"),
-        mimeType: "image/png",
-      },
-    }),
-    uploadImageToR2Impl: async () => ({
-      key: "outfits/outfit-1.png",
-      url: "https://images.example.com/outfit-1.png",
-      digest: "digest",
-    }),
-    updateOutfitSnapshotImpl: async (_email, _outfitId, draft) => {
-      updates.push(draft);
-      return normalizeOutfitRecord({ ...createOutfit(), draft })!;
-    },
-    publishSnapshotImpl: () => undefined,
-  });
-  const res = createResponseRecorder();
-
-  await service.generateOutfitImage(
-    {
-      user: { email: "person@example.com" },
-      params: { id: "outfit-1" },
-    },
-    res,
-  );
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  expect(updates[0]).toMatchObject({
-    items: changedItems,
-    image: "https://images.example.com/outfit-1.png",
-    imageObsolete: true,
-  });
-});
-
-test("outfit image service treats existing images as ready and deletes images", async () => {
-  const updates: unknown[] = [];
-  const service = createOutfitImageService({
-    getOutfitImpl: async () =>
-      createOutfit("https://images.example.com/old.png"),
-    updateOutfitSnapshotImpl: async (_email, _outfitId, draft) => {
-      updates.push(draft);
-      return normalizeOutfitRecord({ ...createOutfit(), draft })!;
-    },
-    publishSnapshotImpl: () => undefined,
-  });
-  const generateRes = createResponseRecorder();
-  const deleteRes = createResponseRecorder();
-
-  await service.generateOutfitImage(
-    {
-      user: { email: "person@example.com" },
-      params: { id: "outfit-1" },
-    },
-    generateRes,
-  );
-  await service.deleteOutfitImage(
-    {
-      user: { email: "person@example.com" },
-      params: { id: "outfit-1" },
-    },
-    deleteRes,
-  );
-
-  expect(generateRes.body).toEqual({ ok: true, status: "ready" });
-  expect(deleteRes.body).toEqual({ ok: true, status: "ready" });
-  expect(updates[0]).toMatchObject({ image: null, imageObsolete: false });
-});
-
-test("outfit image service rejects invalid and missing image requests", async () => {
-  const service = createOutfitImageService({
-    getOutfitImpl: async () => null,
-  });
-  const invalidRes = createResponseRecorder();
-  const missingRes = createResponseRecorder();
-
-  await service.generateOutfitImage(
-    { user: { email: "person@example.com" }, params: { id: "" } },
-    invalidRes,
-  );
-  await service.deleteOutfitImage(
-    { user: { email: "person@example.com" }, params: { id: "missing" } },
-    missingRes,
-  );
-
-  expect(invalidRes.statusCode).toBe(400);
-  expect(invalidRes.body).toEqual({ error: "invalid_payload" });
-  expect(missingRes.statusCode).toBe(404);
-  expect(missingRes.body).toEqual({ error: "not_found" });
-});
-
-test("outfit image service rejects outfits with too few hydrated items", async () => {
-  const service = createOutfitImageService({
-    getOutfitImpl: async () => createOutfit(),
-    getOutfitItemsImpl: async () => outfitItems.slice(0, 2),
-  });
-  const res = createResponseRecorder();
-
-  await service.generateOutfitImage(
-    {
-      user: { email: "person@example.com" },
-      params: { id: "outfit-too-small" },
-    },
-    res,
-  );
-
-  expect(res.statusCode).toBe(400);
-  expect(res.body).toEqual({ error: "invalid_payload" });
-});
-
-test("outfit image service returns pending when a job is already running", async () => {
-  let resolveImage: (() => void) | null = null;
-  const imageStarted = new Promise<void>((resolve) => {
-    resolveImage = resolve;
-  });
-  const service = createOutfitImageService({
-    getOutfitImpl: async () =>
-      createOutfit(null, [
-        { url: "https://example.com/top-pending", source: "from_catalog" },
-        { url: "https://example.com/bottom-pending", source: "from_catalog" },
-        { url: "https://example.com/bag-pending", source: "from_catalog" },
-      ]),
-    getOutfitItemsImpl: async () => outfitItems,
-    getProfileImpl: async () =>
-      buildNormalizedProfileRecord({ imageLlm: "openai:gpt-image-2" }),
-    downloadProductImageAssetsImpl: async () => ({}),
-    generateImageWithOpenAiImpl: async () => {
-      await imageStarted;
-      return { response: {} as never, image: null };
-    },
-    publishSnapshotImpl: () => undefined,
-  });
-  const firstRes = createResponseRecorder();
-  const secondRes = createResponseRecorder();
-
-  await service.generateOutfitImage(
-    {
-      user: { email: "person@example.com" },
-      params: { id: "outfit-pending" },
-    },
-    firstRes,
-  );
-  await service.generateOutfitImage(
-    {
-      user: { email: "person@example.com" },
-      params: { id: "outfit-pending" },
-    },
-    secondRes,
-  );
-  resolveImage?.();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  expect(firstRes.statusCode).toBe(202);
-  expect(secondRes.statusCode).toBe(202);
-  expect(secondRes.body).toEqual({ ok: true, status: "pending" });
-});
-
-test("outfit image service can generate with gemini image provider", async () => {
-  const generateImageWithGeminiImpl = vi.fn(async () => ({
-    response: {} as never,
-    image: null,
-  }));
-  const service = createOutfitImageService({
-    getOutfitImpl: async () => createOutfit(),
-    getOutfitItemsImpl: async () => outfitItems,
-    getProfileImpl: async () =>
-      buildNormalizedProfileRecord({
-        imageLlm: "gemini:gemini-3-pro-image",
-      }),
-    downloadProductImageAssetsImpl: async () => ({}),
-    generateImageWithGeminiImpl,
-    publishSnapshotImpl: () => undefined,
     updateOutfitSnapshotImpl: async (_email, _outfitId, draft) =>
       normalizeOutfitRecord({ ...createOutfit(), draft })!,
-  });
-  const res = createResponseRecorder();
-
-  await service.generateOutfitImage(
-    {
-      user: { email: "person@example.com" },
-      params: { id: "outfit-gemini" },
-    },
-    res,
-  );
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  expect(res.statusCode).toBe(202);
-  expect(generateImageWithGeminiImpl).toHaveBeenCalledOnce();
-});
+    publishSnapshotImpl: () => undefined,
+    ...overrides,
+  };
+}
 
 test("persisted outfit image job runs without process-local state and propagates abort signals", async () => {
   const signal = new AbortController().signal;
   const updates: unknown[] = [];
   const providerSignals: unknown[] = [];
   const result = await runOutfitImageGenerationJob({
-    deps: {
-      getOutfitImpl: async () => createOutfit(),
-      getOutfitItemsImpl: async () => outfitItems,
-      getProfileImpl: async () =>
-        buildNormalizedProfileRecord({ imageLlm: "openai:gpt-image-2" }),
-      downloadProductImageAssetsImpl: async () => ({}),
+    deps: createRunnerDeps({
       generateImageWithOpenAiImpl: async (_prompt, options) => {
         providerSignals.push(options.signal);
         return {
@@ -330,17 +81,11 @@ test("persisted outfit image job runs without process-local state and propagates
           },
         };
       },
-      uploadImageToR2Impl: async () => ({
-        key: "outfits/outfit-1.png",
-        url: "https://images.example.com/outfit-1.png",
-        digest: "digest",
-      }),
       updateOutfitSnapshotImpl: async (_email, _outfitId, draft) => {
         updates.push(draft);
         return normalizeOutfitRecord({ ...createOutfit(), draft })!;
       },
-      publishSnapshotImpl: () => undefined,
-    },
+    }),
     email: "person@example.com",
     outfitId: "outfit-1",
     signal,
@@ -355,18 +100,123 @@ test("persisted outfit image job runs without process-local state and propagates
   });
 });
 
+test("persisted outfit image snapshot keeps pending state from other active jobs", async () => {
+  const snapshots = [];
+  const listActiveJobsForEntityImpl = async () => [
+    { id: "job-current", payload: {} },
+    { id: "job-next", payload: {} },
+  ];
+
+  await runOutfitImageGenerationJob({
+    deps: createRunnerDeps({
+      listActiveJobsForEntityImpl,
+      publishSnapshotImpl: (_email, _outfitId, snapshot) => {
+        snapshots.push(snapshot);
+      },
+    }),
+    email: "person@example.com",
+    outfitId: "outfit-1",
+    jobId: "job-current",
+  });
+
+  expect(snapshots.at(-1)).toMatchObject({
+    status: "pending",
+    pendingImage: true,
+  });
+});
+
+test("persisted outfit image job marks generated image obsolete after newer item edits", async () => {
+  const updates: unknown[] = [];
+  const changedItems = [
+    ...defaultOutfitItemRefs.slice(0, 2),
+    { url: "https://example.com/hat", source: "from_catalog" as const },
+  ];
+  let getOutfitCallCount = 0;
+
+  await runOutfitImageGenerationJob({
+    deps: createRunnerDeps({
+      getOutfitImpl: async () =>
+        getOutfitCallCount++ === 0
+          ? createOutfit()
+          : createOutfit(null, changedItems),
+      updateOutfitSnapshotImpl: async (_email, _outfitId, draft) => {
+        updates.push(draft);
+        return normalizeOutfitRecord({ ...createOutfit(), draft })!;
+      },
+    }),
+    email: "person@example.com",
+    outfitId: "outfit-1",
+  });
+
+  expect(updates[0]).toMatchObject({
+    items: changedItems,
+    image: "https://images.example.com/outfit-1.png",
+    imageObsolete: true,
+  });
+});
+
+test("persisted outfit image job validates missing outfits and too few hydrated items", async () => {
+  await expect(
+    runOutfitImageGenerationJob({
+      deps: createRunnerDeps(),
+      email: "person@example.com",
+      outfitId: "",
+    }),
+  ).rejects.toMatchObject({ code: "invalid_payload" });
+
+  await expect(
+    runOutfitImageGenerationJob({
+      deps: createRunnerDeps({ getOutfitImpl: async () => null }),
+      email: "person@example.com",
+      outfitId: "missing",
+    }),
+  ).rejects.toMatchObject({ code: "not_found" });
+
+  await expect(
+    runOutfitImageGenerationJob({
+      deps: createRunnerDeps({
+        getOutfitItemsImpl: async () => outfitItems.slice(0, 2),
+      }),
+      email: "person@example.com",
+      outfitId: "too-small",
+    }),
+  ).rejects.toMatchObject({ code: "invalid_payload" });
+});
+
+test("persisted outfit image job supports gemini and nullable generated images", async () => {
+  const geminiCalls = [];
+  const updates: unknown[] = [];
+
+  await runOutfitImageGenerationJob({
+    deps: createRunnerDeps({
+      getProfileImpl: async () =>
+        buildNormalizedProfileRecord({
+          imageLlm: "gemini:gemini-3-pro-image",
+        }),
+      generateImageWithGeminiImpl: async (_prompt, options) => {
+        geminiCalls.push(options);
+        return { response: {} as never, image: null };
+      },
+      updateOutfitSnapshotImpl: async (_email, _outfitId, draft) => {
+        updates.push(draft);
+        return normalizeOutfitRecord({ ...createOutfit(), draft })!;
+      },
+    }),
+    email: "person@example.com",
+    outfitId: "outfit-1",
+  });
+
+  expect(geminiCalls).toHaveLength(1);
+  expect(updates[0]).toMatchObject({ image: null, imageObsolete: false });
+});
+
 test("persisted outfit image job does not persist after abort", async () => {
   const controller = new AbortController();
   const updates: unknown[] = [];
 
   await expect(
     runOutfitImageGenerationJob({
-      deps: {
-        getOutfitImpl: async () => createOutfit(),
-        getOutfitItemsImpl: async () => outfitItems,
-        getProfileImpl: async () =>
-          buildNormalizedProfileRecord({ imageLlm: "openai:gpt-image-2" }),
-        downloadProductImageAssetsImpl: async () => ({}),
+      deps: createRunnerDeps({
         generateImageWithOpenAiImpl: async () => {
           controller.abort();
           return {
@@ -377,17 +227,11 @@ test("persisted outfit image job does not persist after abort", async () => {
             },
           };
         },
-        uploadImageToR2Impl: async () => ({
-          key: "outfits/outfit-1.png",
-          url: "https://images.example.com/outfit-1.png",
-          digest: "digest",
-        }),
         updateOutfitSnapshotImpl: async (_email, _outfitId, draft) => {
           updates.push(draft);
           return normalizeOutfitRecord({ ...createOutfit(), draft })!;
         },
-        publishSnapshotImpl: () => undefined,
-      },
+      }),
       email: "person@example.com",
       outfitId: "outfit-1",
       signal: controller.signal,

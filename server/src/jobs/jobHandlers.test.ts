@@ -220,6 +220,14 @@ test("job handler dispatches selected-regeneration and image jobs directly", asy
       },
     ),
   ).resolves.toEqual({ outfitId: "outfit-1" });
+  expect(runOutfitImageGenerationJobImpl).toHaveBeenCalledWith(
+    expect.objectContaining({
+      email: "person@example.com",
+      outfitId: "outfit-1",
+      jobId: "job-1",
+      signal,
+    }),
+  );
 
   await expect(
     runJobHandler(
@@ -235,6 +243,15 @@ test("job handler dispatches selected-regeneration and image jobs directly", asy
       },
     ),
   ).resolves.toEqual({ capsuleId: "capsule-1", setIndex: 2 });
+  expect(runOutfitSetImageGenerationJobImpl).toHaveBeenCalledWith(
+    expect.objectContaining({
+      email: "person@example.com",
+      capsuleId: "capsule-1",
+      setIndex: 2,
+      jobId: "job-1",
+      signal,
+    }),
+  );
 });
 
 test("job handler rejects missing handlers and unsupported kinds with stable codes", async () => {

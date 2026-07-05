@@ -3,10 +3,6 @@ import {
   getEffectiveCapsuleSnapshot,
 } from "../capsuleStore.js";
 
-import {
-  createPartialRegenerationJobKey,
-  getPartialRegenerationJobFromStore,
-} from "./partialRegenerationJobs.js";
 import { countItemsByKey, logWardrobeInfo } from "./ai.js";
 import {
   buildStoredWardrobePayloadFromResult,
@@ -18,35 +14,7 @@ import type { PartialRegenerationJobState } from "./types.js";
 import { getStoredWardrobePayload } from "./capsuleEvents.js";
 import { throwIfAborted } from "./abortSignal.js";
 
-const COMPLETED_JOB_TTL_MS = 5 * 60 * 1000;
 const noopProgress = async (_update?: unknown) => undefined;
-
-function scheduleJobCleanup(
-  deps,
-  jobKey: string,
-  job: PartialRegenerationJobState,
-) {
-  const cleanupTimer = deps.setTimeoutImpl(() => {
-    if (deps.jobs.get(jobKey) === job && job.status !== "pending") {
-      deps.jobs.delete(jobKey);
-    }
-  }, COMPLETED_JOB_TTL_MS);
-  cleanupTimer?.unref?.();
-}
-
-export function getPartialRegenerationJobForService(
-  deps,
-  email: string,
-  capsuleId: string,
-) {
-  return getPartialRegenerationJobFromStore({
-    email,
-    capsuleId,
-    jobs: deps.jobs,
-    nowMs: deps.nowMsImpl(),
-    completedJobTtlMs: COMPLETED_JOB_TTL_MS,
-  });
-}
 
 export function publishPartialRegenerationSnapshot(
   deps,
@@ -95,7 +63,6 @@ async function runPartialRegenerationJob({
   capsule,
   selectedProducts,
   storedWardrobe,
-  jobKey,
   job,
   rethrowErrors = false,
   signal = null,
@@ -162,9 +129,6 @@ async function runPartialRegenerationJob({
       currentCapsule,
       job,
     );
-    if (jobKey) {
-      scheduleJobCleanup(deps, jobKey, job);
-    }
   }
 }
 
@@ -341,56 +305,9 @@ export async function runPersistedPartialRegenerationJobForService(
     capsule: generationCapsule,
     selectedProducts: prepared.selectedProducts,
     storedWardrobe: prepared.storedWardrobe,
-    jobKey: "",
     job,
     rethrowErrors: true,
     signal,
   });
   return { capsuleId, itemUrls: prepared.normalizedItemUrls };
-}
-
-export function startPartialRegenerationJobForService(
-  deps,
-  {
-    email,
-    capsuleId,
-    profile,
-    capsule,
-    selectedProducts,
-    storedWardrobe,
-    logContext = null,
-  },
-) {
-  const jobKey = createPartialRegenerationJobKey(email, capsuleId);
-  const existing = getPartialRegenerationJobForService(deps, email, capsuleId);
-  if (existing?.status === "pending") {
-    return existing;
-  }
-
-  const startedAt = deps.nowMsImpl();
-  const job: PartialRegenerationJobState = {
-    capsuleRequestId: logContext?.capsuleRequestId || deps.randomUuidImpl(),
-    status: "pending",
-    phase: "regenerate",
-    startedAt,
-    updatedAt: startedAt,
-    pendingItemUrls: selectedProducts
-      .map((item) => String(item?.url || "").trim())
-      .filter(Boolean),
-    result: null,
-    promise: null,
-  };
-  deps.jobs.set(jobKey, job);
-  job.promise = runPartialRegenerationJob({
-    deps,
-    email,
-    capsuleId,
-    profile,
-    capsule,
-    selectedProducts,
-    storedWardrobe,
-    jobKey,
-    job,
-  });
-  return job;
 }

@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-import type { OutfitSetImageServiceOptions } from "./outfitSetImageServiceTypes.js";
 import {
   getCapsule,
   getEffectiveCapsuleSnapshot,
@@ -17,7 +15,6 @@ import {
   areOutfitSetItemIdsEqual,
   buildOutfitSetSnapshotUpdate,
   getOutfitSetsFromSnapshot,
-  resolveSnapshotUpdater,
   resolveTargetSetItems,
   updateOutfitSetImageSnapshot,
 } from "./outfitSetImageSnapshots.js";
@@ -25,13 +22,6 @@ import {
   buildPromptFromTemplate,
   saveOutfitSetDebugArtifacts,
 } from "./outfitSetImagePrompt.js";
-import {
-  createOutfitSetImageJobKey,
-  deleteOutfitSetImageJob,
-  getOutfitSetImageJob,
-  getOutfitSetImageJobByKey,
-  setPendingOutfitSetImageJob,
-} from "./outfitSetImageJobs.js";
 import {
   getOutfitSetImageRequestContext,
   isValidOutfitSetImageRequest,
@@ -41,19 +31,62 @@ import { uploadImageToR2 } from "../r2Storage.js";
 import { logError } from "../logger.js";
 import { throwIfAborted } from "./abortSignal.js";
 
-function publishOutfitSetSnapshot({
+async function getOtherActiveOutfitSetImageJob({
+  deps,
+  email,
+  capsuleId,
+  jobId,
+}) {
+  const listActiveJobsForEntityImpl = deps.listActiveJobsForEntityImpl;
+  if (typeof listActiveJobsForEntityImpl !== "function") {
+    return null;
+  }
+
+  try {
+    const jobs = await listActiveJobsForEntityImpl({
+      email,
+      entityType: "capsule",
+      entityId: capsuleId,
+      kinds: ["outfitSetImageGenerate"],
+    });
+    const pendingSetIndexes = jobs
+      .filter((job) => String(job?.id || "") !== String(jobId || ""))
+      .map((job) => Number.parseInt(String(job?.payload?.setIndex), 10))
+      .filter((value) => Number.isInteger(value) && value >= 0);
+
+    return pendingSetIndexes.length > 0
+      ? { status: "pending", pendingSetIndexes }
+      : null;
+  } catch (error) {
+    logError("[outfit-set-image][pending-jobs]", {
+      message: error?.message || "unknown_error",
+      capsuleId,
+    });
+    return null;
+  }
+}
+
+async function publishOutfitSetSnapshot({
+  deps,
   email,
   capsuleId,
   capsule,
+  jobId,
   publishSnapshotImpl,
   buildCapsuleEventSnapshotImpl,
 }) {
+  const outfitSetImageJob = await getOtherActiveOutfitSetImageJob({
+    deps,
+    email,
+    capsuleId,
+    jobId,
+  });
   publishSnapshotImpl(
     email,
     capsuleId,
     buildCapsuleEventSnapshotImpl({
       capsule,
-      outfitSetImageJob: getOutfitSetImageJob(email, capsuleId),
+      outfitSetImageJob,
     }),
   );
 }
@@ -95,9 +128,11 @@ function createDeleteOutfitSetImage(deps) {
     );
 
     publishOutfitSetSnapshot({
+      deps,
       email,
       capsuleId,
       capsule: updatedCapsule,
+      jobId: null,
       publishSnapshotImpl,
       buildCapsuleEventSnapshotImpl,
     });
@@ -183,7 +218,7 @@ async function runOutfitSetImageJob({
   capsule,
   outfitSets,
   setItems,
-  jobKey,
+  jobId = null,
   rethrowErrors = false,
   signal,
 }) {
@@ -254,11 +289,12 @@ async function runOutfitSetImageJob({
       throw error;
     }
   } finally {
-    deleteOutfitSetImageJob(jobKey);
-    publishOutfitSetSnapshot({
+    await publishOutfitSetSnapshot({
+      deps,
       email,
       capsuleId,
       capsule: currentCapsule,
+      jobId,
       publishSnapshotImpl,
       buildCapsuleEventSnapshotImpl,
     });
@@ -270,7 +306,8 @@ async function runOutfitSetImageGenerationJob({
   email,
   capsuleId,
   setIndex,
-  signal,
+  jobId = null,
+  signal = null,
 }) {
   const { getCapsuleImpl } = deps;
   if (!isValidOutfitSetImageRequest({ capsuleId, setIndex })) {
@@ -305,137 +342,32 @@ async function runOutfitSetImageGenerationJob({
     capsule,
     outfitSets,
     setItems,
-    jobKey: "",
+    jobId,
     rethrowErrors: true,
     signal,
   });
   return { capsuleId, setIndex };
 }
 
-function createGenerateOutfitSetImage(deps) {
-  const { buildCapsuleEventSnapshotImpl, getCapsuleImpl, publishSnapshotImpl } =
-    deps;
-
-  return async function generateOutfitSetImage(req, res) {
-    const { email, capsuleId, setIndex } = getOutfitSetImageRequestContext(req);
-
-    if (!isValidOutfitSetImageRequest({ capsuleId, setIndex })) {
-      return res.status(400).json({ error: "invalid_payload" });
-    }
-
-    const capsule = await getCapsuleImpl(email, capsuleId);
-    if (!capsule) {
-      return res.status(404).json({ error: "not_found" });
-    }
-
-    const effectiveSnapshot = getEffectiveCapsuleSnapshot(capsule);
-    const { wardrobe, outfitSets } =
-      getOutfitSetsFromSnapshot(effectiveSnapshot);
-    const targetSet = outfitSets[setIndex];
-    if (!targetSet) {
-      return res.status(404).json({ error: "not_found" });
-    }
-
-    if (
-      typeof targetSet?.image === "string" &&
-      targetSet.image.trim().length > 0
-    ) {
-      return res.json({ ok: true, status: "ready" });
-    }
-
-    const setItems = resolveTargetSetItems(wardrobe, setIndex);
-    if (!Array.isArray(setItems) || setItems.length < 3) {
-      return res.status(400).json({ error: "invalid_payload" });
-    }
-
-    const jobKey = createOutfitSetImageJobKey(email, capsuleId, setIndex);
-    if (getOutfitSetImageJobByKey(jobKey)?.status === "pending") {
-      return res.status(202).json({ ok: true, status: "pending" });
-    }
-
-    setPendingOutfitSetImageJob(jobKey, {
-      id: randomUUID(),
-      status: "pending",
-      setIndex,
-    });
-    publishOutfitSetSnapshot({
-      email,
-      capsuleId,
-      capsule,
-      publishSnapshotImpl,
-      buildCapsuleEventSnapshotImpl,
-    });
-    runOutfitSetImageJob({
-      deps,
-      email,
-      capsuleId,
-      setIndex,
-      capsule,
-      outfitSets,
-      setItems,
-      jobKey,
-      signal: null,
-    });
-
-    return res.status(202).json({ ok: true, status: "pending" });
-  };
-}
-
-function createOutfitSetImageService(
-  options: OutfitSetImageServiceOptions = {},
-) {
-  const {
-    getCapsuleImpl = getCapsule,
-    getProfileImpl,
-    updateCapsuleSavedSnapshotImpl = undefined,
-    updateCapsuleSnapshotImpl = updateCapsuleSnapshot,
-    publishSnapshotImpl = ((email, capsuleId, snapshot) =>
-      capsuleEventHub.publish(email, capsuleId, snapshot)) as (
-      email: string,
-      capsuleId: string,
-      snapshot: unknown,
-    ) => void | boolean,
-    buildCapsuleEventSnapshotImpl = buildCapsuleEventSnapshot as (
-      payload?: Record<string, unknown>,
-    ) => unknown,
-    downloadProductImageAssetsImpl = downloadProductImageAssets,
-    generateImageWithOpenAiImpl = generateImageWithOpenAi,
-    generateImageWithGeminiImpl = generateImageWithGemini,
-    uploadImageToR2Impl = uploadImageToR2,
-    buildOutfitSetDescriptionImpl = buildOutfitSetDescription,
-  } = options;
-  const deps = {
-    buildCapsuleEventSnapshotImpl,
-    buildOutfitSetDescriptionImpl,
-    downloadProductImageAssetsImpl,
-    generateImageWithGeminiImpl,
-    generateImageWithOpenAiImpl,
-    getCapsuleImpl,
-    getProfileImpl: resolveSnapshotUpdater(getProfileImpl, getProfile),
-    publishSnapshotImpl,
-    updateCapsuleSavedSnapshotImpl: resolveSnapshotUpdater(
-      updateCapsuleSavedSnapshotImpl,
-      updateCapsuleSavedSnapshot,
-    ),
-    updateCapsuleSnapshotImpl,
-    uploadImageToR2Impl,
-  };
-
-  return {
-    deleteOutfitSetImage: createDeleteOutfitSetImage(deps),
-    generateOutfitSetImage: createGenerateOutfitSetImage(deps),
-  };
-}
-
-const outfitSetImageService = createOutfitSetImageService();
-
-export {
-  buildPromptFromTemplate,
-  createOutfitSetImageService,
-  getOutfitSetImageJob,
-  runOutfitSetImageGenerationJob,
+const DEFAULT_OUTFIT_SET_IMAGE_DEPS = {
+  buildCapsuleEventSnapshotImpl: buildCapsuleEventSnapshot as (
+    payload?: Record<string, unknown>,
+  ) => unknown,
+  buildOutfitSetDescriptionImpl: buildOutfitSetDescription,
+  downloadProductImageAssetsImpl: downloadProductImageAssets,
+  generateImageWithGeminiImpl: generateImageWithGemini,
+  generateImageWithOpenAiImpl: generateImageWithOpenAi,
+  getCapsuleImpl: getCapsule,
+  getProfileImpl: getProfile,
+  publishSnapshotImpl: (email, capsuleId, snapshot) =>
+    capsuleEventHub.publish(email, capsuleId, snapshot),
+  updateCapsuleSavedSnapshotImpl: updateCapsuleSavedSnapshot,
+  updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
+  uploadImageToR2Impl: uploadImageToR2,
 };
 
-export const deleteOutfitSetImage = outfitSetImageService.deleteOutfitSetImage;
-export const generateOutfitSetImage =
-  outfitSetImageService.generateOutfitSetImage;
+export { buildPromptFromTemplate, runOutfitSetImageGenerationJob };
+
+export const deleteOutfitSetImage = createDeleteOutfitSetImage(
+  DEFAULT_OUTFIT_SET_IMAGE_DEPS,
+);

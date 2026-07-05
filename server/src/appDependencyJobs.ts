@@ -25,21 +25,24 @@ export function createJobDependencies(deps: Record<string, unknown>) {
   }
 
   const queue = createJobQueue();
-  const worker = createJobWorker({
-    backend: queue.backend,
-    deps,
-    enabled: JOB_WORKER_ENABLED,
-    reconcilePendingProviderJobs: queue.reconcilePendingProviderJobs,
-    reconcileStaleRunningJobs: queue.reconcileStaleRunningJobs,
-  });
-  return {
-    enqueueJobImpl: queue.enqueue,
+  const jobStoreDeps = {
     getJobMetricsImpl: getJobMetrics,
     getJobSnapshotImpl: getOwnedJobSnapshot,
     listActiveJobsForEntityImpl: listActiveJobsForEntity,
     listActiveJobSnapshotsForEntityImpl: listActiveJobSnapshotsForEntity,
     listJobEventsAfterImpl: replayJobEvents,
     listJobSnapshotsImpl: listOwnedJobSnapshots,
+  };
+  const worker = createJobWorker({
+    backend: queue.backend,
+    deps: { ...deps, ...jobStoreDeps },
+    enabled: JOB_WORKER_ENABLED,
+    reconcilePendingProviderJobs: queue.reconcilePendingProviderJobs,
+    reconcileStaleRunningJobs: queue.reconcileStaleRunningJobs,
+  });
+  return {
+    enqueueJobImpl: queue.enqueue,
+    ...jobStoreDeps,
     startJobWorkersImpl: worker.start,
     stopJobWorkersImpl: worker.stop,
   };

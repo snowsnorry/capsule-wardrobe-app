@@ -16,39 +16,34 @@ import type {
   PartialRegenerationJobState,
   UserProfileLike,
   WardrobeGenerationResult,
-  WardrobeJobState,
 } from "./types.js";
 
-type WardrobeServiceDependencies = {
-  getProfileImpl?: typeof getProfile;
-  getCapsuleImpl?: typeof getCapsule;
-  renameCapsuleImpl?: typeof renameCapsule;
-  updateCapsuleSnapshotImpl?: typeof updateCapsuleSnapshot;
-  generateCapsuleWardrobeImpl?: (
+type WardrobeServiceRuntimeDeps = {
+  getProfileImpl: typeof getProfile;
+  getCapsuleImpl: typeof getCapsule;
+  renameCapsuleImpl: typeof renameCapsule;
+  updateCapsuleSnapshotImpl: typeof updateCapsuleSnapshot;
+  generateCapsuleWardrobeImpl: (
     userProfile?: UserProfileLike | null,
     logContext?: LogContextLike | null,
     options?: { signal?: AbortSignal | null },
   ) => Promise<WardrobeGenerationResult>;
-  shouldGenerateSwimwearImpl?: typeof shouldGenerateSwimwear;
-  shouldCompleteSelectedSwimwearImpl?: typeof shouldCompleteSelectedSwimwear;
-  generateSwimwearAdditionImpl?: typeof generateSwimwearAddition;
-  getPartialRegenerationJobImpl?: (
+  shouldGenerateSwimwearImpl: typeof shouldGenerateSwimwear;
+  shouldCompleteSelectedSwimwearImpl: typeof shouldCompleteSelectedSwimwear;
+  generateSwimwearAdditionImpl: typeof generateSwimwearAddition;
+  getPartialRegenerationJobImpl: (
     email: string,
     capsuleId: string,
   ) => PartialRegenerationJobState | null;
-  buildCapsuleEventSnapshotImpl?: typeof buildCapsuleEventSnapshot;
-  publishSnapshotImpl?: (
+  buildCapsuleEventSnapshotImpl: typeof buildCapsuleEventSnapshot;
+  publishSnapshotImpl: (
     email: string,
     capsuleId: string,
     snapshot: unknown,
   ) => void;
-  jobs?: Map<string, WardrobeJobState>;
-  nowMsImpl?: () => number;
-  setTimeoutImpl?: typeof setTimeout;
-  randomUuidImpl?: () => string;
+  nowMsImpl: () => number;
+  randomUuidImpl: () => string;
 };
-
-type WardrobeServiceRuntimeDeps = Required<WardrobeServiceDependencies>;
 
 type StartWardrobeJobOptions = {
   allowAutoRename?: boolean;
@@ -56,26 +51,4 @@ type StartWardrobeJobOptions = {
   rollbackSnapshot?: ReturnType<typeof getEffectiveCapsuleSnapshot> | null;
 };
 
-type StartWardrobeJobInput = {
-  email: string;
-  capsuleId: string;
-  profile: Awaited<ReturnType<typeof getProfile>>;
-  capsule: Awaited<ReturnType<typeof getCapsule>>;
-  logContext?: LogContextLike | null;
-  options?: StartWardrobeJobOptions;
-};
-
-type WardrobeJobGetter = (
-  email: string,
-  capsuleId: string,
-) => WardrobeJobState | null;
-type WardrobeJobStarter = (input: StartWardrobeJobInput) => WardrobeJobState;
-
-export type {
-  StartWardrobeJobInput,
-  StartWardrobeJobOptions,
-  WardrobeJobGetter,
-  WardrobeJobStarter,
-  WardrobeServiceDependencies,
-  WardrobeServiceRuntimeDeps,
-};
+export type { StartWardrobeJobOptions, WardrobeServiceRuntimeDeps };
