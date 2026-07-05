@@ -320,9 +320,7 @@ export {
   uploadWardrobeUrls,
 };
 export type { PersonalItemSource };
-export type { PersonalItemsFetchOptions };
 export type { PersonalItemsPagination };
 export type { PersonalItemsReportResponse };
-export type { PersonalItemsResponse };
 export type { UploadedWardrobeItemUpdatePayload };
 export type { UploadWardrobeProgress };

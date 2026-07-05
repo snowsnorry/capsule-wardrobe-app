@@ -353,9 +353,4 @@ async function fetchAllPersonalItemsPages<T = Record<string, unknown>>({
   return mergeItems([], items);
 }
 
-export {
-  DEFAULT_PAGE_LIMIT,
-  fetchAllPersonalItemsPages,
-  filterPersonalItems,
-  usePaginatedPersonalItems,
-};
+export { fetchAllPersonalItemsPages, usePaginatedPersonalItems };
