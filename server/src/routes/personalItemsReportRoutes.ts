@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { logError } from "../logger.js";
 import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
 
@@ -37,6 +39,12 @@ function getRequestContext(body) {
     return { ok: false };
   }
   return { ok: true, context: body.context };
+}
+
+function buildPersonalItemsReportDedupeKey(context?: string | null) {
+  const normalizedContext = String(context || "").trim();
+  const digest = createHash("sha256").update(normalizedContext).digest("hex");
+  return `personalItemsReport:v1:${digest}`;
 }
 
 function registerPersonalItemsReportRoutes(app, context) {
@@ -87,7 +95,7 @@ function registerPersonalItemsReportRoutes(app, context) {
           kind: "personalItemsReportGenerate",
           profileEmail: req.user.email,
           entity: { type: "wardrobe", id: null },
-          dedupeKey: `personalItemsReport:${requestContext.context || ""}`,
+          dedupeKey: buildPersonalItemsReportDedupeKey(requestContext.context),
           phase: "queued",
           payload: { context: requestContext.context },
           progressLabel: "Analyzing Personal items",
@@ -126,6 +134,7 @@ function registerPersonalItemsReportRoutes(app, context) {
 
 export {
   areEqualStringSets,
+  buildPersonalItemsReportDedupeKey,
   normalizeUrlSet,
   registerPersonalItemsReportRoutes,
 };

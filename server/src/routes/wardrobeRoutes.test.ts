@@ -6,6 +6,7 @@ import {
   requestJson,
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
+import { buildPersonalItemsReportDedupeKey } from "./personalItemsReportRoutes.js";
 
 const tinyPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/atcw3kAAAAASUVORK5CYII=",
@@ -108,6 +109,21 @@ function buildUploadForm(
   }
   return form;
 }
+
+test("personal items report dedupe key hashes context into a bounded value", () => {
+  const rawContext = `office ${"very-sensitive-context ".repeat(200)}`;
+  const dedupeKey = buildPersonalItemsReportDedupeKey(rawContext);
+
+  expect(dedupeKey).toMatch(/^personalItemsReport:v1:[a-f0-9]{64}$/);
+  expect(dedupeKey).toHaveLength("personalItemsReport:v1:".length + 64);
+  expect(dedupeKey).not.toContain("very-sensitive-context");
+});
+
+test("personal items report dedupe key treats blank context as missing", () => {
+  expect(buildPersonalItemsReportDedupeKey("   \n\t")).toBe(
+    buildPersonalItemsReportDedupeKey(null),
+  );
+});
 
 test("wardrobe routes list and save user wardrobe items", async (t) => {
   const calls: unknown[] = [];
@@ -345,6 +361,49 @@ test("personal items report route validates payloads before enqueue", async (t) 
   });
   expectQueuedJob(invalid, "personalItemsReportGenerate");
   expect(generatePersonalItemsReportImpl).not.toHaveBeenCalled();
+});
+
+test("personal items report route enqueues with hashed dedupe key and raw context payload", async (t) => {
+  const enqueuedJobs: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      enqueueJobImpl: async (input) => {
+        enqueuedJobs.push(input);
+        return {
+          completedAt: null,
+          createdAt: "2026-06-19T10:00:00.000Z",
+          entity: input.entity || null,
+          error: null,
+          failedAt: null,
+          id: "job-personal-report",
+          kind: input.kind,
+          phase: input.phase || null,
+          progress: {
+            current: 0,
+            label: input.progressLabel || null,
+            total: input.progressTotal ?? null,
+          },
+          result: null,
+          startedAt: null,
+          status: "queued",
+          updatedAt: "2026-06-19T10:00:00.000Z",
+        };
+      },
+    },
+  });
+  const context = `office ${"very-sensitive-context ".repeat(100)}`;
+
+  const generated = await requestReportStream(baseUrl, { context });
+
+  expectQueuedJob(generated, "personalItemsReportGenerate");
+  expect(enqueuedJobs).toHaveLength(1);
+  expect(enqueuedJobs[0]).toMatchObject({
+    dedupeKey: buildPersonalItemsReportDedupeKey(context),
+    payload: { context },
+  });
+  expect(
+    String((enqueuedJobs[0] as { dedupeKey?: unknown }).dedupeKey),
+  ).not.toContain("very-sensitive-context");
 });
 
 test("personal items report routes return service unavailable for read and delete failures", async (t) => {

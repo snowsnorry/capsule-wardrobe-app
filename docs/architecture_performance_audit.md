@@ -199,14 +199,6 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
 
 ## Potential Bugs and Shortcomings
 
-### P1
-
-1. The `personalItemsReport` dedupe key can be too long.
-   - File: `server/src/routes/personalItemsReportRoutes.ts`
-   - Summary: raw user context is included in `dedupeKey`; this risks DB index bloat/error and unnecessary exposure of user text in job metadata.
-
-### P2
-
 1. Report freshness is URL-only.
    - Files: `server/src/routes/personalItemsReportRoutes.ts`, `server/src/db/personalItemsReports.ts`
    - Risk: the report is treated as current after metadata/image/category/source changes if the URL does not change.
@@ -245,14 +237,15 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
    - Add plan/benchmark smoke checks for search/count/stats on a representative catalog size.
    - For stats, consider a rollup/materialized path or batched query plan if cold misses remain expensive.
 
-3. Limit `personalItemsReport` dedupe/context and improve freshness.
-   - Add hash/length cap for the dedupe key.
+3. Limit `personalItemsReport` context and improve freshness.
    - Store a report item fingerprint by id/source/updatedAt/category/image metadata instead of a URL-only set.
+   - Consider an explicit user-context length cap for report generation payloads.
 
 Done in this pass:
 
 - Finish the job crash/cancellation model.
 - Close legacy process-local AI/image job state from production code and remove obsolete server-side legacy service modules.
+- Bound active `personalItemsReport` dedupe keys with a SHA-256 context hash so DB indexes no longer store raw user context.
 
 ### P2 - After Hot Paths Stabilize
 
