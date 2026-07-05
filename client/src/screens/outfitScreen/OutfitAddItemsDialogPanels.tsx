@@ -1,4 +1,5 @@
 import { Box, Divider, Pagination, Stack, Typography } from "@mui/material";
+import { useEffect, useRef } from "react";
 import AnchorPickerFilters from "../../components/ProfileFiltersAnchorPickerFilters";
 import {
   pickerGridSx,
@@ -54,6 +55,45 @@ export function AddItemsPersonalPanel({
   model: OutfitAddItemsDialogModel;
   t: Translate;
 }) {
+  const scrollRef = useRef<HTMLElement | null>(null);
+  const {
+    hasMorePersonalItems,
+    loadMorePersonalItems,
+    personalLoading,
+    personalLoadingMore,
+  } = model;
+
+  useEffect(() => {
+    const scrollNode = scrollRef.current;
+    if (!scrollNode) return undefined;
+
+    const maybeLoadMore = () => {
+      if (!hasMorePersonalItems || personalLoading || personalLoadingMore) {
+        return;
+      }
+      const distanceToBottom =
+        scrollNode.scrollHeight -
+        scrollNode.scrollTop -
+        scrollNode.clientHeight;
+      if (distanceToBottom < 480) {
+        loadMorePersonalItems();
+      }
+    };
+
+    maybeLoadMore();
+    scrollNode.addEventListener("scroll", maybeLoadMore, { passive: true });
+    window.addEventListener("resize", maybeLoadMore);
+    return () => {
+      scrollNode.removeEventListener("scroll", maybeLoadMore);
+      window.removeEventListener("resize", maybeLoadMore);
+    };
+  }, [
+    hasMorePersonalItems,
+    loadMorePersonalItems,
+    personalLoading,
+    personalLoadingMore,
+  ]);
+
   return (
     <Stack spacing={2.5} sx={{ flex: 1, minHeight: 0 }}>
       <AnchorPickerFilters
@@ -67,13 +107,14 @@ export function AddItemsPersonalPanel({
         onSourceChange={model.setSourceFilter}
         onTypeChange={model.setTypeFilter}
       />
-      <Box sx={pickerScrollAreaSx}>
+      <Box ref={scrollRef} sx={pickerScrollAreaSx}>
         <OutfitAddItemsGrid
           existingKeys={model.existingKeys}
           gridSx={pickerGridSx}
           items={model.visiblePersonalItems}
           locale={locale}
           maxSelectedReached={model.maxSelectedReached}
+          scrollContainerRef={scrollRef}
           selectedKeys={model.selectedKeys}
           showEmpty={!model.personalLoading}
           source="personal"

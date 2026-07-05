@@ -22,6 +22,7 @@ import {
   listWardrobeItemsByIdsForEmail,
   listWardrobeItemsByUrlsForEmail,
   listWardrobeItemsByEmail,
+  listWardrobeItemsPageByEmail,
   listUploadedWardrobeR2KeysByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
@@ -711,6 +712,61 @@ test("db integration normalizes wardrobe source filters", async () => {
   });
   expect(calls[0].values).toEqual(["user@example.com", "uploaded", "uploaded"]);
   expect(calls[1].values).toEqual(["user@example.com", null, null]);
+});
+
+test("db integration lists wardrobe item pages with cursor and liked filtering", async () => {
+  const firstRow: WardrobeRow & { isLiked: boolean } = {
+    id: "42",
+    profileEmail: "user@example.com",
+    productId: null,
+    name: "Liked uploaded shirt",
+    url: "wardrobe://42",
+    imageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    source: "uploaded",
+    rawImageUrl: "https://images.example.com/wardrobe/user/image.webp",
+    processingStatus: "ready",
+    isLiked: true,
+    createdAt: "2026-05-01T00:00:00.000Z",
+    updatedAt: "2026-05-02T00:00:00.000Z",
+  };
+  const secondRow: WardrobeRow & { isLiked: boolean } = {
+    ...firstRow,
+    id: "41",
+    name: "Older uploaded shirt",
+    url: "wardrobe://41",
+    createdAt: "2026-04-01T00:00:00.000Z",
+    updatedAt: "2026-04-02T00:00:00.000Z",
+  };
+  const { sql, calls } = createSqlMock([[firstRow, secondRow]]);
+  setSqlClientOverride(sql);
+
+  const page = await listWardrobeItemsPageByEmail({
+    email: "user@example.com",
+    likedOnly: true,
+    limit: 1,
+    source: "uploaded",
+  });
+
+  expect(page.items).toHaveLength(1);
+  expect(page.items[0]).toMatchObject({
+    id: "42",
+    isLiked: true,
+    source: "uploaded",
+  });
+  expect(page.pagination).toMatchObject({
+    hasMore: true,
+    limit: 1,
+  });
+  expect(page.pagination.nextCursor).toEqual(expect.any(String));
+  expect(calls[0].text).toMatch(/from wardrobe/i);
+  expect(calls[0].text).toMatch(/from user_liked_items/i);
+  expect(calls[0].text).toMatch(/order by wardrobe\.updated_at desc/i);
+  expect(calls[0].text).toMatch(/limit/i);
+  expect(calls[0].text).not.toMatch(/\bembedding\b/i);
+  expect(calls[0].values).toContain("user@example.com");
+  expect(calls[0].values).toContain("uploaded");
+  expect(calls[0].values).toContain(true);
+  expect(calls[0].values).toContain(2);
 });
 
 test("db integration reads uploaded wardrobe items by id", async () => {

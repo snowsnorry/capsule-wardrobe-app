@@ -8,7 +8,7 @@ Goal: reassess the architecture decisions, load resilience, edge-case behavior, 
 
 - No critical P0/stop-ship issues were found in the repeat static audit.
 - Most previous P1 items are closed or materially reduced: product options are no longer scanned before every search, stats have bounded TTL/in-flight cache and concurrency limits, job state + event append are atomic, providerless queued jobs have a reconciler, the MCP handler has an error boundary, production startup has fail-fast preflight, and the Render build/quality gate/streaming proxy/R2 staging/observability baseline have improved.
-- The main remaining performance risk is large user-owned lists: Personal items are still loaded and rendered in full, and Personal items report builds the prompt/collage from the whole wardrobe in one pass. Because the report evaluates wardrobe completeness, it must keep full wardrobe coverage; the missing piece is a scalable full-coverage pipeline, not dropping items from the analysis.
+- The main remaining performance risk is now concentrated in the Personal items report path: the Personal items UI list is paginated, server-filtered, auto-loaded, and virtualized, but the report still builds its prompt/collage from the whole wardrobe in one pass. Because the report evaluates wardrobe completeness, it must keep full wardrobe coverage; the missing piece is a scalable full-coverage pipeline, not dropping items from the analysis.
 - Search/stats no longer look like an immediate architectural defect, but a cold cache miss for stats is still expensive, and the `products` performance contract is not an executable migration and is not backed by an automated plan/benchmark guard.
 - Jobs now use `job_runs` as the durable source of truth for capsule generation, selected regeneration, reports, uploads, outfit image generation, outfit-set image generation, crash recovery, cancellation, and client waiting. The remaining job/SSE risk is DB polling cost per stream and broader queue/load policy, not legacy process-local execution state.
 - Production readiness is better because of preflight and structured logs, but the Render health check is still the shallow `/health`; `/ready`/`/live`, scoped limits beyond job-event stream caps, and admin/internal metrics access are not complete.
@@ -19,7 +19,9 @@ Goal: reassess the architecture decisions, load resilience, edge-case behavior, 
 - `server/src/db/searchStats.ts`: `/search/stats` got a 30s TTL, max 100 entries, in-flight dedupe, and `SEARCH_STATS_QUERY_CONCURRENCY = 4`.
 - `server/src/db/sql/products_performance_contract.sql`: a repo-level contract for `products` indexes was added, and search SQL was aligned with indexable array/scalar/vector paths.
 - `server/src/db/wardrobe.ts`, `server/src/wardrobeItemDisplay.ts`: `/wardrobe/items` no longer selects `embedding` and returns a list/display projection instead of internal fields.
+- `server/src/routes/wardrobeRoutes.ts`, `server/src/db/wardrobe.ts`, `server/src/db/sql/schema/064_create_wardrobe_profile_source_cursor_index.sql`: `/wardrobe/items` now supports cursor pagination, source filtering, liked-only filtering, and an executable cursor index over the lightweight list projection.
 - `server/src/routes/appBootstrapRoutes.ts`: sidebar bootstrap uses `wardrobeCount`, not the full wardrobe list.
+- `client/src/hooks/usePaginatedPersonalItems.ts`, `client/src/screens/WardrobeGrid.tsx`, `client/src/screens/outfitScreen/*`: Personal item surfaces use shared paginated loading with automatic scroll loading; the Personal items screen and Add Items / anchor picker personal tab virtualize large personal item lists.
 - `server/src/jobs/jobQueue.ts`, `server/src/db/jobRunCreation.ts`, `server/src/db/jobRunLifecycle.ts`: providerless queued jobs, state transitions, and job events are covered by a minimal outbox/reconciler and atomic SQL CTEs.
 - `server/src/jobs/jobQueue.ts`, `server/src/jobs/jobWorker.ts`, `server/src/db/jobRunLifecycle.ts`: stale `running` jobs are failed on worker startup with replayable events, unblocking active dedupe after a crash without automatic retry.
 - `server/src/jobs/jobHandlers.ts`, `server/src/ai/*ReportService.ts`, AI/LLM/image provider adapters, generation/image runners: job handlers receive cooperative `AbortSignal`, pass it to supported providers, and gate final domain writes after abort/deadline.
@@ -53,17 +55,20 @@ Done:
 - `/wardrobe/items` no longer selects `embedding`.
 - A lightweight display/list projection is returned externally.
 - Sidebar count was moved into `GET /app/bootstrap`.
+- `/wardrobe/items` has cursor pagination with additive `source`, `likedOnly`, `limit`, and `cursor` query params plus a compatible `pagination` response object.
+- Source filtering uses the DB-backed `wardrobe.source` field; liked-only filtering and annotation use `user_liked_items` in the list query instead of fetching all liked URLs.
+- Cursor scans are backed by the executable `wardrobe_profile_source_cursor_idx` schema file.
+- The Personal items screen uses automatic scroll loading from the `wardrobe-screen` container and virtualizes large grids.
+- The Add Items dialog Personal tab and capsule anchor picker use the shared paginated model, automatic scroll loading, source/liked/type filters, and virtualized rendering for large personal item lists.
+- Wardrobe-only source-mode validation pages through the wardrobe with the cursor API when full category coverage is required.
 
 Remaining:
 
-- `/wardrobe/items` returns the whole profile without pagination/cursor.
-- On initial load, the Personal items screen performs at least two unbounded wardrobe-related reads: the list itself and `/wardrobe/items/report`, which reads the whole wardrobe again for a URL-only stale check.
-- Personal items screen grid (`client/src/screens/WardrobeGrid.tsx`) renders `items.map(...)` without virtualization/windowing. The virtualization from `99e709a` applies to `client/src/screens/mainScreen/MainScreenWardrobe.tsx` and `MainScreenVirtualWardrobeGrid.tsx`, meaning the main/capsule wardrobe grid, not the Personal items screen.
+- On initial load, `/wardrobe/items/report` still reads the whole wardrobe for a URL-only stale check; this is now isolated to the report path rather than the Personal items list.
 - Personal report takes the whole wardrobe, puts all report items into one JSON prompt, and builds a collage from all available images in one request path.
 - The report staleness snapshot compares only the URL set; metadata/category/image/source changes without URL changes do not make the report stale.
-- The `personalItemsReport` dedupe key includes raw user context without a hash/length cap and participates in the indexed active dedupe key.
 
-Impact: large wardrobe profiles will disproportionately increase DB egress, Node heap, JSON parse time, DOM/render cost, and the risk of LLM/image payload failures unless the report is split into full-coverage chunks, summaries, or staged passes.
+Impact: large wardrobe profiles should no longer force the Personal items UI to fetch or render the full list up front. The remaining risk is concentrated in report generation and freshness checks unless the report is split into full-coverage chunks, summaries, or staged passes.
 
 ### 2. Search/stats hot path is mitigated, but not fully closed
 
@@ -91,7 +96,7 @@ Remaining:
 - There are no automated `EXPLAIN`/smoke benchmark checks for search/count/stats.
 - A cold stats miss launches a set of separate SQL tasks: total, 12 facets, and price buckets. Cache reduces repeated requests, but not the cost of a unique filter.
 - Statistics UI sends `/search/stats` on every facet toggle without debounce/sequence guard; fast clicks can create many unique cache misses.
-- `/search/run` and `/wardrobe/items` additionally pull the full list of liked URLs for the user for annotation. For search this looks especially redundant because search SQL already returns `isLiked`.
+- `/search/run` additionally pulls the full list of liked URLs for the user for annotation, which looks redundant because search SQL already returns `isLiked`.
 
 Impact: p95/p99 should already be better than in the first audit, but with a large catalog and active statistics UI load, the database still remains the main bottleneck.
 
@@ -192,7 +197,7 @@ Done:
 
 Remaining:
 
-- Personal items screen grid (`client/src/screens/WardrobeGrid.tsx`) is not virtualized and depends on unbounded `/wardrobe/items`.
+- Personal items screen grid scale risk is materially reduced by cursor loading and virtualization.
 - Several less critical `localStorage` helpers are still without `try/catch` (`LocaleProvider`, `MainScreenHelpers`, `outfitCardLayoutStorage`, `usePasskeyPrompt`). This is an edge correctness risk in blocked storage/private mode, but not a high-impact performance blocker.
 
 Impact: the frontend initial architecture is fine; the real frontend problems will mostly appear with large Personal items profiles and rare storage-restricted browsers.
@@ -219,27 +224,26 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
    - Files: `client/src/i18n/LocaleProvider.tsx`, `client/src/screens/mainScreen/MainScreenHelpers.tsx`, `client/src/screens/outfitScreen/outfitCardLayoutStorage.ts`, `client/src/app/usePasskeyPrompt.ts`
    - Risk: blocked storage/private mode breaks mount or layout persistence paths.
 
-6. Full liked URL list fetch is used in hot paths.
-   - Files: `server/src/routes/searchRoutes.ts`, `server/src/routes/wardrobeRoutes.ts`, `server/src/db/likedItems.ts`
+6. Full liked URL list fetch is still used in search hot paths.
+   - Files: `server/src/routes/searchRoutes.ts`, `server/src/db/likedItems.ts`
    - Risk: profiles with many liked items increase unnecessary DB egress and response work.
 
 ## Improvement Recommendations
 
 ### P1 - First
 
-1. Finish wardrobe pagination/cursor and full-coverage report scaling.
-   - Add cursor/pageSize for `/wardrobe/items` and client Personal items loading.
-   - For the report path, preserve analysis over the complete wardrobe while using chunking, per-category/per-attribute aggregation, summary precomputation, or staged generation.
-   - Remove the double unbounded read on initial Personal items screen load: stale check should use a cheap fingerprint/count/version, not the full list.
+1. Finish deferred full-coverage report scaling.
+   - Preserve analysis over the complete wardrobe while using chunking, per-category/per-attribute aggregation, summary precomputation, or staged generation.
+   - Remove the remaining report-path unbounded read on initial Personal items screen load: stale check should use a cheap fingerprint/count/version, not the full list.
+   - Keep this separate from `/wardrobe/items` cursor pagination, which is now complete for Personal item UI surfaces.
 
 2. Apply and control the `products` performance contract.
    - Apply indexes on a staging/temporary branch and then production after separate approval.
    - Add plan/benchmark smoke checks for search/count/stats on a representative catalog size.
    - For stats, consider a rollup/materialized path or batched query plan if cold misses remain expensive.
 
-3. Limit `personalItemsReport` context and improve freshness.
+3. Improve `personalItemsReport` freshness.
    - Store a report item fingerprint by id/source/updatedAt/category/image metadata instead of a URL-only set.
-   - Consider an explicit user-context length cap for report generation payloads.
 
 Done in this pass:
 
@@ -301,8 +305,7 @@ Done in this pass:
 
 ## Recommended Work Order
 
-1. Wardrobe pagination/cursor + full-coverage report chunking/aggregation/fingerprint.
+1. Deferred Personal items report full-coverage chunking/aggregation/fingerprint.
 2. Products index rollout + search/stats plan/benchmark guard.
 3. Readiness/metrics/admin + CORS/fallback integration fixes.
 4. SSE/rate-limit/backpressure metrics and lower-QPS delivery if needed.
-5. Personal items screen grid virtualization after API pagination.

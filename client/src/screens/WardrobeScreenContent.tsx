@@ -1,5 +1,5 @@
 import { Alert, Box, Stack } from "@mui/material";
-import type { Dispatch, MouseEvent, SetStateAction } from "react";
+import type { Dispatch, MouseEvent, RefObject, SetStateAction } from "react";
 import type { UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
 import type {
   MainScreenItem,
@@ -61,6 +61,7 @@ type WardrobeProductDetailModel = {
 };
 
 type WardrobeScreenContentModel = {
+  canAnalyze: boolean;
   displayedItems: MainScreenItem[];
   filters: WardrobeFiltersModel;
   hasReportOrLoading: boolean;
@@ -75,6 +76,7 @@ type WardrobeScreenContentModel = {
   productDetail: WardrobeProductDetailModel;
   report: PersonalItemsReportModel["report"];
   reportError: string;
+  scrollContainerRef: RefObject<HTMLElement | null>;
   showFloatingReportInspector: boolean;
   showInlineCompactReport: boolean;
   t: (key: string, params?: Record<string, unknown>) => string;
@@ -102,6 +104,7 @@ function WardrobeScreenContent({
 }) {
   return (
     <Box
+      ref={model.scrollContainerRef}
       data-testid="wardrobe-screen"
       sx={[
         wardrobeScreenSx,
@@ -122,6 +125,7 @@ function WardrobeScreenContent({
         />
         <WardrobeScreenActionMenu
           anchorEl={model.menuAnchor}
+          canAnalyze={model.canAnalyze}
           filters={model.filters}
           hasReport={model.hasReportOrLoading}
           isOverlay={model.isOverlay}
@@ -156,7 +160,7 @@ function WardrobeScreenToolbar({
 }) {
   return (
     <WardrobeToolbar
-      canAnalyze={model.wardrobeItems.items.length > 0}
+      canAnalyze={model.canAnalyze}
       filter={model.filters.filter}
       hasReport={model.hasReportOrLoading}
       isMobile={model.isOverlay}
@@ -205,7 +209,7 @@ function WardrobeScreenReportAndGrid({
         disabled={model.isActionBusy}
         isPending={model.personalItemsReport.isReportPending}
         isStale={model.personalItemsReport.stale}
-        items={model.wardrobeItems.items}
+        items={model.wardrobeItems.knownItems}
         report={model.report}
         showFloatingReportInspector={model.showFloatingReportInspector}
         showInlineCompactReport={model.showInlineCompactReport}
@@ -215,15 +219,19 @@ function WardrobeScreenReportAndGrid({
         onRegenerate={model.personalItemsReport.generateReport}
       />
       <WardrobeGrid
+        hasMore={model.wardrobeItems.hasMore}
         highlightedKeys={model.highlightedReportItemKeys}
         isLoading={model.wardrobeItems.isLoading}
+        isLoadingMore={model.wardrobeItems.isLoadingMore}
         isOverlay={model.isOverlay}
         isFilteredEmpty={
-          model.filters.likedOnly && model.wardrobeItems.items.length > 0
+          model.filters.likedOnly && model.wardrobeItems.knownItems.length > 0
         }
         items={model.displayedItems}
         mobileColumns={model.filters.displayedColumns}
+        scrollContainerRef={model.scrollContainerRef}
         t={model.t}
+        onLoadMore={model.wardrobeItems.loadMore}
         onProductClick={model.productDetail.openProductDetail}
         onProductMenuOpen={model.wardrobeItems.handleProductMenuOpen}
       />
@@ -233,6 +241,7 @@ function WardrobeScreenReportAndGrid({
 
 function WardrobeScreenActionMenu({
   anchorEl,
+  canAnalyze,
   filters,
   hasReport,
   isOverlay,
@@ -242,6 +251,7 @@ function WardrobeScreenActionMenu({
   wardrobeItems,
 }: {
   anchorEl: HTMLElement | null;
+  canAnalyze: boolean;
   filters: WardrobeFiltersModel;
   hasReport: boolean;
   isOverlay: boolean;
@@ -253,7 +263,7 @@ function WardrobeScreenActionMenu({
   return (
     <WardrobeActionMenu
       anchorEl={anchorEl}
-      canAnalyze={wardrobeItems.items.length > 0}
+      canAnalyze={canAnalyze}
       disabled={
         wardrobeItems.isLoading ||
         wardrobeItems.isDownloadingPdf ||

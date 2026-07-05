@@ -269,14 +269,12 @@ function useWardrobeUploadedItemUpdateAction({
 }
 
 function useWardrobeItemLikeAction({
-  items,
   productMenu,
   setError,
   setItems,
   setProductMenu,
   t,
 }: {
-  items: MainScreenItem[];
   productMenu: WardrobeProductMenuState;
   setError: SetError;
   setItems: SetItems;
@@ -289,7 +287,6 @@ function useWardrobeItemLikeAction({
       return;
     }
 
-    const previousItems = items;
     const previousProductMenu = productMenu;
     setItems((current) => patchLikedStateByUrl(current, itemUrl, isLiked));
     setProductMenu((current) =>
@@ -303,7 +300,7 @@ function useWardrobeItemLikeAction({
       }
       setError("");
     } catch {
-      setItems(previousItems);
+      setItems((current) => patchLikedStateByUrl(current, itemUrl, !isLiked));
       setProductMenu(previousProductMenu);
       setError(t("wardrobe.likeFailed"));
     }

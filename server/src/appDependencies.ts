@@ -118,6 +118,7 @@ import {
   listWardrobeItemsByIdsForEmail,
   listWardrobeItemsByUrlsForEmail,
   listWardrobeItemsByEmail,
+  listWardrobeItemsPageByEmail,
   listUploadedWardrobeR2KeysByEmail,
   listLikedItemUrlsByEmail,
   saveUploadedWardrobeItemsByEmail,
@@ -381,6 +382,7 @@ function createWardrobeMediaDependencies() {
     listWardrobeItemsByIdsImpl: listWardrobeItemsByIdsForEmail,
     listWardrobeItemsByUrlsImpl: listWardrobeItemsByUrlsForEmail,
     listWardrobeItemsImpl: listWardrobeItemsByEmail,
+    listWardrobeItemsPageImpl: listWardrobeItemsPageByEmail,
     listUploadedWardrobeR2KeysImpl: listUploadedWardrobeR2KeysByEmail,
     normalizeWardrobeUploadImagesInChildImpl:
       normalizeWardrobeUploadImagesInChild,

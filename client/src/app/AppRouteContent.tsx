@@ -210,6 +210,7 @@ function AppRouteContent(props: AppRouteContentProps) {
       return (
         <WardrobeScreen
           isJobActive={currentEntityJobs.isWardrobeJobActive}
+          personalItemsCount={props.personalItemsCount}
           waitForJobCompletion={props.waitForJobCompletion}
         />
       );

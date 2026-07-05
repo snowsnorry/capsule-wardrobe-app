@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 import WardrobeGrid from "./WardrobeGrid";
@@ -54,5 +54,43 @@ describe("WardrobeGrid", () => {
       "data-testid",
       "personal-items-report-item-highlighted",
     );
+  });
+
+  test("virtualizes large personal item grids and auto-loads near the bottom", async () => {
+    const scrollContainer = document.createElement("div");
+    Object.defineProperties(scrollContainer, {
+      clientHeight: { configurable: true, value: 600 },
+      scrollHeight: { configurable: true, value: 1000 },
+      scrollTop: { configurable: true, value: 360 },
+    });
+    const scrollContainerRef = { current: scrollContainer };
+    const onLoadMore = vi.fn();
+    const items = Array.from({ length: 70 }, (_, index) => ({
+      id: `item-${index}`,
+      name: `Item ${index}`,
+    }));
+
+    render(
+      <WardrobeGrid
+        hasMore
+        isLoading={false}
+        isOverlay={false}
+        items={items}
+        mobileColumns={2}
+        scrollContainerRef={scrollContainerRef}
+        onLoadMore={onLoadMore}
+        onProductClick={vi.fn()}
+        onProductMenuOpen={vi.fn()}
+        t={(key) => key}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("virtual-personal-items-grid"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByTestId("virtual-personal-items-grid-row").length,
+    ).toBeGreaterThan(0);
+    await waitFor(() => expect(onLoadMore).toHaveBeenCalledTimes(1));
   });
 });

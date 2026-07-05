@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getReadyWardrobeCapsuleItems } from "../../../../shared/capsuleCategories.js";
-import { fetchPersonalItems } from "../../api/personalItems";
+import { fetchAllPersonalItemsPages } from "../../hooks/usePaginatedPersonalItems";
 import {
   readStoredMobileCardColumns,
   writeStoredMobileCardColumns,
@@ -289,12 +289,9 @@ function useWardrobeOnlyRegenerationBlock(sourceMode: string) {
 
     let current = true;
     setIsBlocked(true);
-    fetchPersonalItems({ force: true })
-      .then((response) => {
+    fetchAllPersonalItemsPages()
+      .then((items) => {
         if (!current) return;
-        const items = Array.isArray(response?.items)
-          ? (response.items as Array<Record<string, unknown>>)
-          : [];
         setIsBlocked(getReadyWardrobeCapsuleItems(items).length === 0);
       })
       .catch(() => {

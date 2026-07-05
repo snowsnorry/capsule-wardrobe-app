@@ -51,11 +51,14 @@ export {
 export { searchProductStats } from "./db/searchStats.js";
 export {
   countWardrobeItemsByEmail,
+  decodeWardrobePageCursor,
   deleteWardrobeItemFromCatalogByUrl,
+  encodeWardrobePageCursor,
   getUploadedWardrobeItemById,
   listWardrobeItemsByIdsForEmail,
   listWardrobeItemsByUrlsForEmail,
   listWardrobeItemsByEmail,
+  listWardrobeItemsPageByEmail,
   saveUploadedWardrobeItemsByEmail,
   saveWardrobeItemFromCatalogByUrl,
 } from "./db/wardrobe.js";

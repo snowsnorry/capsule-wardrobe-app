@@ -124,6 +124,16 @@ describe("personal items api", () => {
     expect(getWardrobeItemsUrl({ source: "uploaded" })).toBe(
       "https://api.example.test/wardrobe/items?source=uploaded",
     );
+    expect(
+      getWardrobeItemsUrl({
+        cursor: "cursor-1",
+        likedOnly: true,
+        limit: 24,
+        source: "from_catalog",
+      }),
+    ).toBe(
+      "https://api.example.test/wardrobe/items?source=from_catalog&likedOnly=true&limit=24&cursor=cursor-1",
+    );
     expect(getWardrobeItemsPdfUrl()).toBe(
       "https://api.example.test/wardrobe/items/pdf",
     );
@@ -136,10 +146,16 @@ describe("personal items api", () => {
   });
 
   test("fetches personal items items", async () => {
-    await fetchPersonalItems({ source: "from_catalog", force: true });
+    await fetchPersonalItems({
+      cursor: "cursor-1",
+      likedOnly: true,
+      limit: 24,
+      source: "from_catalog",
+      force: true,
+    });
 
     expect(requestApi.getCachedJson).toHaveBeenCalledWith(
-      "https://api.example.test/wardrobe/items?source=from_catalog",
+      "https://api.example.test/wardrobe/items?source=from_catalog&likedOnly=true&limit=24&cursor=cursor-1",
       {
         credentials: "include",
         force: true,

@@ -454,8 +454,6 @@ describe("WardrobeScreen", () => {
     expect(
       screen.getByRole("group", { name: "Personal item source" }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("wardrobe-placeholder")).toBeInTheDocument();
-
     expect(
       await screen.findByTestId("wardrobe-card-wardrobe-1"),
     ).toHaveTextContent("Linen Shirt");
@@ -464,7 +462,11 @@ describe("WardrobeScreen", () => {
       "true",
     );
     expect(api.fetchPersonalItems).toHaveBeenCalledWith({
+      cursor: null,
       force: false,
+      likedOnly: false,
+      limit: 48,
+      source: null,
     });
     expect(api.fetchPersonalItemsReport).toHaveBeenCalledWith({
       force: false,
@@ -783,7 +785,11 @@ describe("WardrobeScreen", () => {
 
     await waitFor(() => {
       expect(api.fetchPersonalItems).toHaveBeenCalledWith({
+        cursor: null,
         force: false,
+        likedOnly: true,
+        limit: 48,
+        source: "uploaded",
       });
     });
     expect(await screen.findByText("Liked Uploaded Shirt")).toBeInTheDocument();
@@ -1037,7 +1043,11 @@ describe("WardrobeScreen", () => {
 
     await waitFor(() => {
       expect(api.fetchPersonalItems).toHaveBeenLastCalledWith({
+        cursor: null,
         force: true,
+        likedOnly: false,
+        limit: 48,
+        source: "uploaded",
       });
     });
     await waitFor(() => {
@@ -1117,7 +1127,11 @@ describe("WardrobeScreen", () => {
     });
     await waitFor(() => {
       expect(api.fetchPersonalItems).toHaveBeenLastCalledWith({
+        cursor: null,
         force: true,
+        likedOnly: false,
+        limit: 48,
+        source: "uploaded",
       });
     });
   });
@@ -1228,7 +1242,11 @@ describe("WardrobeScreen", () => {
     });
     await waitFor(() => {
       expect(api.fetchPersonalItems).toHaveBeenLastCalledWith({
+        cursor: null,
         force: true,
+        likedOnly: false,
+        limit: 48,
+        source: "uploaded",
       });
     });
   });

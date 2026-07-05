@@ -51,19 +51,22 @@ function createUploadedWardrobeCleanupResult() {
 }
 
 function createWardrobeListDependencies() {
+  const defaultWardrobeItems = [
+    {
+      id: "wardrobe-1",
+      name: "Saved shirt",
+      url: "https://example.com/1",
+      imageUrl: "https://example.com/1.jpg",
+      source: "from_catalog",
+      processingStatus: "ready",
+    },
+  ];
+
   return {
     countWardrobeItemsImpl: async () => 1,
     getPersonalItemsReportImpl: async () => null,
-    listWardrobeItemsImpl: async () => [
-      {
-        id: "wardrobe-1",
-        name: "Saved shirt",
-        url: "https://example.com/1",
-        imageUrl: "https://example.com/1.jpg",
-        source: "from_catalog",
-        processingStatus: "ready",
-      },
-    ],
+    listWardrobeItemsImpl: async () => defaultWardrobeItems,
+    listWardrobeItemsPageImpl: undefined,
     listWardrobeItemsByIdsImpl: async ({ ids }) =>
       ids.map((id) => ({
         id,

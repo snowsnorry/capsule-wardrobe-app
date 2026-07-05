@@ -207,6 +207,11 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   ).toBeTruthy();
   expect(
     statements.some((statement) =>
+      statement.includes("wardrobe_profile_source_cursor_idx"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
       statement.includes("create table if not exists personal_items_reports"),
     ),
   ).toBeTruthy();

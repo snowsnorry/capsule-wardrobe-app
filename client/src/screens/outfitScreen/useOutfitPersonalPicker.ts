@@ -1,21 +1,26 @@
 import { useEffect, useState } from "react";
-import { fetchPersonalItems } from "../../api/personalItems";
+import type { PersonalItemSource } from "../../api/personalItems";
 import type {
   AnchorSourceFilter,
   AnchorTypeFilter,
 } from "../../components/ProfileFiltersAnchorTypes";
 import type { WardrobeItem } from "../../app/appTypes";
+import { usePaginatedPersonalItems } from "../../hooks/usePaginatedPersonalItems";
 import {
   useOutfitPersonalItemTypeOptions,
   useVisibleOutfitPersonalItems,
 } from "./outfitItemMappers";
 
 function useOutfitPersonalPicker(open: boolean) {
-  const [personalItems, setPersonalItems] = useState<WardrobeItem[]>([]);
-  const [personalLoading, setPersonalLoading] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<AnchorSourceFilter>("all");
   const [likedOnly, setLikedOnly] = useState(false);
   const [typeFilter, setTypeFilter] = useState<AnchorTypeFilter>("all");
+  const source = getPersonalItemSourceFilter(sourceFilter);
+  const personalItems = usePaginatedPersonalItems<WardrobeItem>({
+    enabled: open,
+    likedOnly,
+    source,
+  });
 
   useEffect(() => {
     if (!open) {
@@ -25,33 +30,35 @@ function useOutfitPersonalPicker(open: boolean) {
     setSourceFilter("all");
     setLikedOnly(false);
     setTypeFilter("all");
-    setPersonalLoading(true);
-    void fetchPersonalItems({ force: true })
-      .then((result) => {
-        setPersonalItems(Array.isArray(result.items) ? result.items : []);
-      })
-      .catch(() => {
-        setPersonalItems([]);
-      })
-      .finally(() => setPersonalLoading(false));
   }, [open]);
 
   return {
+    hasMorePersonalItems: personalItems.hasMore,
     likedOnly,
-    personalLoading,
+    loadMorePersonalItems: personalItems.loadMore,
+    personalLoading: personalItems.isLoading,
+    personalLoadingMore: personalItems.isLoadingMore,
     setLikedOnly,
     setSourceFilter,
     setTypeFilter,
     sourceFilter,
     typeFilter,
-    typeOptions: useOutfitPersonalItemTypeOptions(personalItems),
+    typeOptions: useOutfitPersonalItemTypeOptions(personalItems.knownItems),
     visiblePersonalItems: useVisibleOutfitPersonalItems({
-      items: personalItems,
+      items: personalItems.items,
       likedOnly,
       sourceFilter,
       typeFilter,
     }),
   };
+}
+
+function getPersonalItemSourceFilter(
+  sourceFilter: AnchorSourceFilter,
+): PersonalItemSource | null {
+  if (sourceFilter === "uploaded") return "uploaded";
+  if (sourceFilter === "catalog") return "from_catalog";
+  return null;
 }
 
 export { useOutfitPersonalPicker };

@@ -437,7 +437,13 @@ describe("ProfileFiltersSidebar", () => {
       await screen.findByText(/No ready personal items/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
-    expect(fetchPersonalItemsMock).toHaveBeenCalledWith({ force: true });
+    expect(fetchPersonalItemsMock).toHaveBeenCalledWith({
+      cursor: null,
+      force: true,
+      likedOnly: false,
+      limit: 48,
+      source: null,
+    });
   });
 
   test("warns but allows apply when wardrobe-only source mode has too few ready items", async () => {

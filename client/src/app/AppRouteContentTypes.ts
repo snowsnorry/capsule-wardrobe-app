@@ -74,6 +74,7 @@ export type AppRouteContentProps = SharedFilterProps & {
   isSigningOut: boolean;
   partialRegenerationPendingUrls: string[];
   pendingImageSetIndexes: number[];
+  personalItemsCount?: number | null;
   profileCreated: boolean;
   profileItems: WardrobeItem[] | null;
   profileOutfitSets: OutfitSetSnapshot[];

@@ -25,8 +25,20 @@ const EMPTY_UPLOAD_PROGRESS: UploadWardrobeProgress = {
   uploaded: 0,
 };
 type PersonalItemsFetchOptions = {
+  cursor?: string | null;
   force?: boolean;
+  likedOnly?: boolean;
+  limit?: number | null;
   source?: PersonalItemSource | null;
+};
+type PersonalItemsPagination = {
+  hasMore: boolean;
+  limit: number;
+  nextCursor: string | null;
+};
+type PersonalItemsResponse = JsonObject & {
+  items?: unknown[];
+  pagination?: PersonalItemsPagination;
 };
 type UploadedWardrobeItemUpdatePayload = {
   name: string;
@@ -57,11 +69,23 @@ type PersonalItemsReportResponse = {
   stale?: boolean;
 };
 function getWardrobeItemsUrl({
+  cursor = null,
+  likedOnly = false,
+  limit = null,
   source = null,
 }: PersonalItemsFetchOptions = {}) {
   const params = new URLSearchParams();
   if (source) {
     params.set("source", source);
+  }
+  if (likedOnly) {
+    params.set("likedOnly", "true");
+  }
+  if (limit) {
+    params.set("limit", String(limit));
+  }
+  if (cursor) {
+    params.set("cursor", cursor);
   }
   const query = params.toString();
   return `${API_BASE_URL}/wardrobe/items${query ? `?${query}` : ""}`;
@@ -104,11 +128,11 @@ function getDownloadFilenameFromDisposition(
 
 async function fetchPersonalItems(
   options: PersonalItemsFetchOptions = {},
-): Promise<JsonObject> {
+): Promise<PersonalItemsResponse> {
   return getCachedJson(getWardrobeItemsUrl(options), {
     credentials: "include",
     force: options.force,
-  });
+  }) as Promise<PersonalItemsResponse>;
 }
 
 async function fetchPersonalItemsReport(
@@ -296,6 +320,9 @@ export {
   uploadWardrobeUrls,
 };
 export type { PersonalItemSource };
+export type { PersonalItemsFetchOptions };
+export type { PersonalItemsPagination };
 export type { PersonalItemsReportResponse };
+export type { PersonalItemsResponse };
 export type { UploadedWardrobeItemUpdatePayload };
 export type { UploadWardrobeProgress };

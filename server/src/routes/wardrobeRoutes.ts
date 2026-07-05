@@ -1,5 +1,11 @@
 import { logError } from "../logger.js";
-import { normalizeWardrobeSourceParam } from "./wardrobeRouteParams.js";
+import { decodeWardrobePageCursor } from "../db.js";
+import {
+  normalizeWardrobeCursorParam,
+  normalizeWardrobeLikedOnlyParam,
+  normalizeWardrobeLimitParam,
+  normalizeWardrobeSourceParam,
+} from "./wardrobeRouteParams.js";
 import { registerWardrobeUploadRoute } from "./wardrobeFileUploadRoute.js";
 import { registerUploadedWardrobeItemUpdateRoute } from "./wardrobeUploadedItemUpdateRoute.js";
 import { registerWardrobeUrlUploadRoute } from "./wardrobeUrlUploadRoute.js";
@@ -45,30 +51,69 @@ export function registerWardrobeRoutes(app, context) {
 }
 
 function registerWardrobeListRoute(app, context) {
-  app.get("/wardrobe/items", context.requireAuth, async (req, res) => {
-    const source = normalizeWardrobeSourceParam(req.query?.source);
-    if (source === "") {
-      return res.status(400).json({ error: "invalid_payload" });
-    }
+  app.get(
+    "/wardrobe/items",
+    context.requireAuth,
+    // eslint-disable-next-line complexity
+    async (req, res) => {
+      const source = normalizeWardrobeSourceParam(req.query?.source);
+      const likedOnly = normalizeWardrobeLikedOnlyParam(req.query?.likedOnly);
+      const limit = normalizeWardrobeLimitParam(req.query?.limit);
+      const cursor = normalizeWardrobeCursorParam(req.query?.cursor);
+      if (
+        source === "" ||
+        likedOnly === "" ||
+        limit === "" ||
+        cursor === "" ||
+        (cursor && !decodeWardrobePageCursor(cursor))
+      ) {
+        return res.status(400).json({ error: "invalid_payload" });
+      }
 
-    try {
-      const items = await context.listWardrobeItemsImpl({
-        email: req.user.email,
-        source,
-      });
-      const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
-      const displayItems = Array.isArray(items)
-        ? context.annotateLikedItems(
-            items.map(filterWardrobeListItemForDisplay),
-            likedUrls,
-          )
-        : items;
-      return res.json({ ok: true, items: displayItems });
-    } catch (error) {
-      logError("[wardrobe/items]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
+      try {
+        if (context.listWardrobeItemsPageImpl) {
+          const page = await context.listWardrobeItemsPageImpl({
+            cursor,
+            email: req.user.email,
+            likedOnly,
+            limit,
+            source,
+          });
+          const displayItems = Array.isArray(page.items)
+            ? page.items.map(filterWardrobeListItemForDisplay)
+            : page.items;
+          return res.json({
+            ok: true,
+            items: displayItems,
+            pagination: page.pagination,
+          });
+        }
+
+        const items = await context.listWardrobeItemsImpl({
+          email: req.user.email,
+          source,
+        });
+        const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
+        const displayItems = Array.isArray(items)
+          ? context
+              .annotateLikedItems(
+                items.map(filterWardrobeListItemForDisplay),
+                likedUrls,
+              )
+              .filter((item) => !likedOnly || item?.isLiked)
+              .slice(0, limit)
+          : items;
+        return res.json({
+          ok: true,
+          items: displayItems,
+          pagination: { hasMore: false, limit, nextCursor: null },
+        });
+      } catch (error) {
+        logError("[wardrobe/items]", error);
+        return res.status(503).json({ error: "service_unavailable" });
+      }
+    },
+  );
 }
 
 function registerWardrobePdfRoute(app, context) {

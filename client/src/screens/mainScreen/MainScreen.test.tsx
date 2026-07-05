@@ -712,7 +712,13 @@ describe("MainScreen", () => {
         screen.getByRole("button", { name: "Regenerate all" }),
       ).toBeDisabled();
     });
-    expect(fetchPersonalItemsMock).toHaveBeenCalledWith({ force: true });
+    expect(fetchPersonalItemsMock).toHaveBeenCalledWith({
+      cursor: null,
+      force: true,
+      likedOnly: false,
+      limit: 48,
+      source: null,
+    });
     expect(onRefreshItems).not.toHaveBeenCalled();
   });
 

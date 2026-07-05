@@ -81,7 +81,7 @@ describe("useWardrobeItems", () => {
       }),
     );
     const { unmount } = renderHook(() =>
-      useWardrobeItems("all", 0, t, waitForJobCompletion),
+      useWardrobeItems("all", false, 0, t, waitForJobCompletion),
     );
 
     unmount();
@@ -89,7 +89,13 @@ describe("useWardrobeItems", () => {
     await act(async () => {
       resolveItems({ items: [] });
     });
-    expect(api.fetchPersonalItems).toHaveBeenCalledWith({ force: false });
+    expect(api.fetchPersonalItems).toHaveBeenCalledWith({
+      cursor: null,
+      force: false,
+      likedOnly: false,
+      limit: 48,
+      source: null,
+    });
   });
 
   test("loads items and handles successful catalog and uploaded mutations", async () => {
@@ -112,7 +118,7 @@ describe("useWardrobeItems", () => {
     });
     const onItemsChanged = vi.fn();
     const { result } = renderHook(() =>
-      useWardrobeItems("uploaded", 0, t, waitForJobCompletion, {
+      useWardrobeItems("all", false, 0, t, waitForJobCompletion, {
         onItemsChanged,
       }),
     );
@@ -123,7 +129,7 @@ describe("useWardrobeItems", () => {
       await result.current.handleDownloadPdf();
     });
     expect(api.downloadPersonalItemsPdf).toHaveBeenCalledWith({
-      source: "uploaded",
+      source: null,
     });
 
     await act(async () => {
@@ -230,7 +236,7 @@ describe("useWardrobeItems", () => {
     );
     const onItemsChanged = vi.fn();
     const { result } = renderHook(() =>
-      useWardrobeItems("uploaded", 0, t, waitForJobCompletion, {
+      useWardrobeItems("uploaded", false, 0, t, waitForJobCompletion, {
         onItemsChanged,
       }),
     );
@@ -253,7 +259,7 @@ describe("useWardrobeItems", () => {
   test("handles empty and failing operations", async () => {
     api.fetchPersonalItems.mockRejectedValueOnce(new Error("load failed"));
     const { result } = renderHook(() =>
-      useWardrobeItems("all", 1, t, waitForJobCompletion),
+      useWardrobeItems("all", false, 1, t, waitForJobCompletion),
     );
 
     await waitFor(() =>

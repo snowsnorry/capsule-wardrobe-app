@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, ReactElement, SetStateAction } from "react";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { type UploadedWardrobeItemUpdatePayload } from "../api/personalItems";
@@ -37,9 +37,11 @@ import { useWardrobeItems } from "./useWardrobeItems";
 // eslint-disable-next-line max-lines-per-function
 function WardrobeScreen({
   isJobActive = false,
+  personalItemsCount = null,
   waitForJobCompletion,
 }: {
   isJobActive?: boolean;
+  personalItemsCount?: number | null;
   waitForJobCompletion: (jobId: string) => Promise<JobSnapshot>;
 }): ReactElement {
   const { t, locale } = useI18n();
@@ -53,6 +55,7 @@ function WardrobeScreen({
   const [highlightedReportItemIds, setHighlightedReportItemIds] = useState<
     string[]
   >([]);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
   const filters = useWardrobeScreenFilters(isOverlay);
   const personalItemsReport = usePersonalItemsReport({
     setError: setReportError,
@@ -61,6 +64,7 @@ function WardrobeScreen({
   });
   const wardrobeItems = useWardrobeItems(
     filters.filter,
+    filters.likedOnly,
     refreshKey,
     t,
     waitForJobCompletion,
@@ -86,10 +90,10 @@ function WardrobeScreen({
   const highlightedReportItemKeys = useMemo(
     () =>
       getHighlightedPersonalItemsReportItemKeys(
-        wardrobeItems.items,
+        wardrobeItems.knownItems,
         highlightedReportItemIds,
       ),
-    [highlightedReportItemIds, wardrobeItems.items],
+    [highlightedReportItemIds, wardrobeItems.knownItems],
   );
   const isActionBusy =
     isJobActive ||
@@ -121,6 +125,9 @@ function WardrobeScreen({
       model={{
         displayedItems,
         filters,
+        canAnalyze:
+          Number(personalItemsCount || 0) > 0 ||
+          wardrobeItems.knownItems.length > 0,
         hasReportOrLoading: reportLayout.hasReportOrLoading,
         highlightedReportItemKeys,
         isActionBusy,
@@ -133,6 +140,7 @@ function WardrobeScreen({
         productDetail,
         report: reportLayout.report,
         reportError,
+        scrollContainerRef,
         showFloatingReportInspector: reportLayout.showFloatingReportInspector,
         showInlineCompactReport: reportLayout.showInlineCompactReport,
         t,

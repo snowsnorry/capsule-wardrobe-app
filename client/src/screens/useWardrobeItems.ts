@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
-import { fetchPersonalItems } from "../api/personalItems";
 import type { JobSnapshot } from "../api/jobs";
+import { usePaginatedPersonalItems } from "../hooks/usePaginatedPersonalItems";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 import { getSourceFilter, type WardrobeFilter } from "./WardrobeToolbar";
 import {
@@ -13,10 +13,11 @@ import {
   useWardrobeUploadActions,
   type WardrobeItemsChangedReason,
 } from "./wardrobeItemActions";
-import { getItemsFromResponse } from "./wardrobeResponse";
 
+// eslint-disable-next-line max-params
 export function useWardrobeItems(
   filter: WardrobeFilter,
+  likedOnly: boolean,
   refreshKey: number,
   t: (key: string) => string,
   waitForJobCompletion: (jobId: string) => Promise<JobSnapshot>,
@@ -25,10 +26,17 @@ export function useWardrobeItems(
   } = {},
 ) {
   const source = useMemo(() => getSourceFilter(filter), [filter]);
-  const { error, isLoading, items, setError, setItems } = useWardrobeItemsQuery(
-    refreshKey,
-    t,
+  const query = usePaginatedPersonalItems<MainScreenItem>({
+    forceKey: refreshKey,
+    likedOnly,
+    source,
+  });
+  const items = useMemo(() => sortWardrobeItems(query.items), [query.items]);
+  const knownItems = useMemo(
+    () => sortWardrobeItems(query.knownItems),
+    [query.knownItems],
   );
+  const [error, setError] = useState("");
   const [isMutating, setIsMutating] = useState(false);
   const [removeConfirmItem, setRemoveConfirmItem] =
     useState<MainScreenItem | null>(null);
@@ -48,24 +56,27 @@ export function useWardrobeItems(
     onItemsChanged: options.onItemsChanged,
     setError,
     setIsMutating,
-    setItems,
+    setItems: query.setItems,
     t,
   });
   const handleUpdateUploadedItem = useWardrobeUploadedItemUpdateAction({
     onItemsChanged: options.onItemsChanged,
     setError,
     setIsMutating,
-    setItems,
+    setItems: query.setItems,
     t,
   });
   const handleSetItemLike = useWardrobeItemLikeAction({
-    items,
     productMenu: productMenuState.productMenu,
     setError,
-    setItems,
+    setItems: query.setItems,
     setProductMenu: productMenuState.setProductMenu,
     t,
   });
+
+  useEffect(() => {
+    setError(query.error ? t("wardrobe.loadFailed") : "");
+  }, [query.error, t]);
 
   return {
     closeProductMenu: productMenuState.closeProductMenu,
@@ -77,50 +88,18 @@ export function useWardrobeItems(
     handleUpdateUploadedItem,
     handleUploadImages: uploadActions.handleUploadImages,
     handleUploadUrls: uploadActions.handleUploadUrls,
+    hasMore: query.hasMore,
     isDownloadingPdf: downloadPdfAction.isDownloadingPdf,
-    isLoading,
+    isLoading: query.isLoading,
+    isLoadingMore: query.isLoadingMore,
     isMutating,
     isUploading: uploadActions.isUploading,
     items,
+    knownItems,
+    loadMore: query.loadMore,
     productMenu: productMenuState.productMenu,
     removeConfirmItem,
     setRemoveConfirmItem,
     uploadProgress: uploadActions.uploadProgress,
   };
-}
-
-function useWardrobeItemsQuery(refreshKey: number, t: (key: string) => string) {
-  const [items, setItems] = useState<MainScreenItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let isActive = true;
-
-    setIsLoading(true);
-    setError("");
-    fetchPersonalItems({ force: refreshKey > 0 })
-      .then((response) => {
-        if (isActive) {
-          setItems(sortWardrobeItems(getItemsFromResponse(response)));
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setItems([]);
-          setError(t("wardrobe.loadFailed"));
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [refreshKey, t]);
-
-  return { error, isLoading, items, setError, setItems };
 }

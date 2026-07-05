@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fetchPersonalItems } from "../api/personalItems";
 import { fetchProductDetailByUrl } from "../api/search";
 import type { OutfitItemSnapshot, WardrobeItem } from "../app/appTypes";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
+import { fetchAllPersonalItemsPages } from "../hooks/usePaginatedPersonalItems";
 import {
   getOutfitItemKey,
   toSnapshot,
@@ -123,10 +123,7 @@ export function useProfileFiltersAnchorSelection({
   );
   const loadItems = useCallback(async () => {
     try {
-      const response = await fetchPersonalItems({ force: true });
-      const nextItems = Array.isArray(response.items)
-        ? (response.items as WardrobeItem[])
-        : [];
+      const nextItems = await fetchAllPersonalItemsPages<WardrobeItem>();
       setItems(
         sortWardrobeItems(
           nextItems as Parameters<typeof sortWardrobeItems>[0],

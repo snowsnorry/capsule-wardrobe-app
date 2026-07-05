@@ -34,6 +34,7 @@ function toWardrobeUiItem(row: UserWardrobeRow): Record<string, unknown> {
     source: row.source,
     rawImageUrl: row.rawImageUrl,
     processingStatus: row.processingStatus,
+    ...(typeof row.isLiked === "boolean" ? { isLiked: row.isLiked } : {}),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -6,6 +6,7 @@ import {
   requestJson,
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
+import { encodeWardrobePageCursor } from "../db.js";
 import { buildPersonalItemsReportDedupeKey } from "./personalItemsReportRoutes.js";
 
 const tinyPng = Buffer.from(
@@ -129,23 +130,44 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
   const calls: unknown[] = [];
   const { baseUrl } = await startTestServer(t, {
     overrides: {
-      listWardrobeItemsImpl: async (payload) => {
-        calls.push({ type: "list", payload });
-        return [
-          {
-            createdAt: "2026-05-01T00:00:00.000Z",
-            email: "person@example.com",
-            embedding: [0.1, 0.2],
-            id: "wardrobe-1",
-            productId: "product-1",
-            profileEmail: "person@example.com",
-            rawImageUrl: "https://example.com/raw.jpg",
-            url: "https://example.com/1",
-            source: "from_catalog",
-            updatedAt: "2026-05-01T00:00:00.000Z",
+      listWardrobeItemsPageImpl: async (payload) => {
+        calls.push({ type: "listPage", payload });
+        return {
+          items: [
+            {
+              createdAt: "2026-05-01T00:00:00.000Z",
+              email: "person@example.com",
+              embedding: [0.1, 0.2],
+              id: "wardrobe-1",
+              productId: "product-1",
+              profileEmail: "person@example.com",
+              rawImageUrl: "https://example.com/raw.jpg",
+              url: "https://example.com/1",
+              source: "from_catalog",
+              updatedAt: "2026-05-01T00:00:00.000Z",
+            },
+          ],
+          pagination: {
+            hasMore: false,
+            limit: payload.limit,
+            nextCursor: null,
           },
-        ];
+        };
       },
+      listWardrobeItemsImpl: async () => [
+        {
+          createdAt: "2026-05-01T00:00:00.000Z",
+          email: "person@example.com",
+          embedding: [0.1, 0.2],
+          id: "wardrobe-1",
+          productId: "product-1",
+          profileEmail: "person@example.com",
+          rawImageUrl: "https://example.com/raw.jpg",
+          url: "https://example.com/1",
+          source: "from_catalog",
+          updatedAt: "2026-05-01T00:00:00.000Z",
+        },
+      ],
       saveWardrobeItemFromCatalogImpl: async (payload) => {
         calls.push({ type: "save", payload });
         return {
@@ -180,9 +202,13 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
         id: "wardrobe-1",
         url: "https://example.com/1",
         source: "from_catalog",
-        isLiked: false,
       },
     ],
+    pagination: {
+      hasMore: false,
+      limit: 48,
+      nextCursor: null,
+    },
   });
 
   const save = await requestJson(baseUrl, "/wardrobe/items/from-catalog", {
@@ -215,8 +241,14 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
 
   expect(calls).toEqual([
     {
-      type: "list",
-      payload: { email: "person@example.com", source: "from_catalog" },
+      type: "listPage",
+      payload: {
+        cursor: null,
+        email: "person@example.com",
+        likedOnly: false,
+        limit: 48,
+        source: "from_catalog",
+      },
     },
     {
       type: "save",
@@ -225,6 +257,78 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
     {
       type: "delete",
       payload: { email: "person@example.com", url: "https://example.com/1" },
+    },
+  ]);
+});
+
+test("wardrobe list route supports cursor pagination and liked filtering", async (t) => {
+  const cursor = encodeWardrobePageCursor({
+    createdAt: "2026-05-01T00:00:00.000Z",
+    id: "42",
+    updatedAt: "2026-05-02T00:00:00.000Z",
+  });
+  const calls: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listLikedItemUrlsImpl: async () => {
+        throw new Error("liked_urls_should_not_be_loaded");
+      },
+      listWardrobeItemsPageImpl: async (payload) => {
+        calls.push(payload);
+        return {
+          items: [
+            {
+              createdAt: "2026-05-01T00:00:00.000Z",
+              embedding: [0.1],
+              id: "44",
+              profileEmail: "person@example.com",
+              rawImageUrl: "https://example.com/raw.jpg",
+              source: "from_catalog",
+              updatedAt: "2026-05-02T00:00:00.000Z",
+              url: "https://example.com/liked",
+              isLiked: true,
+            },
+          ],
+          pagination: {
+            hasMore: true,
+            limit: 24,
+            nextCursor: "next-cursor",
+          },
+        };
+      },
+    },
+  });
+
+  const list = await requestJson(
+    baseUrl,
+    `/wardrobe/items?source=from_catalog&likedOnly=true&limit=24&cursor=${cursor}`,
+    { cookie: AUTH_COOKIE },
+  );
+
+  expect(list.response.status).toBe(200);
+  expect(list.json).toEqual({
+    ok: true,
+    items: [
+      {
+        id: "44",
+        source: "from_catalog",
+        url: "https://example.com/liked",
+        isLiked: true,
+      },
+    ],
+    pagination: {
+      hasMore: true,
+      limit: 24,
+      nextCursor: "next-cursor",
+    },
+  });
+  expect(calls).toEqual([
+    {
+      cursor,
+      email: "person@example.com",
+      likedOnly: true,
+      limit: 24,
+      source: "from_catalog",
     },
   ]);
 });
@@ -1807,6 +1911,20 @@ test("wardrobe routes validate source and catalog item payloads", async (t) => {
   expect(invalidSource.response.status).toBe(400);
   expect(invalidSource.json).toEqual({ error: "invalid_payload" });
 
+  for (const path of [
+    "/wardrobe/items?cursor=not-a-cursor",
+    "/wardrobe/items?limit=0",
+    "/wardrobe/items?limit=24abc",
+    "/wardrobe/items?limit=24.9",
+    "/wardrobe/items?likedOnly=yes",
+  ]) {
+    const invalidPagination = await requestJson(baseUrl, path, {
+      cookie: AUTH_COOKIE,
+    });
+    expect(invalidPagination.response.status).toBe(400);
+    expect(invalidPagination.json).toEqual({ error: "invalid_payload" });
+  }
+
   const invalidPdfSource = await requestJson(
     baseUrl,
     "/wardrobe/items/pdf?source=other",
@@ -1901,6 +2019,9 @@ test("wardrobe routes map missing products and service failures", async (t) => {
 
   const failingListServer = await startTestServer(t, {
     overrides: {
+      listWardrobeItemsPageImpl: async () => {
+        throw new Error("wardrobe_down");
+      },
       listWardrobeItemsImpl: async () => {
         throw new Error("wardrobe_down");
       },

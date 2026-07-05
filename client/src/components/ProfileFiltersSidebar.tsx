@@ -4,7 +4,7 @@ import {
   getCapsuleCategoryShortfalls,
   getReadyWardrobeCapsuleItems,
 } from "../../../shared/capsuleCategories.js";
-import { fetchPersonalItems } from "../api/personalItems";
+import { fetchAllPersonalItemsPages } from "../hooks/usePaginatedPersonalItems";
 import { useI18n } from "../i18n/useI18n";
 import { translateOption } from "../i18n";
 import { buildCanonicalPatternOptions } from "../../../shared/patternOptions.js";
@@ -101,14 +101,12 @@ function useWardrobeOnlySourceModeStatus(
 
     let current = true;
     setState((previous) => ({ ...previous, error: false, loading: true }));
-    fetchPersonalItems({ force: true })
-      .then((response) => {
+    fetchAllPersonalItemsPages()
+      .then((items) => {
         if (!current) return;
         setState({
           error: false,
-          items: Array.isArray(response?.items)
-            ? (response.items as Array<Record<string, unknown>>)
-            : [],
+          items,
           loading: false,
         });
       })
