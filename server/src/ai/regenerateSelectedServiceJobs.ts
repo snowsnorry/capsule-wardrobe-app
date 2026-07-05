@@ -16,7 +16,7 @@ import { throwIfAborted } from "./abortSignal.js";
 
 const noopProgress = async (_update?: unknown) => undefined;
 
-export function publishPartialRegenerationSnapshot(
+function publishPartialRegenerationSnapshot(
   deps,
   email,
   capsuleId,

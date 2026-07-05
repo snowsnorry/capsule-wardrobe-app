@@ -1,11 +1,9 @@
 import { getCapsule } from "../capsuleStore.js";
 import { getProfile } from "../profileStore.js";
 import type {
-  PartialRegenerationJobState,
   ProfileWithItemsLike,
   StoredWardrobePayloadLike,
   WardrobeGenerationResult,
-  WardrobeJobState,
   WardrobeUiItemLike,
 } from "../ai/types.js";
 
@@ -211,37 +209,6 @@ function buildNormalizedCapsuleRecord(
   };
 }
 
-function buildWardrobeJobState(
-  overrides: Partial<WardrobeJobState> = {},
-): WardrobeJobState {
-  return {
-    capsuleRequestId: "req-1",
-    status: "pending",
-    startedAt: 1,
-    updatedAt: 1,
-    promise: null,
-    phase: "capsule",
-    result: null,
-    ...overrides,
-  };
-}
-
-function buildPartialRegenerationJobState(
-  overrides: Partial<PartialRegenerationJobState> = {},
-): PartialRegenerationJobState {
-  return {
-    capsuleRequestId: "regen-req-1",
-    status: "pending",
-    phase: "regenerate",
-    startedAt: 1,
-    updatedAt: 1,
-    pendingItemUrls: [],
-    result: null,
-    promise: null,
-    ...overrides,
-  };
-}
-
 function buildProfileWithItems(
   overrides: Partial<ProfileWithItemsLike> = {},
 ): ProfileWithItemsLike {
@@ -289,12 +256,10 @@ export {
   buildCapsuleSnapshot,
   buildNormalizedCapsuleRecord,
   buildNormalizedProfileRecord,
-  buildPartialRegenerationJobState,
   buildProductRow,
   buildProfileWithItems,
   buildStoredOutfitSet,
   buildStoredWardrobePayload,
   buildWardrobeGenerationResult,
-  buildWardrobeJobState,
   buildWardrobeUiItem,
 };
