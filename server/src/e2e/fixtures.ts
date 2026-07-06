@@ -32,6 +32,26 @@ export function e2eImageUrl(name: string): string {
   return `${E2E_BASE_URL}/__e2e/images/${encodeURIComponent(name)}.svg`;
 }
 
+type E2eWardrobeItem = {
+  id: string;
+  name: string;
+  category: string;
+  brand: string;
+  price: number;
+  currency: string;
+  url: string;
+  imageUrl: string;
+  description: string;
+  color: string;
+  formalityLevel: string;
+  style: string;
+  season: string[];
+  occasions: string[];
+  audience: string;
+  pattern: string;
+  isLiked?: boolean;
+};
+
 export function buildE2eProfile(email = E2E_EMAIL) {
   return {
     id: "profile-e2e",
@@ -53,7 +73,7 @@ export function buildE2eProfile(email = E2E_EMAIL) {
   };
 }
 
-export function buildE2eWardrobeItems() {
+export function buildE2eWardrobeItems(): E2eWardrobeItem[] {
   return [
     {
       id: "top-e2e",
