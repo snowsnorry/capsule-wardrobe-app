@@ -2,6 +2,8 @@ import { getFirstRow, getSqlClient } from "./core.js";
 import type { JobRunRecord } from "../jobs/types.js";
 import { toJobRunRecord, type JobRunRow } from "./jobRows.js";
 
+const JOB_RUN_RETENTION_INTERVAL = "7 days";
+
 export async function markJobRunStarted(
   id: string,
 ): Promise<JobRunRecord | null> {
@@ -86,7 +88,8 @@ export async function markJobRunCompleted({
           phase = 'complete',
           result = ${JSON.stringify(result || {})}::jsonb,
           completed_at = now(),
-          updated_at = now()
+          updated_at = now(),
+          expires_at = now() + ${JOB_RUN_RETENTION_INTERVAL}::interval
         where id = ${id}
           and status = 'running'
         returning *
@@ -122,7 +125,8 @@ export async function markJobRunFailed({
           error_code = ${errorCode},
           error_message = ${errorMessage || null},
           failed_at = now(),
-          updated_at = now()
+          updated_at = now(),
+          expires_at = now() + ${JOB_RUN_RETENTION_INTERVAL}::interval
         where id = ${id}
           and status in ('queued', 'running')
         returning *
@@ -164,7 +168,8 @@ export async function markStaleRunningJobRunsFailed({
         error_code = 'job_stale_after_crash',
         error_message = 'Job was running before worker recovery and exceeded its deadline.',
         failed_at = now(),
-        updated_at = now()
+        updated_at = now(),
+        expires_at = now() + ${JOB_RUN_RETENTION_INTERVAL}::interval
       where id in (select id from due)
       returning *
     ),

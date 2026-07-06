@@ -79,6 +79,10 @@ function getSqlText(index: number) {
   return Array.from(strings || []).join(" ");
 }
 
+function getSqlValues(index: number) {
+  return coreApi.sql.mock.calls[index]?.slice(1) || [];
+}
+
 beforeEach(() => {
   coreApi.sql.mockReset();
   coreApi.getSqlClient.mockReturnValue(coreApi.sql);
@@ -221,6 +225,8 @@ test("markStaleRunningJobRunsFailed terminalizes stale running jobs with events"
 
   expect(getSqlText(0)).toContain("status = 'running'");
   expect(getSqlText(0)).toContain("for update skip locked");
+  expect(getSqlText(0)).toContain("expires_at = now() +");
+  expect(getSqlValues(0)).toContain("7 days");
   expect(getSqlText(0)).toContain("insert into job_events");
 });
 
@@ -347,6 +353,8 @@ test("job mutation helpers update lifecycle state and parse nullable JSON object
     result: { items: 2 },
   });
   expect(getSqlText(2)).toContain("insert into job_events");
+  expect(getSqlText(2)).toContain("expires_at = now() +");
+  expect(getSqlValues(2)).toContain("7 days");
 
   coreApi.sql.mockResolvedValueOnce([
     jobRow({
@@ -369,6 +377,8 @@ test("job mutation helpers update lifecycle state and parse nullable JSON object
     errorCode: "llm_failed",
   });
   expect(getSqlText(3)).toContain("insert into job_events");
+  expect(getSqlText(3)).toContain("expires_at = now() +");
+  expect(getSqlValues(3)).toContain("7 days");
 });
 
 test("job mutation helpers return null when lifecycle transitions are not applicable", async () => {
