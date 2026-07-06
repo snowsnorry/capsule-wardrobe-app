@@ -4,6 +4,28 @@ import type { EnqueueJobInput, JobSnapshot, JobStatus } from "./types.js";
 import { addJobMetricCount, createEmptyJobMetrics } from "./jobMetrics.js";
 
 const QUEUED_STUCK_MS = 5 * 60 * 1000;
+const ACTIVE_TOTAL_JOB_CAP = 8;
+const ACTIVE_GENERATION_JOB_CAP = 4;
+const ACTIVE_UPLOAD_JOB_CAP = 2;
+const ACTIVE_REPORT_KIND_CAP = 1;
+const UPLOAD_JOB_KINDS = new Set([
+  "personalItemUploadFiles",
+  "personalItemUploadUrls",
+]);
+const REPORT_JOB_KINDS = new Set([
+  "capsuleReportGenerate",
+  "outfitReportGenerate",
+  "personalItemsReportGenerate",
+]);
+const GENERATION_JOB_KINDS = new Set([
+  "capsuleGenerate",
+  "capsuleRegenerateSelected",
+  "capsuleReportGenerate",
+  "outfitImageGenerate",
+  "outfitReportGenerate",
+  "outfitSetImageGenerate",
+  "personalItemsReportGenerate",
+]);
 
 function now() {
   return new Date().toISOString();
@@ -54,6 +76,91 @@ function normalizeEmail(email: unknown) {
     .toLowerCase();
 }
 
+function createTooManyActiveJobsError(): Error & { code: string } {
+  const error = new Error("too_many_active_jobs") as Error & { code: string };
+  error.code = "too_many_active_jobs";
+  return error;
+}
+
+type InMemoryActiveJobCounts = {
+  generation: number;
+  reportKind: number;
+  total: number;
+  upload: number;
+};
+
+function getInMemoryActiveJobCounts({
+  kind,
+  jobs,
+  owners,
+  profileEmail,
+}: {
+  kind: EnqueueJobInput["kind"];
+  jobs: Map<string, JobSnapshot>;
+  owners: Map<string, string>;
+  profileEmail: string;
+}): InMemoryActiveJobCounts {
+  const counts: InMemoryActiveJobCounts = {
+    generation: 0,
+    reportKind: 0,
+    total: 0,
+    upload: 0,
+  };
+  for (const job of jobs.values()) {
+    if (owners.get(job.id) !== profileEmail || !isActive(job)) {
+      continue;
+    }
+    counts.total += 1;
+    if (GENERATION_JOB_KINDS.has(job.kind)) counts.generation += 1;
+    if (UPLOAD_JOB_KINDS.has(job.kind)) counts.upload += 1;
+    if (REPORT_JOB_KINDS.has(job.kind) && job.kind === kind) {
+      counts.reportKind += 1;
+    }
+  }
+  return counts;
+}
+
+function exceedsInMemoryActiveJobCapacity(
+  kind: EnqueueJobInput["kind"],
+  counts: InMemoryActiveJobCounts,
+) {
+  const exceedsUploadCap =
+    UPLOAD_JOB_KINDS.has(kind) && counts.upload >= ACTIVE_UPLOAD_JOB_CAP;
+  const exceedsGenerationCap =
+    GENERATION_JOB_KINDS.has(kind) &&
+    counts.generation >= ACTIVE_GENERATION_JOB_CAP;
+  const exceedsReportKindCap =
+    REPORT_JOB_KINDS.has(kind) && counts.reportKind >= ACTIVE_REPORT_KIND_CAP;
+  return (
+    counts.total >= ACTIVE_TOTAL_JOB_CAP ||
+    exceedsUploadCap ||
+    exceedsGenerationCap ||
+    exceedsReportKindCap
+  );
+}
+
+function assertInMemoryActiveJobCapacity({
+  input,
+  jobs,
+  owners,
+  profileEmail,
+}: {
+  input: EnqueueJobInput;
+  jobs: Map<string, JobSnapshot>;
+  owners: Map<string, string>;
+  profileEmail: string;
+}) {
+  const counts = getInMemoryActiveJobCounts({
+    kind: input.kind,
+    jobs,
+    owners,
+    profileEmail,
+  });
+  if (exceedsInMemoryActiveJobCapacity(input.kind, counts)) {
+    throw createTooManyActiveJobsError();
+  }
+}
+
 async function clearJobRunsForEmail({
   dedupe,
   email,
@@ -99,6 +206,8 @@ async function enqueueInMemoryJob({
   if (existing && isActive(existing)) {
     return existing;
   }
+
+  assertInMemoryActiveJobCapacity({ input, jobs, owners, profileEmail });
 
   const job = toSnapshot(input, crypto.randomUUID());
   jobs.set(job.id, job);

@@ -110,6 +110,14 @@ test("createJobRun returns existing active dedupe job before inserting", async (
 test("createJobRun inserts queued jobs and recovers from unique active dedupe races", async () => {
   coreApi.sql
     .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([
+      {
+        total_count: 0,
+        generation_count: 0,
+        upload_count: 0,
+        report_kind_count: 0,
+      },
+    ])
     .mockResolvedValueOnce([jobRow({ id: "job-2", payload: { ok: true } })]);
 
   await expect(
@@ -126,12 +134,20 @@ test("createJobRun inserts queued jobs and recovers from unique active dedupe ra
     deduped: false,
     job: { id: "job-2", payload: { ok: true } },
   });
-  expect(getSqlText(1)).toContain("insert into job_events");
+  expect(getSqlText(2)).toContain("insert into job_events");
 
   const uniqueViolation = new Error("23505 duplicate");
   (uniqueViolation as Error & { code?: string }).code = "23505";
   coreApi.sql
     .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([
+      {
+        total_count: 0,
+        generation_count: 0,
+        upload_count: 0,
+        report_kind_count: 0,
+      },
+    ])
     .mockRejectedValueOnce(uniqueViolation)
     .mockResolvedValueOnce([jobRow({ id: "job-3" })]);
 
@@ -143,6 +159,28 @@ test("createJobRun inserts queued jobs and recovers from unique active dedupe ra
       payload: {},
     }),
   ).resolves.toMatchObject({ deduped: true, job: { id: "job-3" } });
+});
+
+test("createJobRun rejects new jobs over active caps after dedupe lookup", async () => {
+  coreApi.sql.mockResolvedValueOnce([]).mockResolvedValueOnce([
+    {
+      total_count: 8,
+      generation_count: 4,
+      upload_count: 0,
+      report_kind_count: 0,
+    },
+  ]);
+
+  await expect(
+    createJobRun({
+      kind: "capsuleGenerate",
+      profileEmail: "person@example.com",
+      dedupeKey: "capsule:over-cap",
+      payload: {},
+    }),
+  ).rejects.toMatchObject({ code: "too_many_active_jobs" });
+  expect(coreApi.sql).toHaveBeenCalledTimes(2);
+  expect(getSqlText(1)).toContain("count(*) as total_count");
 });
 
 test("claimQueuedJobRunsWithoutProviderId conditionally claims stale providerless queued jobs", async () => {

@@ -232,7 +232,7 @@ function registerOAuthAuthorizePostRoute(app, context, config) {
 }
 
 function registerOAuthTokenRoute(app, context, config) {
-  app.post("/oauth/token", async (req, res) => {
+  app.post("/oauth/token", context.oauthTokenLimiter, async (req, res) => {
     if (req.headers.authorization || readString(req.body?.client_secret)) {
       logInfo("[mcp/oauth/token/failure]", { error: "invalid_client" });
       return res.status(400).json({ error: "invalid_client" });

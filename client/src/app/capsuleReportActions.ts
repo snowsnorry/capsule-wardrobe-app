@@ -6,6 +6,7 @@ import {
 import { fromContext, type AppActionContext } from "./actionContext";
 import { refreshCapsuleList } from "./capsuleListActions";
 import type { CapsuleMeta, CapsuleMutationResponse } from "./appTypes";
+import { resolveRateLimitFlowMessage } from "./errorMessages";
 import { reportStatusError } from "./outfitActionHelpers";
 
 function setCapsuleReportPending(context: AppActionContext, value: boolean) {
@@ -59,16 +60,18 @@ async function generateCurrentCapsuleReport(
         }
         throw new Error(finishedJob.error?.code || "service_unavailable");
       })
-      .catch(() => {
+      .catch((error) => {
         if (
           fromContext<{ current: boolean }>(context, "isMountedRef").current
         ) {
+          const t = fromContext<(key: string) => string>(context, "t");
           reportStatusError(
             context,
-            fromContext<(key: string) => string>(
-              context,
-              "t",
-            )("errors.capsuleReportGenerateFailed"),
+            resolveRateLimitFlowMessage(
+              error as Error,
+              t,
+              "errors.generationLimitActive",
+            ) || t("errors.capsuleReportGenerateFailed"),
           );
         }
       })
@@ -79,14 +82,16 @@ async function generateCurrentCapsuleReport(
           setCapsuleReportPending(context, false);
         }
       });
-  } catch {
+  } catch (error) {
     if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      const t = fromContext<(key: string) => string>(context, "t");
       reportStatusError(
         context,
-        fromContext<(key: string) => string>(
-          context,
-          "t",
-        )("errors.capsuleReportGenerateFailed"),
+        resolveRateLimitFlowMessage(
+          error as Error,
+          t,
+          "errors.generationLimitActive",
+        ) || t("errors.capsuleReportGenerateFailed"),
       );
       setCapsuleReportPending(context, false);
     }

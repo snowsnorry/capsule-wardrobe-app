@@ -77,6 +77,28 @@ function expectQueuedJob(result, kind, entity) {
   expect(typeof json.job.id).toBe("string");
 }
 
+function createQueuedJob(input) {
+  return {
+    id: `${input.kind}-${String(input.entity?.id || "job")}`,
+    kind: input.kind,
+    status: "queued",
+    phase: input.phase || "queued",
+    progress: {
+      current: 0,
+      total: input.progressTotal ?? null,
+      label: input.progressLabel || null,
+    },
+    entity: input.entity || null,
+    result: null,
+    error: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    startedAt: null,
+    completedAt: null,
+    failedAt: null,
+  };
+}
+
 test("outfit read routes return paginated, searched, and annotated outfits", async (t) => {
   const listRecentOutfitsImpl = vi.fn(async () => [outfit]);
   const countOutfitsImpl = vi.fn(async () => 12);
@@ -706,6 +728,7 @@ test("outfit report route delegates to generator and maps report errors", async 
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       generateOutfitReportImpl,
+      enqueueJobImpl: async (input) => createQueuedJob(input),
       getOutfitImpl: async (_email, id) => ({ ...outfit, id }),
       updateOutfitReportImpl,
       getProductsByUrlsForEmailImpl: async () => [],

@@ -17,6 +17,11 @@ type InternalMetricsSnapshot = {
   requests: RequestMetrics;
   uploads: ReturnType<typeof getWardrobeUploadProcessingMetrics>;
   jobs: JobMetrics | null;
+  active: {
+    jobEventStreams: number;
+    mcpSessions: number;
+  };
+  rejections: Record<string, number>;
 };
 
 const requestMetrics: RequestMetrics = {
@@ -28,6 +33,11 @@ const requestMetrics: RequestMetrics = {
     max: 0,
   },
 };
+const activeMetrics = {
+  jobEventStreams: 0,
+  mcpSessions: 0,
+};
+const rejectionMetrics: Record<string, number> = {};
 
 function incrementCounter(map: Record<string, number>, key: string): void {
   map[key] = (map[key] || 0) + 1;
@@ -61,11 +71,37 @@ export function getHttpRequestMetrics(): RequestMetrics {
   };
 }
 
+export function setActiveJobEventStreamMetric(count: number): void {
+  activeMetrics.jobEventStreams = Math.max(0, Math.floor(count));
+}
+
+export function setActiveMcpSessionMetric(count: number): void {
+  activeMetrics.mcpSessions = Math.max(0, Math.floor(count));
+}
+
+export function recordRejectionMetric(scope: string): void {
+  const key = String(scope || "unknown").trim() || "unknown";
+  rejectionMetrics[key] = (rejectionMetrics[key] || 0) + 1;
+}
+
+export function getActiveMetrics() {
+  return { ...activeMetrics };
+}
+
+export function getRejectionMetrics() {
+  return { ...rejectionMetrics };
+}
+
 export function resetHttpRequestMetrics(): void {
   requestMetrics.total = 0;
   requestMetrics.byMethod = {};
   requestMetrics.byStatusCode = {};
   requestMetrics.durationMs = { total: 0, max: 0 };
+  activeMetrics.jobEventStreams = 0;
+  activeMetrics.mcpSessions = 0;
+  for (const key of Object.keys(rejectionMetrics)) {
+    delete rejectionMetrics[key];
+  }
 }
 
 export async function buildInternalMetricsSnapshot({
@@ -82,5 +118,7 @@ export async function buildInternalMetricsSnapshot({
     requests: getHttpRequestMetrics(),
     uploads: getWardrobeUploadProcessingMetricsImpl(),
     jobs: getJobMetricsImpl ? await getJobMetricsImpl() : null,
+    active: getActiveMetrics(),
+    rejections: getRejectionMetrics(),
   };
 }

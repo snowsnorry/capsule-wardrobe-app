@@ -16,6 +16,7 @@ import {
 } from "./outfitActionHelpers";
 import { refreshOutfitList } from "./outfitListActions";
 import type { OutfitMutationResponse } from "./appTypes";
+import { resolveRateLimitFlowMessage } from "./errorMessages";
 
 async function subscribeUntilOutfitImageReady(
   context: AppActionContext,
@@ -170,16 +171,18 @@ export async function generateCurrentOutfitReport(
         }
         throw new Error(finishedJob.error?.code || "service_unavailable");
       })
-      .catch(() => {
+      .catch((error) => {
         if (
           fromContext<{ current: boolean }>(context, "isMountedRef").current
         ) {
+          const t = fromContext<(key: string) => string>(context, "t");
           reportStatusError(
             context,
-            fromContext<(key: string) => string>(
-              context,
-              "t",
-            )("errors.outfitReportGenerateFailed"),
+            resolveRateLimitFlowMessage(
+              error as Error,
+              t,
+              "errors.generationLimitActive",
+            ) || t("errors.outfitReportGenerateFailed"),
           );
         }
       })
@@ -190,14 +193,16 @@ export async function generateCurrentOutfitReport(
           setOutfitReportPending(context, false);
         }
       });
-  } catch {
+  } catch (error) {
     if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
+      const t = fromContext<(key: string) => string>(context, "t");
       reportStatusError(
         context,
-        fromContext<(key: string) => string>(
-          context,
-          "t",
-        )("errors.outfitReportGenerateFailed"),
+        resolveRateLimitFlowMessage(
+          error as Error,
+          t,
+          "errors.generationLimitActive",
+        ) || t("errors.outfitReportGenerateFailed"),
       );
       setOutfitReportPending(context, false);
     }

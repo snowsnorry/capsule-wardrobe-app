@@ -308,6 +308,41 @@ describe("capsuleActions", () => {
     expect(context.setIsCapsuleReportPending).toHaveBeenLastCalledWith(false);
   });
 
+  test("reports capsule report generation rate and active cap messages", async () => {
+    vi.mocked(generateCapsuleReport)
+      .mockRejectedValueOnce(new Error("too_many_requests"))
+      .mockRejectedValueOnce(new Error("too_many_active_jobs"));
+    const context = createActionContext({
+      setIsCapsuleReportPending: vi.fn(),
+      setStatus: vi.fn(),
+      t: vi.fn(
+        (key: string) =>
+          ({
+            "errors.tooManyRequests": "Please wait briefly and try again.",
+            "errors.generationLimitActive":
+              "Too many generation tasks are already running.",
+          })[key] || key,
+      ),
+    });
+
+    await generateCurrentCapsuleReport(context, "capsule-1");
+    await generateCurrentCapsuleReport(context, "capsule-1");
+
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-2)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "Please wait briefly and try again.",
+    });
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-1)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "Too many generation tasks are already running.",
+    });
+    expect(context.setIsCapsuleReportPending).toHaveBeenLastCalledWith(false);
+  });
+
   test("skips stale capsule report updates and unmounted report errors", async () => {
     vi.mocked(generateCapsuleReport).mockResolvedValueOnce({
       ...createJobResponse(),

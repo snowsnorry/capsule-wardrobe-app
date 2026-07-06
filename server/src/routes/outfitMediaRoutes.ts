@@ -1,5 +1,9 @@
 import { logError } from "../logger.js";
-import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
+import {
+  enqueueRouteJob,
+  sendJobEnqueueError,
+  sendQueuedJob,
+} from "./jobRouteResponses.js";
 import { hashCapsuleContent } from "../db.js";
 import { getEffectiveOutfitSnapshot } from "../outfitStore.js";
 import { normalizeWardrobeItemForPdf } from "../wardrobePdfItems.js";
@@ -38,6 +42,7 @@ function registerOutfitReportRoute(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
+    context.jobEnqueueLimiter,
     async (req, res) => {
       try {
         const outfit = await context.getOutfitImpl(
@@ -58,6 +63,10 @@ function registerOutfitReportRoute(app, context) {
         });
         return sendQueuedJob(res, job);
       } catch (error) {
+        const jobError = sendJobEnqueueError(res, error);
+        if (jobError) {
+          return jobError;
+        }
         const status = getOutfitReportErrorStatus(error);
         if (status === 503) {
           logError("[outfits/report]", error);
@@ -98,6 +107,7 @@ function registerOutfitImageRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
+    context.jobEnqueueLimiter,
     async (req, res) => {
       try {
         const outfitId = String(req.params.id || "").trim();
@@ -133,6 +143,10 @@ function registerOutfitImageRoutes(app, context) {
         });
         return sendQueuedJob(res, job);
       } catch (error) {
+        const jobError = sendJobEnqueueError(res, error);
+        if (jobError) {
+          return jobError;
+        }
         logError("[outfits/image][enqueue]", error);
         return res.status(503).json({ error: "service_unavailable" });
       }

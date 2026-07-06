@@ -416,6 +416,26 @@ async function readMcpResource(baseUrl: string, token: string, uri: string) {
   });
 }
 
+function initializeMcpSession(baseUrl: string, token: string, id = 2) {
+  return requestJson(baseUrl, "/mcp", {
+    method: "POST",
+    headers: mcpHeaders(token),
+    body: {
+      jsonrpc: "2.0",
+      id,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: {
+          name: "streamable-http-test-client",
+          version: "0.1.0",
+        },
+      },
+    },
+  });
+}
+
 type McpResult = Record<string, unknown> & {
   _meta?: {
     cards?: Record<string, unknown>[];
@@ -1294,6 +1314,25 @@ test("mcp streamable http session supports GET SSE", async (t) => {
   expect(closed.status).toBe(200);
 });
 
+test("mcp streamable http session caps active sessions per client subject", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+  const token = bearerToken({
+    client_id: "mcp-session-cap-test",
+    scope: "mcp:read catalog:read personal-items:read",
+    sub: "mcp-session-cap@example.com",
+  });
+
+  for (let index = 0; index < 4; index += 1) {
+    const initialize = await initializeMcpSession(baseUrl, token, index + 1);
+    expect(initialize.response.status).toBe(200);
+    expect(initialize.response.headers.get("mcp-session-id")).toBeTruthy();
+  }
+
+  const capped = await initializeMcpSession(baseUrl, token, 5);
+  expect(capped.response.status).toBe(429);
+  expect(capped.json).toEqual({ error: "too_many_mcp_sessions" });
+});
+
 test("oauth refresh token grant issues rotated tokens accepted by mcp", async (t) => {
   const { baseUrl } = await startMcpTestServer(t);
   const { refreshToken } = await approveAndExchangeCode(baseUrl);
@@ -1317,6 +1356,25 @@ test("oauth refresh token grant issues rotated tokens accepted by mcp", async (t
   const reused = await refreshAccessToken(baseUrl, refreshToken);
   expect(reused.response.status).toBe(400);
   expect(reused.json.error).toBe("invalid_grant");
+});
+
+test("oauth token endpoint applies scoped rate limits", async (t) => {
+  const { baseUrl } = await startMcpTestServer(t);
+
+  for (let index = 0; index < 60; index += 1) {
+    const invalid = await requestJson(baseUrl, "/oauth/token", {
+      method: "POST",
+      body: { grant_type: "invalid" },
+    });
+    expect(invalid.response.status).toBe(400);
+  }
+
+  const capped = await requestJson(baseUrl, "/oauth/token", {
+    method: "POST",
+    body: { grant_type: "invalid" },
+  });
+  expect(capped.response.status).toBe(429);
+  expect(capped.json).toEqual({ error: "too_many_requests" });
 });
 
 test("oauth refresh token grant rejects expired and revoked tokens", async (t) => {

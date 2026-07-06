@@ -1,5 +1,9 @@
 import { expect, test, vi } from "vitest";
-import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
+import {
+  enqueueRouteJob,
+  sendJobEnqueueError,
+  sendQueuedJob,
+} from "./jobRouteResponses.js";
 import type { JobSnapshot } from "../jobs/types.js";
 
 const snapshot = {
@@ -52,4 +56,20 @@ test("enqueueRouteJob delegates to injected queue and fails closed when unavaila
       },
     ),
   ).rejects.toThrow("job_queue_unavailable");
+});
+
+test("sendJobEnqueueError maps active job caps to 429", () => {
+  const res = {
+    json: vi.fn((body) => body),
+    status: vi.fn(() => res),
+  };
+  const error = Object.assign(new Error("too_many_active_jobs"), {
+    code: "too_many_active_jobs",
+  });
+
+  expect(sendJobEnqueueError(res, error)).toEqual({
+    error: "too_many_active_jobs",
+  });
+  expect(res.status).toHaveBeenCalledWith(429);
+  expect(sendJobEnqueueError(res, new Error("queue_down"))).toBeNull();
 });

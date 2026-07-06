@@ -1,13 +1,16 @@
 import crypto from "node:crypto";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import {
   isTrustedOrigin,
   parseCookies,
   readCsrfHeader,
 } from "./httpCookies.js";
 import { logError, logInfo, runWithRequestLogContext } from "./logger.js";
-import { recordHttpRequestMetric } from "./observabilityMetrics.js";
+import {
+  recordHttpRequestMetric,
+  recordRejectionMetric,
+} from "./observabilityMetrics.js";
 
 type SecurityMiddlewareOptions = {
   clientOrigin?: string;
@@ -114,6 +117,40 @@ function buildFormActionSources({
   return Array.from(sources);
 }
 
+function buildTooManyRequestsHandler(scope: string) {
+  return (_req, res) => {
+    recordRejectionMetric(`rate_limit:${scope}`);
+    return res.status(429).json({ error: "too_many_requests" });
+  };
+}
+
+function getIpRateLimitKey(req) {
+  return ipKeyGenerator(String(req.ip || ""));
+}
+
+function getAuthenticatedUserRateLimitKey(req) {
+  const subject =
+    String(req.user?.email || "")
+      .trim()
+      .toLowerCase() || getIpRateLimitKey(req);
+  const routePath = String(req.route?.path || req.path || "").trim();
+  return routePath ? `${subject}:${routePath}` : subject;
+}
+
+function getMcpRateLimitKey(req) {
+  const subject = String(req.mcpAuth?.subject || "")
+    .trim()
+    .toLowerCase();
+  const clientId = String(req.mcpAuth?.clientId || "").trim();
+  return subject && clientId
+    ? `${subject}:${clientId}`
+    : getIpRateLimitKey(req);
+}
+
+function skipRouteRateLimitInTest() {
+  return process.env.NODE_ENV === "test";
+}
+
 export function applySecurityMiddleware(
   app,
   nodeEnv,
@@ -161,42 +198,75 @@ export function createRateLimiters() {
       max: 30,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" },
+      handler: buildTooManyRequestsHandler("auth_request_code"),
     }),
     verifyCodeLimiter: rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 60,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" },
+      handler: buildTooManyRequestsHandler("auth_verify_code"),
     }),
     passkeyAuthenticateOptionsLimiter: rateLimit({
       windowMs: 10 * 60 * 1000,
       max: 20,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" },
+      handler: buildTooManyRequestsHandler("passkey_auth_options"),
     }),
     passkeyAuthenticateVerifyLimiter: rateLimit({
       windowMs: 10 * 60 * 1000,
       max: 30,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" },
+      handler: buildTooManyRequestsHandler("passkey_auth_verify"),
     }),
     passkeyRegisterOptionsLimiter: rateLimit({
       windowMs: 10 * 60 * 1000,
       max: 10,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" },
+      handler: buildTooManyRequestsHandler("passkey_register_options"),
     }),
     oauthRegisterLimiter: rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 60,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "too_many_requests" },
+      handler: buildTooManyRequestsHandler("oauth_register"),
+    }),
+    oauthTokenLimiter: rateLimit({
+      windowMs: 5 * 60 * 1000,
+      max: 60,
+      standardHeaders: true,
+      legacyHeaders: false,
+      handler: buildTooManyRequestsHandler("oauth_token"),
+    }),
+    mcpRequestLimiter: rateLimit({
+      windowMs: 60 * 1000,
+      max: 180,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: getMcpRateLimitKey,
+      handler: buildTooManyRequestsHandler("mcp"),
+    }),
+    jobEnqueueLimiter: rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 30,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: getAuthenticatedUserRateLimitKey,
+      skip: skipRouteRateLimitInTest,
+      handler: buildTooManyRequestsHandler("job_enqueue"),
+    }),
+    uploadEnqueueLimiter: rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 12,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: getAuthenticatedUserRateLimitKey,
+      skip: skipRouteRateLimitInTest,
+      handler: buildTooManyRequestsHandler("upload_enqueue"),
     }),
   };
 }

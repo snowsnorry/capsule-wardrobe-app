@@ -8,6 +8,9 @@ const ERROR_MESSAGE_KEYS: Record<string, string> = {
   profile_exists: "errors.profileExists",
   not_found: "errors.profileNotFound",
   invalid_payload: "errors.invalidPayload",
+  too_many_requests: "errors.tooManyRequests",
+  too_many_active_jobs: "errors.generationLimitActive",
+  too_many_mcp_sessions: "errors.tooManyMcpSessions",
   invalid_google_token: "errors.invalidGoogleToken",
   google_auth_not_configured: "errors.googleAuthNotConfigured",
   passkey_not_supported: "errors.passkeyNotSupported",
@@ -19,13 +22,34 @@ const ERROR_MESSAGE_KEYS: Record<string, string> = {
   shared_capsule_unavailable: "errors.sharedCapsuleUnavailable",
 };
 
+type Translate = (key: string, params?: Record<string, unknown>) => string;
+
+function getErrorCode(error: { message?: string } | null | undefined) {
+  return String(error?.message || "");
+}
+
 export function resolveAppErrorMessage(
   error: { message?: string } | null | undefined,
-  t: (key: string, params?: Record<string, unknown>) => string,
+  t: Translate,
 ) {
-  if (error?.message === "passkey_cancelled") {
+  if (getErrorCode(error) === "passkey_cancelled") {
     return "";
   }
 
-  return t(ERROR_MESSAGE_KEYS[error?.message || ""] || "errors.generic");
+  return t(ERROR_MESSAGE_KEYS[getErrorCode(error)] || "errors.generic");
+}
+
+export function resolveRateLimitFlowMessage(
+  error: { message?: string } | null | undefined,
+  t: Translate,
+  activeJobKey: string,
+) {
+  const code = getErrorCode(error);
+  if (code === "too_many_requests") {
+    return t("errors.tooManyRequests");
+  }
+  if (code === "too_many_active_jobs") {
+    return t(activeJobKey);
+  }
+  return "";
 }

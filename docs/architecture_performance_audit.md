@@ -167,12 +167,17 @@ Done:
 - The client-only Render proxy no longer buffers SSE/PDF/attachment responses.
 - Browser MCP CORS preflight allows `Authorization`, `Mcp-Session-Id`, and `Mcp-Protocol-Version`.
 - SPA fallback treats `/oauth`, `/.well-known`, `/mcp`, and `/jobs` as integration/API prefixes, so misses return JSON 404s.
+- Scoped rate limits now cover `/oauth/token`, authenticated MCP requests, report/generation enqueue routes, and upload enqueue routes with explicit `429` JSON responses.
+- Durable and in-memory job enqueue paths enforce conservative active job caps after active dedupe lookup, so duplicate active jobs still return the existing job while new excess work is rejected with `too_many_active_jobs`.
+- MCP stateful sessions have per subject+client and per-process active caps, and backpressure/rate-limit rejections plus active job-event/MCP session counts are represented in internal metrics.
+- Upload, report, and generation client flows now map rate/backpressure `429` responses to flow-specific EN/RU messages instead of generic failures.
 
 Remaining:
 
 - Render `healthCheckPath` is still `/health`, and `/health` checks only process liveness. DB readiness remains on `/healthall`; `/live`/`/ready` are not split.
 - `/internal/metrics` and `/api/internal/metrics` are reserved, but always return 403; there is no admin/internal auth model for metrics yet.
-- Scoped rate limits exist for auth/passkey/oauth register, and job-event SSE streams now have active caps. There are still no separate limits for `/oauth/token`, `/mcp`, report/generate enqueue, or broader queue backpressure.
+- The new rate-limit and active-cap values are conservative defaults and still need production tuning from observed traffic/rejection metrics.
+- `/jobs/:id/events` still polls the DB once per second per accepted stream; active stream caps bound exposure, but high sustained wait traffic may still need lower-cost event delivery.
 
 Impact: deploy is now less likely to start with invalid production config, and browser MCP/integration misses are easier to diagnose. It can still be "green" during a runtime dependency problem, and broader rate-limit/backpressure policy remains incomplete.
 
@@ -253,9 +258,9 @@ Done in this pass:
    - Wire `buildInternalMetricsSnapshotImpl` only after an admin/internal auth model exists.
    - Revisit the email hash policy before exporting logs beyond a trusted boundary: use keyed HMAC or remove the hash if user correlation in logs is not needed.
 
-3. Add scoped rate limits and active caps.
-   - `/oauth/token`, `/mcp` initialize/session requests, report/generate enqueue, upload enqueue.
-   - For SSE: active stream metrics and, if DB polling cost becomes material, a lower-QPS event delivery model.
+3. Monitor backpressure metrics and calibrate limit values.
+   - Use rejection metrics by scope and active job/MCP/SSE counts to calibrate the already implemented conservative defaults.
+   - For SSE: if DB polling cost becomes material, move to a lower-QPS event delivery model.
 
 ## What Already Works Well Enough
 

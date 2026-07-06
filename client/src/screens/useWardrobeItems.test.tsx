@@ -286,6 +286,18 @@ describe("useWardrobeItems", () => {
     });
     expect(result.current.error).toBe("wardrobe.uploadFailed");
 
+    api.uploadWardrobeImages.mockRejectedValueOnce(
+      new Error("too_many_active_jobs"),
+    );
+    await act(async () => {
+      expect(
+        await result.current.handleUploadImages([
+          new File(["image"], "jacket.png", { type: "image/png" }),
+        ]),
+      ).toBe(false);
+    });
+    expect(result.current.error).toBe("wardrobe.uploadLimitActive");
+
     api.uploadWardrobeUrls.mockRejectedValueOnce(
       new Error("url upload failed"),
     );

@@ -1,4 +1,8 @@
 import { logError } from "../logger.js";
+import {
+  recordRejectionMetric,
+  setActiveJobEventStreamMetric,
+} from "../observabilityMetrics.js";
 
 const JOB_EVENTS_POLL_INTERVAL_MS = 1000;
 const JOB_EVENTS_MAX_DURATION_MS = 10 * 60 * 1000;
@@ -58,15 +62,26 @@ function getActiveStreamCount(email: string) {
 
 function incrementActiveStreamCount(email: string) {
   activeJobEventStreamsByEmail.set(email, getActiveStreamCount(email) + 1);
+  setActiveJobEventStreamMetric(getTotalActiveStreamCount());
 }
 
 function decrementActiveStreamCount(email: string) {
   const nextCount = Math.max(0, getActiveStreamCount(email) - 1);
   if (nextCount === 0) {
     activeJobEventStreamsByEmail.delete(email);
+    setActiveJobEventStreamMetric(getTotalActiveStreamCount());
     return;
   }
   activeJobEventStreamsByEmail.set(email, nextCount);
+  setActiveJobEventStreamMetric(getTotalActiveStreamCount());
+}
+
+function getTotalActiveStreamCount() {
+  let total = 0;
+  for (const count of activeJobEventStreamsByEmail.values()) {
+    total += count;
+  }
+  return total;
 }
 
 function normalizeStreamEmail(req) {
@@ -77,6 +92,7 @@ function normalizeStreamEmail(req) {
 
 function reserveJobEventStream(email: string, res) {
   if (getActiveStreamCount(email) >= JOB_EVENTS_MAX_STREAMS_PER_USER) {
+    recordRejectionMetric("active_cap:job_event_streams");
     res.status(429).json({ error: "too_many_job_streams" });
     return false;
   }

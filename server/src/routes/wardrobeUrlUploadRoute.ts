@@ -8,7 +8,11 @@ import {
   processPreparedUploadedWardrobeItemMetadata,
   writeWardrobeUploadEvent,
 } from "./wardrobeUploadStream.js";
-import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
+import {
+  enqueueRouteJob,
+  sendJobEnqueueError,
+  sendQueuedJob,
+} from "./jobRouteResponses.js";
 
 function createWardrobeUploadProgress(total) {
   return {
@@ -179,6 +183,7 @@ function registerWardrobeUrlUploadRoute(app, context) {
     context.requireTrustedOrigin,
     context.requireAuth,
     context.requireCsrf,
+    context.uploadEnqueueLimiter,
     async (req, res) => {
       const urls = normalizeWardrobeImageUploadUrls(req.body?.urls);
       if (!urls) {
@@ -198,6 +203,10 @@ function registerWardrobeUrlUploadRoute(app, context) {
         });
         return sendQueuedJob(res, job);
       } catch (error) {
+        const jobError = sendJobEnqueueError(res, error);
+        if (jobError) {
+          return jobError;
+        }
         logError("[wardrobe/items/upload-url]", error);
         return res.status(503).json({ error: "service_unavailable" });
       }

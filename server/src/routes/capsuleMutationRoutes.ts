@@ -1,7 +1,11 @@
 import { logError } from "../logger.js";
 import { hashCapsuleContent } from "../db.js";
 import { getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
-import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
+import {
+  enqueueRouteJob,
+  sendJobEnqueueError,
+  sendQueuedJob,
+} from "./jobRouteResponses.js";
 import { registerCapsuleLifecycleRoutes } from "./capsuleLifecycleRoutes.js";
 import { registerCapsulePdfRoute } from "./capsulePdfRoute.js";
 import {
@@ -66,6 +70,10 @@ async function handleCapsuleCreate(req, res, context) {
       capsule: await buildAnnotatedCapsuleResponse(capsule, req, context),
     });
   } catch (error) {
+    const jobError = sendJobEnqueueError(res, error);
+    if (jobError) {
+      return jobError;
+    }
     if (isInvalidPayloadError(error)) {
       return res.status(400).json({ error: "invalid_payload" });
     }
@@ -121,12 +129,25 @@ async function handleCapsuleFiltersUpdate(req, res, context) {
 
     return sendCapsuleMutationResponse(req, res, capsule, context);
   } catch (error) {
+    const jobError = sendJobEnqueueError(res, error);
+    if (jobError) {
+      return jobError;
+    }
     if (isInvalidPayloadError(error)) {
       return res.status(400).json({ error: "invalid_payload" });
     }
     logError("[capsules/filters]", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
+}
+
+function applyJobEnqueueLimiterWhenRegenerating(context) {
+  return (req, res, next) => {
+    if (!context.isTruthyQueryFlag(req.query?.regenerate)) {
+      return next();
+    }
+    return context.jobEnqueueLimiter(req, res, next);
+  };
 }
 
 function registerCapsuleCreateRoutes(app, context) {
@@ -145,6 +166,7 @@ function registerCapsuleCreateRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
+    applyJobEnqueueLimiterWhenRegenerating(context),
     (req, res) => handleCapsuleFiltersUpdate(req, res, context),
   );
 }
@@ -191,6 +213,7 @@ function registerCapsuleReportRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
+    context.jobEnqueueLimiter,
     async (req, res) => {
       try {
         const capsule = await context.getCapsuleImpl(
@@ -211,6 +234,10 @@ function registerCapsuleReportRoutes(app, context) {
         });
         return sendQueuedJob(res, job);
       } catch (error) {
+        const jobError = sendJobEnqueueError(res, error);
+        if (jobError) {
+          return jobError;
+        }
         const status = getCapsuleReportErrorStatus(error);
         if (status === 503) {
           logError("[capsules/report]", error);

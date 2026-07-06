@@ -577,6 +577,44 @@ describe("outfitActions", () => {
     expect(context.setIsOutfitReportPending).toHaveBeenLastCalledWith(false);
   });
 
+  test("reports outfit report generation rate and active cap messages", async () => {
+    vi.mocked(generateOutfitReport)
+      .mockRejectedValueOnce(new Error("too_many_requests"))
+      .mockRejectedValueOnce(new Error("too_many_active_jobs"));
+    const context = createActionContext({
+      activeOutfitId: "outfit-1",
+      setActiveOutfitMeta: vi.fn(),
+      setIsOutfitReportPending: vi.fn(),
+      setStatus: vi.fn(),
+      t: vi.fn(
+        (key: string) =>
+          ({
+            "errors.tooManyRequests": "Please wait briefly and try again.",
+            "errors.generationLimitActive":
+              "Too many generation tasks are already running.",
+          })[key] || key,
+      ),
+    });
+
+    await generateCurrentOutfitReport(context, "outfit-1");
+    await generateCurrentOutfitReport(context, "outfit-1");
+
+    expect(context.setActiveOutfitMeta).not.toHaveBeenCalled();
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-2)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "Please wait briefly and try again.",
+    });
+    expect(
+      (context.setStatus as Mock).mock.calls.at(-1)?.[0]({ previous: true }),
+    ).toEqual({
+      previous: true,
+      error: "Too many generation tasks are already running.",
+    });
+    expect(context.setIsOutfitReportPending).toHaveBeenLastCalledWith(false);
+  });
+
   test("reports media deletion failures and skips missing outfit ids", async () => {
     vi.mocked(deleteOutfitReport).mockRejectedValueOnce(new Error("report"));
     vi.mocked(deleteOutfitImage).mockRejectedValueOnce(new Error("image"));

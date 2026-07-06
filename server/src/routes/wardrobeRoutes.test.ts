@@ -1925,6 +1925,23 @@ test("wardrobe upload route validates files and maps failures", async (t) => {
     buildUploadForm(),
   );
   expectQueuedJob(serviceFailure, "personalItemUploadFiles");
+
+  const cappedServer = await startTestServer(t, {
+    overrides: {
+      enqueueJobImpl: async () => {
+        throw Object.assign(new Error("too_many_active_jobs"), {
+          code: "too_many_active_jobs",
+        });
+      },
+    },
+  });
+  const capped = await requestMultipart(
+    cappedServer.baseUrl,
+    "/wardrobe/items/upload",
+    buildUploadForm(),
+  );
+  expect(capped.response.status).toBe(429);
+  expect(capped.json).toEqual({ error: "too_many_active_jobs" });
 });
 
 test("wardrobe file upload route leaves worker cleanup to the queued handler", async (t) => {

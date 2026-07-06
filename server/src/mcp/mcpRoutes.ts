@@ -4,6 +4,10 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { logError } from "../logger.js";
+import {
+  recordRejectionMetric,
+  setActiveMcpSessionMetric,
+} from "../observabilityMetrics.js";
 import { createMcpAuthMiddleware } from "./mcpAuth.js";
 import { registerProductGridWidgetResource } from "./productGridWidget.js";
 import { registerProductTools } from "./productTools.js";
@@ -27,6 +31,8 @@ const PING_OUTPUT_SCHEMA = z.object({
   scopes: z.array(z.string()),
 });
 const MCP_SESSION_TTL_MS = 30 * 60 * 1000;
+const MCP_MAX_SESSIONS_PER_CLIENT_SUBJECT = 4;
+const MCP_MAX_SESSIONS_PER_PROCESS = 200;
 type McpHttpSession = {
   clientId: string;
   scopes: McpReadScope[];
@@ -36,6 +42,10 @@ type McpHttpSession = {
   transport: StreamableHTTPServerTransport;
 };
 const mcpSessions = new Map<string, McpHttpSession>();
+
+function updateMcpSessionMetric() {
+  setActiveMcpSessionMetric(mcpSessions.size);
+}
 
 function pingResponse(req) {
   return {
@@ -164,6 +174,7 @@ async function closeMcpSession(sessionId: string, closeTransport = true) {
     return;
   }
   mcpSessions.delete(sessionId);
+  updateMcpSessionMetric();
   if (session.timeout) {
     clearTimeout(session.timeout);
   }
@@ -171,6 +182,31 @@ async function closeMcpSession(sessionId: string, closeTransport = true) {
     await session.transport.close();
   }
   await session.server.close();
+}
+
+function getMcpSessionCountForRequest(req) {
+  let count = 0;
+  for (const session of mcpSessions.values()) {
+    if (
+      session.subject === req.mcpAuth.subject &&
+      session.clientId === req.mcpAuth.clientId
+    ) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function reserveMcpInitializeCapacity(req, res) {
+  if (
+    mcpSessions.size >= MCP_MAX_SESSIONS_PER_PROCESS ||
+    getMcpSessionCountForRequest(req) >= MCP_MAX_SESSIONS_PER_CLIENT_SUBJECT
+  ) {
+    recordRejectionMetric("active_cap:mcp_sessions");
+    res.status(429).json({ error: "too_many_mcp_sessions" });
+    return false;
+  }
+  return true;
 }
 
 function refreshMcpSession(sessionId: string, session: McpHttpSession) {
@@ -208,6 +244,10 @@ function getMcpSession(req, res) {
 }
 
 async function handleStatefulMcpInitialize(req, res, context) {
+  if (!reserveMcpInitializeCapacity(req, res)) {
+    return;
+  }
+
   let sessionId = "";
   let server: McpServer | null = null;
   let transport: StreamableHTTPServerTransport | null = null;
@@ -224,6 +264,7 @@ async function handleStatefulMcpInitialize(req, res, context) {
         }
         sessionId = initializedSessionId;
         mcpSessions.set(initializedSessionId, session);
+        updateMcpSessionMetric();
         refreshMcpSession(initializedSessionId, session);
       },
       onsessionclosed: (closedSessionId) => {
@@ -282,12 +323,17 @@ async function handleMcpTransportRequest(req, res, context) {
 export function registerMcpRoutes(app, context) {
   const requireMcpBearerToken = createMcpAuthMiddleware(context);
 
-  app.all("/mcp", requireMcpBearerToken, async (req, res) => {
-    try {
-      await handleMcpTransportRequest(req, res, context);
-    } catch (error) {
-      logError("[mcp/request]", error);
-      sendMcpInternalError(res);
-    }
-  });
+  app.all(
+    "/mcp",
+    requireMcpBearerToken,
+    context.mcpRequestLimiter,
+    async (req, res) => {
+      try {
+        await handleMcpTransportRequest(req, res, context);
+      } catch (error) {
+        logError("[mcp/request]", error);
+        sendMcpInternalError(res);
+      }
+    },
+  );
 }

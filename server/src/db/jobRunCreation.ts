@@ -1,6 +1,30 @@
 import { getFirstRow, getSqlClient, type SqlClientLike } from "./core.js";
 import type { EnqueueJobInput, JobKind, JobRunRecord } from "../jobs/types.js";
 import { normalizeEmail, toJobRunRecord, type JobRunRow } from "./jobRows.js";
+import { recordRejectionMetric } from "../observabilityMetrics.js";
+
+const ACTIVE_TOTAL_JOB_CAP = 8;
+const ACTIVE_GENERATION_JOB_CAP = 4;
+const ACTIVE_UPLOAD_JOB_CAP = 2;
+const ACTIVE_REPORT_KIND_CAP = 1;
+const UPLOAD_JOB_KINDS = new Set<JobKind>([
+  "personalItemUploadFiles",
+  "personalItemUploadUrls",
+]);
+const REPORT_JOB_KINDS = new Set<JobKind>([
+  "capsuleReportGenerate",
+  "outfitReportGenerate",
+  "personalItemsReportGenerate",
+]);
+const GENERATION_JOB_KINDS = new Set<JobKind>([
+  "capsuleGenerate",
+  "capsuleRegenerateSelected",
+  "capsuleReportGenerate",
+  "outfitImageGenerate",
+  "outfitReportGenerate",
+  "outfitSetImageGenerate",
+  "personalItemsReportGenerate",
+]);
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -38,6 +62,82 @@ async function findActiveDedupeJob({
   return row ? toJobRunRecord(row) : null;
 }
 
+function toCount(value: unknown): number {
+  const count = Number(value);
+  return Number.isFinite(count) ? count : 0;
+}
+
+function createTooManyActiveJobsError(): Error & { code: string } {
+  const error = new Error("too_many_active_jobs") as Error & { code: string };
+  error.code = "too_many_active_jobs";
+  return error;
+}
+
+async function getActiveJobCapCounts({
+  sql,
+  profileEmail,
+  kind,
+}: {
+  sql: SqlClientLike;
+  profileEmail: string;
+  kind: JobKind;
+}) {
+  const row = getFirstRow(
+    await sql<{
+      total_count: string | number;
+      generation_count: string | number;
+      upload_count: string | number;
+      report_kind_count: string | number;
+    }>`
+      select
+        count(*) as total_count,
+        count(*) filter (
+          where kind = any(${Array.from(GENERATION_JOB_KINDS)})
+        ) as generation_count,
+        count(*) filter (
+          where kind = any(${Array.from(UPLOAD_JOB_KINDS)})
+        ) as upload_count,
+        count(*) filter (
+          where kind = ${kind}
+            and kind = any(${Array.from(REPORT_JOB_KINDS)})
+        ) as report_kind_count
+      from job_runs
+      where profile_email = ${profileEmail}
+        and status in ('queued', 'running')
+    `,
+  );
+  return {
+    total: toCount(row?.total_count),
+    generation: toCount(row?.generation_count),
+    upload: toCount(row?.upload_count),
+    reportKind: toCount(row?.report_kind_count),
+  };
+}
+
+async function assertActiveJobCapacity({
+  sql,
+  profileEmail,
+  kind,
+}: {
+  sql: SqlClientLike;
+  profileEmail: string;
+  kind: JobKind;
+}) {
+  const counts = await getActiveJobCapCounts({ sql, profileEmail, kind });
+  const isUpload = UPLOAD_JOB_KINDS.has(kind);
+  const isGeneration = GENERATION_JOB_KINDS.has(kind);
+  const isReport = REPORT_JOB_KINDS.has(kind);
+  if (
+    counts.total >= ACTIVE_TOTAL_JOB_CAP ||
+    (isUpload && counts.upload >= ACTIVE_UPLOAD_JOB_CAP) ||
+    (isGeneration && counts.generation >= ACTIVE_GENERATION_JOB_CAP) ||
+    (isReport && counts.reportKind >= ACTIVE_REPORT_KIND_CAP)
+  ) {
+    recordRejectionMetric(`active_cap:job:${kind}`);
+    throw createTooManyActiveJobsError();
+  }
+}
+
 // eslint-disable-next-line complexity
 export async function createJobRun(
   input: EnqueueJobInput,
@@ -54,6 +154,8 @@ export async function createJobRun(
   if (active) {
     return { job: active, deduped: true };
   }
+
+  await assertActiveJobCapacity({ sql, profileEmail, kind: input.kind });
 
   try {
     const row = getFirstRow(

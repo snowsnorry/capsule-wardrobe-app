@@ -19,7 +19,11 @@ import {
   processPreparedUploadedWardrobeItemMetadata,
   writeWardrobeUploadEvent,
 } from "./wardrobeUploadStream.js";
-import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
+import {
+  enqueueRouteJob,
+  sendJobEnqueueError,
+  sendQueuedJob,
+} from "./jobRouteResponses.js";
 import {
   cleanupStagedUploadFiles,
   hydrateStagedUploadFiles,
@@ -295,6 +299,7 @@ function registerWardrobeUploadRoute(app, context) {
     context.requireTrustedOrigin,
     context.requireAuth,
     context.requireCsrf,
+    context.uploadEnqueueLimiter,
     async (req, res) => {
       const uploadDir = await mkdtemp(
         path.join(os.tmpdir(), "wardrobe-upload-"),
@@ -336,6 +341,13 @@ function registerWardrobeUploadRoute(app, context) {
         });
         return sendQueuedJob(res, job);
       } catch (error) {
+        const jobError = sendJobEnqueueError(res, error);
+        if (jobError) {
+          await cleanupStagedUploadFiles(stagedFiles).catch((cleanupError) => {
+            logError("[wardrobe/items/upload][staging-cleanup]", cleanupError);
+          });
+          return jobError;
+        }
         if (error?.message === "invalid_image") {
           return res.status(400).json({ error: "invalid_image" });
         }

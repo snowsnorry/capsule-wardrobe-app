@@ -11,6 +11,12 @@ describe("errorMessages", () => {
     expect(resolveAppErrorMessage({ message: "passkey_failed" }, t)).toBe(
       "errors.passkeyLoginFailed",
     );
+    expect(resolveAppErrorMessage({ message: "too_many_requests" }, t)).toBe(
+      "errors.tooManyRequests",
+    );
+    expect(resolveAppErrorMessage({ message: "too_many_active_jobs" }, t)).toBe(
+      "errors.generationLimitActive",
+    );
     expect(t).toHaveBeenCalledWith("errors.invalidEmail");
   });
 

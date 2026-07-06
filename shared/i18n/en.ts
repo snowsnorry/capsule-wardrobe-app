@@ -467,10 +467,14 @@ const en = {
     loadFailed: "Failed to load Personal items.",
     reportLoadFailed: "Failed to load Personal items report.",
     reportGenerateFailed: "Could not generate Personal items report.",
+    reportLimitActive:
+      "A Personal items analysis is already running. Wait for it to finish, then try again.",
     reportDeleteFailed: "Could not delete Personal items report.",
     downloadFailed: "Failed to export Personal items PDF. Please try again.",
     uploadFailed: "Failed to upload personal item photos. Please try again.",
     urlUploadFailed: "Failed to upload image URLs. Please try again.",
+    uploadLimitActive:
+      "Too many Personal item uploads are already running. Wait for one to finish, then try again.",
     saved: "Saved to Personal items.",
     removed: "Removed from Personal items.",
     updated: "Personal item updated.",
@@ -735,6 +739,13 @@ const en = {
     profileExists: "Profile already exists.",
     profileNotFound: "Profile not found.",
     invalidPayload: "Please select at least one option.",
+    tooManyRequests: "Too many requests. Please wait a moment and try again.",
+    tooManyActiveJobs:
+      "Several tasks are already running. Wait for one to finish, then try again.",
+    tooManyMcpSessions:
+      "Too many connector sessions are open. Close one and try again.",
+    generationLimitActive:
+      "Several generation tasks are already running. Wait for one to finish, then try again.",
     invalidGoogleToken: "Google sign-in failed. Please try again.",
     googleAuthNotConfigured: "Google sign-in is not configured on the server.",
     passkeyNotSupported: "Passkeys are not supported in this browser/device.",

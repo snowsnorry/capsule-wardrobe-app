@@ -13,6 +13,7 @@ import {
   type UploadedWardrobeItemUpdatePayload,
 } from "../api/personalItems";
 import type { JobResponse, JobSnapshot } from "../api/jobs";
+import { resolveRateLimitFlowMessage } from "../app/errorMessages";
 import { notifyPersonalItemsChanged } from "../app/personalItemsCount";
 import type { ProductMenuOpenOptions } from "../components/ClothingCardTypes";
 import {
@@ -193,8 +194,14 @@ function useWardrobeUploadActions({
         });
       setIsUploading(false);
       return true;
-    } catch {
-      setError(t(errorKey));
+    } catch (error) {
+      setError(
+        resolveRateLimitFlowMessage(
+          error as Error,
+          t,
+          "wardrobe.uploadLimitActive",
+        ) || t(errorKey),
+      );
       setIsUploading(false);
       return false;
     }

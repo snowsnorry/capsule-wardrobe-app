@@ -8,6 +8,7 @@ import {
 } from "../api/personalItems";
 import type { JobSnapshot } from "../api/jobs";
 import type { PersonalItemsReport } from "../app/appTypes";
+import { resolveRateLimitFlowMessage } from "../app/errorMessages";
 
 type UsePersonalItemsReportOptions = {
   setError: (error: string) => void;
@@ -120,15 +121,27 @@ function usePersonalItemsReport({
           }
           await refreshReport({ force: true });
         })
-        .catch(() => {
-          setError(t("wardrobe.reportGenerateFailed"));
+        .catch((error) => {
+          setError(
+            resolveRateLimitFlowMessage(
+              error as Error,
+              t,
+              "wardrobe.reportLimitActive",
+            ) || t("wardrobe.reportGenerateFailed"),
+          );
         })
         .finally(() => {
           setIsReportPending(false);
         });
       setError("");
-    } catch {
-      setError(t("wardrobe.reportGenerateFailed"));
+    } catch (error) {
+      setError(
+        resolveRateLimitFlowMessage(
+          error as Error,
+          t,
+          "wardrobe.reportLimitActive",
+        ) || t("wardrobe.reportGenerateFailed"),
+      );
       setIsReportPending(false);
     }
   };

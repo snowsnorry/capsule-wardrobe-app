@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 
 import { logError } from "../logger.js";
-import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
+import {
+  enqueueRouteJob,
+  sendJobEnqueueError,
+  sendQueuedJob,
+} from "./jobRouteResponses.js";
 
 function getPersonalItemsReportErrorStatus(error) {
   switch (error?.code) {
@@ -84,6 +88,7 @@ function registerPersonalItemsReportRoutes(app, context) {
     context.requireTrustedOrigin,
     context.requireAuth,
     context.requireCsrf,
+    context.jobEnqueueLimiter,
     async (req, res) => {
       try {
         const requestContext = getRequestContext(req.body);
@@ -102,6 +107,10 @@ function registerPersonalItemsReportRoutes(app, context) {
         });
         return sendQueuedJob(res, job);
       } catch (error) {
+        const jobError = sendJobEnqueueError(res, error);
+        if (jobError) {
+          return jobError;
+        }
         const status = getPersonalItemsReportErrorStatus(error);
         if (status === 503) {
           logError("[wardrobe/items/report][generate]", error);

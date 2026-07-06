@@ -61,6 +61,28 @@ function expectQueuedJob(result, kind, entity) {
   expect(typeof json.job.id).toBe("string");
 }
 
+function createQueuedJob(input) {
+  return {
+    id: `${input.kind}-${String(input.entity?.id || "job")}`,
+    kind: input.kind,
+    status: "queued",
+    phase: input.phase || "queued",
+    progress: {
+      current: 0,
+      total: input.progressTotal ?? null,
+      label: input.progressLabel || null,
+    },
+    entity: input.entity || null,
+    result: null,
+    error: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    startedAt: null,
+    completedAt: null,
+    failedAt: null,
+  };
+}
+
 test("capsule action routes cover wardrobe handlers and pdf download", async (t) => {
   let wardrobeCalled = false;
   let fullRegenerateCalled = false;
@@ -279,6 +301,7 @@ test("capsule report route delegates to generator and maps report errors", async
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       generateCapsuleReportImpl,
+      enqueueJobImpl: async (input) => createQueuedJob(input),
       updateCapsuleReportImpl,
       listLikedItemUrlsImpl: async () => [],
       listWardrobeItemsImpl: async () => [],
@@ -990,6 +1013,35 @@ test("filters patch can trigger regenerate via query flag after saving filters",
       },
     },
   ]);
+});
+
+test("filters patch maps regenerate active job caps to 429", async (t) => {
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      enqueueJobImpl: async () => {
+        const error = new Error("too_many_active_jobs") as Error & {
+          code: string;
+        };
+        error.code = "too_many_active_jobs";
+        throw error;
+      },
+    },
+  });
+
+  const result = await requestJson(
+    baseUrl,
+    "/capsules/capsule-1/filters?regenerate=true",
+    {
+      method: "PATCH",
+      origin: TEST_CLIENT_ORIGIN,
+      cookie: AUTH_COOKIE,
+      csrfToken: CSRF_TOKEN,
+      body: { filters: {} },
+    },
+  );
+
+  expect(result.response.status).toBe(429);
+  expect(result.json).toEqual({ error: "too_many_active_jobs" });
 });
 
 test("rejected urls patch validates against current capsule wardrobe", async (t) => {

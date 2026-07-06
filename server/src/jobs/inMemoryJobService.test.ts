@@ -109,3 +109,34 @@ test("in-memory job service exposes aggregate metrics", async () => {
     byStatus: { queued: 0, running: 0, completed: 0, failed: 0 },
   });
 });
+
+test("in-memory job service enforces active caps after dedupe", async () => {
+  const service = createInMemoryJobService();
+  const firstReport = await service.enqueueJobImpl({
+    kind: "personalItemsReportGenerate",
+    profileEmail: "person@example.com",
+    payload: {},
+    entity: { type: "wardrobe", id: null },
+    dedupeKey: "report:1",
+  });
+
+  await expect(
+    service.enqueueJobImpl({
+      kind: "personalItemsReportGenerate",
+      profileEmail: "person@example.com",
+      payload: {},
+      entity: { type: "wardrobe", id: null },
+      dedupeKey: "report:1",
+    }),
+  ).resolves.toBe(firstReport);
+
+  await expect(
+    service.enqueueJobImpl({
+      kind: "personalItemsReportGenerate",
+      profileEmail: "person@example.com",
+      payload: {},
+      entity: { type: "wardrobe", id: null },
+      dedupeKey: "report:2",
+    }),
+  ).rejects.toMatchObject({ code: "too_many_active_jobs" });
+});

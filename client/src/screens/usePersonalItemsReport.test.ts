@@ -126,6 +126,15 @@ describe("usePersonalItemsReport", () => {
 
     expect(setError).toHaveBeenCalledWith("wardrobe.reportGenerateFailed");
     expect(result.current.isReportPending).toBe(false);
+
+    api.generatePersonalItemsReport.mockRejectedValueOnce(
+      new Error("too_many_active_jobs"),
+    );
+    await act(async () => {
+      await result.current.generateReport();
+    });
+
+    expect(setError).toHaveBeenCalledWith("wardrobe.reportLimitActive");
   });
 
   test("surfaces initial report load errors", async () => {

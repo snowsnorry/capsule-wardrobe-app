@@ -3,7 +3,10 @@ import {
   buildInternalMetricsSnapshot,
   getHttpRequestMetrics,
   recordHttpRequestMetric,
+  recordRejectionMetric,
   resetHttpRequestMetrics,
+  setActiveJobEventStreamMetric,
+  setActiveMcpSessionMetric,
 } from "./observabilityMetrics.js";
 
 afterEach(() => {
@@ -36,6 +39,9 @@ test("internal metrics snapshot combines release, request, upload, and job metri
     method: "GET",
     statusCode: 200,
   });
+  setActiveJobEventStreamMetric(2);
+  setActiveMcpSessionMetric(3);
+  recordRejectionMetric("active_cap:job:personalItemsReportGenerate");
 
   await expect(
     buildInternalMetricsSnapshot({
@@ -73,6 +79,13 @@ test("internal metrics snapshot combines release, request, upload, and job metri
     },
     jobs: {
       total: 1,
+    },
+    active: {
+      jobEventStreams: 2,
+      mcpSessions: 3,
+    },
+    rejections: {
+      "active_cap:job:personalItemsReportGenerate": 1,
     },
   });
 });

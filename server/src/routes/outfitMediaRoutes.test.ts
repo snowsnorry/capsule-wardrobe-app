@@ -74,6 +74,7 @@ function createContext(overrides = {}) {
     deleteOutfitImageHandler: vi.fn(),
     generateOutfitImageHandler: vi.fn(),
     getOutfitImpl: vi.fn(async () => ({ id: "outfit-1" })),
+    jobEnqueueLimiter: passthrough,
     requireAuth: passthrough,
     requireCsrf: passthrough,
     requireTrustedOrigin: passthrough,
@@ -113,4 +114,21 @@ test("outfit report route maps enqueue validation errors and service failures", 
   const failed = await invokeReportPost({ app });
   expect(failed.statusCode).toBe(503);
   expect(failed.body).toEqual({ error: "service_unavailable" });
+});
+
+test("outfit media enqueue limiter only wraps enqueue routes", () => {
+  const app = createFakeApp();
+  const jobEnqueueLimiter = vi.fn(passthrough);
+  const context = createContext({ jobEnqueueLimiter });
+  registerOutfitMediaRoutes(app, context);
+
+  expect(app.routes.get("POST /outfits/:id/report")).toContain(
+    jobEnqueueLimiter,
+  );
+  expect(app.routes.get("POST /outfits/:id/image")).toContain(
+    jobEnqueueLimiter,
+  );
+  expect(app.routes.get("DELETE /outfits/:id/report")).not.toContain(
+    jobEnqueueLimiter,
+  );
 });

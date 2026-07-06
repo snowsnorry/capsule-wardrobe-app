@@ -57,6 +57,7 @@ function createContext(overrides = {}) {
     requireAuth: (_req, _res, next) => next(),
     requireCsrf: (_req, _res, next) => next(),
     requireTrustedOrigin: (_req, _res, next) => next(),
+    uploadEnqueueLimiter: (_req, _res, next) => next(),
     ...overrides,
   };
 }
@@ -97,4 +98,13 @@ test("upload-url route enqueues normalized URL jobs and maps queue failures", as
   const failed = await invoke(app, { urls: ["https://example.com/b.png"] });
   expect(failed.statusCode).toBe(503);
   expect(failed.body).toEqual({ error: "service_unavailable" });
+
+  context.enqueueJobImpl.mockRejectedValueOnce(
+    Object.assign(new Error("too_many_active_jobs"), {
+      code: "too_many_active_jobs",
+    }),
+  );
+  const capped = await invoke(app, { urls: ["https://example.com/c.png"] });
+  expect(capped.statusCode).toBe(429);
+  expect(capped.body).toEqual({ error: "too_many_active_jobs" });
 });

@@ -1,7 +1,11 @@
 import type { ErrorWithCode } from "../ai/types.js";
 import { logError } from "../logger.js";
 import { hashCapsuleContent } from "../db.js";
-import { enqueueRouteJob, sendQueuedJob } from "./jobRouteResponses.js";
+import {
+  enqueueRouteJob,
+  sendJobEnqueueError,
+  sendQueuedJob,
+} from "./jobRouteResponses.js";
 import { getEffectiveCapsuleSnapshot } from "../capsuleStore.js";
 import {
   getOutfitSetsFromSnapshot,
@@ -331,6 +335,7 @@ function registerCapsuleActionRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
+    context.jobEnqueueLimiter,
     async (req, res) => {
       try {
         const capsule = await context.getCapsuleImpl(
@@ -351,6 +356,10 @@ function registerCapsuleActionRoutes(app, context) {
         });
         return sendQueuedJob(res, job);
       } catch (error) {
+        const jobError = sendJobEnqueueError(res, error);
+        if (jobError) {
+          return jobError;
+        }
         logError("[capsules/regenerate][enqueue]", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
@@ -362,6 +371,7 @@ function registerCapsuleActionRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
+    context.jobEnqueueLimiter,
     async (req, res) => {
       const itemUrls = Array.isArray(req.body?.itemUrls)
         ? req.body.itemUrls
@@ -395,6 +405,10 @@ function registerCapsuleActionRoutes(app, context) {
         });
         return sendQueuedJob(res, job);
       } catch (error) {
+        const jobError = sendJobEnqueueError(res, error);
+        if (jobError) {
+          return jobError;
+        }
         logError("[capsules/regenerate-selected][enqueue]", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
@@ -406,10 +420,15 @@ function registerCapsuleActionRoutes(app, context) {
     requireTrustedOrigin,
     requireAuth,
     requireCsrf,
+    context.jobEnqueueLimiter,
     async (req, res) => {
       try {
         return await sendQueuedOutfitSetImageJob(context, req, res);
       } catch (error) {
+        const jobError = sendJobEnqueueError(res, error);
+        if (jobError) {
+          return jobError;
+        }
         logError("[capsules/outfit-set-image][enqueue]", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
