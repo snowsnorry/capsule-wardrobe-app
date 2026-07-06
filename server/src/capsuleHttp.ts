@@ -19,12 +19,17 @@ const API_PATH_PREFIXES = [
   "/app",
   "/auth",
   "/capsules",
+  "/.well-known",
   "/outfits",
   "/shared-capsules",
   "/profile",
   "/wardrobe",
   "/liked-items",
   "/health",
+  "/healthall",
+  "/jobs",
+  "/mcp",
+  "/oauth",
 ];
 const API_EXACT_PATHS = new Set([
   "/search/options",
@@ -56,8 +61,9 @@ export function buildPdfDownloadFilename(capsuleName) {
 
 export function isApiPath(pathname = "") {
   return (
-    API_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
-    API_EXACT_PATHS.has(pathname)
+    API_PATH_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    ) || API_EXACT_PATHS.has(pathname)
   );
 }
 

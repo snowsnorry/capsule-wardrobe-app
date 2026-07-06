@@ -1,6 +1,7 @@
 import { test, expect, vi } from "vitest";
 import fs from "node:fs";
 import { createStartServer } from "./serverStartup.js";
+import { isApiPath } from "./capsuleHttp.js";
 
 const skipProductionPreflight = () => {};
 
@@ -411,7 +412,7 @@ test("production startup serves static files, spa html, and api 404s when client
     }) as unknown as typeof fs.promises.readFile,
     injectSharedCapsuleMetaTagsImpl: async (html, req) =>
       `${html}:meta:${req.path}`,
-    isApiPathImpl: (requestPath) => requestPath.startsWith("/api"),
+    isApiPathImpl: isApiPath,
     logInfoImpl: () => {},
     runProductionStartupPreflightImpl: skipProductionPreflight,
   });
@@ -467,6 +468,20 @@ test("production startup serves static files, spa html, and api 404s when client
   );
   expect(apiResponse.statusCode).toBe(404);
   expect(apiResponse.body).toEqual({ error: "not_found" });
+
+  for (const path of [
+    "/oauth/missing",
+    "/.well-known/missing",
+    "/mcp/missing",
+    "/jobs/missing",
+  ]) {
+    const integrationResponse = createResponse();
+    await handler({ path }, integrationResponse, (error) =>
+      nextCalls.push(error),
+    );
+    expect(integrationResponse.statusCode).toBe(404);
+    expect(integrationResponse.body).toEqual({ error: "not_found" });
+  }
 
   const pageResponse = createResponse();
   await handler({ path: "/share/abc" }, pageResponse, (error) =>

@@ -38,6 +38,32 @@ test("production security headers allow configured app and OAuth form actions", 
   );
 });
 
+test("production CORS preflight allows browser MCP headers", async (t) => {
+  const { baseUrl } = await startTestServer(t);
+
+  const { response } = await requestJson(baseUrl, "/mcp", {
+    method: "OPTIONS",
+    origin: "https://client.example",
+    headers: {
+      "Access-Control-Request-Headers":
+        "Authorization, Mcp-Session-Id, Mcp-Protocol-Version",
+      "Access-Control-Request-Method": "POST",
+    },
+  });
+
+  expect(response.status).toBe(204);
+  expect(response.headers.get("access-control-allow-origin")).toBe(
+    "https://client.example",
+  );
+  expect(response.headers.get("access-control-allow-credentials")).toBe("true");
+  expect(response.headers.get("access-control-allow-headers")).toBe(
+    "Content-Type, X-CSRF-Token, Authorization, Mcp-Session-Id, Mcp-Protocol-Version",
+  );
+  expect(response.headers.get("access-control-allow-methods")).toBe(
+    "GET,POST,PATCH,DELETE,OPTIONS",
+  );
+});
+
 test("observability middleware generates and reuses request ids", async (t) => {
   const { baseUrl } = await startTestServer(t);
 

@@ -36,6 +36,7 @@ Goal: reassess the architecture decisions, load resilience, edge-case behavior, 
 - `client/render-server.js`, `server/src/jobs/stagedUploadStorage.ts`: the client-only Render proxy is stream-friendly for SSE/PDF/attachments, R2 staging no longer reads the staged upload fully into memory, and concurrent sends are limited.
 - `server/src/appMiddleware.ts`, `server/src/logger.ts`, `server/src/observabilityMetrics.ts`: a baseline observability layer was added: request id, structured logs, latency/status metrics, release metadata, and a reserved internal metrics endpoint.
 - `server/src/routes/searchRoutes.ts`, `server/src/routes/wardrobeRoutes.ts`, `server/src/db/likedItems.ts`: search and wardrobe liked-state annotation no longer fetch the full liked URL list in hot paths; search trusts SQL-projected `isLiked`, and product/wardrobe annotation uses scoped URL-set lookups.
+- `server/src/appMiddleware.ts`, `server/src/capsuleHttp.ts`, `server/src/serverStartup.ts`: browser MCP CORS preflight now allows the supported integration headers, and missing `/oauth`, `/.well-known`, `/mcp`, and `/jobs` integration routes return JSON 404s instead of SPA HTML.
 
 ## Remaining Real Issues
 
@@ -164,16 +165,16 @@ Done:
 - `/health` and `/healthall` return release metadata.
 - Structured request logs and the internal metrics builder exist.
 - The client-only Render proxy no longer buffers SSE/PDF/attachment responses.
+- Browser MCP CORS preflight allows `Authorization`, `Mcp-Session-Id`, and `Mcp-Protocol-Version`.
+- SPA fallback treats `/oauth`, `/.well-known`, `/mcp`, and `/jobs` as integration/API prefixes, so misses return JSON 404s.
 
 Remaining:
 
 - Render `healthCheckPath` is still `/health`, and `/health` checks only process liveness. DB readiness remains on `/healthall`; `/live`/`/ready` are not split.
 - `/internal/metrics` and `/api/internal/metrics` are reserved, but always return 403; there is no admin/internal auth model for metrics yet.
-- Production CORS allow-headers include only `Content-Type, X-CSRF-Token`; browser-based MCP clients with `Authorization`, `Mcp-Session-Id`, `Mcp-Protocol-Version` may fail preflight.
-- SPA fallback whitelist does not include all integration prefixes (`/oauth`, `/.well-known`, `/mcp`, `/jobs`), so an integration route miss can return HTML 200 instead of JSON/404.
 - Scoped rate limits exist for auth/passkey/oauth register, and job-event SSE streams now have active caps. There are still no separate limits for `/oauth/token`, `/mcp`, report/generate enqueue, or broader queue backpressure.
 
-Impact: deploy is now less likely to start with invalid production config, but it can still be "green" during a runtime dependency problem; browser MCP/integration diagnostics can be noisy.
+Impact: deploy is now less likely to start with invalid production config, and browser MCP/integration misses are easier to diagnose. It can still be "green" during a runtime dependency problem, and broader rate-limit/backpressure policy remains incomplete.
 
 ### 5. Frontend scale/correctness: the main risks narrowed
 
@@ -211,15 +212,7 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
    - Files: `server/src/routes/personalItemsReportRoutes.ts`, `server/src/db/personalItemsReports.ts`
    - Risk: the report is treated as current after metadata/image/category/source changes if the URL does not change.
 
-2. API fallback can return SPA HTML for an integration route miss.
-   - Files: `server/src/capsuleHttp.ts`, `server/src/serverStartup.ts`
-   - Risk: OAuth/MCP/job clients receive misleading 200 HTML instead of a diagnosable 404/JSON.
-
-3. CORS preflight is incomplete for browser-based MCP.
-   - File: `server/src/appMiddleware.ts`
-   - Risk: a browser client with bearer token/session headers will not pass preflight.
-
-4. Job-event SSE streams still poll per stream.
+2. Job-event SSE streams still poll per stream.
    - File: `server/src/routes/jobRoutes.ts`
    - Risk: caps limit active streams, but accepted streams still create constant DB QPS and socket pressure.
 
@@ -247,6 +240,7 @@ Done in this pass:
 - Bound active `personalItemsReport` dedupe keys with a SHA-256 context hash so DB indexes no longer store raw user context.
 - Remove unnecessary full liked list fetches from search and wardrobe annotation hot paths.
 - Close the remaining `localStorage` edge paths with best-effort read/write handling.
+- Close integration HTTP edges by allowing browser MCP preflight headers and returning JSON 404s for missing integration routes.
 
 ### P2 - After Hot Paths Stabilize
 
@@ -259,11 +253,7 @@ Done in this pass:
    - Wire `buildInternalMetricsSnapshotImpl` only after an admin/internal auth model exists.
    - Revisit the email hash policy before exporting logs beyond a trusted boundary: use keyed HMAC or remove the hash if user correlation in logs is not needed.
 
-3. Close integration HTTP edges.
-   - Add CORS allow headers for `Authorization`, `Mcp-Session-Id`, `Mcp-Protocol-Version` where browser MCP clients are actually supported.
-   - Extend API-ish fallback prefixes to `/oauth`, `/.well-known`, `/mcp`, `/jobs`.
-
-4. Add scoped rate limits and active caps.
+3. Add scoped rate limits and active caps.
    - `/oauth/token`, `/mcp` initialize/session requests, report/generate enqueue, upload enqueue.
    - For SSE: active stream metrics and, if DB polling cost becomes material, a lower-QPS event delivery model.
 
@@ -292,5 +282,5 @@ Done in this pass:
 
 1. Deferred Personal items report full-coverage chunking/aggregation/fingerprint.
 2. Products index rollout + search/stats plan/benchmark guard.
-3. Readiness/metrics/admin + CORS/fallback integration fixes.
+3. Readiness/metrics/admin + scoped integration rate-limit fixes.
 4. SSE/rate-limit/backpressure metrics and lower-QPS delivery if needed.

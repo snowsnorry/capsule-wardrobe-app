@@ -209,7 +209,16 @@ export function applyCorsMiddleware(app, { nodeEnv, clientOrigin }) {
   app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", clientOrigin);
     res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Headers", "Content-Type, X-CSRF-Token");
+    res.header(
+      "Access-Control-Allow-Headers",
+      [
+        "Content-Type",
+        "X-CSRF-Token",
+        "Authorization",
+        "Mcp-Session-Id",
+        "Mcp-Protocol-Version",
+      ].join(", "),
+    );
     res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
     if (req.method === "OPTIONS") {
       return res.sendStatus(204);
