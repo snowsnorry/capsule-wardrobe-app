@@ -1,6 +1,6 @@
 # Capsule Wardrobe App
 
-Full-stack TypeScript monorepo for a capsule wardrobe application. The project combines passwordless auth, passkeys, profile onboarding and account removal, AI-assisted wardrobe generation, saved capsules and outfits, Personal items uploads, product search, and statistics.
+Full-stack TypeScript monorepo for a capsule wardrobe application. The project combines passwordless auth, passkeys, profile onboarding and account removal, AI-assisted wardrobe generation, saved capsules and outfits, Personal items uploads, queued long-running jobs, product search, and statistics.
 
 ## Stack
 
@@ -12,8 +12,9 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 - Optional auth providers: Google Sign-In and passkeys/WebAuthn
 - Optional external assistant access: read-only MCP connector over Streamable HTTP with OAuth PKCE
 - Generated and uploaded image storage: Cloudflare R2 when configured
+- Long-running work: `pg-boss` backed Postgres jobs in production, in-memory jobs for tests/e2e
 - Browser e2e: Playwright against a dedicated Express/Vite server with in-memory dependencies
-- Deployment path: Render single-service
+- Deployment path: Render web service plus cleanup cron
 
 ## What the app does
 
@@ -24,6 +25,7 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 - AI-assisted wardrobe generation, wardrobe/catalog source modes, and selective regeneration
 - outfit-set image generation
 - Personal items file and URL uploads, uploaded item metadata editing, catalog saves, liked items, AI report generation, and wardrobe PDF export
+- queued job tracking for generation, report, image, and upload workflows
 - shareable capsule links and shared capsule import
 - product search and aggregated statistics views
 - read-only MCP tools for authenticated product search, product stats, product fetch, wardrobe item reads, and visual render helpers
@@ -34,7 +36,7 @@ Full-stack TypeScript monorepo for a capsule wardrobe application. The project c
 client/   React frontend
 server/   Express API and server workflows
 shared/   shared TypeScript models, helpers, and tests
-tests/    Playwright browser tests
+tests/    Playwright browser workflow/regression tests
 docs/     repository documentation
 ```
 
@@ -43,8 +45,11 @@ Useful entrypoints:
 - `client/src/App.tsx`
 - `client/src/api/outfits.ts`
 - `client/src/api/likedItems.ts`
+- `client/src/api/jobs.ts`
 - `client/src/app/oauthReturn.ts`
+- `client/src/app/useActiveSidebarJobs.ts`
 - `client/src/api/request.ts`
+- `client/src/hooks/usePaginatedPersonalItems.ts`
 - `client/src/main.tsx`
 - `client/src/screens/WardrobeScreen.tsx`
 - `client/vite.config.ts`
@@ -52,6 +57,7 @@ Useful entrypoints:
 - `server/src/index.ts`
 - `server/src/appFactory.ts`
 - `server/src/appDependencies.ts`
+- `server/src/appDependencyJobs.ts`
 - `server/src/appRouteContext.ts`
 - `server/src/appRoutes.ts`
 - `server/src/appConfig.ts`
@@ -60,6 +66,8 @@ Useful entrypoints:
 - `server/src/e2e/server.ts`
 - `server/src/db.ts`
 - `server/src/db/sql/`
+- `server/src/jobs/`
+- `server/src/maintenance/pruneExpiredRecords.ts`
 - `server/src/mcp/`
 - `server/src/ai/`
 - `server/src/authStore.ts`
@@ -68,10 +76,12 @@ Useful entrypoints:
 - `server/src/profileStore.ts`
 - `server/src/searchStore.ts`
 - `server/src/r2Storage.ts`
+- `server/src/routes/jobRoutes.ts`
 - `server/src/routes/personalItemsReportRoutes.ts`
 - `server/src/wardrobeUploadImagesRunner.ts`
 - `server/src/wardrobeUploadProcessingRunner.ts`
 - `server/src/routes/`
+- `shared/productMetadataOptions.ts`
 
 ## Requirements
 
@@ -120,7 +130,7 @@ Common optional values:
 - `DEEPINFRA_API_KEY` — DeepInfra-backed generation flows
 - `GEMINI_API_KEY` — Gemini-backed text and image generation flows
 - `ANTHROPIC_API_KEY` — Claude-backed generation flows
-- `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BASE_URL` — Cloudflare R2 storage for generated and uploaded wardrobe images; `R2_PUBLIC_BASE_URL` must be a public bucket URL or custom domain
+- `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BASE_URL` — Cloudflare R2 storage for generated and uploaded wardrobe images; `R2_PUBLIC_BASE_URL` must be a public bucket URL or custom domain. In production, Personal items file-upload job staging requires the full R2 set.
 - `R2_IMAGE_KEY_PREFIX` — optional R2 object key prefix, defaults to `outfit-set-images`
 - `PORT` — defaults to `3000`
 - `CLIENT_ORIGIN` — defaults to `http://localhost:5173`
@@ -132,8 +142,11 @@ Common optional values:
 - `MCP_ALLOWED_REDIRECT_URIS`, `MCP_ALLOWED_REDIRECT_ORIGINS` — allowed OAuth redirect destinations for MCP clients such as ChatGPT or Codex
 - `MCP_ALLOWED_CLIENT_IDS`, `MCP_ALLOWED_CLIENT_METADATA_HOSTS` — optional MCP client allowlists; dynamic client registration is supported and production still requires redirect allowlists
 - `MCP_ACCESS_TOKEN_TTL_SECONDS`, `MCP_AUTH_CODE_TTL_SECONDS`, `MCP_REFRESH_TOKEN_TTL_SECONDS` — optional MCP OAuth connector controls
+- `JOB_QUEUE_BACKEND` — queued job backend, defaults to `pg_boss` outside test/e2e
+- `JOB_WORKER_ENABLED` — enables local job workers, defaults to enabled outside test/e2e
+- `JOB_WORKER_CONCURRENCY` — local queued job worker concurrency, defaults to `1`
+- `JOB_RUN_TIMEOUT_MS` — stale running job timeout, defaults to 15 minutes
 - `VITE_THUMBNAIL_ASSET_BASE_URL` — thumbnail URL prefix also used by server-generated prompt/MCP thumbnails
-- `SESSION_PRUNE_MIN_INTERVAL_MS` — session cleanup throttle
 - `WARDROBE_PDF_CHILD_TIMEOUT_MS` — PDF child-process timeout
 - `WARDROBE_UPLOAD_CHILD_TIMEOUT_MS` — uploaded wardrobe image normalization child-process timeout
 - `WARDROBE_UPLOAD_PROCESSING_CHILD_TIMEOUT_MS`, `WARDROBE_UPLOAD_PROCESSING_CHILD_KILL_GRACE_MS` — uploaded wardrobe metadata/image processing child-process controls
@@ -216,7 +229,7 @@ Playwright starts an isolated Express/Vite server automatically when you run e2e
 npm run test:e2e
 ```
 
-That server uses in-memory auth, profile, capsule, outfit, search, wardrobe, generation, image, and embedding dependencies. It does not require `DATABASE_URL` or provider API keys and mounts e2e-only control routes such as `POST /__e2e/reset` and `POST /__e2e/login`. E2E login sets the same session and CSRF cookies that normal authenticated routes expect.
+That server uses in-memory auth, profile, capsule, outfit, search, wardrobe, generation, image, embedding, and job dependencies. It does not require `DATABASE_URL` or provider API keys and mounts e2e-only control routes such as `POST /__e2e/reset` and `POST /__e2e/login`. E2E login sets the same session and CSRF cookies that normal authenticated routes expect.
 
 ### Local URLs
 
@@ -225,7 +238,7 @@ That server uses in-memory auth, profile, capsule, outfit, search, wardrobe, gen
 
 The app root redirects to `/personal-items` while preserving query parameters such as OAuth return state.
 
-In local development, Vite proxies `/api` to the Express server and strips that prefix, so frontend calls to `/api/auth`, `/api/profile`, `/api/capsules`, `/api/outfits`, `/api/shared-capsules`, `/api/search`, `/api/wardrobe`, and `/api/liked-items` reach the matching backend route groups. Direct `/auth`, `/profile`, `/wardrobe/filters`, `/wardrobe/items`, and `/health` proxy entries are also present for compatibility.
+In local development, Vite proxies `/api` to the Express server and strips that prefix, so frontend calls to `/api/auth`, `/api/profile`, `/api/capsules`, `/api/outfits`, `/api/jobs`, `/api/shared-capsules`, `/api/search`, `/api/wardrobe`, and `/api/liked-items` reach the matching backend route groups. Direct `/auth`, `/profile`, `/wardrobe/filters`, `/wardrobe/items`, and `/health` proxy entries are also present for compatibility.
 
 ## Build, start, validation
 
@@ -246,6 +259,12 @@ Render start helpers:
 ```bash
 npm run start:render
 npm run start:client:render
+```
+
+Maintenance:
+
+```bash
+npm run prune:expired-records
 ```
 
 Type-check:
@@ -302,7 +321,7 @@ npm run security:audit
 npm run screenshots
 ```
 
-After editing files, verify that relevant tests pass, coverage remains acceptable, and ESLint has zero warnings for the changed source files. For cross-cutting changes, prefer `npm run quality:gate`.
+Documentation-only changes do not require `format`, lint, tests, coverage, typecheck, or `quality:unused` when behavior and executable/config files are untouched. After code or executable/config changes, verify the relevant tests and coverage, run any needed typecheck, then run `npm run format`, `npm run quality:unused`, and `npm run lint:strict`; for cross-cutting changes, prefer `npm run quality:gate`.
 
 ## Health checks
 
@@ -323,6 +342,7 @@ Main backend route groups:
 - `/profile/*` — onboarding, profile data, locale, and account removal
 - `/capsules/*` — bootstrap, recent, search, CRUD, save/revert, regenerate, share, import support, PDF, SSE events, outfit-set image jobs
 - `/outfits/*` — bootstrap, recent, search, CRUD, save/revert, duplicate, select, report SSE, image jobs/events, and PDF export for saved outfit sets
+- `/jobs`, `/jobs/:jobId`, `/jobs/:jobId/events` — authenticated queued job list/detail/SSE status endpoints
 - `/shared-capsules/*` — public shared capsule read and authenticated import
 - `/liked-items` — authenticated product like/unlike mutations
 - `/search/*` — search options, saved filters, run search, product-detail lookup, and stats
@@ -337,6 +357,12 @@ The e2e server also mounts `/__e2e/*` test-control and fixture endpoints. Those 
 
 The app is created by [server/src/appFactory.ts](server/src/appFactory.ts), with route registration in [server/src/appRoutes.ts](server/src/appRoutes.ts) and startup in [server/src/index.ts](server/src/index.ts).
 
+## Queued jobs
+
+Long-running generation, report, image, and Personal items upload workflows return job snapshots and are tracked through [client/src/api/jobs.ts](client/src/api/jobs.ts) and [client/src/app/useActiveSidebarJobs.ts](client/src/app/useActiveSidebarJobs.ts). The server exposes authenticated `/jobs/*` endpoints from [server/src/routes/jobRoutes.ts](server/src/routes/jobRoutes.ts).
+
+Production uses the `pg_boss` backend in [server/src/jobs](server/src/jobs) with job rows and replayable events stored in Postgres. Test and e2e startup use an in-memory job service so browser tests do not need a real database or queue provider. Expired transient job and auth records are pruned by `npm run prune:expired-records`.
+
 ## MCP connector
 
 The optional MCP connector is implemented entirely on the server in [server/src/mcp](server/src/mcp). When `MCP_OAUTH_ENABLED=true`, `/mcp` requires bearer tokens issued by the local OAuth PKCE flow and validates issuer, audience, expiry, token use, mandatory `mcp:read` transport access, and supported read scopes. Product catalog tools require `catalog:read`; personal item tools require `personal-items:read`.
@@ -347,13 +373,15 @@ MCP OAuth state is persisted in Postgres through `mcp_oauth_authorization_codes`
 
 ## Deployment
 
-### Render single-service deploy
+### Render web service and cleanup cron
 
-This repo supports a single Render web service that builds the client and serves it from the Express backend.
+This repo supports one Render web service that builds the client and serves it from the Express backend, plus a cron service that prunes expired transient records.
 
 - build command: `npm ci --include=dev && npm run build`
 - start command: `npm run start`
 - health check path: `/health`
+- cleanup cron command: `npm run prune:expired-records`
+- cleanup cron schedule: `0 3 * * *`
 
 Related files:
 
@@ -374,9 +402,16 @@ Minimum env for this path:
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 
+Minimum env for the cleanup cron:
+
+- `NODE_VERSION=24.18.0`
+- `NODE_ENV=production`
+- `DATABASE_URL`
+
 Optional:
 
 - `GOOGLE_CLIENT_ID`
+- `JOB_QUEUE_BACKEND=pg_boss`, `JOB_WORKER_ENABLED`, `JOB_WORKER_CONCURRENCY`, and `JOB_RUN_TIMEOUT_MS` when overriding queued job behavior
 - `MCP_OAUTH_ENABLED=true`, `MCP_OAUTH_ISSUER=https://<your-service>.onrender.com`, `MCP_RESOURCE_URL=https://<your-service>.onrender.com/mcp`, `MCP_JWT_SECRET`, and `MCP_ALLOWED_REDIRECT_URIS` or `MCP_ALLOWED_REDIRECT_ORIGINS` when enabling the MCP connector OAuth surface
 - AI provider keys you actually use
 
@@ -395,6 +430,6 @@ This path requires:
 
 - The server entry source is TypeScript: `server/src/index.ts`.
 - Production start runs compiled output from `server/dist`.
-- DB schema bootstrap uses canonical SQL assets under `server/src/db/sql/`; there is no active standalone naming-convention migration script.
+- DB schema bootstrap uses canonical SQL assets under `server/src/db/sql/`, including `job_runs`/`job_events` assets and indexes `100` through `107`; there is no active standalone naming-convention migration script.
 - Shared business logic and locale helpers live in `shared/`.
 - Auth test mode should remain non-production only.
