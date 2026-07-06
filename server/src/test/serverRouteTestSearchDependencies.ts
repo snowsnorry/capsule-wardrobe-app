@@ -55,7 +55,7 @@ export function createSearchAndGenerationDependencies() {
       priceBuckets: [],
     }),
     runSavedSearchImpl: async (_email, payload) => ({
-      items: [{ id: "1" }],
+      items: [{ id: "1", isLiked: false }],
       total: 1,
       search: payload,
     }),
@@ -69,6 +69,7 @@ export function createSearchAndGenerationDependencies() {
       id === product.id ? { ...product } : null,
     getProductByUrlForEmailImpl: async (url) =>
       url === product.url ? { ...product } : null,
+    listLikedItemUrlsForUrlsImpl: async () => [],
     listLikedItemUrlsImpl: async () => [],
     upsertLikedItemImpl: async ({ itemUrl }) => itemUrl,
     deleteLikedItemImpl: async () => true,

@@ -4,7 +4,7 @@ export function registerSearchRoutes(app, context) {
   const {
     annotateLikedItems,
     getProductsByUrlsInOrderImpl,
-    listLikedItemUrlsImpl,
+    listLikedItemUrlsForUrlsImpl,
     requireAuth,
     requireCsrf,
     requireTrustedOrigin,
@@ -19,7 +19,7 @@ export function registerSearchRoutes(app, context) {
     createProductDetailHandler({
       annotateLikedItems,
       getProductsByUrlsInOrderImpl,
-      listLikedItemUrlsImpl,
+      listLikedItemUrlsForUrlsImpl,
     }),
   );
 
@@ -31,12 +31,9 @@ export function registerSearchRoutes(app, context) {
     async (req, res) => {
       try {
         const result = await runSavedSearchImpl(req.user.email, req.body || {});
-        const likedUrls = await listLikedItemUrlsImpl(req.user.email);
         return res.json({
           ok: true,
-          ...(result && typeof result === "object"
-            ? annotateLikedItems(result, likedUrls)
-            : {}),
+          ...(result && typeof result === "object" ? result : {}),
         });
       } catch (error) {
         if (
@@ -111,7 +108,7 @@ function registerSearchStatsRoute(app, context) {
 function createProductDetailHandler({
   annotateLikedItems,
   getProductsByUrlsInOrderImpl,
-  listLikedItemUrlsImpl,
+  listLikedItemUrlsForUrlsImpl,
 }) {
   return async (req, res) => {
     const url = getHttpUrlParam(req.query?.url);
@@ -121,13 +118,14 @@ function createProductDetailHandler({
 
     try {
       const items = await getProductsByUrlsInOrderImpl([url]);
-      const likedUrls = await listLikedItemUrlsImpl(req.user.email);
+      const item = Array.isArray(items) ? items[0] || null : null;
+      const likedUrls = await listLikedItemUrlsForUrlsImpl({
+        email: req.user.email,
+        itemUrls: [item?.url || url],
+      });
       return res.json({
         ok: true,
-        item: annotateLikedItems(
-          Array.isArray(items) ? items[0] || null : null,
-          likedUrls,
-        ),
+        item: annotateLikedItems(item, likedUrls),
       });
     } catch (error) {
       logError("[search/product]", error);

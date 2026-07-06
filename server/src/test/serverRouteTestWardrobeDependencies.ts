@@ -65,6 +65,7 @@ function createWardrobeListDependencies() {
   return {
     countWardrobeItemsImpl: async () => 1,
     getPersonalItemsReportImpl: async () => null,
+    listLikedItemUrlsForUrlsImpl: async () => [],
     listWardrobeItemsImpl: async () => defaultWardrobeItems,
     listWardrobeItemsPageImpl: undefined,
     listWardrobeItemsByIdsImpl: async ({ ids }) =>

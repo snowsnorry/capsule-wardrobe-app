@@ -36,6 +36,12 @@ function getHttpUrl(value: unknown): string {
   }
 }
 
+function getItemUrls(items) {
+  return Array.isArray(items)
+    ? items.map((item) => item?.url).filter((url) => typeof url === "string")
+    : [];
+}
+
 export function registerWardrobeRoutes(app, context) {
   registerWardrobeListRoute(app, context);
   registerPersonalItemsReportRoutes(app, context);
@@ -93,19 +99,29 @@ function registerWardrobeListRoute(app, context) {
           email: req.user.email,
           source,
         });
-        const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
         const displayItems = Array.isArray(items)
-          ? context
-              .annotateLikedItems(
-                items.map(filterWardrobeListItemForDisplay),
-                likedUrls,
-              )
+          ? items.map(filterWardrobeListItemForDisplay)
+          : items;
+        const annotationBatch = Array.isArray(displayItems)
+          ? likedOnly
+            ? displayItems
+            : displayItems.slice(0, limit)
+          : displayItems;
+        const likedUrls = await context.listLikedItemUrlsForUrlsImpl({
+          email: req.user.email,
+          itemUrls: getItemUrls(annotationBatch),
+        });
+        const annotatedItems = Array.isArray(annotationBatch)
+          ? context.annotateLikedItems(annotationBatch, likedUrls)
+          : annotationBatch;
+        const pagedItems = Array.isArray(annotatedItems)
+          ? annotatedItems
               .filter((item) => !likedOnly || item?.isLiked)
               .slice(0, limit)
-          : items;
+          : annotatedItems;
         return res.json({
           ok: true,
-          items: displayItems,
+          items: pagedItems,
           pagination: { hasMore: false, limit, nextCursor: null },
         });
       } catch (error) {
@@ -208,14 +224,15 @@ function registerWardrobeCatalogRoutes(app, context) {
         if (!item) {
           return res.status(404).json({ error: "not_found" });
         }
-        const likedUrls = await context.listLikedItemUrlsImpl(req.user.email);
+        const displayItem = filterWardrobeItemForDisplay(item);
+        const likedUrls = await context.listLikedItemUrlsForUrlsImpl({
+          email: req.user.email,
+          itemUrls: getItemUrls([displayItem]),
+        });
 
         return res.status(201).json({
           ok: true,
-          item: context.annotateLikedItems(
-            filterWardrobeItemForDisplay(item),
-            likedUrls,
-          ),
+          item: context.annotateLikedItems(displayItem, likedUrls),
         });
       } catch (error) {
         logError("[wardrobe/items/from-catalog]", error);

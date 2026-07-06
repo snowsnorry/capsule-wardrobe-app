@@ -6,6 +6,7 @@ import {
 } from "./core.js";
 import {
   deleteLikedItemByUrl,
+  listLikedItemUrlsForUrlsByEmail,
   listLikedItemUrlsByEmail,
   upsertLikedItemByUrl,
 } from "./likedItems.js";
@@ -44,6 +45,48 @@ test("listLikedItemUrlsByEmail returns liked canonical URLs", async () => {
   );
   expect(statements[0]).toContain("from user_liked_items");
   expect(values[0]).toEqual(["person@example.com"]);
+});
+
+test("listLikedItemUrlsForUrlsByEmail returns liked URLs scoped to the provided URLs", async () => {
+  const { statements, values } = createSqlRecorder([
+    [
+      { itemUrl: "https://example.com/products/1" },
+      { itemUrl: "wardrobe://uploaded-1" },
+    ],
+  ]);
+
+  await expect(
+    listLikedItemUrlsForUrlsByEmail({
+      email: "person@example.com",
+      itemUrls: [
+        "https://example.com/products/1",
+        "https://example.com/products/1",
+        "wardrobe://uploaded-1",
+        "",
+      ],
+    }),
+  ).resolves.toEqual([
+    "https://example.com/products/1",
+    "wardrobe://uploaded-1",
+  ]);
+  expect(statements[0]).toContain("from user_liked_items");
+  expect(statements[0]).toContain("item_url = any");
+  expect(values[0]).toEqual([
+    "person@example.com",
+    ["https://example.com/products/1", "wardrobe://uploaded-1"],
+  ]);
+});
+
+test("listLikedItemUrlsForUrlsByEmail skips SQL for empty URL sets", async () => {
+  const { statements } = createSqlRecorder();
+
+  await expect(
+    listLikedItemUrlsForUrlsByEmail({
+      email: "person@example.com",
+      itemUrls: ["", null, undefined],
+    }),
+  ).resolves.toEqual([]);
+  expect(statements).toEqual([]);
 });
 
 test("upsertLikedItemByUrl is idempotent and returns the URL", async () => {

@@ -69,6 +69,7 @@ export {
 } from "./db/personalItemsReports.js";
 export {
   deleteLikedItemByUrl,
+  listLikedItemUrlsForUrlsByEmail,
   listLikedItemUrlsByEmail,
   upsertLikedItemByUrl,
 } from "./db/likedItems.js";

@@ -24,6 +24,34 @@ export async function listLikedItemUrlsByEmail(
   return rows.map((row) => normalizeLikedItemUrl(row.itemUrl)).filter(Boolean);
 }
 
+export async function listLikedItemUrlsForUrlsByEmail({
+  email,
+  itemUrls,
+}: {
+  email: string;
+  itemUrls: unknown[];
+}): Promise<string[]> {
+  const normalizedItemUrls = Array.from(
+    new Set(itemUrls.map(normalizeLikedItemUrl).filter(Boolean)),
+  );
+  if (normalizedItemUrls.length === 0) {
+    return [];
+  }
+
+  const sql = getSqlClient();
+  const rows = getResultRows(
+    await sql<LikedItemRow>`
+    select item_url as "itemUrl"
+    from user_liked_items
+    where user_email = ${email}
+      and item_url = any(${normalizedItemUrls}::text[])
+    order by item_url asc
+  `,
+  );
+
+  return rows.map((row) => normalizeLikedItemUrl(row.itemUrl)).filter(Boolean);
+}
+
 export async function upsertLikedItemByUrl({
   email,
   itemUrl,

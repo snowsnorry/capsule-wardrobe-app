@@ -227,6 +227,7 @@ function createE2ePersistenceDependencies(memory: E2eWardrobeMemory) {
       ),
     updateUploadedWardrobeItemMetadataImpl: async (payload) =>
       memory.updateMetadata(payload),
+    listLikedItemUrlsForUrlsImpl: async () => [],
     listLikedItemUrlsImpl: async () => [],
     upsertLikedItemImpl: async ({ itemUrl }) => itemUrl,
     deleteLikedItemImpl: async () => true,

@@ -180,6 +180,10 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
           updatedAt: "2026-05-01T00:00:00.000Z",
         };
       },
+      listLikedItemUrlsForUrlsImpl: async (payload) => {
+        calls.push({ type: "likedScoped", payload });
+        return ["https://example.com/1"];
+      },
       deleteWardrobeItemFromCatalogImpl: async (payload) => {
         calls.push({ type: "delete", payload });
         return true;
@@ -225,7 +229,7 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
       id: "wardrobe-1",
       url: "https://example.com/1",
       source: "from_catalog",
-      isLiked: false,
+      isLiked: true,
     },
   });
 
@@ -255,8 +259,76 @@ test("wardrobe routes list and save user wardrobe items", async (t) => {
       payload: { email: "person@example.com", url: "https://example.com/1" },
     },
     {
+      type: "likedScoped",
+      payload: {
+        email: "person@example.com",
+        itemUrls: ["https://example.com/1"],
+      },
+    },
+    {
       type: "delete",
       payload: { email: "person@example.com", url: "https://example.com/1" },
+    },
+  ]);
+});
+
+test("wardrobe list legacy fallback scopes liked lookup to the returned page", async (t) => {
+  const calls: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listLikedItemUrlsImpl: async () => {
+        throw new Error("liked_urls_should_not_be_loaded");
+      },
+      listLikedItemUrlsForUrlsImpl: async (payload) => {
+        calls.push({ type: "likedScoped", payload });
+        return ["https://example.com/1"];
+      },
+      listWardrobeItemsImpl: async () => [
+        {
+          id: "wardrobe-1",
+          source: "from_catalog",
+          url: "https://example.com/1",
+        },
+        {
+          id: "wardrobe-2",
+          source: "from_catalog",
+          url: "https://example.com/2",
+        },
+      ],
+      listWardrobeItemsPageImpl: undefined,
+    },
+  });
+
+  const list = await requestJson(
+    baseUrl,
+    "/wardrobe/items?source=from_catalog&limit=1",
+    { cookie: AUTH_COOKIE },
+  );
+
+  expect(list.response.status).toBe(200);
+  expect(list.json).toEqual({
+    ok: true,
+    items: [
+      {
+        id: "wardrobe-1",
+        source: "from_catalog",
+        url: "https://example.com/1",
+        isLiked: true,
+      },
+    ],
+    pagination: {
+      hasMore: false,
+      limit: 1,
+      nextCursor: null,
+    },
+  });
+  expect(calls).toEqual([
+    {
+      type: "likedScoped",
+      payload: {
+        email: "person@example.com",
+        itemUrls: ["https://example.com/1"],
+      },
     },
   ]);
 });

@@ -66,6 +66,44 @@ test("search routes expose options, saved search, run, and stats", async (t) => 
   });
 });
 
+test("search product detail scopes liked lookup to the requested product URL", async (t) => {
+  const calls: unknown[] = [];
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listLikedItemUrlsImpl: async () => {
+        throw new Error("liked_urls_should_not_be_loaded");
+      },
+      listLikedItemUrlsForUrlsImpl: async (payload) => {
+        calls.push(payload);
+        return ["https://example.com/1"];
+      },
+      getProductsByUrlsInOrderImpl: async () => [
+        { url: "https://example.com/1" },
+      ],
+    },
+  });
+
+  const productDetail = await requestJson(
+    baseUrl,
+    "/search/product?url=https%3A%2F%2Fexample.com%2F1",
+    {
+      cookie: AUTH_COOKIE,
+    },
+  );
+
+  expect(productDetail.response.status).toBe(200);
+  expect(productDetail.json).toEqual({
+    ok: true,
+    item: { url: "https://example.com/1", isLiked: true },
+  });
+  expect(calls).toEqual([
+    {
+      email: "person@example.com",
+      itemUrls: ["https://example.com/1"],
+    },
+  ]);
+});
+
 test("search run maps invalid payload failures", async (t) => {
   vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -92,6 +130,37 @@ test("search run maps invalid payload failures", async (t) => {
   );
   expect(invalidSearch.response.status).toBe(400);
   expect(invalidSearch.json).toEqual({ error: "invalid_payload" });
+});
+
+test("search run preserves SQL liked state without loading all liked URLs", async (t) => {
+  const { baseUrl } = await startTestServer(t, {
+    overrides: {
+      listLikedItemUrlsImpl: async () => {
+        throw new Error("liked_urls_should_not_be_loaded");
+      },
+      runSavedSearchImpl: async () => ({
+        items: [{ id: "1", url: "https://example.com/1", isLiked: true }],
+        total: 1,
+        savedSearch: { query: "coat" },
+      }),
+    },
+  });
+
+  const searchRun = await requestJson(baseUrl, "/search/run", {
+    method: "POST",
+    origin: TEST_CLIENT_ORIGIN,
+    cookie: AUTH_COOKIE,
+    csrfToken: CSRF_TOKEN,
+    body: { query: "coat" },
+  });
+
+  expect(searchRun.response.status).toBe(200);
+  expect(searchRun.json).toEqual({
+    ok: true,
+    items: [{ id: "1", url: "https://example.com/1", isLiked: true }],
+    total: 1,
+    savedSearch: { query: "coat" },
+  });
 });
 
 test("search routes forward liked-only payloads to search and stats handlers", async (t) => {

@@ -326,6 +326,7 @@ export function searchAndGenerationDependencies(
       const items = buildSearchResultItems(savedSearch).map((item) => ({
         ...item,
         imageUrl: item.imageUrl,
+        isLiked: item.isLiked === true,
       }));
       state.searchDelay.completeRequest(requestOrder);
       return { items, total: items.length, savedSearch };

@@ -34,6 +34,7 @@ Goal: reassess the architecture decisions, load resilience, edge-case behavior, 
 - `client/src/screens/outfitScreen/useOutfitCatalogPicker.ts`: the outfit catalog picker got a sequence guard against stale response overwrite.
 - `client/render-server.js`, `server/src/jobs/stagedUploadStorage.ts`: the client-only Render proxy is stream-friendly for SSE/PDF/attachments, R2 staging no longer reads the staged upload fully into memory, and concurrent sends are limited.
 - `server/src/appMiddleware.ts`, `server/src/logger.ts`, `server/src/observabilityMetrics.ts`: a baseline observability layer was added: request id, structured logs, latency/status metrics, release metadata, and a reserved internal metrics endpoint.
+- `server/src/routes/searchRoutes.ts`, `server/src/routes/wardrobeRoutes.ts`, `server/src/db/likedItems.ts`: search and wardrobe liked-state annotation no longer fetch the full liked URL list in hot paths; search trusts SQL-projected `isLiked`, and product/wardrobe annotation uses scoped URL-set lookups.
 
 ## Remaining Real Issues
 
@@ -89,6 +90,8 @@ Done:
 - Stats cache has bounded TTL/LRU and in-flight dedupe.
 - Stats query concurrency is limited.
 - The index contract for the external `products` catalog is documented.
+- `/search/run` no longer fetches the full liked URL list for result annotation; it uses the `isLiked` value already projected by search SQL.
+- `/search/product` uses a scoped liked lookup for the requested product URL instead of loading all liked URLs.
 
 Remaining:
 
@@ -96,7 +99,6 @@ Remaining:
 - There are no automated `EXPLAIN`/smoke benchmark checks for search/count/stats.
 - A cold stats miss launches a set of separate SQL tasks: total, 12 facets, and price buckets. Cache reduces repeated requests, but not the cost of a unique filter.
 - Statistics UI sends `/search/stats` on every facet toggle without debounce/sequence guard; fast clicks can create many unique cache misses.
-- `/search/run` additionally pulls the full list of liked URLs for the user for annotation, which looks redundant because search SQL already returns `isLiked`.
 
 Impact: p95/p99 should already be better than in the first audit, but with a large catalog and active statistics UI load, the database still remains the main bottleneck.
 
@@ -224,10 +226,6 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
    - Files: `client/src/i18n/LocaleProvider.tsx`, `client/src/screens/mainScreen/MainScreenHelpers.tsx`, `client/src/screens/outfitScreen/outfitCardLayoutStorage.ts`, `client/src/app/usePasskeyPrompt.ts`
    - Risk: blocked storage/private mode breaks mount or layout persistence paths.
 
-6. Full liked URL list fetch is still used in search hot paths.
-   - Files: `server/src/routes/searchRoutes.ts`, `server/src/db/likedItems.ts`
-   - Risk: profiles with many liked items increase unnecessary DB egress and response work.
-
 ## Improvement Recommendations
 
 ### P1 - First
@@ -250,6 +248,7 @@ Done in this pass:
 - Finish the job crash/cancellation model.
 - Close legacy process-local AI/image job state from production code and remove obsolete server-side legacy service modules.
 - Bound active `personalItemsReport` dedupe keys with a SHA-256 context hash so DB indexes no longer store raw user context.
+- Remove unnecessary full liked list fetches from search and wardrobe annotation hot paths.
 
 ### P2 - After Hot Paths Stabilize
 
@@ -270,15 +269,7 @@ Done in this pass:
    - `/oauth/token`, `/mcp` initialize/session requests, report/generate enqueue, upload enqueue.
    - For SSE: active stream metrics and, if DB polling cost becomes material, a lower-QPS event delivery model.
 
-5. Virtualize the Personal items screen grid.
-   - Use the existing `MainScreenVirtualWardrobeGrid` approach or server-side pagination/windowing.
-   - Solve API pagination first, so virtualization is not only reducing DOM while payloads remain full.
-
-6. Remove unnecessary full liked list fetch in hot paths.
-   - For search, use `isLiked` from the SQL result.
-   - For wardrobe annotation, make a scoped lookup by the URL set of the current page/batch after pagination.
-
-7. Close the remaining `localStorage` edge paths.
+5. Close the remaining `localStorage` edge paths.
    - Wrap the remaining read/write operations in best-effort helpers.
    - This is low priority, but cheap cleanup.
 
