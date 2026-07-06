@@ -1,5 +1,6 @@
-import { test, expect, vi } from "vitest";
+import { test, expect } from "vitest";
 import sharp from "sharp";
+import { muteExpectedStructuredLog } from "./test/structuredLogSpies.js";
 import {
   createWardrobePdfGenerationKey,
   formatLogPayload,
@@ -170,7 +171,6 @@ test("loadImageBytes downloads external images and tracks failures without throw
   }));
   t.onTestFinished(() => {
     setPdfImageDownloadBufferImplForTests(null);
-    vi.restoreAllMocks();
   });
 
   const downloaded = await loadImageBytes(
@@ -188,13 +188,7 @@ test("loadImageBytes downloads external images and tracks failures without throw
     status: 500,
     url,
   }));
-  const originalError = console.error;
-  vi.spyOn(console, "error").mockImplementation((...args) => {
-    if (args[0] === "[wardrobe-pdf][image]") {
-      return;
-    }
-    originalError(...args);
-  });
+  muteExpectedStructuredLog(t, "error", "[wardrobe-pdf][image]");
   expect(
     await loadImageBytes("https://example.com/fail.png", null, null, stats),
   ).toBe(null);
@@ -208,16 +202,9 @@ test("loadImageBytes treats over-limit downloads as unavailable images", async (
   });
   t.onTestFinished(() => {
     setPdfImageDownloadBufferImplForTests(null);
-    vi.restoreAllMocks();
   });
 
-  const originalError = console.error;
-  vi.spyOn(console, "error").mockImplementation((...args) => {
-    if (args[0] === "[wardrobe-pdf][image]") {
-      return;
-    }
-    originalError(...args);
-  });
+  muteExpectedStructuredLog(t, "error", "[wardrobe-pdf][image]");
 
   await expect(
     loadImageBytes("https://example.com/large.png", null, null, stats),

@@ -1,9 +1,10 @@
-import { test, expect, vi } from "vitest";
+import { test, expect } from "vitest";
 import {
   buildOpenAiImageFiles,
   createOpenAiImageClient,
   extractGeneratedImage,
 } from "./openaiImage.js";
+import { muteExpectedStructuredLog } from "../test/structuredLogSpies.js";
 
 test("extractGeneratedImage reads base64 image output", () => {
   expect(
@@ -22,16 +23,7 @@ test("extractGeneratedImage reads base64 image output", () => {
 });
 
 test("buildOpenAiImageFiles converts only valid buffers", async (t) => {
-  const originalWarn = console.warn;
-  vi.spyOn(console, "warn").mockImplementation((...args) => {
-    if (args[0] === "[openai-image][image-skipped]") {
-      return;
-    }
-    originalWarn(...args);
-  });
-  t.onTestFinished(() => {
-    vi.restoreAllMocks();
-  });
+  muteExpectedStructuredLog(t, "warn", "[openai-image][image-skipped]");
 
   const files = await buildOpenAiImageFiles([
     {

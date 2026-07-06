@@ -24,9 +24,4 @@ async function enqueueRouteJob(context, input: EnqueueJobInput) {
   return enqueue(input);
 }
 
-export {
-  enqueueRouteJob,
-  isTooManyActiveJobsError,
-  sendJobEnqueueError,
-  sendQueuedJob,
-};
+export { enqueueRouteJob, sendJobEnqueueError, sendQueuedJob };

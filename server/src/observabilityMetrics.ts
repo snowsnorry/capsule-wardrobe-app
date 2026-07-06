@@ -84,11 +84,11 @@ export function recordRejectionMetric(scope: string): void {
   rejectionMetrics[key] = (rejectionMetrics[key] || 0) + 1;
 }
 
-export function getActiveMetrics() {
+function getActiveMetrics() {
   return { ...activeMetrics };
 }
 
-export function getRejectionMetrics() {
+function getRejectionMetrics() {
   return { ...rejectionMetrics };
 }
 

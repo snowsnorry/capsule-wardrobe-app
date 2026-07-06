@@ -1,4 +1,4 @@
-import { test, expect, vi } from "vitest";
+import { test, expect } from "vitest";
 import type { TestContext } from "vitest";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -21,6 +21,7 @@ import {
   withCachedImage,
   withTempDir,
 } from "../test/promptImageFixtures.js";
+import { muteExpectedStructuredLog } from "../test/structuredLogSpies.js";
 import type { ServerImageDownloadBufferImpl } from "../serverImageDownload.js";
 
 function createImageDownloadResult(
@@ -176,23 +177,17 @@ test("buildPromptDebugImages keeps collages in memory when debug saving is disab
 test("buildPromptDebugImages skips failed downloads and still produces outputs", async (t) => {
   const outputDir = await withTempDir(t);
   const redBuffer = await createFixtureBuffer("#cc0000");
-  const originalWarn = console.warn;
-  vi.spyOn(console, "warn").mockImplementation((...args) => {
-    if (args[0] === "[prompt-images][asset-download-failed]") {
-      return;
-    }
-    originalWarn(...args);
-  });
+  muteExpectedStructuredLog(
+    t,
+    "warn",
+    "[prompt-images][asset-download-failed]",
+  );
 
   usePromptImageDownloader(t, async ({ url }) => {
     if (url.includes("bad")) {
       throw new Error("socket_hang_up");
     }
     return createImageDownloadResult(redBuffer, { url });
-  });
-
-  t.onTestFinished(() => {
-    vi.restoreAllMocks();
   });
 
   const result = await buildPromptDebugImages({
