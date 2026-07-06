@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   buildOutfitSetCategorySummaryItems,
   buildOutfitSetCompactSummary,
@@ -15,6 +15,10 @@ import { t } from "./MainScreen.testUtils";
 describe("MainScreenHelpers", () => {
   beforeEach(() => {
     window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   test("builds capsule metadata with counts and active filters in filter order", () => {
@@ -145,6 +149,18 @@ describe("MainScreenHelpers", () => {
     expect(readStoredMobileCardColumns()).toBe(3);
     window.localStorage.setItem("capsule.mobileCardColumns", "4");
     expect(readStoredMobileCardColumns()).toBe(2);
+  });
+
+  test("falls back to default mobile card columns when localStorage throws", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+
+    expect(readStoredMobileCardColumns()).toBe(2);
+    expect(() => writeStoredMobileCardColumns(3)).not.toThrow();
   });
 
   test("reports capsule unsaved and shareable states", () => {

@@ -54,6 +54,7 @@ describe("usePasskeyPrompt", () => {
   afterEach(() => {
     cleanup();
     window.localStorage.clear();
+    vi.restoreAllMocks();
   });
 
   test("shows the prompt when passkeys are supported and none are registered", async () => {
@@ -78,6 +79,20 @@ describe("usePasskeyPrompt", () => {
     });
   });
 
+  test("still evaluates the prompt when dismissed state storage is unavailable", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole("button", { name: "maybe" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("open")).toHaveTextContent("true");
+    });
+    expect(listPasskeys).toHaveBeenCalledTimes(1);
+  });
+
   test("dismisses and persists the prompt decision", async () => {
     render(<Harness />);
 
@@ -89,6 +104,19 @@ describe("usePasskeyPrompt", () => {
     expect(
       window.localStorage.getItem(PASSKEY_PROMPT_DISMISSED_STORAGE_KEY),
     ).toBe("true");
+  });
+
+  test("dismisses the prompt when dismissal storage writes fail", async () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole("button", { name: "maybe" }));
+    await screen.findByText("true");
+    fireEvent.click(screen.getByRole("button", { name: "dismiss" }));
+
+    expect(screen.getByTestId("open")).toHaveTextContent("false");
   });
 
   test("adds a passkey and suppresses future prompts", async () => {
@@ -103,6 +131,20 @@ describe("usePasskeyPrompt", () => {
     expect(
       window.localStorage.getItem(PASSKEY_PROMPT_DISMISSED_STORAGE_KEY),
     ).toBe("true");
+  });
+
+  test("closes after adding a passkey when dismissal storage writes fail", async () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole("button", { name: "add" }));
+
+    await waitFor(() => {
+      expect(registerPasskey).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByTestId("open")).toHaveTextContent("false");
   });
 
   test("keeps the prompt open for actionable add-passkey failures", async () => {

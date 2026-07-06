@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { LocaleProvider, useLocale } from "./LocaleProvider";
 
 const STORAGE_KEY = "locale";
@@ -51,6 +51,28 @@ describe("LocaleProvider", () => {
         <Consumer />
       </LocaleProvider>,
     );
+
+    expect(screen.getByTestId("locale")).toHaveTextContent("ru");
+  });
+
+  test("keeps locale state usable when localStorage is unavailable", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    vi.spyOn(window.navigator, "language", "get").mockReturnValue("en-US");
+
+    render(
+      <LocaleProvider>
+        <Consumer />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("locale")).toHaveTextContent("en");
+
+    fireEvent.click(screen.getByRole("button", { name: "set-locale" }));
 
     expect(screen.getByTestId("locale")).toHaveTextContent("ru");
   });

@@ -32,6 +32,7 @@ Goal: reassess the architecture decisions, load resilience, edge-case behavior, 
 - `server/src/startupPreflight.ts`, `server/src/serverStartup.ts`: production preflight runs before `ensureTables`/`listen` and validates critical configuration.
 - `client/src/api/request.ts`: `getCachedJson` got a bounded LRU/TTL cache.
 - `client/src/screens/outfitScreen/useOutfitCatalogPicker.ts`: the outfit catalog picker got a sequence guard against stale response overwrite.
+- `client/src/i18n/LocaleProvider.tsx`, `client/src/screens/mainScreen/MainScreenHelpers.tsx`, `client/src/screens/outfitScreen/outfitCardLayoutStorage.ts`, `client/src/app/usePasskeyPrompt.ts`: the remaining `localStorage` read/write edge paths are best-effort and no longer throw when browser storage is blocked.
 - `client/render-server.js`, `server/src/jobs/stagedUploadStorage.ts`: the client-only Render proxy is stream-friendly for SSE/PDF/attachments, R2 staging no longer reads the staged upload fully into memory, and concurrent sends are limited.
 - `server/src/appMiddleware.ts`, `server/src/logger.ts`, `server/src/observabilityMetrics.ts`: a baseline observability layer was added: request id, structured logs, latency/status metrics, release metadata, and a reserved internal metrics endpoint.
 - `server/src/routes/searchRoutes.ts`, `server/src/routes/wardrobeRoutes.ts`, `server/src/db/likedItems.ts`: search and wardrobe liked-state annotation no longer fetch the full liked URL list in hot paths; search trusts SQL-projected `isLiked`, and product/wardrobe annotation uses scoped URL-set lookups.
@@ -196,13 +197,13 @@ Done:
 - `getCachedJson` is bounded.
 - The outfit catalog picker is protected against stale response overwrite.
 - The audit-listed `localStorage` paths (`AppSidebarShell`, `WardrobeCardLayoutStorage`, `statisticsFilterStorage`) became best-effort.
+- The remaining `localStorage` helpers (`LocaleProvider`, `MainScreenHelpers`, `outfitCardLayoutStorage`, `usePasskeyPrompt`) are now best-effort too.
 
 Remaining:
 
 - Personal items screen grid scale risk is materially reduced by cursor loading and virtualization.
-- Several less critical `localStorage` helpers are still without `try/catch` (`LocaleProvider`, `MainScreenHelpers`, `outfitCardLayoutStorage`, `usePasskeyPrompt`). This is an edge correctness risk in blocked storage/private mode, but not a high-impact performance blocker.
 
-Impact: the frontend initial architecture is fine; the real frontend problems will mostly appear with large Personal items profiles and rare storage-restricted browsers.
+Impact: the frontend initial architecture is fine; the real frontend problems will mostly appear with large Personal items profiles rather than rare storage-restricted browsers.
 
 ## Potential Bugs and Shortcomings
 
@@ -221,10 +222,6 @@ Impact: the frontend initial architecture is fine; the real frontend problems wi
 4. Job-event SSE streams still poll per stream.
    - File: `server/src/routes/jobRoutes.ts`
    - Risk: caps limit active streams, but accepted streams still create constant DB QPS and socket pressure.
-
-5. Remaining `localStorage` helpers can throw.
-   - Files: `client/src/i18n/LocaleProvider.tsx`, `client/src/screens/mainScreen/MainScreenHelpers.tsx`, `client/src/screens/outfitScreen/outfitCardLayoutStorage.ts`, `client/src/app/usePasskeyPrompt.ts`
-   - Risk: blocked storage/private mode breaks mount or layout persistence paths.
 
 ## Improvement Recommendations
 
@@ -249,6 +246,7 @@ Done in this pass:
 - Close legacy process-local AI/image job state from production code and remove obsolete server-side legacy service modules.
 - Bound active `personalItemsReport` dedupe keys with a SHA-256 context hash so DB indexes no longer store raw user context.
 - Remove unnecessary full liked list fetches from search and wardrobe annotation hot paths.
+- Close the remaining `localStorage` edge paths with best-effort read/write handling.
 
 ### P2 - After Hot Paths Stabilize
 
@@ -268,10 +266,6 @@ Done in this pass:
 4. Add scoped rate limits and active caps.
    - `/oauth/token`, `/mcp` initialize/session requests, report/generate enqueue, upload enqueue.
    - For SSE: active stream metrics and, if DB polling cost becomes material, a lower-QPS event delivery model.
-
-5. Close the remaining `localStorage` edge paths.
-   - Wrap the remaining read/write operations in best-effort helpers.
-   - This is low priority, but cheap cleanup.
 
 ## What Already Works Well Enough
 

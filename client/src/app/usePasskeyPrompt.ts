@@ -12,16 +12,30 @@ type ResolveErrorMessage = (
 type SetStatus = (status: StatusState) => void;
 
 function markPasskeyPromptDismissed() {
-  if (typeof window !== "undefined") {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
     window.localStorage.setItem(PASSKEY_PROMPT_DISMISSED_STORAGE_KEY, "true");
+  } catch {
+    // Prompt dismissal persistence is optional; keep the current UI flow.
   }
 }
 
 function shouldSkipPasskeyPrompt() {
-  return (
-    typeof window !== "undefined" &&
-    window.localStorage.getItem(PASSKEY_PROMPT_DISMISSED_STORAGE_KEY) === "true"
-  );
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    return (
+      window.localStorage.getItem(PASSKEY_PROMPT_DISMISSED_STORAGE_KEY) ===
+      "true"
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function usePasskeyPrompt(

@@ -328,15 +328,26 @@ export function readStoredMobileCardColumns(): MobileCardColumns {
     return 2;
   }
 
-  const parsed = Number(
-    window.localStorage?.getItem(MOBILE_CARD_COLUMNS_STORAGE_KEY),
-  );
-  return isMobileCardColumns(parsed) ? parsed : 2;
+  try {
+    const parsed = Number(
+      window.localStorage?.getItem(MOBILE_CARD_COLUMNS_STORAGE_KEY),
+    );
+    return isMobileCardColumns(parsed) ? parsed : 2;
+  } catch {
+    return 2;
+  }
 }
 
 export function writeStoredMobileCardColumns(value: MobileCardColumns) {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage?.setItem(MOBILE_CARD_COLUMNS_STORAGE_KEY, String(value));
+  try {
+    window.localStorage?.setItem(
+      MOBILE_CARD_COLUMNS_STORAGE_KEY,
+      String(value),
+    );
+  } catch {
+    // Layout persistence is optional; keep the in-memory state.
+  }
 }

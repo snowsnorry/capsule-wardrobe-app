@@ -28,12 +28,28 @@ const LocaleContext = createContext<LocaleContextValue>({
   setLocale: noopSetLocale,
 });
 
+function readStoredLocale(): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredLocale(value: string) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, value);
+  } catch {
+    // Locale persistence is optional; keep the in-memory state.
+  }
+}
+
 const getInitialLocale = (): LocaleValue => {
   if (typeof window === "undefined") {
     return defaultLocale as LocaleValue;
   }
 
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = readStoredLocale();
   if (stored && isSupportedLocale(stored)) {
     return stored as LocaleValue;
   }
@@ -56,7 +72,7 @@ function LocaleProvider({ children }: LocaleProviderProps) {
     const value = isSupportedLocale(normalized) ? normalized : defaultLocale;
     setLocaleState(value);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, value);
+      writeStoredLocale(value);
     }
   }, []);
 

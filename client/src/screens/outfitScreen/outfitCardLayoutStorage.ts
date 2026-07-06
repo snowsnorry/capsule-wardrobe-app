@@ -11,18 +11,26 @@ export function readStoredOutfitMobileCardColumns(): MobileCardColumns {
     return 2;
   }
 
-  const parsed = Number(
-    window.localStorage?.getItem(OUTFIT_MOBILE_CARD_COLUMNS_STORAGE_KEY),
-  );
-  return isMobileCardColumns(parsed) ? parsed : 2;
+  try {
+    const parsed = Number(
+      window.localStorage?.getItem(OUTFIT_MOBILE_CARD_COLUMNS_STORAGE_KEY),
+    );
+    return isMobileCardColumns(parsed) ? parsed : 2;
+  } catch {
+    return 2;
+  }
 }
 
 export function writeStoredOutfitMobileCardColumns(value: MobileCardColumns) {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage?.setItem(
-    OUTFIT_MOBILE_CARD_COLUMNS_STORAGE_KEY,
-    String(value),
-  );
+  try {
+    window.localStorage?.setItem(
+      OUTFIT_MOBILE_CARD_COLUMNS_STORAGE_KEY,
+      String(value),
+    );
+  } catch {
+    // Layout persistence is optional; keep the in-memory state.
+  }
 }
