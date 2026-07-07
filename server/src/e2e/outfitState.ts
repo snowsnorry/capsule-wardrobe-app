@@ -108,7 +108,11 @@ export class E2eOutfitMemory {
     const outfit = toStoredOutfit({
       id,
       name: buildUniqueOutfitName(this.outfits.values(), payload.name),
-      draft: normalizeOutfitSnapshot(payload.draft ?? { items: [] }),
+      draft: normalizeOutfitSnapshot(
+        payload.saved
+          ? (payload.draft ?? null)
+          : (payload.draft ?? { items: [] }),
+      ),
       saved: normalizeOutfitSnapshot(payload.saved ?? null),
       createdAt: deterministicTimestamp(this.counter),
       updatedAt: deterministicTimestamp(this.counter),
@@ -188,6 +192,20 @@ export class E2eOutfitMemory {
       draft: null,
       saved: source.draft || source.saved,
     });
+  }
+
+  setPin(id: unknown, pin: boolean): NormalizedOutfitRecord | null {
+    const outfitId = normalizeOutfitId(id);
+    const current = this.outfits.get(outfitId);
+    if (!current) return null;
+    this.counter += 1;
+    const next = toStoredOutfit({
+      ...current,
+      pin: Boolean(pin),
+      updatedAt: deterministicTimestamp(this.counter),
+    });
+    this.outfits.set(outfitId, next);
+    return deepClone(next);
   }
 
   setImage(

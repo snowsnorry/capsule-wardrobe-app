@@ -341,6 +341,8 @@ function outfitDependencies(state: E2eState) {
       state.outfitMemory.rename(id, name),
     duplicateOutfitImpl: async (_email, id, name) =>
       state.outfitMemory.duplicate(id, name),
+    setOutfitPinImpl: async (_email, id, pin) =>
+      state.outfitMemory.setPin(id, Boolean(pin)),
     deleteOutfitImpl: async (_email, id) => state.outfitMemory.delete(id),
     generateOutfitImageHandler: createE2eGenerateOutfitImageHandler(state),
     runOutfitImageGenerationJobImpl: async ({ outfitId }) =>
@@ -363,6 +365,8 @@ function outfitDependencies(state: E2eState) {
       }
       return report;
     },
+    updateOutfitReportImpl: async (_email, outfitId, report) =>
+      state.outfitMemory.setReport(outfitId, report),
     getOutfitImageJobImpl: async () => null,
     streamOutfitEventsImpl: async (_req, res) => res.status(204).end(),
     getProductsByUrlsForEmailImpl: async (payload) => {

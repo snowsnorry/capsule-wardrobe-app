@@ -12,6 +12,7 @@ import {
   type E2eSearchDelayState,
 } from "./searchState.js";
 import type { E2eCapsuleMemory } from "./capsuleState.js";
+import type { E2eWardrobeMemory } from "./wardrobeState.js";
 import type { E2eGenerationMemory } from "./generationState.js";
 import type { E2eSelectedRegenerationMemory } from "./selectedRegenerationState.js";
 import {
@@ -28,6 +29,7 @@ type E2eSearchAndGenerationState = {
   savedSearch: unknown;
   searchDelay: E2eSearchDelayState;
   generationMemory: E2eGenerationMemory;
+  wardrobeMemory: E2eWardrobeMemory;
   selectedRegenerationMemory: E2eSelectedRegenerationMemory;
   nextOutfitImageUrl: (capsuleId: unknown, setIndex: number) => string;
 };
@@ -323,10 +325,11 @@ export function searchAndGenerationDependencies(
       const savedSearch = buildE2eSearchPayload(payload);
       state.savedSearch = savedSearch;
       const requestOrder = await state.searchDelay.waitForGate(savedSearch);
+      const likedUrls = new Set(state.wardrobeMemory.listLikedItemUrls());
       const items = buildSearchResultItems(savedSearch).map((item) => ({
         ...item,
         imageUrl: item.imageUrl,
-        isLiked: item.isLiked === true,
+        isLiked: item.isLiked === true || likedUrls.has(String(item.url || "")),
       }));
       state.searchDelay.completeRequest(requestOrder);
       return { items, total: items.length, savedSearch };
