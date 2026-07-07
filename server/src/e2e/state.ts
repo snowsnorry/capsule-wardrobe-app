@@ -16,6 +16,7 @@ import {
   E2E_EMAIL,
 } from "./fixtures.js";
 import { E2eGenerationMemory } from "./generationState.js";
+import { buildE2eCapsuleReport } from "./capsuleReportMock.js";
 import { buildE2eOutfitReport } from "./outfitReportMock.js";
 import { E2eOutfitMemory } from "./outfitState.js";
 import { E2eSearchDelayState } from "./searchState.js";
@@ -30,6 +31,7 @@ import { createE2eJobDependencies } from "./jobState.js";
 import { annotateLikedItems } from "../routes/likedItemsRoutes.js";
 import { processQueuedWardrobeFileUploadImpl } from "../routes/wardrobeFileUploadRoute.js";
 import { processQueuedWardrobeUrlUpload } from "../routes/wardrobeUrlUploadRoute.js";
+import type { JobKind } from "../jobs/types.js";
 
 export type E2eScenario =
   | "with-profile"
@@ -48,6 +50,13 @@ type E2ePersonalItemsReportSnapshot = {
   generatedAt: string;
   personalItemUrls: string[];
   report: Record<string, unknown>;
+};
+type E2eJobControls = {
+  clearAll: () => void;
+  completeManualJob: (id: string) => Promise<unknown | null>;
+  failManualJob: (id: string, errorCode?: string) => unknown | null;
+  getManualMode: () => JobKind[];
+  setManualMode: (kinds: JobKind[]) => JobKind[];
 };
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -79,6 +88,8 @@ class E2eState {
   generationMemory = new E2eGenerationMemory();
   personalItemsReport: E2ePersonalItemsReportSnapshot | null = null;
   personalItemsReportCounter = 0;
+  capsuleReportCounter = 0;
+  jobControls: E2eJobControls | null = null;
 
   get capsules() {
     return this.capsuleMemory.capsules;
@@ -97,6 +108,8 @@ class E2eState {
     this.generationMemory.reset();
     this.personalItemsReport = null;
     this.personalItemsReportCounter = 0;
+    this.capsuleReportCounter = 0;
+    this.jobControls?.clearAll();
     this.outfitMemory.reset();
     this.capsuleMemory.reset(
       scenario === "empty-wardrobe"
@@ -272,6 +285,19 @@ function capsuleDependencies(state: E2eState) {
       return state.capsuleMemory.duplicate(id, name);
     },
     deleteCapsuleImpl: async (_email, id) => state.capsuleMemory.delete(id),
+    generateCapsuleReportImpl: async (_email, id) => {
+      state.capsuleReportCounter += 1;
+      const report = buildE2eCapsuleReport(state.capsuleReportCounter);
+      const capsule = state.capsuleMemory.setReport(id, report);
+      if (!capsule) {
+        const error = new Error("not_found") as Error & { code?: string };
+        error.code = "not_found";
+        throw error;
+      }
+      return report;
+    },
+    updateCapsuleReportImpl: async (_email, id, report) =>
+      state.capsuleMemory.setReport(id, report),
     createCapsuleShareImpl: async (email, capsuleId, clientOrigin) =>
       state.shareMemory.createFromCapsule({
         capsuleId,
@@ -465,8 +491,10 @@ export function createE2eDependencies(state = e2eState) {
     processQueuedWardrobeUrlUploadImpl: (input) =>
       processQueuedWardrobeUrlUpload({ context: deps, ...input }),
   };
+  const jobDependencies = createE2eJobDependencies(queuedDeps);
+  state.jobControls = jobDependencies.controls;
   return {
     ...queuedDeps,
-    ...createE2eJobDependencies(queuedDeps),
+    ...jobDependencies,
   };
 }

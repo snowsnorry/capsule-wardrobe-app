@@ -27,6 +27,7 @@ export type SearchState = {
   query: string;
   results: CapsuleLike[];
   loading: boolean;
+  onSelectComplete?: (() => void) | null;
 };
 
 export type ShareState = {

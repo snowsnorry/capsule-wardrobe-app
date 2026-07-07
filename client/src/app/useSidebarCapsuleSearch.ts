@@ -14,9 +14,14 @@ export function useSidebarCapsuleSearch<T extends CapsuleLike = CapsuleLike>(
     query: "",
     results: [],
     loading: false,
+    onSelectComplete: null,
   });
-  const open = useCallback(() => {
-    setState((current) => ({ ...current, open: true }));
+  const open = useCallback((onSelectComplete?: () => void) => {
+    setState((current) => ({
+      ...current,
+      open: true,
+      onSelectComplete: onSelectComplete || null,
+    }));
   }, []);
 
   useEffect(() => {

@@ -50,8 +50,8 @@ type AppShellSidebarNavigationBodyProps = {
     outfitId: string,
     onComplete?: () => void,
   ) => Promise<void>;
-  onSearchCapsules: () => void;
-  onSearchOutfits: () => void;
+  onSearchCapsules: (onSelectComplete?: () => void) => void;
+  onSearchOutfits: (onSelectComplete?: () => void) => void;
   onSetCapsulePin: (
     capsuleId: string | undefined,
     pin: boolean,
@@ -205,8 +205,12 @@ export default function AppShellSidebarNavigationBody({
       onCreateOutfit={async () => {
         await onCreateOutfitFromSidebar(navigationHandlers.overlayCompletion);
       }}
-      onSearchCapsules={onSearchCapsules}
-      onSearchOutfits={onSearchOutfits}
+      onSearchCapsules={() =>
+        onSearchCapsules(navigationHandlers.overlayCompletion)
+      }
+      onSearchOutfits={() =>
+        onSearchOutfits(navigationHandlers.overlayCompletion)
+      }
       onOpenCapsule={navigationHandlers.onOpenCapsule}
       onOpenOutfit={navigationHandlers.onOpenOutfit}
       onOpenCapsuleActions={navigationHandlers.onOpenCapsuleActions}

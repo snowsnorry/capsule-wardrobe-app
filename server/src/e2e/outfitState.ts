@@ -121,6 +121,18 @@ export class E2eOutfitMemory {
     return deepClone(outfit);
   }
 
+  seedMany(count: number, namePrefix: string): NormalizedOutfitRecord[] {
+    const total = Math.max(0, Math.min(50, Math.floor(count)));
+    for (let index = 1; index <= total; index += 1) {
+      this.create({
+        name: `${namePrefix} ${String(index).padStart(2, "0")}`,
+        draft: { items: [] },
+        saved: { items: [] },
+      });
+    }
+    return this.list(1000);
+  }
+
   update(
     id: unknown,
     draft: Record<string, unknown> | null,

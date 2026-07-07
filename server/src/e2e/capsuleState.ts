@@ -263,6 +263,40 @@ export class E2eCapsuleMemory {
     };
   }
 
+  setReport(
+    id: unknown,
+    report: Record<string, unknown> | null,
+  ): NormalizedCapsuleRecord | null {
+    const capsuleId = normalizeCapsuleId(id);
+    const current = this.capsules.get(capsuleId);
+    if (!current) return null;
+    const effective = getEffectiveSnapshot(current) || {
+      filters: {},
+      data: { wardrobe: { items: [], outfitSets: [] }, rejectedUrls: [] },
+    };
+    return cloneCapsule(
+      this.set({
+        ...current,
+        ...(current.draft
+          ? { draft: { ...effective, report, reportMeta: null } }
+          : { saved: { ...effective, report, reportMeta: null } }),
+        updatedAt: this.nextTimestamp(),
+      }),
+    );
+  }
+
+  seedMany(count: number, namePrefix: string): NormalizedCapsuleRecord[] {
+    const total = Math.max(0, Math.min(50, Math.floor(count)));
+    for (let index = 1; index <= total; index += 1) {
+      this.create({
+        name: `${namePrefix} ${String(index).padStart(2, "0")}`,
+        draft: buildE2eCapsule().draft,
+        saved: null,
+      });
+    }
+    return this.list(1000);
+  }
+
   regenerateSelectedItems(
     id: unknown,
     selectedItems: unknown,

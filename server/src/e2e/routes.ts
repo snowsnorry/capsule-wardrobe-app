@@ -2,6 +2,7 @@ import { setCsrfCookie, setSessionCookie } from "../httpCookies.js";
 import { buildCapsuleEventSnapshot } from "../ai/capsuleEvents.js";
 import { E2E_EMAIL } from "./fixtures.js";
 import { e2eState, type E2eScenario } from "./state.js";
+import type { JobKind } from "../jobs/types.js";
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lcrPrwAAAABJRU5ErkJggg==",
@@ -14,6 +15,17 @@ const SCENARIOS = new Set<E2eScenario>([
   "with-saved-search",
   "with-non-empty-stats",
   "empty-wardrobe",
+]);
+const JOB_KINDS = new Set<JobKind>([
+  "capsuleGenerate",
+  "capsuleRegenerateSelected",
+  "capsuleReportGenerate",
+  "outfitImageGenerate",
+  "outfitReportGenerate",
+  "outfitSetImageGenerate",
+  "personalItemsReportGenerate",
+  "personalItemUploadFiles",
+  "personalItemUploadUrls",
 ]);
 
 function normalizeScenario(value: unknown): E2eScenario {
@@ -101,6 +113,68 @@ function registerGenerationControlRoutes(app) {
   });
 }
 
+function normalizeJobKinds(value: unknown): JobKind[] {
+  const values = Array.isArray(value) ? value : [];
+  return values
+    .map((kind) => String(kind || "").trim())
+    .filter((kind): kind is JobKind => JOB_KINDS.has(kind as JobKind));
+}
+
+function registerJobControlRoutes(app) {
+  app.post("/__e2e/jobs/manual-mode", (req, res) => {
+    if (!e2eState.jobControls) {
+      return res.status(503).json({ error: "not_ready" });
+    }
+    const kinds = normalizeJobKinds(req.body?.kinds);
+    const manualKinds = e2eState.jobControls.setManualMode(kinds);
+    return res.json({ ok: true, manualKinds });
+  });
+
+  app.post("/__e2e/jobs/:jobId/release", async (req, res) => {
+    const job = await e2eState.jobControls?.completeManualJob(
+      String(req.params?.jobId || ""),
+    );
+    if (!job) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.json({ ok: true, job });
+  });
+
+  app.post("/__e2e/jobs/:jobId/fail", (req, res) => {
+    const job = e2eState.jobControls?.failManualJob(
+      String(req.params?.jobId || ""),
+      String(req.body?.errorCode || "e2e_forced_failure"),
+    );
+    if (!job) {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.json({ ok: true, job });
+  });
+}
+
+function registerSeedRoutes(app) {
+  app.post("/__e2e/seed/sidebar-lists", (req, res) => {
+    const capsuleCount = Number(req.body?.capsules || 0);
+    const outfitCount = Number(req.body?.outfits || 0);
+    const capsules = e2eState.capsuleMemory.seedMany(
+      capsuleCount,
+      "Sidebar capsule",
+    );
+    const outfits = e2eState.outfitMemory.seedMany(
+      outfitCount,
+      "Sidebar outfit",
+    );
+    return res.json({
+      ok: true,
+      capsules: capsules.map((capsule) => ({
+        id: capsule.id,
+        name: capsule.name,
+      })),
+      outfits: outfits.map((outfit) => ({ id: outfit.id, name: outfit.name })),
+    });
+  });
+}
+
 export function registerE2eRoutes(app) {
   app.post("/__e2e/reset", (req, res) => {
     e2eState.reset(normalizeScenario(req.body?.scenario));
@@ -115,6 +189,8 @@ export function registerE2eRoutes(app) {
   });
 
   registerGenerationControlRoutes(app);
+  registerJobControlRoutes(app);
+  registerSeedRoutes(app);
 
   // E2E search gate controls:
   // POST /__e2e/search/delay { query: string, match?: "exact" | "includes" }

@@ -49,7 +49,16 @@ export function SearchDialog({
 }) {
   const { t } = useI18n();
   const groups = groupCapsules(state.results);
-  const close = () => setState((current) => ({ ...current, open: false }));
+  const showEmptyState =
+    !state.loading &&
+    state.results.length === 0 &&
+    state.query.trim().length > 0;
+  const close = () =>
+    setState((current) => ({
+      ...current,
+      open: false,
+      onSelectComplete: null,
+    }));
 
   return (
     <Dialog
@@ -88,31 +97,76 @@ export function SearchDialog({
         </Stack>
         {isOverlay ? null : <Divider />}
         {state.loading ? <LinearProgress color="success" /> : null}
-        <Box sx={isOverlay ? mobileSearchResultsSx : desktopSearchResultsSx}>
-          {Object.entries(groups).map(([label, group]) => (
-            <Stack key={label} spacing={1} sx={{ mb: 3 }}>
-              <Typography color="text.secondary">
-                {t(`${copyPrefix}.${label}`)}
-              </Typography>
-              {group.map((capsule) => (
-                <ListItemButton
-                  key={capsule.id}
-                  disabled={disabled}
-                  onClick={() => {
-                    void onOpenCapsule?.(String(capsule.id || ""));
-                    close();
-                  }}
-                >
-                  <Typography noWrap sx={{ minWidth: 0, flex: 1 }}>
-                    {highlightMatch(capsule.name, state.query)}
-                  </Typography>
-                </ListItemButton>
-              ))}
-            </Stack>
-          ))}
-        </Box>
+        <SearchDialogResults
+          close={close}
+          copyPrefix={copyPrefix}
+          disabled={disabled}
+          groups={groups}
+          isOverlay={isOverlay}
+          onOpenCapsule={onOpenCapsule}
+          query={state.query}
+          showEmptyState={showEmptyState}
+          onSelectComplete={state.onSelectComplete}
+        />
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SearchDialogResults({
+  close,
+  copyPrefix,
+  disabled,
+  groups,
+  isOverlay,
+  onOpenCapsule,
+  onSelectComplete,
+  query,
+  showEmptyState,
+}: {
+  close: () => void;
+  copyPrefix: "capsule" | "outfit";
+  disabled: boolean;
+  groups: ReturnType<typeof groupCapsules>;
+  isOverlay: boolean;
+  onOpenCapsule?: DialogsProps["onOpenCapsule"];
+  onSelectComplete?: (() => void) | null;
+  query: string;
+  showEmptyState: boolean;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <Box sx={isOverlay ? mobileSearchResultsSx : desktopSearchResultsSx}>
+      {showEmptyState ? (
+        <Typography color="text.secondary">
+          {t(`${copyPrefix}.searchEmpty`)}
+        </Typography>
+      ) : null}
+      {Object.entries(groups).map(([label, group]) => (
+        <Stack key={label} spacing={1} sx={{ mb: 3 }}>
+          <Typography color="text.secondary">
+            {t(`${copyPrefix}.${label}`)}
+          </Typography>
+          {group.map((capsule) => (
+            <ListItemButton
+              key={capsule.id}
+              disabled={disabled}
+              onClick={() => {
+                void Promise.resolve(
+                  onOpenCapsule?.(String(capsule.id || "")),
+                ).finally(() => onSelectComplete?.());
+                close();
+              }}
+            >
+              <Typography noWrap sx={{ minWidth: 0, flex: 1 }}>
+                {highlightMatch(capsule.name, query)}
+              </Typography>
+            </ListItemButton>
+          ))}
+        </Stack>
+      ))}
+    </Box>
   );
 }
 
