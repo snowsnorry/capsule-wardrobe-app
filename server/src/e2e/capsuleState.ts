@@ -153,6 +153,16 @@ function buildSnapshotWithOutfitSetImage(
   });
 }
 
+function buildEmptyCapsuleSnapshot(): CapsuleSnapshot {
+  const snapshot = normalizeCapsuleSnapshot({
+    data: { wardrobe: { items: [], outfitSets: [] }, rejectedUrls: [] },
+  });
+  if (!snapshot) {
+    throw new Error("Failed to build empty e2e capsule snapshot");
+  }
+  return snapshot;
+}
+
 export class E2eCapsuleMemory {
   capsules = new Map<string, NormalizedCapsuleRecord>();
   capsuleCounter = INITIAL_CAPSULE_COUNTER;
@@ -270,16 +280,14 @@ export class E2eCapsuleMemory {
     const capsuleId = normalizeCapsuleId(id);
     const current = this.capsules.get(capsuleId);
     if (!current) return null;
-    const effective = getEffectiveSnapshot(current) || {
-      filters: {},
-      data: { wardrobe: { items: [], outfitSets: [] }, rejectedUrls: [] },
-    };
+    const effective =
+      getEffectiveSnapshot(current) || buildEmptyCapsuleSnapshot();
     return cloneCapsule(
       this.set({
         ...current,
         ...(current.draft
-          ? { draft: { ...effective, report, reportMeta: null } }
-          : { saved: { ...effective, report, reportMeta: null } }),
+          ? { draft: { ...effective, report } }
+          : { saved: { ...effective, report } }),
         updatedAt: this.nextTimestamp(),
       }),
     );
