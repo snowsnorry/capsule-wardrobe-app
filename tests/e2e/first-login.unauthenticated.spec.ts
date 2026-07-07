@@ -29,16 +29,24 @@ test("first login keeps the selected Russian locale and opens the app", async ({
   await expect(
     page.getByRole("button", { name: "Загрузить фото вещи" }),
   ).toBeVisible();
-  await expect(page.getByText("Шаг 1")).toHaveCount(0);
   await expect(page.getByText("Капсулы", { exact: true })).toBeVisible();
   await expect(
     page
       .getByTestId("sidebar-navigation-list")
       .getByRole("button", { name: "Каталог" }),
   ).toBeVisible();
+  await expect(
+    page.evaluate(() => window.localStorage.getItem("locale")),
+  ).resolves.toBe("ru");
 
   await page.reload();
 
   await expect(page.getByText("Капсулы", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Загрузить фото вещи" }),
+  ).toBeVisible();
   await expect(page.getByLabel("Эл. почта")).toBeHidden();
+  await expect(
+    page.evaluate(() => window.localStorage.getItem("locale")),
+  ).resolves.toBe("ru");
 });

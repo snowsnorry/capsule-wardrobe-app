@@ -1,11 +1,16 @@
 import { deepClone } from "./capsuleState.js";
-import { E2E_EMAIL, e2eImageUrl } from "./fixtures.js";
+import { buildE2eWardrobeItems, E2E_EMAIL, e2eImageUrl } from "./fixtures.js";
 
 type E2eUploadedWardrobeItem = Record<string, unknown> & {
   id: string;
   imageUrl: string;
   rawImageUrl: string;
   source: "uploaded";
+};
+type E2eCatalogWardrobeItem = Record<string, unknown> & {
+  id: string;
+  source: "from_catalog";
+  url: string;
 };
 
 function buildUploadedMetadata(index: number) {
@@ -33,12 +38,18 @@ function buildUploadedMetadata(index: number) {
 class E2eWardrobeMemory {
   uploadedImageCounter = 0;
   uploadedItemCounter = 0;
+  catalogItemCounter = 0;
   uploadedItems: E2eUploadedWardrobeItem[] = [];
+  catalogItems: E2eCatalogWardrobeItem[] = [];
+  likedUrls = new Set<string>();
 
   reset() {
     this.uploadedImageCounter = 0;
     this.uploadedItemCounter = 0;
+    this.catalogItemCounter = 0;
     this.uploadedItems = [];
+    this.catalogItems = [];
+    this.likedUrls.clear();
   }
 
   nextUploadedImage() {
@@ -88,7 +99,13 @@ class E2eWardrobeMemory {
   }
 
   listItems(source: unknown) {
-    return source === "from_catalog" ? [] : deepClone(this.uploadedItems);
+    if (source === "uploaded") {
+      return deepClone(this.uploadedItems);
+    }
+    if (source === "from_catalog") {
+      return deepClone(this.catalogItems);
+    }
+    return deepClone([...this.uploadedItems, ...this.catalogItems]);
   }
 
   countItems(source: unknown) {
@@ -113,6 +130,143 @@ class E2eWardrobeMemory {
     this.uploadedItems[index] = updated;
     return deepClone(updated);
   }
+
+  updateDetails(payload) {
+    const id = String(payload?.id || "").trim();
+    const index = this.uploadedItems.findIndex((item) => item.id === id);
+    if (index < 0) {
+      return null;
+    }
+
+    const current = this.uploadedItems[index];
+    const updated = {
+      ...current,
+      ...(payload?.details || {}),
+      processingStatus: payload?.processingStatus || current.processingStatus,
+      updatedAt: new Date().toISOString(),
+    };
+    this.uploadedItems[index] = updated;
+    return deepClone(updated);
+  }
+
+  getUploadedItem(id: unknown) {
+    const normalizedId = String(id || "").trim();
+    return deepClone(
+      this.uploadedItems.find((item) => item.id === normalizedId) || null,
+    );
+  }
+
+  deleteUploadedItem(id: unknown) {
+    const normalizedId = String(id || "").trim();
+    const index = this.uploadedItems.findIndex(
+      (item) => item.id === normalizedId,
+    );
+    if (index < 0) {
+      return null;
+    }
+
+    const [removed] = this.uploadedItems.splice(index, 1);
+    return deepClone(removed);
+  }
+
+  saveCatalogItem(email: string, url: unknown) {
+    const normalizedUrl = normalizeHttpUrl(url);
+    if (!normalizedUrl) {
+      return null;
+    }
+
+    const existing = this.catalogItems.find(
+      (item) => normalizeHttpUrl(item.url) === normalizedUrl,
+    );
+    if (existing) {
+      return deepClone(existing);
+    }
+
+    const fixture = buildE2eWardrobeItems().find(
+      (item) => normalizeHttpUrl(item.url) === normalizedUrl,
+    );
+    if (!fixture) {
+      return null;
+    }
+
+    this.catalogItemCounter += 1;
+    const now = new Date().toISOString();
+    const item: E2eCatalogWardrobeItem = {
+      ...fixture,
+      id: `catalog-e2e-${this.catalogItemCounter}`,
+      profileEmail: email,
+      source: "from_catalog",
+      url: normalizedUrl,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.catalogItems.push(item);
+    return deepClone(item);
+  }
+
+  deleteCatalogItem(url: unknown) {
+    const normalizedUrl = normalizeHttpUrl(url);
+    const index = this.catalogItems.findIndex(
+      (item) => normalizeHttpUrl(item.url) === normalizedUrl,
+    );
+    if (index < 0) {
+      return false;
+    }
+
+    this.catalogItems.splice(index, 1);
+    return true;
+  }
+
+  listLikedItemUrls(itemUrls?: unknown[]) {
+    const requestedUrls = Array.isArray(itemUrls)
+      ? new Set(itemUrls.map(normalizeLikedUrl).filter(Boolean))
+      : null;
+    const likedUrls = [...this.likedUrls];
+    return requestedUrls
+      ? likedUrls.filter((itemUrl) => requestedUrls.has(itemUrl))
+      : likedUrls;
+  }
+
+  likeItem(url: unknown) {
+    const itemUrl = normalizeLikedUrl(url);
+    if (!itemUrl) {
+      return "";
+    }
+
+    this.likedUrls.add(itemUrl);
+    return itemUrl;
+  }
+
+  unlikeItem(url: unknown) {
+    const itemUrl = normalizeLikedUrl(url);
+    if (itemUrl) {
+      this.likedUrls.delete(itemUrl);
+    }
+    return true;
+  }
+}
+
+function normalizeHttpUrl(value: unknown): string {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+
+  try {
+    const url = new URL(normalized);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.toString()
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizeLikedUrl(value: unknown): string {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  if (/^wardrobe:\/\/\S+$/i.test(normalized)) {
+    return normalized;
+  }
+  return normalizeHttpUrl(normalized);
 }
 
 function getUploadedIndexFromImageUrl(imageUrl: unknown) {
@@ -183,6 +337,7 @@ function buildE2eFileProcessingResult(
 }
 
 function buildE2eUrlProcessingResult(url: unknown, inputIndex: number) {
+  const imageUrl = e2eImageUrl(`uploaded-url-e2e-${inputIndex + 1}`);
   return {
     analysis: {
       hasMetadata: true,
@@ -192,7 +347,7 @@ function buildE2eUrlProcessingResult(url: unknown, inputIndex: number) {
     cleanup: {
       cleanImage: {
         key: "wardrobe/e2e/image-url-source.webp.clean",
-        url: "https://images.example.com/uploaded-e2e-1.jpg",
+        url: imageUrl,
         digest: "e2e-clean-digest",
       },
       thumbnails: [],
@@ -200,12 +355,12 @@ function buildE2eUrlProcessingResult(url: unknown, inputIndex: number) {
     inputIndex,
     ok: true,
     source: {
-      imageUrl: "https://images.example.com/uploaded-e2e-1.jpg",
+      imageUrl,
       kind: "direct-image",
       productPageUrl: String(url || "https://shop.example.com/product"),
-      rawImageUrl: "https://images.example.com/uploaded-e2e-1.jpg",
+      rawImageUrl: imageUrl,
       sourceImageKey: "wardrobe/e2e/image-url-source.webp",
-      sourceImageUrl: "https://images.example.com/uploaded-e2e-1.jpg",
+      sourceImageUrl: imageUrl,
     },
   };
 }
@@ -225,12 +380,23 @@ function createE2ePersistenceDependencies(memory: E2eWardrobeMemory) {
             ? payload.imageUrls
             : [],
       ),
+    saveWardrobeItemFromCatalogImpl: async (payload) =>
+      memory.saveCatalogItem(String(payload?.email || E2E_EMAIL), payload?.url),
+    deleteWardrobeItemFromCatalogImpl: async (payload) =>
+      memory.deleteCatalogItem(payload?.url),
+    getUploadedWardrobeItemImpl: async (payload) =>
+      memory.getUploadedItem(payload?.id),
+    deleteUploadedWardrobeItemImpl: async (payload) =>
+      memory.deleteUploadedItem(payload?.id),
+    updateUploadedWardrobeItemDetailsImpl: async (payload) =>
+      memory.updateDetails(payload),
     updateUploadedWardrobeItemMetadataImpl: async (payload) =>
       memory.updateMetadata(payload),
-    listLikedItemUrlsForUrlsImpl: async () => [],
-    listLikedItemUrlsImpl: async () => [],
-    upsertLikedItemImpl: async ({ itemUrl }) => itemUrl,
-    deleteLikedItemImpl: async () => true,
+    listLikedItemUrlsForUrlsImpl: async (payload) =>
+      memory.listLikedItemUrls(payload?.itemUrls),
+    listLikedItemUrlsImpl: async () => memory.listLikedItemUrls(),
+    upsertLikedItemImpl: async ({ itemUrl }) => memory.likeItem(itemUrl),
+    deleteLikedItemImpl: async ({ itemUrl }) => memory.unlikeItem(itemUrl),
   };
 }
 
