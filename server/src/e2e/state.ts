@@ -44,6 +44,11 @@ type E2eSession = {
   createdAt: number;
   expiresAt: number;
 };
+type E2ePersonalItemsReportSnapshot = {
+  generatedAt: string;
+  personalItemUrls: string[];
+  report: Record<string, unknown>;
+};
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -72,6 +77,8 @@ class E2eState {
   selectedRegenerationMemory = new E2eSelectedRegenerationMemory();
   searchDelay = new E2eSearchDelayState();
   generationMemory = new E2eGenerationMemory();
+  personalItemsReport: E2ePersonalItemsReportSnapshot | null = null;
+  personalItemsReportCounter = 0;
 
   get capsules() {
     return this.capsuleMemory.capsules;
@@ -88,6 +95,8 @@ class E2eState {
     this.selectedRegenerationMemory.reset();
     this.searchDelay.clear();
     this.generationMemory.reset();
+    this.personalItemsReport = null;
+    this.personalItemsReportCounter = 0;
     this.outfitMemory.reset();
     this.capsuleMemory.reset(
       scenario === "empty-wardrobe"
@@ -143,6 +152,42 @@ class E2eState {
 }
 
 export const e2eState = new E2eState();
+
+function normalizePersonalItemUrls(items: Array<Record<string, unknown>>) {
+  return [
+    ...new Set(
+      items.map((item) => String(item?.url || "").trim()).filter(Boolean),
+    ),
+  ].sort((left, right) => left.localeCompare(right));
+}
+
+function buildE2ePersonalItemsReport(
+  items: Array<Record<string, unknown>>,
+  generationNumber: number,
+): E2ePersonalItemsReportSnapshot {
+  const generatedAt = new Date().toISOString();
+  return {
+    generatedAt,
+    personalItemUrls: normalizePersonalItemUrls(items),
+    report: {
+      schemaVersion: 1,
+      generatedAt,
+      verdict: {
+        score: 0.82,
+        status: "good",
+        summary: `E2E personal items report #${generationNumber} for ${
+          items.length
+        } item${items.length === 1 ? "" : "s"}.`,
+      },
+      scores: {
+        coverage: 0.78,
+        outfitReadiness: 0.84,
+        versatility: 0.8,
+        seasonality: 0.86,
+      },
+    },
+  };
+}
 
 function profileDependencies(state: E2eState) {
   return {
@@ -362,20 +407,35 @@ export function createE2eDependencies(state = e2eState) {
     ...searchAndGenerationDependencies(state),
     ...createE2eWardrobeDependencies(state.wardrobeMemory),
     ...buildE2ePasskeyDependencies(),
-    deletePersonalItemsReportImpl: async () => true,
-    generatePersonalItemsReportImpl: async () => ({
-      generatedAt: "2026-06-20T00:00:00.000Z",
-      personalItemUrls: [],
-      report: {
-        schemaVersion: 1,
-        verdict: {
-          score: 0.8,
-          status: "good",
-          summary: "E2E personal items report.",
-        },
-      },
-    }),
-    getPersonalItemsReportImpl: async () => null,
+    deletePersonalItemsReportImpl: async () => {
+      const removed = Boolean(state.personalItemsReport);
+      state.personalItemsReport = null;
+      return removed;
+    },
+    generatePersonalItemsReportImpl: async () => {
+      const items = state.wardrobeMemory.listItems(null) as Array<
+        Record<string, unknown>
+      >;
+      if (items.length === 0) {
+        const error = new Error("not_found") as Error & {
+          code?: string;
+          suppressJobHandlerLog?: boolean;
+        };
+        error.code = "not_found";
+        error.suppressJobHandlerLog = true;
+        throw error;
+      }
+
+      state.personalItemsReportCounter += 1;
+      const snapshot = buildE2ePersonalItemsReport(
+        items,
+        state.personalItemsReportCounter,
+      );
+      state.personalItemsReport = snapshot;
+      return deepClone(snapshot);
+    },
+    getPersonalItemsReportImpl: async () =>
+      state.personalItemsReport ? deepClone(state.personalItemsReport) : null,
     createUploadedWardrobeItemEmbeddingImpl: async () => [0.1, 0.2, 0.3],
     deleteR2ObjectsImpl: async (payload) => ({
       deleted: Array.isArray(payload?.keys) ? payload.keys.length : 0,
