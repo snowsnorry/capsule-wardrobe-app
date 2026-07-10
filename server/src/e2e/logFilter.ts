@@ -26,4 +26,4 @@ function installE2eLogFilter(consoleObject = globalThis.console) {
   };
 }
 
-export { installE2eLogFilter, shouldMuteExpectedE2eWarning };
+export { installE2eLogFilter };
