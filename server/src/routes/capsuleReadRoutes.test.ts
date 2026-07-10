@@ -7,8 +7,7 @@ import {
   startTestServer,
 } from "../test/serverRouteTestUtils.js";
 
-test("capsule events initial snapshot includes pending outfit set image indexes", async (t) => {
-  let streamedSnapshot = null;
+test("capsule GET snapshot includes pending outfit set image indexes", async (t) => {
   const { baseUrl } = await startTestServer(t, {
     overrides: {
       getCapsuleImpl: async () => ({
@@ -42,19 +41,15 @@ test("capsule events initial snapshot includes pending outfit set image indexes"
         status: "pending",
         pendingSetIndexes: [0],
       }),
-      streamCapsuleEventsImpl: async (_req, res, { snapshot }) => {
-        streamedSnapshot = snapshot;
-        res.json({ ok: true, snapshot });
-      },
     },
   });
 
-  const response = await requestJson(baseUrl, "/capsules/capsule-1/events", {
+  const response = await requestJson(baseUrl, "/capsules/capsule-1", {
     cookie: AUTH_COOKIE,
   });
 
   expect(response.response.status).toBe(200);
-  expect(streamedSnapshot?.pendingImageSetIndexes).toEqual([0]);
+  expect(response.json.snapshot?.pendingImageSetIndexes).toEqual([0]);
 });
 
 test("share routes create, read, import, and enforce auth boundaries", async (t) => {

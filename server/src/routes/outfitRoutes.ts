@@ -85,45 +85,6 @@ function registerOutfitSearchRoute(app, context) {
   });
 }
 
-function registerOutfitEventRoute(app, context) {
-  const { getOutfitImpl, requireAuth } = context;
-
-  app.get("/outfits/:id/events", requireAuth, async (req, res) => {
-    try {
-      const outfit = await getOutfitImpl(req.user.email, req.params.id);
-      if (!outfit) {
-        return res.status(404).json({ error: "not_found" });
-      }
-      return context.streamOutfitEventsImpl(req, res, {
-        email: req.user.email,
-        capsuleId: req.params.id,
-        snapshot: async () => {
-          const latestOutfit =
-            (await getOutfitImpl(req.user.email, req.params.id)) || outfit;
-          const pendingImage = Boolean(
-            await context.getOutfitImageJobImpl?.(
-              req.user.email,
-              req.params.id,
-            ),
-          );
-          return {
-            status: pendingImage ? "pending" : "ready",
-            pendingImage,
-            outfit: await buildAnnotatedOutfitResponse(
-              latestOutfit,
-              req,
-              context,
-            ),
-          };
-        },
-      });
-    } catch (error) {
-      logError("[outfits/events]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
-}
-
 function registerOutfitGetRoute(app, context) {
   const { getOutfitImpl, requireAuth } = context;
 
@@ -151,7 +112,6 @@ function registerOutfitGetRoute(app, context) {
 function registerOutfitReadRoutes(app, context) {
   registerOutfitRecentRoute(app, context);
   registerOutfitSearchRoute(app, context);
-  registerOutfitEventRoute(app, context);
   registerOutfitGetRoute(app, context);
 }
 

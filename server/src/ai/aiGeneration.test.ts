@@ -1,5 +1,18 @@
-import { test, expect, vi } from "vitest";
+import { beforeEach, test, expect, vi } from "vitest";
+
+const loggerApi = vi.hoisted(() => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+}));
+
+vi.mock("../logger.js", () => loggerApi);
+
 import { createGenerateCapsuleWardrobe } from "./aiGeneration.js";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 function createWardrobeRows() {
   return [
@@ -111,6 +124,9 @@ test("generateCapsuleWardrobe builds a no-LLM result from SQL candidates", async
     undefined,
     undefined,
   ]);
+  expect(loggerApi.logInfo).toHaveBeenCalledWith(
+    expect.stringContaining("[wardrobe-ai][capsule-llm-resolved]"),
+  );
 });
 
 test("generateCapsuleWardrobe uses LLM selection, prompt images, and short capsule name", async () => {

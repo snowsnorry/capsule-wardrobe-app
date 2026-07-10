@@ -17,7 +17,6 @@ import {
   searchOutfits,
   selectOutfit,
   setOutfitPin,
-  subscribeOutfitEvents,
   updateOutfitItems,
 } from "../api/outfits";
 import {
@@ -380,25 +379,16 @@ describe("outfitActions", () => {
 
     expect(generateOutfitImage).toHaveBeenCalledWith("outfit-1");
     expect(deleteOutfitImage).toHaveBeenCalledWith("outfit-1");
-    expect(subscribeOutfitEvents).not.toHaveBeenCalled();
     expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
     expect(context.setIsOutfitImagePending).toHaveBeenNthCalledWith(1, true);
     expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
   });
 
-  test("waits for saved outfit image events and reports generation errors", async () => {
+  test("refreshes legacy pending saved outfit images without another stream", async () => {
     vi.mocked(generateOutfitImage)
       .mockResolvedValueOnce({ status: "pending" })
       .mockRejectedValueOnce(new Error("network"));
     vi.mocked(fetchOutfit).mockResolvedValue({ outfit });
-    vi.mocked(subscribeOutfitEvents).mockImplementationOnce(
-      async ({ onMessage }) => {
-        onMessage?.({
-          event: "snapshot",
-          data: { pendingImage: false, status: "ready" },
-        });
-      },
-    );
     const context = createActionContext({
       activeOutfitId: "outfit-1",
       resolveErrorMessage: vi.fn(() => "resolved error"),
@@ -416,9 +406,6 @@ describe("outfitActions", () => {
     });
     await generateCurrentOutfitImage(context, "outfit-1");
 
-    expect(subscribeOutfitEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ outfitId: "outfit-1" }),
-    );
     expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
     expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
     expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
@@ -430,17 +417,9 @@ describe("outfitActions", () => {
     });
   });
 
-  test("reports saved outfit image stream errors after ignoring non-ready events", async () => {
+  test("reports legacy pending saved outfit refresh errors", async () => {
     vi.mocked(generateOutfitImage).mockResolvedValueOnce({ status: "pending" });
-    vi.mocked(subscribeOutfitEvents).mockImplementationOnce(
-      async ({ onError, onMessage }) => {
-        onMessage?.({
-          event: "snapshot",
-          data: { pendingImage: true, status: "pending" },
-        });
-        onError?.(new Error("stream"));
-      },
-    );
+    vi.mocked(fetchOutfit).mockRejectedValueOnce(new Error("refresh"));
     const context = createActionContext({
       activeOutfitId: "outfit-1",
       resolveErrorMessage: vi.fn(() => "stream failed"),
@@ -450,7 +429,7 @@ describe("outfitActions", () => {
 
     await generateCurrentOutfitImage(context, "outfit-1");
 
-    expect(fetchOutfit).not.toHaveBeenCalled();
+    expect(fetchOutfit).toHaveBeenCalledWith("outfit-1");
     expect(context.setIsOutfitImagePending).toHaveBeenLastCalledWith(false);
     expect(
       (context.setStatus as Mock).mock.calls.at(-1)?.[0]({ previous: true }),
@@ -661,14 +640,6 @@ describe("outfitActions", () => {
   test("does not reactivate a previous outfit when image generation finishes after navigation", async () => {
     vi.mocked(generateOutfitImage).mockResolvedValueOnce({ status: "pending" });
     vi.mocked(fetchOutfit).mockResolvedValue({ outfit });
-    vi.mocked(subscribeOutfitEvents).mockImplementationOnce(
-      async ({ onMessage }) => {
-        onMessage?.({
-          event: "snapshot",
-          data: { pendingImage: false, status: "ready" },
-        });
-      },
-    );
     const context = createActionContext({
       activeOutfitId: "outfit-2",
       setActiveOutfitId: vi.fn(),

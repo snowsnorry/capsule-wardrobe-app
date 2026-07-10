@@ -41,14 +41,30 @@ async function expectProductCard(page: Page, name: string) {
   await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
 }
 
-test("applying capsule filters shows pending regeneration until SSE ready snapshot", async ({
+test("applying capsule filters reconciles through the shared jobs stream", async ({
   baseURL,
   page,
   resetAndLogin,
 }) => {
   const externalRequests: string[] = [];
+  const eventRequests: string[] = [];
+  const capsuleReadRequests: string[] = [];
+  const recentCapsuleRequests: string[] = [];
   page.on("request", (request) => {
     const url = request.url();
+    if (url.includes("/events")) eventRequests.push(url);
+    if (
+      request.method() === "GET" &&
+      new URL(url).pathname.endsWith(`/capsules/${capsuleId}`)
+    ) {
+      capsuleReadRequests.push(url);
+    }
+    if (
+      request.method() === "GET" &&
+      new URL(url).pathname.endsWith("/capsules/recent")
+    ) {
+      recentCapsuleRequests.push(url);
+    }
     if (isLocalHttpUrl(url, baseURL)) {
       return;
     }
@@ -68,7 +84,9 @@ test("applying capsule filters shows pending regeneration until SSE ready snapsh
 
   const modeResponse = await page
     .context()
-    .request.post("/__e2e/generation/mode", { data: { mode: "pending" } });
+    .request.post("/__e2e/jobs/manual-mode", {
+      data: { kinds: ["capsuleGenerate"] },
+    });
   await expect(modeResponse).toBeOK();
 
   await page.getByRole("button", { name: "Formal" }).click();
@@ -89,7 +107,7 @@ test("applying capsule filters shows pending regeneration until SSE ready snapsh
   );
   const eventStreamResponse = page.waitForResponse(
     (response) =>
-      response.url().endsWith(`/capsules/${capsuleId}/events`) &&
+      response.url().endsWith("/jobs/events") &&
       response.request().method() === "GET" &&
       response.status() === 200,
   );
@@ -99,22 +117,34 @@ test("applying capsule filters shows pending regeneration until SSE ready snapsh
 
   const filterResponse = await filterRegenerationResponse;
   expect(filterResponse.ok()).toBe(true);
+  const filterPayload = (await filterResponse.json()) as {
+    job?: { id?: string };
+  };
+  expect(filterPayload.job?.id).toBeTruthy();
   await eventStreamResponse;
 
-  await expect(page.getByRole("progressbar")).toBeVisible();
+  await expect(
+    page.getByRole("progressbar", { name: "Job in progress" }),
+  ).toBeVisible();
   for (const product of readyProducts) {
     await expect(
       page.getByRole("button", { name: product.name, exact: true }),
     ).toHaveCount(0);
   }
 
+  const capsuleReadsBeforeCompletion = capsuleReadRequests.length;
+  const recentReadsBeforeCompletion = recentCapsuleRequests.length;
   const releaseResponse = await page
     .context()
-    .request.post("/__e2e/generation/release", { data: { capsuleId } });
+    .request.post(`/__e2e/jobs/${filterPayload.job?.id}/release`);
   await expect(releaseResponse).toBeOK();
   await expect(
-    (await releaseResponse.json()) as { published?: boolean },
-  ).toEqual(expect.objectContaining({ published: true, status: "ready" }));
+    (await releaseResponse.json()) as { job?: { status?: string } },
+  ).toEqual(
+    expect.objectContaining({
+      job: expect.objectContaining({ status: "completed" }),
+    }),
+  );
 
   for (const product of readyProducts) {
     await expectProductCard(page, product.name);
@@ -123,6 +153,8 @@ test("applying capsule filters shows pending regeneration until SSE ready snapsh
   await expect(
     page.getByRole("button", { name: originalProductName, exact: true }),
   ).toHaveCount(0);
+  expect(capsuleReadRequests.length - capsuleReadsBeforeCompletion).toBe(1);
+  expect(recentCapsuleRequests.length - recentReadsBeforeCompletion).toBe(1);
 
   await page.reload();
   await expect(
@@ -135,4 +167,14 @@ test("applying capsule filters shows pending regeneration until SSE ready snapsh
     page.getByRole("button", { name: originalProductName, exact: true }),
   ).toHaveCount(0);
   expect(externalRequests).toEqual([]);
+  expect(
+    eventRequests.filter((url) => url.endsWith("/jobs/events")),
+  ).toHaveLength(1);
+  expect(
+    eventRequests.filter(
+      (url) =>
+        url.includes(`/capsules/${capsuleId}/events`) ||
+        /\/jobs\/[^/]+\/events$/.test(url),
+    ),
+  ).toEqual([]);
 });

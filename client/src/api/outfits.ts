@@ -8,15 +8,6 @@ import {
   type OutfitListOptions,
 } from "./outfitApiPaths";
 import { toOutfitItemRefs, type OutfitItemSnapshot } from "./outfitItemRefs";
-import {
-  FatalError,
-  RetriableError,
-  loadFetchEventSource,
-  parseEventPayload,
-  type OutfitEventSourceMessage,
-  type OutfitEventSubscription,
-  type OutfitStreamResponse,
-} from "./outfitEventStreams";
 export { generateOutfitReport } from "./outfitReportApi";
 export { downloadOutfitPdf } from "./outfitPdfApi";
 
@@ -48,63 +39,6 @@ async function fetchOutfit(id: string): Promise<OutfitResponse> {
   return requestJson(outfitUrl(outfitIdPath(id)), {
     credentials: "include",
   });
-}
-
-async function subscribeOutfitEvents({
-  outfitId,
-  signal,
-  onMessage = () => {},
-  onError = () => {},
-}: OutfitEventSubscription = {}): Promise<unknown> {
-  const normalizedOutfitId = String(outfitId || "").trim();
-  const fetchEventSource = await loadFetchEventSource();
-  return fetchEventSource(
-    outfitUrl(`${outfitIdPath(normalizedOutfitId)}/events`),
-    {
-      credentials: "include",
-      signal,
-      openWhenHidden: true,
-      async onopen(response: OutfitStreamResponse) {
-        const contentType = (
-          response.headers.get("content-type") || ""
-        ).toLowerCase();
-        if (response.ok && contentType.includes("text/event-stream")) {
-          return;
-        }
-
-        if (
-          response.status >= 400 &&
-          response.status < 500 &&
-          response.status !== 429
-        ) {
-          throw new FatalError(`request_failed_${response.status}`);
-        }
-
-        throw new RetriableError(`request_failed_${response.status}`);
-      },
-      onmessage(event: OutfitEventSourceMessage) {
-        onMessage({
-          event: event.event || "message",
-          data: parseEventPayload(event.data),
-        });
-      },
-      onclose() {
-        throw new RetriableError("event_stream_closed");
-      },
-      onerror(error: Error) {
-        if (signal?.aborted) {
-          return undefined;
-        }
-
-        if (error instanceof FatalError) {
-          onError(error);
-          throw error;
-        }
-
-        return 1000;
-      },
-    },
-  );
 }
 
 async function createOutfit({
@@ -238,6 +172,5 @@ export {
   searchOutfits,
   selectOutfit,
   setOutfitPin,
-  subscribeOutfitEvents,
   updateOutfitItems,
 };

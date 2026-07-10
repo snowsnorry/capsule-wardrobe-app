@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { JobSnapshot } from "../api/jobs";
 import { usePersonalItemsReport } from "./usePersonalItemsReport";
 
 const api = vi.hoisted(() => ({
@@ -7,13 +8,37 @@ const api = vi.hoisted(() => ({
   fetchPersonalItemsReport: vi.fn(),
   generatePersonalItemsReport: vi.fn(),
 }));
+const jobs = vi.hoisted(() => ({
+  addJobSnapshotListener: vi.fn(),
+}));
 
 vi.mock("../api/personalItems", () => api);
+vi.mock("../api/jobs", () => jobs);
 
 const t = (key: string) => key;
 const waitForJobCompletion = vi.fn().mockResolvedValue({
   status: "completed",
 });
+let jobListener: ((job: JobSnapshot) => void) | null = null;
+
+function createJobSnapshot(overrides: Partial<JobSnapshot> = {}): JobSnapshot {
+  return {
+    id: "report-job",
+    kind: "personalItemsReportGenerate",
+    status: "completed",
+    phase: "complete",
+    progress: { current: 1, total: 1, label: null },
+    entity: { type: "wardrobe", id: null },
+    result: null,
+    error: null,
+    createdAt: "2026-07-10T10:00:00.000Z",
+    updatedAt: "2026-07-10T10:01:00.000Z",
+    startedAt: "2026-07-10T10:00:01.000Z",
+    completedAt: "2026-07-10T10:01:00.000Z",
+    failedAt: null,
+    ...overrides,
+  };
+}
 
 function createJobResponse() {
   return {
@@ -38,6 +63,13 @@ function createJobResponse() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  jobListener = null;
+  jobs.addJobSnapshotListener.mockImplementation(
+    (listener: (job: JobSnapshot) => void) => {
+      jobListener = listener;
+      return vi.fn();
+    },
+  );
   waitForJobCompletion.mockResolvedValue({ status: "completed" });
   api.fetchPersonalItemsReport.mockResolvedValue({
     ok: true,
@@ -170,5 +202,55 @@ describe("usePersonalItemsReport", () => {
     });
 
     expect(result.current.stale).toBe(true);
+  });
+
+  test("reconciles terminal report jobs from the shared job stream", async () => {
+    const setError = vi.fn();
+    const { result } = renderHook(() =>
+      usePersonalItemsReport({ setError, t, waitForJobCompletion }),
+    );
+
+    await waitFor(() => expect(result.current.isLoadingReport).toBe(false));
+    expect(jobListener).not.toBeNull();
+
+    act(() => {
+      jobListener?.(createJobSnapshot({ status: "running" }));
+      jobListener?.(
+        createJobSnapshot({ kind: "capsuleGenerate", status: "completed" }),
+      );
+    });
+    expect(api.fetchPersonalItemsReport).toHaveBeenCalledTimes(1);
+
+    api.fetchPersonalItemsReport.mockResolvedValueOnce({
+      ok: true,
+      report: { verdict: { score: 0.95 } },
+      stale: false,
+      generatedAt: "2026-07-10T10:01:00.000Z",
+    });
+    const completed = createJobSnapshot();
+    act(() => {
+      jobListener?.(completed);
+      jobListener?.(completed);
+    });
+
+    await waitFor(() =>
+      expect(result.current.report).toEqual({ verdict: { score: 0.95 } }),
+    );
+    expect(api.fetchPersonalItemsReport).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      jobListener?.(
+        createJobSnapshot({
+          id: "failed-report-job",
+          status: "failed",
+          completedAt: null,
+          failedAt: "2026-07-10T10:02:00.000Z",
+          updatedAt: "2026-07-10T10:02:00.000Z",
+        }),
+      );
+    });
+
+    expect(result.current.isReportPending).toBe(false);
+    expect(setError).toHaveBeenLastCalledWith("wardrobe.reportGenerateFailed");
   });
 });

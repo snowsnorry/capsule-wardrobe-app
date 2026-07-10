@@ -5,7 +5,9 @@ import {
 } from "../observabilityMetrics.js";
 
 const JOB_EVENTS_POLL_INTERVAL_MS = 1000;
-const JOB_EVENTS_MAX_DURATION_MS = 10 * 60 * 1000;
+const JOB_EVENTS_HEARTBEAT_INTERVAL_MS = 10_000;
+const JOB_EVENTS_IDLE_GRACE_MS = 2000;
+const JOB_EVENTS_PAGE_SIZE = 100;
 const JOB_EVENTS_MAX_STREAMS_PER_USER = 6;
 const activeJobEventStreamsByEmail = new Map<string, number>();
 
@@ -19,9 +21,7 @@ function writeSseEvent(
   data: unknown,
   options: { id?: number | string | null } = {},
 ) {
-  if (!isResponseWritable(res)) {
-    return false;
-  }
+  if (!isResponseWritable(res)) return false;
   if (options.id !== undefined && options.id !== null) {
     res.write(`id: ${options.id}\n`);
   }
@@ -36,10 +36,6 @@ function openJobEventStream(res) {
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders?.();
-}
-
-function isTerminalStatus(status: unknown) {
-  return status === "completed" || status === "failed";
 }
 
 function delay(ms: number) {
@@ -60,6 +56,12 @@ function getActiveStreamCount(email: string) {
   return activeJobEventStreamsByEmail.get(email) || 0;
 }
 
+function getTotalActiveStreamCount() {
+  let total = 0;
+  for (const count of activeJobEventStreamsByEmail.values()) total += count;
+  return total;
+}
+
 function incrementActiveStreamCount(email: string) {
   activeJobEventStreamsByEmail.set(email, getActiveStreamCount(email) + 1);
   setActiveJobEventStreamMetric(getTotalActiveStreamCount());
@@ -69,19 +71,10 @@ function decrementActiveStreamCount(email: string) {
   const nextCount = Math.max(0, getActiveStreamCount(email) - 1);
   if (nextCount === 0) {
     activeJobEventStreamsByEmail.delete(email);
-    setActiveJobEventStreamMetric(getTotalActiveStreamCount());
-    return;
+  } else {
+    activeJobEventStreamsByEmail.set(email, nextCount);
   }
-  activeJobEventStreamsByEmail.set(email, nextCount);
   setActiveJobEventStreamMetric(getTotalActiveStreamCount());
-}
-
-function getTotalActiveStreamCount() {
-  let total = 0;
-  for (const count of activeJobEventStreamsByEmail.values()) {
-    total += count;
-  }
-  return total;
 }
 
 function normalizeStreamEmail(req) {
@@ -100,78 +93,90 @@ function reserveJobEventStream(email: string, res) {
   return true;
 }
 
-function getLastEventId(req) {
-  return Number(req.headers["last-event-id"]) || 0;
+function normalizeLastEventId(req, latestEventId: number) {
+  const rawValue = Array.isArray(req.headers["last-event-id"])
+    ? req.headers["last-event-id"][0]
+    : req.headers["last-event-id"];
+  const requested = Number(rawValue);
+  if (!Number.isSafeInteger(requested) || requested <= 0) {
+    return latestEventId;
+  }
+  return Math.min(requested, latestEventId);
 }
 
-function shouldCloseJobEventStream(latestStatus: unknown, startedAt: number) {
-  return (
-    isTerminalStatus(latestStatus) ||
-    Date.now() - startedAt >= JOB_EVENTS_MAX_DURATION_MS
-  );
-}
-
-function writeJobStreamEvents(res, events, lastEventId, latestStatus) {
+function writeJobStreamEvents(res, events, lastEventId) {
   let nextLastEventId = lastEventId;
-  let nextLatestStatus = latestStatus;
   for (const event of events) {
     nextLastEventId = Math.max(nextLastEventId, event.id);
-    nextLatestStatus =
-      String(
-        (event.data?.job as { status?: unknown } | undefined)?.status || "",
-      ) || nextLatestStatus;
     writeSseEvent(res, event.eventType, event.data, { id: event.id });
   }
-  return { lastEventId: nextLastEventId, latestStatus: nextLatestStatus };
+  return nextLastEventId;
+}
+
+async function drainOwnedJobEvents({ context, email, lastEventId, res }) {
+  let cursor = lastEventId;
+  while (isResponseWritable(res)) {
+    const events = await context.listJobEventsAfterImpl({
+      email,
+      afterId: cursor,
+      limit: JOB_EVENTS_PAGE_SIZE,
+    });
+    cursor = writeJobStreamEvents(res, events, cursor);
+    if (events.length < JOB_EVENTS_PAGE_SIZE) break;
+  }
+  return cursor;
 }
 
 async function streamJobEvents(req, res, context) {
   const email = normalizeStreamEmail(req);
-  if (!reserveJobEventStream(email, res)) {
-    return undefined;
-  }
-  const initialJob = await context.getJobSnapshotImpl({
-    id: req.params.jobId,
-    email,
-  });
-  if (!initialJob) {
-    decrementActiveStreamCount(email);
-    return res.status(404).json({ error: "not_found" });
-  }
-
-  openJobEventStream(res);
-  writeSseEvent(res, "snapshot", { job: initialJob });
-
-  let lastEventId = getLastEventId(req);
-  let latestStatus = initialJob.status;
-  const startedAt = Date.now();
+  if (!reserveJobEventStream(email, res)) return undefined;
 
   try {
-    while (isResponseWritable(res)) {
-      const events = await context.listJobEventsAfterImpl({
-        jobId: initialJob.id,
-        afterId: lastEventId,
-      });
-      ({ lastEventId, latestStatus } = writeJobStreamEvents(
-        res,
-        events,
-        lastEventId,
-        latestStatus,
-      ));
+    const latestEventId = await context.getLatestJobEventIdImpl(email);
+    let lastEventId = normalizeLastEventId(req, latestEventId);
+    const initialJobs = await context.listJobSnapshotsImpl({
+      email,
+      status: "active",
+    });
 
-      if (shouldCloseJobEventStream(latestStatus, startedAt)) {
-        break;
+    openJobEventStream(res);
+    writeSseEvent(
+      res,
+      "sync",
+      { cursor: lastEventId, jobs: initialJobs },
+      { id: lastEventId },
+    );
+
+    let idleSince: number | null = null;
+    let lastHeartbeatAt = Date.now();
+    while (isResponseWritable(res)) {
+      lastEventId = await drainOwnedJobEvents({
+        context,
+        email,
+        lastEventId,
+        res,
+      });
+      const activeJobs = await context.listJobSnapshotsImpl({
+        email,
+        status: "active",
+      });
+      if (activeJobs.length > 0) {
+        idleSince = null;
+      } else {
+        idleSince ??= Date.now();
+        if (Date.now() - idleSince >= JOB_EVENTS_IDLE_GRACE_MS) break;
       }
-      writeSseEvent(res, "heartbeat", { ok: true });
+      if (Date.now() - lastHeartbeatAt >= JOB_EVENTS_HEARTBEAT_INTERVAL_MS) {
+        writeSseEvent(res, "heartbeat", { ok: true });
+        lastHeartbeatAt = Date.now();
+      }
       await delay(JOB_EVENTS_POLL_INTERVAL_MS);
     }
   } finally {
     decrementActiveStreamCount(email);
   }
 
-  if (isResponseWritable(res)) {
-    res.end();
-  }
+  if (isResponseWritable(res)) res.end();
   return undefined;
 }
 
@@ -189,23 +194,7 @@ export function registerJobRoutes(app, context) {
     }
   });
 
-  app.get("/jobs/:jobId", context.requireAuth, async (req, res) => {
-    try {
-      const job = await context.getJobSnapshotImpl({
-        id: req.params.jobId,
-        email: req.user.email,
-      });
-      if (!job) {
-        return res.status(404).json({ error: "not_found" });
-      }
-      return res.json({ ok: true, job });
-    } catch (error) {
-      logError("[jobs/get]", error);
-      return res.status(503).json({ error: "service_unavailable" });
-    }
-  });
-
-  app.get("/jobs/:jobId/events", context.requireAuth, async (req, res) => {
+  app.get("/jobs/events", context.requireAuth, async (req, res) => {
     try {
       return await streamJobEvents(req, res, context);
     } catch (error) {
@@ -214,12 +203,24 @@ export function registerJobRoutes(app, context) {
         return res.status(503).json({ error: "service_unavailable" });
       }
       if (isResponseWritable(res)) {
-        writeSseEvent(res, "failed", {
-          error: "service_unavailable",
-        });
+        writeSseEvent(res, "streamError", { error: "service_unavailable" });
         res.end();
       }
       return undefined;
+    }
+  });
+
+  app.get("/jobs/:jobId", context.requireAuth, async (req, res) => {
+    try {
+      const job = await context.getJobSnapshotImpl({
+        id: req.params.jobId,
+        email: req.user.email,
+      });
+      if (!job) return res.status(404).json({ error: "not_found" });
+      return res.json({ ok: true, job });
+    } catch (error) {
+      logError("[jobs/get]", error);
+      return res.status(503).json({ error: "service_unavailable" });
     }
   });
 }

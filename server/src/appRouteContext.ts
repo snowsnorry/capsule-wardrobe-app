@@ -91,8 +91,6 @@ export function createAppRouteContext(deps) {
     listActiveJobSnapshotsForEntityImpl,
   );
   const eventHandlers = createCapsuleEventHandlers({
-    annotateLikedItems,
-    getCapsuleImpl: deps.getCapsuleImpl,
     getOutfitSetImageJobImpl:
       deps.getOutfitSetImageJobImpl ||
       createGetPersistedOutfitSetImageJob(listActiveJobsForEntityImpl),
@@ -106,8 +104,6 @@ export function createAppRouteContext(deps) {
       deps.getWardrobeJobImpl ||
       ((email, capsuleId) =>
         getPersistedCapsuleJob(email, capsuleId, ["capsuleGenerate"])),
-    listLikedItemUrlsImpl: deps.listLikedItemUrlsImpl,
-    streamCapsuleEventsImpl: deps.streamCapsuleEventsImpl,
     updateCapsuleSnapshotImpl: deps.updateCapsuleSnapshotImpl,
   });
 

@@ -3,7 +3,8 @@ import { expect, test } from "./test";
 
 const capsuleId = "capsule-e2e";
 const emptyCapsuleName = "Empty Playwright capsule";
-const failureMessage = "Something went wrong. Please try again.";
+const failureMessage =
+  "Failed to regenerate the capsule. Your previous capsule was restored.";
 const readyProducts = [
   {
     name: "E2E Ready linen blazer",
@@ -138,28 +139,45 @@ test("empty wardrobe recovers from one failed full regeneration and persists ret
   expect(externalRequests).toEqual([]);
 });
 
-test("full regeneration shows an error when its pending capsule stream fails", async ({
+test("full regeneration shows an error when its queued job fails", async ({
   page,
   resetAndLogin,
 }) => {
   await resetAndLogin("empty-wardrobe");
   await openApp(page);
 
-  const pendingModeResponse = await page
+  const manualModeResponse = await page
     .context()
-    .request.post("/__e2e/generation/mode", { data: { mode: "pending" } });
-  await expect(pendingModeResponse).toBeOK();
+    .request.post("/__e2e/jobs/manual-mode", {
+      data: { kinds: ["capsuleGenerate"] },
+    });
+  await expect(manualModeResponse).toBeOK();
 
+  const regenerationResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/capsules/${capsuleId}/regenerate`) &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "Regenerate all" }).click();
-  await expect(page.getByRole("progressbar")).toBeVisible();
+  const response = await regenerationResponse;
+  expect(response.status()).toBe(202);
+  const payload = (await response.json()) as {
+    job?: { id?: string; status?: string };
+  };
+  expect(payload.job).toEqual(
+    expect.objectContaining({ id: expect.any(String), status: "queued" }),
+  );
+  await expect(
+    page.getByRole("progressbar", { name: "Job in progress" }),
+  ).toBeVisible();
 
   const failureResponse = await page
     .context()
-    .request.post("/__e2e/generation/fail", { data: { capsuleId } });
+    .request.post(`/__e2e/jobs/${payload.job?.id}/fail`, {
+      data: { errorCode: "e2e_forced_failure" },
+    });
   await expect(failureResponse).toBeOK();
-  await expect(page.getByRole("alert")).toContainText(
-    "Failed to regenerate the capsule. Your previous capsule was restored.",
-  );
+  await expect(page.getByRole("alert")).toContainText(failureMessage);
   await expect(page.getByRole("progressbar")).toHaveCount(0);
   await expectEmptyWardrobe(page);
 });

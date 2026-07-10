@@ -23,7 +23,9 @@ import {
   getJobRunById,
   getJobRunByIdForEmail,
   getJobRunMetrics,
+  getLatestOwnedJobEventId,
   listJobEventsAfter,
+  listOwnedJobEventsAfter,
   listActiveJobRunsForEntity,
   listJobRunsForEmail,
   markJobRunCompleted,
@@ -466,6 +468,29 @@ test("job event helpers append replayable events and cleanup profile-owned rows"
       originalName: "source.png",
     },
   ]);
+});
+
+test("owned job event helpers use a profile-scoped global cursor", async () => {
+  coreApi.sql.mockResolvedValueOnce([{ id: "42" }]);
+  await expect(getLatestOwnedJobEventId(" PERSON@example.com ")).resolves.toBe(
+    42,
+  );
+  expect(getSqlText(0)).toContain("inner join job_runs");
+  expect(getSqlValues(0)).toContain("person@example.com");
+
+  coreApi.sql.mockResolvedValueOnce([eventRow({ id: "43" })]);
+  await expect(
+    listOwnedJobEventsAfter({
+      email: "PERSON@example.com",
+      afterId: 42,
+      limit: 500,
+    }),
+  ).resolves.toMatchObject([{ id: 43, jobId: "job-1" }]);
+  expect(getSqlText(1)).toContain("job_events.id >");
+  expect(getSqlText(1)).toContain("order by job_events.id asc");
+  expect(getSqlValues(1)).toEqual(
+    expect.arrayContaining(["person@example.com", 42, 100]),
+  );
 });
 
 test("job event helpers handle empty append and replay results", async () => {

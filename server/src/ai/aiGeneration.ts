@@ -15,6 +15,7 @@ import {
   buildCapsuleGenerationResult,
   buildNoLlmCapsuleResult,
 } from "./aiGenerationResults.js";
+import { logWardrobeInfo } from "./aiCommon.js";
 import {
   expandCategoriesForAnchors,
   splitAnchorSelectionRows,
@@ -31,6 +32,16 @@ export function createGenerateCapsuleWardrobe(
     logContext: LogContextLike | null = null,
   ) {
     const llmResolution = resolvedDeps.resolveLlmProviderImpl(userProfile);
+    logWardrobeInfo(
+      "capsule-llm-resolved",
+      {
+        llmProvider: llmResolution.provider,
+        llmModel: llmResolution.model,
+        requestedLlm: llmResolution.requestedLlm,
+        fallbackReason: llmResolution.fallbackReason,
+      },
+      logContext,
+    );
     const prompt = resolvedDeps.getWardrobePromptImpl(userProfile);
     const promptEmbeddings = await resolvedDeps.getPromptEmbeddingsImpl(prompt);
     const baseCapsuleCategories = getCapsuleCategories(userProfile);

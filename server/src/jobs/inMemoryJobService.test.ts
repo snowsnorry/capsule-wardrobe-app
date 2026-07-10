@@ -95,7 +95,12 @@ test("in-memory job service exposes aggregate metrics", async () => {
       running: 1,
     },
   });
-  await expect(service.listJobEventsAfterImpl()).resolves.toEqual([]);
+  await expect(
+    service.listJobEventsAfterImpl({
+      email: "person@example.com",
+      afterId: 0,
+    }),
+  ).resolves.toHaveLength(2);
   await expect(service.startJobWorkersImpl()).resolves.toBeUndefined();
   await expect(service.stopJobWorkersImpl()).resolves.toBeUndefined();
   await expect(

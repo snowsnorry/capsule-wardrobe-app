@@ -485,6 +485,7 @@ describe("capsuleActions", () => {
 
     expect(context.startPendingNotificationFlow).toHaveBeenCalledWith("full");
     expect(context.startCapsuleEventStream).toHaveBeenCalledWith("capsule-1");
+    expect(context.waitForJobCompletion).not.toHaveBeenCalled();
     expect(context.setIsLoadingItems).not.toHaveBeenLastCalledWith(false);
 
     vi.mocked(updateCapsuleFilters).mockRejectedValueOnce(
@@ -498,6 +499,26 @@ describe("capsuleActions", () => {
       infoKey: "",
       infoParams: null,
     });
+  });
+
+  test("completed filter jobs do not restore loading after terminal reconciliation", async () => {
+    vi.mocked(updateCapsuleFilters).mockResolvedValueOnce({
+      ...createJobResponse("job-1", "capsuleGenerate"),
+      job: {
+        ...createJobResponse("job-1", "capsuleGenerate").job,
+        status: "completed",
+        phase: "completed",
+        completedAt: "2026-07-10T18:05:54.000Z",
+      },
+    });
+    const context = createActionContext();
+
+    await applyCapsuleFilters(context);
+
+    expect(context.startPendingNotificationFlow).not.toHaveBeenCalled();
+    expect(context.startCapsuleEventStream).not.toHaveBeenCalled();
+    expect(context.setProfileItems).not.toHaveBeenCalledWith([]);
+    expect(context.setIsLoadingItems).toHaveBeenLastCalledWith(false);
   });
 
   test("current capsule mutations skip inactive capsule state updates", async () => {

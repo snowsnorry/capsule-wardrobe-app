@@ -4,7 +4,6 @@ import {
   downloadOutfitPdf,
   generateOutfitImage,
   generateOutfitReport,
-  subscribeOutfitEvents,
 } from "../api/outfits";
 import { fromContext, type AppActionContext } from "./actionContext";
 import {
@@ -17,60 +16,6 @@ import {
 import { refreshOutfitList } from "./outfitListActions";
 import type { OutfitMutationResponse } from "./appTypes";
 import { resolveRateLimitFlowMessage } from "./errorMessages";
-
-async function subscribeUntilOutfitImageReady(
-  context: AppActionContext,
-  outfitId: string,
-) {
-  const controller = new AbortController();
-  await subscribeOutfitEvents({
-    outfitId,
-    signal: controller.signal,
-    onMessage: (message) => {
-      const isReady =
-        message.event === "snapshot" &&
-        !message.data?.pendingImage &&
-        message.data?.status !== "pending";
-      if (!isReady) return;
-
-      controller.abort();
-      void refreshActiveOutfit(context, outfitId, { onlyIfActive: true })
-        .catch((error) => {
-          fromContext<(updater: (current: unknown) => unknown) => void>(
-            context,
-            "setStatus",
-          )((current) => ({
-            ...(current as object),
-            error: fromContext<(error: unknown) => string>(
-              context,
-              "resolveErrorMessage",
-            )(error),
-          }));
-        })
-        .finally(() => {
-          if (
-            fromContext<{ current: boolean }>(context, "isMountedRef").current
-          )
-            setOutfitImagePending(context, false);
-        });
-    },
-    onError: (error) => {
-      if (!fromContext<{ current: boolean }>(context, "isMountedRef").current)
-        return;
-      setOutfitImagePending(context, false);
-      fromContext<(updater: (current: unknown) => unknown) => void>(
-        context,
-        "setStatus",
-      )((current) => ({
-        ...(current as object),
-        error: fromContext<(error: unknown) => string>(
-          context,
-          "resolveErrorMessage",
-        )(error),
-      }));
-    },
-  }).catch(() => undefined);
-}
 
 export async function generateCurrentOutfitImage(
   context: AppActionContext,
@@ -124,7 +69,8 @@ export async function generateCurrentOutfitImage(
       return;
     }
     if (response?.status === "pending") {
-      void subscribeUntilOutfitImageReady(context, outfitId);
+      await refreshActiveOutfit(context, outfitId, { onlyIfActive: true });
+      setOutfitImagePending(context, false);
       return;
     }
     await refreshActiveOutfit(context, outfitId, { onlyIfActive: true });

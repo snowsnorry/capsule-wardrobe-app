@@ -45,23 +45,8 @@ type WaitForJobOptions = {
   timeoutMs?: number;
 };
 type JobSnapshotListener = (job: JobSnapshot) => void;
-type JobWaitReconciliationInput = {
-  cycleController: AbortController;
-  fail: (error: unknown) => void;
-  id: string;
-  settle: (job: JobSnapshot) => void;
-  startCycle: () => void;
-};
-type JobWaitPollingInput = {
-  cycleController: AbortController;
-  fail: (error: unknown) => void;
-  getController: () => AbortController | null;
-  id: string;
-  isSettled: () => boolean;
-  settle: (job: JobSnapshot) => void;
-};
 
-const DEFAULT_JOB_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
+const DEFAULT_JOB_WAIT_TIMEOUT_MS = 16 * 60 * 1000;
 
 let fetchEventSourcePromise: Promise<
   EventStreamLike["fetchEventSource"]
@@ -160,10 +145,13 @@ function delay(ms: number, signal?: AbortSignal) {
   });
 }
 
+// eslint-disable-next-line complexity
 async function pollJobUntilTerminal(
   id: string,
-  signal?: AbortSignal,
+  { signal, timeoutMs }: WaitForJobOptions = {},
 ): Promise<JobSnapshot> {
+  const startedAt = Date.now();
+  const effectiveTimeoutMs = timeoutMs ?? DEFAULT_JOB_WAIT_TIMEOUT_MS;
   for (;;) {
     if (signal?.aborted) {
       throw new Error("job_wait_aborted");
@@ -178,159 +166,62 @@ async function pollJobUntilTerminal(
         throw new Error("job_wait_aborted");
       }
     }
+    if (
+      Number.isFinite(effectiveTimeoutMs) &&
+      effectiveTimeoutMs > 0 &&
+      Date.now() - startedAt >= effectiveTimeoutMs
+    ) {
+      throw new Error("job_status_check_failed");
+    }
     await delay(1500, signal);
   }
-}
-
-async function reconcileJobWaitAfterWatchdog({
-  cycleController,
-  fail,
-  id,
-  settle,
-  startCycle,
-}: JobWaitReconciliationInput) {
-  cycleController.abort();
-  try {
-    const { job } = await fetchJob(id);
-    if (isTerminalJob(job)) {
-      settle(job);
-      return;
-    }
-    startCycle();
-  } catch {
-    fail(new Error("job_status_check_failed"));
-  }
-}
-
-function startJobWaitFallbackPolling({
-  cycleController,
-  fail,
-  getController,
-  id,
-  isSettled,
-  settle,
-}: JobWaitPollingInput) {
-  void pollJobUntilTerminal(id, cycleController.signal).then(
-    settle,
-    (error) => {
-      if (
-        !isSettled() &&
-        getController() === cycleController &&
-        !cycleController.signal.aborted
-      ) {
-        fail(error);
-      }
-    },
-  );
 }
 
 async function waitForJob(
   id: string,
   options: WaitForJobOptions = {},
 ): Promise<JobSnapshot> {
-  const timeoutMs = options.timeoutMs ?? DEFAULT_JOB_WAIT_TIMEOUT_MS;
-  if (options.signal?.aborted) throw new Error("job_wait_aborted");
-
-  return new Promise<JobSnapshot>((resolve, reject) => {
-    let settled = false;
-    let controller: AbortController | null = null;
-    let timeout: number | null = null;
-    const clearWatchdog = () => {
-      if (timeout === null) return;
-      window.clearTimeout(timeout);
-      timeout = null;
-    };
-    const settle = (job: JobSnapshot) => {
-      if (settled) return;
-      settled = true;
-      clearWatchdog();
-      controller?.abort();
-      options.signal?.removeEventListener("abort", abortFromCaller);
-      resolve(job);
-    };
-    const fail = (error: unknown) => {
-      if (settled) return;
-      settled = true;
-      clearWatchdog();
-      controller?.abort();
-      options.signal?.removeEventListener("abort", abortFromCaller);
-      reject(error);
-    };
-    function abortFromCaller() {
-      fail(new Error("job_wait_aborted"));
-    }
-    function scheduleWatchdog(cycleController: AbortController) {
-      clearWatchdog();
-      if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return;
-      timeout = window.setTimeout(() => {
-        clearWatchdog();
-        void reconcileJobWaitAfterWatchdog({
-          cycleController,
-          fail,
-          id,
-          settle,
-          startCycle,
-        });
-      }, timeoutMs);
-    }
-    function startCycle() {
-      if (settled || options.signal?.aborted) {
-        if (options.signal?.aborted) {
-          fail(new Error("job_wait_aborted"));
-        }
-        return;
-      }
-      const cycleController = new AbortController();
-      controller = cycleController;
-      scheduleWatchdog(cycleController);
-      void subscribeJobEvents({
-        id,
-        signal: cycleController.signal,
-        onJob(job) {
-          if (isTerminalJob(job)) settle(job);
-        },
-      })
-        .catch(() => undefined)
-        .finally(() => {
-          if (
-            !settled &&
-            controller === cycleController &&
-            !cycleController.signal.aborted
-          ) {
-            startJobWaitFallbackPolling({
-              cycleController,
-              fail,
-              getController: () => controller,
-              id,
-              isSettled: () => settled,
-              settle,
-            });
-          }
-        });
-    }
-    options.signal?.addEventListener("abort", abortFromCaller, { once: true });
-    startCycle();
-  });
+  return pollJobUntilTerminal(id, options);
 }
 
-async function subscribeJobEvents({
-  id,
+async function subscribeUserJobEvents({
+  lastEventId,
+  onCursor,
   onJob,
+  onSync,
   signal,
 }: {
-  id: string;
+  lastEventId?: number;
+  onCursor?: (cursor: number) => void;
   onJob: (job: JobSnapshot) => void;
+  onSync?: (jobs: JobSnapshot[]) => void;
   signal?: AbortSignal;
 }) {
   const fetchEventSource = await loadFetchEventSource();
-  return fetchEventSource(jobsUrl(`/${encodeURIComponent(id)}/events`), {
+  return fetchEventSource(jobsUrl("/events"), {
     credentials: "include",
+    headers:
+      Number.isSafeInteger(lastEventId) && Number(lastEventId) > 0
+        ? { "Last-Event-ID": String(lastEventId) }
+        : undefined,
     signal,
     openWhenHidden: true,
-    onmessage(event: { data?: string }) {
+    onmessage(event: { data?: string; event?: string; id?: string }) {
       if (!event.data) return;
       try {
-        const data = JSON.parse(event.data) as { job?: unknown };
+        const data = JSON.parse(event.data) as {
+          cursor?: unknown;
+          job?: unknown;
+          jobs?: unknown;
+        };
+        const cursor = Number(event.id || data.cursor);
+        if (Number.isSafeInteger(cursor) && cursor >= 0) onCursor?.(cursor);
+        if (event.event === "sync" && Array.isArray(data.jobs)) {
+          const jobs = data.jobs.filter(isJobSnapshot);
+          for (const job of jobs) emitJobSnapshot(job);
+          onSync?.(jobs);
+          return;
+        }
         if (isJobSnapshot(data.job)) {
           emitJobSnapshot(data.job);
           onJob(data.job);
@@ -339,8 +230,12 @@ async function subscribeJobEvents({
         // Ignore malformed transient events; polling can recover.
       }
     },
-    onerror(error: unknown) {
-      throw error;
+    onclose() {
+      if (!signal?.aborted) throw new Error("event_stream_closed");
+    },
+    onerror() {
+      if (signal?.aborted) return undefined;
+      return 1000;
     },
   });
 }
@@ -359,7 +254,7 @@ export {
   getJobEntityKey,
   parseJobResponse,
   parseTrackedJobResponse,
-  subscribeJobEvents,
+  subscribeUserJobEvents,
   waitForJob,
 };
 export type { JobResponse, JobSnapshot };

@@ -1,6 +1,11 @@
 import crypto from "node:crypto";
 import { JOB_RUN_TIMEOUT_MS } from "../appConfig.js";
-import type { EnqueueJobInput, JobSnapshot, JobStatus } from "./types.js";
+import type {
+  EnqueueJobInput,
+  JobEventRecord,
+  JobSnapshot,
+  JobStatus,
+} from "./types.js";
 import { addJobMetricCount, createEmptyJobMetrics } from "./jobMetrics.js";
 
 const QUEUED_STUCK_MS = 5 * 60 * 1000;
@@ -164,11 +169,13 @@ function assertInMemoryActiveJobCapacity({
 async function clearJobRunsForEmail({
   dedupe,
   email,
+  events,
   jobs,
   owners,
 }: {
   dedupe: Map<string, string>;
   email: string;
+  events: JobEventRecord[];
   jobs: Map<string, JobSnapshot>;
   owners: Map<string, string>;
 }) {
@@ -180,6 +187,11 @@ async function clearJobRunsForEmail({
     owners.delete(id);
     deleted += 1;
   }
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (!jobs.has(events[index].jobId)) {
+      events.splice(index, 1);
+    }
+  }
   for (const [key, id] of dedupe.entries()) {
     if (!jobs.has(id)) {
       dedupe.delete(key);
@@ -189,12 +201,16 @@ async function clearJobRunsForEmail({
 }
 
 async function enqueueInMemoryJob({
+  createEventId,
   dedupe,
+  events,
   input,
   jobs,
   owners,
 }: {
+  createEventId: () => number;
   dedupe: Map<string, string>;
+  events: JobEventRecord[];
   input: EnqueueJobInput;
   jobs: Map<string, JobSnapshot>;
   owners: Map<string, string>;
@@ -212,6 +228,13 @@ async function enqueueInMemoryJob({
   const job = toSnapshot(input, crypto.randomUUID());
   jobs.set(job.id, job);
   owners.set(job.id, profileEmail);
+  events.push({
+    id: createEventId(),
+    jobId: job.id,
+    eventType: "snapshot",
+    data: { job },
+    createdAt: job.createdAt,
+  });
   if (input.dedupeKey) {
     dedupe.set(dedupeKey, job.id);
   }
@@ -298,12 +321,21 @@ export function createInMemoryJobService() {
   const jobs = new Map<string, JobSnapshot>();
   const owners = new Map<string, string>();
   const dedupe = new Map<string, string>();
+  const events: JobEventRecord[] = [];
+  let nextEventId = 1;
 
   return {
     clearJobRunsForEmailImpl: async (email: string) =>
-      clearJobRunsForEmail({ dedupe, email, jobs, owners }),
+      clearJobRunsForEmail({ dedupe, email, events, jobs, owners }),
     enqueueJobImpl: async (input: EnqueueJobInput) =>
-      enqueueInMemoryJob({ dedupe, input, jobs, owners }),
+      enqueueInMemoryJob({
+        createEventId: () => nextEventId++,
+        dedupe,
+        events,
+        input,
+        jobs,
+        owners,
+      }),
     getJobSnapshotImpl: async ({ id, email }: { id: string; email: string }) =>
       owners.get(id) === normalizeEmail(email) ? jobs.get(id) || null : null,
     listActiveJobsForEntityImpl: async () => [],
@@ -334,7 +366,34 @@ export function createInMemoryJobService() {
       email: string;
       status?: "active" | JobStatus | null;
     }) => listJobSnapshots({ email, jobs, owners, status }),
-    listJobEventsAfterImpl: async () => [],
+    getLatestJobEventIdImpl: async (email: string) => {
+      const normalizedEmail = normalizeEmail(email);
+      return events.reduce(
+        (latest, event) =>
+          owners.get(event.jobId) === normalizedEmail
+            ? Math.max(latest, event.id)
+            : latest,
+        0,
+      );
+    },
+    listJobEventsAfterImpl: async ({
+      email,
+      afterId,
+      limit = 100,
+    }: {
+      email: string;
+      afterId?: number | null;
+      limit?: number;
+    }) => {
+      const normalizedEmail = normalizeEmail(email);
+      return events
+        .filter(
+          (event) =>
+            event.id > Number(afterId || 0) &&
+            owners.get(event.jobId) === normalizedEmail,
+        )
+        .slice(0, Math.max(1, Math.min(100, limit)));
+    },
     startJobWorkersImpl: async () => {},
     stopJobWorkersImpl: async () => {},
   };

@@ -5,7 +5,7 @@ import {
   updateCapsuleSnapshot,
 } from "../capsuleStore.js";
 import { getProfile } from "../profileStore.js";
-import { buildCapsuleEventSnapshot, capsuleEventHub } from "./capsuleEvents.js";
+import { buildCapsuleEventSnapshot } from "./capsuleEvents.js";
 import { generateImageWithGemini } from "./geminiImage.js";
 import { resolveImageLlmProvider } from "./imageLlm.js";
 import { logWardrobeInfo } from "./ai.js";
@@ -359,8 +359,7 @@ const DEFAULT_OUTFIT_SET_IMAGE_DEPS = {
   generateImageWithOpenAiImpl: generateImageWithOpenAi,
   getCapsuleImpl: getCapsule,
   getProfileImpl: getProfile,
-  publishSnapshotImpl: (email, capsuleId, snapshot) =>
-    capsuleEventHub.publish(email, capsuleId, snapshot),
+  publishSnapshotImpl: () => undefined,
   updateCapsuleSavedSnapshotImpl: updateCapsuleSavedSnapshot,
   updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
   uploadImageToR2Impl: uploadImageToR2,

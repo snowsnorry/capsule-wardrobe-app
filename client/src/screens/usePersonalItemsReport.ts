@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import {
   deletePersonalItemsReport,
@@ -6,7 +6,7 @@ import {
   generatePersonalItemsReport,
   type PersonalItemsReportResponse,
 } from "../api/personalItems";
-import type { JobSnapshot } from "../api/jobs";
+import { addJobSnapshotListener, type JobSnapshot } from "../api/jobs";
 import type { PersonalItemsReport } from "../app/appTypes";
 import { resolveRateLimitFlowMessage } from "../app/errorMessages";
 
@@ -76,6 +76,7 @@ function useInitialReportLoad({
   }, [setError, setIsLoadingReport, setters, t]);
 }
 
+// eslint-disable-next-line max-lines-per-function
 function usePersonalItemsReport({
   setError,
   t,
@@ -86,6 +87,7 @@ function usePersonalItemsReport({
   const [isLoadingReport, setIsLoadingReport] = useState(true);
   const [isReportPending, setIsReportPending] = useState(false);
   const [stale, setStale] = useState(false);
+  const handledReportJobsRef = useRef(new Set<string>());
   const setters = useMemo(() => ({ setGeneratedAt, setReport, setStale }), []);
 
   const refreshReport = useCallback(
@@ -108,6 +110,28 @@ function usePersonalItemsReport({
   }, [report]);
 
   useInitialReportLoad({ setError, setIsLoadingReport, setters, t });
+
+  useEffect(
+    () =>
+      addJobSnapshotListener((job) => {
+        if (
+          job.kind !== "personalItemsReportGenerate" ||
+          (job.status !== "completed" && job.status !== "failed")
+        ) {
+          return;
+        }
+        const key = `${job.id}:${job.updatedAt}`;
+        if (handledReportJobsRef.current.has(key)) return;
+        handledReportJobsRef.current.add(key);
+        setIsReportPending(false);
+        if (job.status === "completed") {
+          void refreshReport({ force: true });
+        } else {
+          setError(t("wardrobe.reportGenerateFailed"));
+        }
+      }),
+    [refreshReport, setError, t],
+  );
 
   const generateReport = async () => {
     setIsReportPending(true);

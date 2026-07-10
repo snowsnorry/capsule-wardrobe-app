@@ -135,13 +135,13 @@ Done:
 - Capsule/outfit pending image state is derived from active persisted jobs in production route context, not in-memory registries.
 - Account cleanup relies on persisted job cleanup for transient AI/image jobs instead of clearing production legacy maps.
 - Legacy server-side service factories, process-local pending registries, and direct execution handlers for capsule generation, selected regeneration, outfit image generation, and outfit-set image generation were removed from production modules. Test/e2e in-memory adapters remain isolated in test/e2e layers.
-- `/jobs/:id/events` has server-side max stream duration and a per-user active stream cap.
-- The client `waitForJob` helper got a default timeout and server status reconciliation.
+- `/jobs/events` multiplexes all profile-owned jobs over one client stream, with cursor replay, heartbeat, idle close, and a per-user active stream cap.
+- The client `waitForJob` helper uses bounded status polling and server status reconciliation without opening another SSE connection.
 - `useActiveSidebarJobs.waitForJobCompletion` delegates to the shared timed `waitForJob` watchdog so local stream/discovery gaps do not hang forever.
 
 Remaining:
 
-- `/jobs/:id/events` still polls the DB once per second per accepted stream. Stream caps bound exposure, but a future push/event-notify path would reduce DB pressure.
+- `/jobs/events` still polls the DB once per second per accepted browser stream. Multiplexing and stream caps bound exposure, but a future push/event-notify path would reduce DB pressure.
 - Provider SDKs that do not support abort still cannot always stop the remote call itself; final writes are guarded by cooperative abort checks.
 
 Impact: the regular happy path and crash/timeout recovery are now production-ready for the current single-service architecture. The remaining concern is operational load/backpressure, not correctness of durable job state.
@@ -177,7 +177,7 @@ Remaining:
 - Render `healthCheckPath` is still `/health`, and `/health` checks only process liveness. DB readiness remains on `/healthall`; `/live`/`/ready` are not split.
 - `/internal/metrics` and `/api/internal/metrics` are reserved, but always return 403; there is no admin/internal auth model for metrics yet.
 - The new rate-limit and active-cap values are conservative defaults and still need production tuning from observed traffic/rejection metrics.
-- `/jobs/:id/events` still polls the DB once per second per accepted stream; active stream caps bound exposure, but high sustained wait traffic may still need lower-cost event delivery.
+- `/jobs/events` still polls the DB once per second per accepted browser stream; active stream caps bound exposure, but high sustained wait traffic may still need lower-cost event delivery.
 
 Impact: deploy is now less likely to start with invalid production config, and browser MCP/integration misses are easier to diagnose. It can still be "green" during a runtime dependency problem, and broader rate-limit/backpressure policy remains incomplete.
 
@@ -277,7 +277,7 @@ Done in this pass:
 
 ## Checks Worth Adding Separately
 
-- Load test for `/search/run`, `/search/stats`, `/wardrobe/items`, `/wardrobe/items/report`, `/jobs/:id/events` on realistic catalog/profile sizes.
+- Load test for `/search/run`, `/search/stats`, `/wardrobe/items`, `/wardrobe/items/report`, `/jobs/events` on realistic catalog/profile sizes.
 - DB `EXPLAIN (ANALYZE, BUFFERS)` for search/count/stats queries after applying `products` indexes.
 - Browser profiling for Personal items screen grid with 500/1000/3000 personal items.
 - Failure-injection tests for worker timeout with an uncancellable provider, SSE disconnect/reconnect, profile delete cleanup failure, and high-concurrency job-event streams.

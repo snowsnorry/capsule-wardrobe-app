@@ -4,16 +4,11 @@ const requestApi = vi.hoisted(() => ({
   getCachedJson: vi.fn(),
   requestJson: vi.fn(),
 }));
-
-const eventSourceApi = vi.hoisted(() => ({
-  fetchEventSource: vi.fn(),
-}));
+const eventSourceApi = vi.hoisted(() => ({ fetchEventSource: vi.fn() }));
 
 vi.mock("./request", () => requestApi);
 vi.mock("@microsoft/fetch-event-source", () => eventSourceApi);
-vi.mock("./config", () => ({
-  API_BASE_URL: "https://api.example.test",
-}));
+vi.mock("./config", () => ({ API_BASE_URL: "https://api.example.test" }));
 
 import {
   addJobSnapshotListener,
@@ -22,10 +17,10 @@ import {
   getJobEntityKey,
   parseJobResponse,
   parseTrackedJobResponse,
-  subscribeJobEvents,
+  subscribeUserJobEvents,
   waitForJob,
+  type JobSnapshot,
 } from "./jobs";
-import type { JobSnapshot } from "./jobs";
 
 function createJob(overrides: Partial<JobSnapshot> = {}): JobSnapshot {
   return {
@@ -54,276 +49,128 @@ describe("jobs api", () => {
     eventSourceApi.fetchEventSource.mockReset();
   });
 
-  test("fetchActiveJobs uses cached authenticated active query and drops malformed rows", async () => {
+  test("fetchActiveJobs uses the authenticated active query", async () => {
     const queued = createJob();
     requestApi.getCachedJson.mockResolvedValue({
       ok: true,
-      jobs: [queued, { kind: "missing-id" }, null],
+      jobs: [queued, { kind: "missing-id" }],
     });
-
     await expect(fetchActiveJobs({ force: true })).resolves.toEqual({
       ok: true,
       jobs: [queued],
     });
     expect(requestApi.getCachedJson).toHaveBeenCalledWith(
       "https://api.example.test/jobs?status=active",
-      {
-        credentials: "include",
-        force: true,
-        ttlMs: 500,
-      },
+      { credentials: "include", force: true, ttlMs: 500 },
     );
   });
 
-  test("fetchJob parses the public job response contract and rejects malformed payloads", async () => {
+  test("fetchJob and tracked responses publish snapshots", async () => {
     const job = createJob({ id: "job/with space" });
-    const onSnapshot = vi.fn();
-    const unsubscribe = addJobSnapshotListener(onSnapshot);
-    requestApi.requestJson.mockResolvedValueOnce({ ok: true, job });
+    const listener = vi.fn();
+    const unsubscribe = addJobSnapshotListener(listener);
+    requestApi.requestJson.mockResolvedValue({ ok: true, job });
 
-    await expect(fetchJob("job/with space")).resolves.toEqual({
-      ok: true,
-      job,
-    });
+    await expect(fetchJob(job.id)).resolves.toEqual({ ok: true, job });
     expect(requestApi.requestJson).toHaveBeenCalledWith(
       "https://api.example.test/jobs/job%2Fwith%20space",
       { credentials: "include" },
     );
-    expect(onSnapshot).toHaveBeenCalledWith(job);
-    unsubscribe();
-
-    expect(() =>
-      parseJobResponse({ ok: true, job: { kind: "missing-id" } }),
-    ).toThrowError("invalid_job_response");
-  });
-
-  test("parseTrackedJobResponse publishes valid job snapshots", () => {
-    const job = createJob();
-    const onSnapshot = vi.fn();
-    const unsubscribe = addJobSnapshotListener(onSnapshot);
-
     expect(parseTrackedJobResponse({ ok: true, job })).toEqual({
       ok: true,
       job,
     });
-    expect(onSnapshot).toHaveBeenCalledWith(job);
+    expect(listener).toHaveBeenCalledTimes(2);
     unsubscribe();
+    expect(() => parseJobResponse({ ok: true, job: {} })).toThrow(
+      "invalid_job_response",
+    );
   });
 
-  test("waitForJob uses polling fallback only after the SSE stream closes", async () => {
+  test("waitForJob uses GET polling only", async () => {
     vi.useFakeTimers();
     const running = createJob({ status: "running" });
-    const completed = createJob({
-      status: "completed",
-      completedAt: "2026-01-01T00:01:00.000Z",
-    });
-    eventSourceApi.fetchEventSource.mockResolvedValue(undefined);
+    const completed = createJob({ status: "completed" });
     requestApi.requestJson
       .mockResolvedValueOnce({ ok: true, job: running })
       .mockResolvedValueOnce({ ok: true, job: completed });
 
-    const result = waitForJob("job-1", { timeoutMs: 0 });
-    expect(requestApi.requestJson).not.toHaveBeenCalled();
-
-    await Promise.resolve();
-    await vi.runOnlyPendingTimersAsync();
-
+    const result = waitForJob("job-1");
+    await vi.advanceTimersByTimeAsync(1500);
     await expect(result).resolves.toEqual(completed);
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(2);
+    expect(eventSourceApi.fetchEventSource).not.toHaveBeenCalled();
   });
 
-  test("waitForJob resolves from SSE without polling", async () => {
-    const completed = createJob({
-      status: "completed",
-      completedAt: "2026-01-01T00:01:00.000Z",
-    });
-    eventSourceApi.fetchEventSource.mockImplementation(
-      async (_url, options) => {
-        const onmessage = options.onmessage as (event: {
-          data?: string;
-        }) => void;
-        onmessage({ data: JSON.stringify({ job: completed }) });
-      },
-    );
-
-    await expect(waitForJob("job-1")).resolves.toEqual(completed);
-    expect(requestApi.requestJson).not.toHaveBeenCalled();
-  });
-
-  test("waitForJob keeps waiting after transient fallback polling failures", async () => {
+  test("waitForJob tolerates transient GET failures and supports abort", async () => {
     vi.useFakeTimers();
-    const completed = createJob({
-      status: "completed",
-      completedAt: "2026-01-01T00:01:00.000Z",
-    });
-    eventSourceApi.fetchEventSource.mockResolvedValue(undefined);
-    requestApi.requestJson
-      .mockRejectedValueOnce(new Error("network"))
-      .mockResolvedValueOnce({ ok: true, job: completed });
-
-    const result = waitForJob("job-1", { timeoutMs: 0 });
-    await Promise.resolve();
-    await vi.runOnlyPendingTimersAsync();
-
-    await expect(result).resolves.toEqual(completed);
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(2);
-  });
-
-  test("waitForJob reconciles watchdog timeouts with server status before continuing", async () => {
-    vi.useFakeTimers();
-    const running = createJob({ status: "running" });
-    const completed = createJob({
-      status: "completed",
-      completedAt: "2026-01-01T00:01:00.000Z",
-    });
-    eventSourceApi.fetchEventSource.mockImplementation(
-      () => new Promise(() => undefined),
-    );
-    requestApi.requestJson
-      .mockResolvedValueOnce({ ok: true, job: running })
-      .mockResolvedValueOnce({ ok: true, job: completed });
-
-    const result = waitForJob("job-1", { timeoutMs: 25 });
-    const onResolved = vi.fn();
-    void result.then(onResolved);
-
-    await vi.advanceTimersByTimeAsync(25);
-    await Promise.resolve();
-
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
-    expect(eventSourceApi.fetchEventSource).toHaveBeenCalledTimes(2);
-    expect(onResolved).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(25);
-
-    await expect(result).resolves.toEqual(completed);
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(2);
-    const signals = eventSourceApi.fetchEventSource.mock.calls.map(
-      (call) => (call[1] as { signal?: AbortSignal }).signal,
-    );
-    expect(signals.every((signal) => signal?.aborted)).toBe(true);
-  });
-
-  test("waitForJob keeps waiting when watchdog aborts polling fallback for an active job", async () => {
-    vi.useFakeTimers();
-    const running = createJob({ status: "running" });
-    const completed = createJob({
-      status: "completed",
-      completedAt: "2026-01-01T00:01:00.000Z",
-    });
-    eventSourceApi.fetchEventSource.mockResolvedValue(undefined);
-    requestApi.requestJson
-      .mockResolvedValueOnce({ ok: true, job: running })
-      .mockResolvedValueOnce({ ok: true, job: running })
-      .mockResolvedValueOnce({ ok: true, job: running })
-      .mockResolvedValueOnce({ ok: true, job: completed });
-
-    const result = waitForJob("job-1", { timeoutMs: 25 });
-    const onRejected = vi.fn();
-    void result.catch(onRejected);
-
-    await Promise.resolve();
-    await vi.advanceTimersByTimeAsync(25);
-    await Promise.resolve();
-
-    expect(onRejected).not.toHaveBeenCalled();
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(3);
-    expect(eventSourceApi.fetchEventSource).toHaveBeenCalledTimes(2);
-
-    await vi.advanceTimersByTimeAsync(25);
-
-    await expect(result).resolves.toEqual(completed);
-    expect(onRejected).not.toHaveBeenCalled();
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(4);
-  });
-
-  test("waitForJob rejects with status check error when watchdog reconciliation cannot fetch the job", async () => {
-    vi.useFakeTimers();
-    eventSourceApi.fetchEventSource.mockImplementation(
-      () => new Promise(() => undefined),
-    );
-    requestApi.requestJson.mockRejectedValue(new Error("network"));
-
-    const result = waitForJob("job-1", { timeoutMs: 25 });
-    const expectation = expect(result).rejects.toThrow(
-      "job_status_check_failed",
-    );
-
-    await vi.advanceTimersByTimeAsync(25);
-
-    await expectation;
-    expect(requestApi.requestJson).toHaveBeenCalledTimes(1);
-  });
-
-  test("waitForJob rejects with job_wait_aborted when caller aborts", async () => {
     const controller = new AbortController();
-    eventSourceApi.fetchEventSource.mockImplementation(
-      () => new Promise(() => undefined),
-    );
-
-    const result = waitForJob("job-1", {
-      signal: controller.signal,
-      timeoutMs: 0,
-    });
+    requestApi.requestJson.mockRejectedValueOnce(new Error("network"));
+    const result = waitForJob("job-1", { signal: controller.signal });
+    const expectation = expect(result).rejects.toThrow("job_wait_aborted");
+    await Promise.resolve();
     controller.abort();
-
-    await expect(result).rejects.toThrow("job_wait_aborted");
-    const options = eventSourceApi.fetchEventSource.mock.calls[0]?.[1] as {
-      signal?: AbortSignal;
-    };
-    expect(options.signal?.aborted).toBe(true);
+    await vi.advanceTimersByTimeAsync(1500);
+    await expectation;
   });
 
-  test("subscribeJobEvents forwards valid job snapshots and ignores malformed events", async () => {
+  test("subscribeUserJobEvents handles sync and job events on one URL", async () => {
+    const queued = createJob();
+    const completed = createJob({ status: "completed" });
     const onJob = vi.fn();
-    const onSnapshot = vi.fn();
-    const unsubscribe = addJobSnapshotListener(onSnapshot);
-    const signal = new AbortController().signal;
-    const failed = createJob({
-      status: "failed",
-      entity: { type: "wardrobe", id: null },
-    });
+    const onCursor = vi.fn();
+    const onSync = vi.fn();
     eventSourceApi.fetchEventSource.mockImplementation(
       async (_url, options) => {
         const onmessage = options.onmessage as (event: {
           data?: string;
+          event?: string;
+          id?: string;
         }) => void;
-        onmessage({ data: "" });
-        onmessage({ data: "{bad json" });
-        onmessage({ data: JSON.stringify({ job: { kind: "missing-id" } }) });
-        onmessage({ data: JSON.stringify({ job: failed }) });
+        onmessage({
+          id: "7",
+          event: "sync",
+          data: JSON.stringify({ cursor: 7, jobs: [queued] }),
+        });
+        onmessage({
+          id: "8",
+          event: "complete",
+          data: JSON.stringify({ job: completed }),
+        });
+        onmessage({ event: "progress", data: "{bad" });
       },
     );
 
-    await subscribeJobEvents({ id: "job-1", onJob, signal });
-
+    await subscribeUserJobEvents({ lastEventId: 6, onCursor, onJob, onSync });
     expect(eventSourceApi.fetchEventSource).toHaveBeenCalledWith(
-      "https://api.example.test/jobs/job-1/events",
+      "https://api.example.test/jobs/events",
       expect.objectContaining({
         credentials: "include",
+        headers: { "Last-Event-ID": "6" },
         openWhenHidden: true,
-        signal,
       }),
     );
-    expect(onJob).toHaveBeenCalledWith(failed);
-    expect(onSnapshot).toHaveBeenCalledWith(failed);
-    unsubscribe();
+    expect(onSync).toHaveBeenCalledWith([queued]);
+    expect(onJob).toHaveBeenCalledWith(completed);
+    expect(onCursor.mock.calls.map(([cursor]) => cursor)).toEqual([7, 8]);
   });
 
-  test("subscribeJobEvents fails fast on stream errors instead of allowing hidden retries", async () => {
-    const streamError = new Error("stream failed");
-    eventSourceApi.fetchEventSource.mockImplementation((_url, options) => {
-      const onerror = options.onerror as (error: unknown) => void;
-      onerror(streamError);
-      return Promise.resolve();
+  test("aggregate stream retries transport failures and closes on abort", async () => {
+    const controller = new AbortController();
+    eventSourceApi.fetchEventSource.mockImplementation(
+      async (_url, options) => {
+        expect((options.onerror as () => number)()).toBe(1000);
+        controller.abort();
+        expect((options.onerror as () => number | undefined)()).toBeUndefined();
+        expect(() => (options.onclose as () => void)()).not.toThrow();
+      },
+    );
+    await subscribeUserJobEvents({
+      onJob: vi.fn(),
+      signal: controller.signal,
     });
-
-    await expect(
-      subscribeJobEvents({ id: "job-1", onJob: vi.fn() }),
-    ).rejects.toThrow("stream failed");
   });
 
-  test("getJobEntityKey creates stable sidebar keys for entity-scoped jobs", () => {
+  test("getJobEntityKey creates stable deduplication keys", () => {
     expect(getJobEntityKey(createJob())).toBe("capsule:capsule-1");
     expect(
       getJobEntityKey(

@@ -195,7 +195,15 @@ function createE2eJobStore(): E2eJobStore {
 
 function createJobStoreActions(store: E2eJobStore) {
   function emitJobEvent(job: JobRunRecord) {
-    const event = addJobEvent(store.events, job);
+    const eventType =
+      job.status === "completed"
+        ? "complete"
+        : job.status === "failed"
+          ? "failed"
+          : job.status === "running"
+            ? "progress"
+            : "snapshot";
+    const event = addJobEvent(store.events, job, eventType);
     store.eventOwners.set(event.id, normalizeEmail(job.profileEmail));
   }
 
@@ -317,16 +325,32 @@ export function createE2eJobDependencies(deps: HandlerDeps) {
       store.owners.get(id) === normalizeEmail(email) && store.jobs.has(id)
         ? toJobSnapshot(store.jobs.get(id) as JobRunRecord)
         : null,
+    getLatestJobEventIdImpl: async (email: string): Promise<number> => {
+      const owner = normalizeEmail(email);
+      return store.events.reduce(
+        (latest, event) =>
+          store.eventOwners.get(event.id) === owner
+            ? Math.max(latest, event.id)
+            : latest,
+        0,
+      );
+    },
     listJobEventsAfterImpl: async ({
-      jobId,
+      email,
       afterId,
+      limit = 100,
     }: {
-      jobId: string;
+      email: string;
       afterId?: number | null;
+      limit?: number;
     }): Promise<JobEventRecord[]> =>
-      store.events.filter(
-        (event) => event.jobId === jobId && event.id > Number(afterId || 0),
-      ),
+      store.events
+        .filter(
+          (event) =>
+            store.eventOwners.get(event.id) === normalizeEmail(email) &&
+            event.id > Number(afterId || 0),
+        )
+        .slice(0, Math.max(1, Math.min(100, limit))),
     listJobSnapshotsImpl: async ({
       email,
       status,

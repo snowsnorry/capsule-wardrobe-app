@@ -80,8 +80,6 @@ import {
   deleteOutfitImage,
   runOutfitImageGenerationJob,
 } from "./ai/outfitImages.js";
-import { capsuleEventHub } from "./ai/capsuleEvents.js";
-import { outfitEventHub } from "./ai/outfitEvents.js";
 import {
   generateSwimwearAddition,
   shouldCompleteSelectedSwimwear,
@@ -264,7 +262,6 @@ function createCapsuleDependencies() {
     saveCapsuleImpl: saveCapsule,
     searchCapsulesImpl: searchCapsules,
     setCapsulePinImpl: setCapsulePin,
-    streamCapsuleEventsImpl: capsuleEventHub.subscribe,
     updateCapsuleReportImpl: updateCapsuleReport,
     updateCapsuleSnapshotImpl: updateCapsuleSnapshot,
     validateCapsuleAnchorItemsImpl: (email, anchorItemRefs) =>
@@ -295,7 +292,6 @@ function createOutfitDependencies() {
     saveOutfitImpl: saveOutfit,
     searchOutfitsImpl: searchOutfits,
     setOutfitPinImpl: setOutfitPin,
-    streamOutfitEventsImpl: outfitEventHub.subscribe,
     updateOutfitReportImpl: updateOutfitReport,
     updateOutfitSnapshotImpl: updateOutfitSnapshot,
   };
@@ -395,8 +391,7 @@ function createWardrobeMediaDependencies() {
     shouldCompleteSelectedSwimwearImpl: shouldCompleteSelectedSwimwear,
     shouldGenerateSwimwearImpl: shouldGenerateSwimwear,
     buildCapsuleEventSnapshotImpl: buildCapsuleEventSnapshot,
-    publishSnapshotImpl: (email, capsuleId, snapshot) =>
-      capsuleEventHub.publish(email, capsuleId, snapshot),
+    publishSnapshotImpl: () => undefined,
     randomUuidImpl: () => crypto.randomUUID(),
     regenerateCapsuleWardrobeImpl: regenerateCapsuleWardrobe,
     setTimeoutImpl: setTimeout,

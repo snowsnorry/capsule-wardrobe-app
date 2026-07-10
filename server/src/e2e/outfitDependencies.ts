@@ -84,7 +84,6 @@ export function outfitDependencies(state: E2eState) {
     updateOutfitReportImpl: async (_email, outfitId, report) =>
       state.outfitMemory.setReport(outfitId, report),
     getOutfitImageJobImpl: async () => null,
-    streamOutfitEventsImpl: async (_req, res) => res.status(204).end(),
     getProductsByUrlsForEmailImpl: async (payload) => {
       const urls = new Set(
         Array.isArray(payload?.urls)

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Mock } from "vitest";
-import { downloadCapsulePdf, fetchCapsule } from "../api/capsules";
+import { downloadCapsulePdf } from "../api/capsules";
 import {
   removeCatalogItemFromPersonalItems,
   saveCatalogItemToPersonalItems,
@@ -11,7 +11,6 @@ import {
   generateOutfitSetImage,
   regenerateCapsuleWardrobe,
   regenerateSelectedWardrobeItems,
-  subscribeCapsuleEvents,
 } from "../api/wardrobe";
 import {
   deleteGeneratedOutfitSetImage,
@@ -31,7 +30,6 @@ import { createActionContext } from "./testUtils";
 
 vi.mock("../api/capsules", () => ({
   downloadCapsulePdf: vi.fn(),
-  fetchCapsule: vi.fn(),
 }));
 vi.mock("../api/personalItems", () => ({
   removeCatalogItemFromPersonalItems: vi.fn(),
@@ -163,9 +161,6 @@ describe("wardrobeActions", () => {
     expect(context.startPendingNotificationFlow).toHaveBeenCalledWith(
       "partial",
     );
-    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ capsuleId: "capsule-1" }),
-    );
   });
 
   test("regenerateSelectedItems handles guards, queued responses, and errors", async () => {
@@ -189,9 +184,6 @@ describe("wardrobeActions", () => {
     );
     expect(readyContext.startPendingNotificationFlow).toHaveBeenCalledWith(
       "partial",
-    );
-    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ capsuleId: "capsule-1" }),
     );
 
     vi.mocked(regenerateSelectedWardrobeItems).mockRejectedValueOnce(
@@ -649,9 +641,7 @@ describe("wardrobeActions", () => {
     expect(regenerateCapsuleWardrobe).toHaveBeenCalledWith({
       capsuleId: "capsule-1",
     });
-    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ capsuleId: "capsule-1" }),
-    );
+    expect(context.waitForJobCompletion).not.toHaveBeenCalled();
 
     vi.mocked(regenerateCapsuleWardrobe).mockRejectedValueOnce(
       new Error("boom"),
@@ -673,7 +663,6 @@ describe("wardrobeActions", () => {
 
     await refreshWardrobe(context);
 
-    expect(subscribeCapsuleEvents).not.toHaveBeenCalled();
     expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
     const updater = mockCalls(context.setStatus).at(-1)?.[0] as (
       current: unknown,
@@ -693,117 +682,23 @@ describe("wardrobeActions", () => {
     expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
     expect(context.setIsLoadingItems).toHaveBeenCalledWith(true);
     expect(context.applyWardrobeSnapshot).not.toHaveBeenCalled();
-    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ capsuleId: "capsule-1" }),
-    );
   });
 
-  test("refreshWardrobe reconciles a failed job through its persisted capsule snapshot", async () => {
-    const failedJob = createFailedJobResponse().job;
-    vi.mocked(regenerateCapsuleWardrobe).mockResolvedValueOnce(
-      createJobResponse(),
-    );
-    vi.mocked(fetchCapsule).mockResolvedValueOnce({
-      capsule: { id: "capsule-1" },
-      snapshot: {
-        status: "ready",
-        items: [{ id: "top-1", url: "https://example.com/top-1" }],
-      },
-    });
-    vi.mocked(subscribeCapsuleEvents).mockReturnValue(
-      new Promise(() => undefined),
-    );
-    const context = createActionContext({
-      waitForJobCompletion: vi.fn(async () => failedJob),
-    });
-
-    await refreshWardrobe(context);
-    await vi.waitFor(() =>
-      expect(context.waitForJobCompletion).toHaveBeenCalledWith("job-1"),
-    );
-    await vi.waitFor(() =>
-      expect(fetchCapsule).toHaveBeenCalledWith("capsule-1"),
-    );
-
-    expect(context.applyWardrobeSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "failed" }),
-      "capsule-1",
-    );
-  });
-
-  test("startCapsuleEventStream subscribes and stopCapsuleEventStream aborts the stream", () => {
-    vi.mocked(subscribeCapsuleEvents).mockReturnValue(
-      new Promise(() => undefined),
-    );
+  test("legacy capsule stream operations do not open another SSE", async () => {
     const context = createActionContext();
 
-    startCapsuleEventStream(context, "capsule-1");
+    await startCapsuleEventStream(context, "capsule-1");
     const abortRef = context.capsuleEventsAbortRef as {
       current: AbortController | null;
     };
-
-    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(
-      expect.objectContaining({
-        capsuleId: "capsule-1",
-        signal: abortRef.current?.signal,
-      }),
-    );
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     stopCapsuleEventStream(context);
 
+    expect(controller.signal.aborted).toBe(true);
     expect(abortRef.current).toBe(null);
-  });
-
-  test("startCapsuleEventStream applies snapshots and maps stream errors", async () => {
-    vi.mocked(subscribeCapsuleEvents).mockImplementation(async (options) => {
-      options.onMessage({ event: "snapshot", data: { status: "ready" } });
-      options.onMessage({ event: "message", data: {} });
-      options.onError(new Error("stream"));
-    });
-    const context = createActionContext({
-      applyWardrobeSnapshot: vi.fn(async () => undefined),
-    });
-
-    await startCapsuleEventStream(context, " capsule-1 ");
-
-    expect(context.applyWardrobeSnapshot).toHaveBeenCalledWith(
-      { status: "ready" },
-      "capsule-1",
-    );
-    expect(context.closeNotificationPrompt).toHaveBeenCalled();
-    expect(context.setStatus).toHaveBeenCalledWith(expect.any(Function));
-    const updater = mockCalls(context.setStatus).at(-1)?.[0] as (
-      current: unknown,
-    ) => unknown;
-    expect(updater({ error: "" })).toEqual({ error: "stream" });
-  });
-
-  test("startCapsuleEventStream fails safely when snapshot application rejects or subscription rejects", async () => {
-    vi.mocked(subscribeCapsuleEvents).mockImplementationOnce(
-      async (options) => {
-        options.onMessage({ event: "snapshot", data: { status: "ready" } });
-        await Promise.resolve();
-      },
-    );
-    const context = createActionContext({
-      applyWardrobeSnapshot: vi.fn(async () => {
-        throw new Error("apply failed");
-      }),
-    });
-
-    await startCapsuleEventStream(context, "capsule-1");
-    await Promise.resolve();
-
-    expect(context.closeNotificationPrompt).toHaveBeenCalled();
-
-    vi.mocked(subscribeCapsuleEvents).mockRejectedValueOnce(
-      new Error("subscribe failed"),
-    );
-    const rejectedContext = createActionContext();
-    await startCapsuleEventStream(rejectedContext, "capsule-1");
-    expect(rejectedContext.setStatus).toHaveBeenCalledWith(
-      expect.any(Function),
-    );
+    stopCapsuleEventStream(context);
   });
 
   test("generateOutfitSetImage handles pending, ready, invalid, and failing requests", async () => {
@@ -908,9 +803,6 @@ describe("wardrobeActions", () => {
       { image: "keep.jpg", imageObsolete: true },
       { image: null, imageObsolete: false },
     ]);
-    expect(subscribeCapsuleEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ capsuleId: "capsule-1" }),
-    );
     expect(context.setIsContentOperationLoading).toHaveBeenLastCalledWith(
       false,
     );

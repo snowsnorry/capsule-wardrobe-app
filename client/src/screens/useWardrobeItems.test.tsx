@@ -1,5 +1,6 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { JobSnapshot } from "../api/jobs";
 import { useWardrobeItems } from "./useWardrobeItems";
 
 const api = vi.hoisted(() => ({
@@ -18,15 +19,39 @@ const likedApi = vi.hoisted(() => ({
 const personalItems = vi.hoisted(() => ({
   notifyPersonalItemsChanged: vi.fn(),
 }));
+const jobs = vi.hoisted(() => ({
+  addJobSnapshotListener: vi.fn(),
+}));
 
 vi.mock("../api/personalItems", () => api);
 vi.mock("../api/likedItems", () => likedApi);
 vi.mock("../app/personalItemsCount", () => personalItems);
+vi.mock("../api/jobs", () => jobs);
 
 const t = (key: string) => key;
 const waitForJobCompletion = vi.fn().mockResolvedValue({
   status: "completed",
 });
+let jobListener: ((job: JobSnapshot) => void) | null = null;
+
+function createJobSnapshot(overrides: Partial<JobSnapshot> = {}): JobSnapshot {
+  return {
+    id: "upload-job",
+    kind: "personalItemUploadFiles",
+    status: "completed",
+    phase: "complete",
+    progress: { current: 1, total: 1, label: null },
+    entity: { type: "wardrobe", id: null },
+    result: null,
+    error: null,
+    createdAt: "2026-07-10T10:00:00.000Z",
+    updatedAt: "2026-07-10T10:01:00.000Z",
+    startedAt: "2026-07-10T10:00:01.000Z",
+    completedAt: "2026-07-10T10:01:00.000Z",
+    failedAt: null,
+    ...overrides,
+  };
+}
 
 function createJobResponse(
   kind = "personalItemUploadUrls",
@@ -54,6 +79,13 @@ function createJobResponse(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  jobListener = null;
+  jobs.addJobSnapshotListener.mockImplementation(
+    (listener: (job: JobSnapshot) => void) => {
+      jobListener = listener;
+      return vi.fn();
+    },
+  );
   waitForJobCompletion.mockResolvedValue({ status: "completed" });
   api.fetchPersonalItems.mockResolvedValue({ items: [] });
   api.deleteUploadedWardrobeItem.mockResolvedValue({ ok: true });
@@ -254,6 +286,52 @@ describe("useWardrobeItems", () => {
     expect(waitForJobCompletion).not.toHaveBeenCalled();
     expect(personalItems.notifyPersonalItemsChanged).toHaveBeenCalledTimes(1);
     expect(onItemsChanged).toHaveBeenCalledWith("upload");
+  });
+
+  test("reconciles terminal upload jobs from the shared job stream", async () => {
+    const onItemsChanged = vi.fn();
+    const { result } = renderHook(() =>
+      useWardrobeItems("all", false, 0, t, waitForJobCompletion, {
+        onItemsChanged,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(jobListener).not.toBeNull();
+
+    act(() => {
+      jobListener?.(createJobSnapshot({ status: "running" }));
+      jobListener?.(
+        createJobSnapshot({ kind: "capsuleGenerate", status: "completed" }),
+      );
+    });
+    expect(api.fetchPersonalItems).toHaveBeenCalledTimes(1);
+
+    const completed = createJobSnapshot();
+    act(() => {
+      jobListener?.(completed);
+      jobListener?.(completed);
+    });
+
+    await waitFor(() =>
+      expect(api.fetchPersonalItems).toHaveBeenCalledTimes(2),
+    );
+    expect(onItemsChanged).toHaveBeenCalledTimes(1);
+    expect(onItemsChanged).toHaveBeenCalledWith("upload");
+
+    act(() => {
+      jobListener?.(
+        createJobSnapshot({
+          id: "failed-upload-job",
+          kind: "personalItemUploadUrls",
+          status: "failed",
+          completedAt: null,
+          failedAt: "2026-07-10T10:02:00.000Z",
+          updatedAt: "2026-07-10T10:02:00.000Z",
+        }),
+      );
+    });
+    expect(result.current.error).toBe("wardrobe.uploadFailed");
   });
 
   test("handles empty and failing operations", async () => {

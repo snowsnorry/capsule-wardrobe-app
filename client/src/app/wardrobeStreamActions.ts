@@ -1,6 +1,4 @@
-import { subscribeCapsuleEvents } from "../api/wardrobe";
 import { fromContext, type AppActionContext } from "./actionContext";
-import type { WardrobeSnapshot } from "./appTypes";
 
 export function handleWardrobeError(context: AppActionContext) {
   fromContext<(value: []) => void>(context, "setProfileItems")([]);
@@ -41,71 +39,9 @@ export function clearNotificationFlow(context: AppActionContext) {
   fromContext<() => void>(context, "closeNotificationPrompt")();
 }
 
-function failWardrobeStream(context: AppActionContext, error?: unknown) {
-  stopCapsuleEventStream(context);
-  clearNotificationFlow(context);
-  handleWardrobeError(context);
-  if (error) {
-    fromContext<(updater: (current: unknown) => unknown) => void>(
-      context,
-      "setStatus",
-    )((current) => ({
-      ...(current as object),
-      error: fromContext<(error: unknown) => string>(
-        context,
-        "resolveErrorMessage",
-      )(error),
-    }));
-  }
-}
-
 export function startCapsuleEventStream(
-  context: AppActionContext,
-  capsuleId: string | undefined,
+  _context: AppActionContext,
+  _capsuleId: string | undefined,
 ) {
-  const normalizedCapsuleId = String(capsuleId || "").trim();
-  if (!normalizedCapsuleId) return Promise.resolve();
-
-  stopCapsuleEventStream(context);
-  const abortController = new AbortController();
-  fromContext<{ current: AbortController | null }>(
-    context,
-    "capsuleEventsAbortRef",
-  ).current = abortController;
-
-  return subscribeCapsuleEvents({
-    capsuleId: normalizedCapsuleId,
-    signal: abortController.signal,
-    onMessage(event) {
-      if (
-        event.event !== "snapshot" ||
-        !fromContext<{ current: boolean }>(context, "isMountedRef").current
-      )
-        return;
-      fromContext<
-        (snapshot?: WardrobeSnapshot, capsuleId?: string) => Promise<void>
-      >(context, "applyWardrobeSnapshot")(
-        event.data,
-        normalizedCapsuleId,
-      ).catch(() => {
-        if (
-          fromContext<{ current: boolean }>(context, "isMountedRef").current
-        ) {
-          failWardrobeStream(context);
-        }
-      });
-    },
-    onError(error) {
-      if (fromContext<{ current: boolean }>(context, "isMountedRef").current) {
-        failWardrobeStream(context, error);
-      }
-    },
-  }).catch((error) => {
-    if (
-      !abortController.signal.aborted &&
-      fromContext<{ current: boolean }>(context, "isMountedRef").current
-    ) {
-      failWardrobeStream(context, error);
-    }
-  });
+  return Promise.resolve();
 }

@@ -6,8 +6,10 @@ const dbApi = vi.hoisted(() => ({
   getJobRunById: vi.fn(),
   getJobRunByIdForEmail: vi.fn(),
   getJobRunMetrics: vi.fn(),
+  getLatestOwnedJobEventId: vi.fn(),
   listActiveJobRunsForEntity: vi.fn(),
   listJobEventsAfter: vi.fn(),
+  listOwnedJobEventsAfter: vi.fn(),
   listJobRunsForEmail: vi.fn(),
   markJobRunCompleted: vi.fn(),
   markJobRunFailed: vi.fn(),
@@ -27,11 +29,13 @@ import {
   failJobRun,
   getJobForWorker,
   getJobMetrics,
+  getLatestOwnedJobEventCursor,
   getOwnedJobSnapshot,
   listActiveJobsForEntity,
   listActiveJobSnapshotsForEntity,
   listOwnedJobSnapshots,
   replayJobEvents,
+  replayOwnedJobEvents,
   setProviderJobId,
   startJobRun,
   writeJobProgress,
@@ -261,6 +265,29 @@ test("jobStore skips lifecycle events when updates do not find a job and replays
   await expect(
     replayJobEvents({ jobId: "job-1", afterId: 1 }),
   ).resolves.toMatchObject([{ id: 2, eventType: "complete" }]);
+});
+
+test("jobStore exposes profile-owned aggregate event replay", async () => {
+  dbApi.getLatestOwnedJobEventId.mockResolvedValue(9);
+  dbApi.listOwnedJobEventsAfter.mockResolvedValue([
+    { id: 10, jobId: "job-2", eventType: "progress", data: {}, createdAt: "" },
+  ]);
+
+  await expect(
+    getLatestOwnedJobEventCursor("person@example.com"),
+  ).resolves.toBe(9);
+  await expect(
+    replayOwnedJobEvents({
+      email: "person@example.com",
+      afterId: 9,
+      limit: 100,
+    }),
+  ).resolves.toMatchObject([{ id: 10, jobId: "job-2" }]);
+  expect(dbApi.listOwnedJobEventsAfter).toHaveBeenCalledWith({
+    email: "person@example.com",
+    afterId: 9,
+    limit: 100,
+  });
 });
 
 test("jobStore reads aggregate job metrics with stuck thresholds", async () => {

@@ -21,7 +21,7 @@ import {
   saveOutfitSetDebugArtifacts,
 } from "./outfitSetImagePrompt.js";
 import { downloadProductImageAssets } from "./promptImages.js";
-import { buildOutfitEventSnapshot, outfitEventHub } from "./outfitEvents.js";
+import { buildOutfitEventSnapshot } from "./outfitEvents.js";
 import { throwIfAborted } from "./abortSignal.js";
 
 function getOutfitImageRequestContext(req) {
@@ -339,8 +339,7 @@ const DEFAULT_OUTFIT_IMAGE_SERVICE_DEPS = {
   getProductsByUrlsForEmailImpl: getProductsByUrlsForEmailInOrder,
   getProfileImpl: getProfile,
   listWardrobeItemsByUrlsImpl: listWardrobeItemsByUrlsForEmail,
-  publishSnapshotImpl: (email, outfitId, snapshot) =>
-    outfitEventHub.publish(email, outfitId, snapshot),
+  publishSnapshotImpl: () => undefined,
   updateOutfitSnapshotImpl: updateOutfitSnapshot,
   uploadImageToR2Impl: uploadImageToR2,
 };

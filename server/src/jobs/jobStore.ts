@@ -4,8 +4,10 @@ import {
   getJobRunById,
   getJobRunByIdForEmail,
   getJobRunMetrics,
+  getLatestOwnedJobEventId,
   listActiveJobRunsForEntity,
   listJobEventsAfter,
+  listOwnedJobEventsAfter,
   listJobRunsForEmail,
   markJobRunCompleted,
   markJobRunFailed,
@@ -178,6 +180,24 @@ export async function replayJobEvents({
   afterId?: number | null;
 }): Promise<JobEventRecord[]> {
   return listJobEventsAfter({ jobId, afterId });
+}
+
+export async function getLatestOwnedJobEventCursor(
+  email: string,
+): Promise<number> {
+  return getLatestOwnedJobEventId(email);
+}
+
+export async function replayOwnedJobEvents({
+  email,
+  afterId,
+  limit,
+}: {
+  email: string;
+  afterId?: number | null;
+  limit?: number;
+}): Promise<JobEventRecord[]> {
+  return listOwnedJobEventsAfter({ email, afterId, limit });
 }
 
 export async function getJobMetrics(): Promise<JobMetrics> {

@@ -38,6 +38,12 @@ type WardrobeJobRunInput = {
   job: WardrobeJobState;
   rethrowErrors?: boolean;
   signal?: AbortSignal | null;
+  updateProgress?: (update: {
+    phase?: string | null;
+    current?: number;
+    total?: number | null;
+    label?: string | null;
+  }) => Promise<void>;
 };
 
 type BaseWardrobeResult = {
@@ -169,6 +175,11 @@ async function addSwimwearIfNeeded(
 
   job.phase = "extras";
   job.updatedAt = deps.nowMsImpl();
+  await input.updateProgress?.({
+    phase: "extras",
+    current: 1,
+    label: "Generating additional items",
+  });
   publishWardrobeSnapshot(
     deps,
     email,
@@ -423,6 +434,7 @@ export async function runPersistedWardrobeGenerationJobForService(
     job,
     rethrowErrors: true,
     signal,
+    updateProgress,
   });
   return { capsuleId };
 }

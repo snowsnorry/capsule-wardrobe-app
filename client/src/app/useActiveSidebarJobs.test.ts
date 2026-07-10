@@ -10,7 +10,7 @@ const jobsApi = vi.hoisted(() => ({
       ? "wardrobe"
       : `${job.entity?.type}:${job.entity?.id}`,
   ),
-  subscribeJobEvents: vi.fn(),
+  subscribeUserJobEvents: vi.fn(),
   waitForJob: vi.fn(),
 }));
 
@@ -59,8 +59,8 @@ beforeEach(() => {
   jobsApi.fetchActiveJobs.mockReset();
   jobsApi.fetchJob.mockReset();
   jobsApi.getJobEntityKey.mockClear();
-  jobsApi.subscribeJobEvents.mockReset();
-  jobsApi.subscribeJobEvents.mockImplementation(
+  jobsApi.subscribeUserJobEvents.mockReset();
+  jobsApi.subscribeUserJobEvents.mockImplementation(
     () => new Promise(() => undefined),
   );
   jobsApi.waitForJob.mockReset();
@@ -90,8 +90,8 @@ test("useJobTracker discovers active jobs every 30s even while jobs are active",
   });
   expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
   expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(1);
-  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledWith(
-    expect.objectContaining({ id: "job-1" }),
+  expect(jobsApi.subscribeUserJobEvents).toHaveBeenCalledWith(
+    expect.objectContaining({ onJob: expect.any(Function) }),
   );
 
   await act(async () => {
@@ -133,12 +133,7 @@ test("useJobTracker discovers new jobs on the next discovery and opens SSE for t
     "capsule:capsule-1",
     "outfit:outfit-1",
   ]);
-  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledWith(
-    expect.objectContaining({ id: "job-1" }),
-  );
-  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledWith(
-    expect.objectContaining({ id: "job-2" }),
-  );
+  expect(jobsApi.subscribeUserJobEvents).toHaveBeenCalledTimes(1);
 });
 
 test("useJobTracker resolves waiters and removes terminal jobs from SSE snapshots", async () => {
@@ -149,7 +144,7 @@ test("useJobTracker resolves waiters and removes terminal jobs from SSE snapshot
   });
   let emitSseJob: ((job: JobSnapshot) => void) | undefined;
   jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
-  jobsApi.subscribeJobEvents.mockImplementation(({ onJob }) => {
+  jobsApi.subscribeUserJobEvents.mockImplementation(({ onJob }) => {
     emitSseJob = onJob;
     return new Promise(() => undefined);
   });
@@ -169,14 +164,14 @@ test("useJobTracker resolves waiters and removes terminal jobs from SSE snapshot
   expect(result.current.activeJobEntityKeys).toEqual([]);
 });
 
-test("useJobTracker pauses timer and SSE while hidden, then discovers immediately when visible", async () => {
+test("useJobTracker pauses discovery but keeps SSE while hidden", async () => {
   const visibilitySpy = vi
     .spyOn(document, "visibilityState", "get")
     .mockReturnValue("visible");
   const queued = createJob();
   const streamSignals: AbortSignal[] = [];
   jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
-  jobsApi.subscribeJobEvents.mockImplementation(({ signal }) => {
+  jobsApi.subscribeUserJobEvents.mockImplementation(({ signal }) => {
     streamSignals.push(signal);
     return new Promise(() => undefined);
   });
@@ -193,7 +188,7 @@ test("useJobTracker pauses timer and SSE while hidden, then discovers immediatel
   act(() => {
     document.dispatchEvent(new Event("visibilitychange"));
   });
-  expect(streamSignals[0].aborted).toBe(true);
+  expect(streamSignals[0].aborted).toBe(false);
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(30_000);
@@ -207,7 +202,7 @@ test("useJobTracker pauses timer and SSE while hidden, then discovers immediatel
   });
 
   expect(jobsApi.fetchActiveJobs).toHaveBeenCalledTimes(2);
-  expect(streamSignals).toHaveLength(2);
+  expect(streamSignals).toHaveLength(1);
 });
 
 test("useJobTracker does one terminal reconciliation fetch when a known job disappears from active discovery", async () => {
@@ -323,7 +318,7 @@ test("useJobTracker waits for a tracked job without a second event stream", asyn
 test("useJobTracker does not fetch job details when SSE fails for a still-active job", async () => {
   const queued = createJob();
   jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
-  jobsApi.subscribeJobEvents
+  jobsApi.subscribeUserJobEvents
     .mockRejectedValueOnce(new Error("stream failed"))
     .mockImplementation(() => new Promise(() => undefined));
 
@@ -332,7 +327,7 @@ test("useJobTracker does not fetch job details when SSE fails for a still-active
   await act(async () => {
     await flushPromises(2);
   });
-  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledTimes(1);
+  expect(jobsApi.subscribeUserJobEvents).toHaveBeenCalledTimes(2);
   expect(jobsApi.fetchJob).not.toHaveBeenCalled();
 
   await act(async () => {
@@ -341,10 +336,10 @@ test("useJobTracker does not fetch job details when SSE fails for a still-active
   });
 
   expect(jobsApi.fetchJob).not.toHaveBeenCalled();
-  expect(jobsApi.subscribeJobEvents).toHaveBeenCalledTimes(2);
+  expect(jobsApi.subscribeUserJobEvents).toHaveBeenCalledTimes(2);
 });
 
-test("useJobTracker merges locally observed snapshots and clears state on logout", async () => {
+test("useJobTracker clears locally observed snapshots when identity changes", async () => {
   const queued = createJob();
   jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [] });
 
@@ -362,10 +357,30 @@ test("useJobTracker merges locally observed snapshots and clears state on logout
   });
   expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
 
-  rerender({ email: "" });
+  rerender({ email: "other@test.com" });
   await act(async () => {
     await flushPromises();
   });
 
   expect(result.current.activeJobEntityKeys).toEqual([]);
+});
+
+test("keeps terminal tombstones and deduplicates sidebar entity keys", async () => {
+  jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [] });
+  const { result } = renderHook(() => useJobTracker("person@test.com"));
+  const first = createJob();
+  const second = createJob({ id: "job-2" });
+
+  act(() => {
+    emitJobSnapshot(first);
+    emitJobSnapshot(second);
+  });
+  expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
+
+  const completed = createJob({ status: "completed" });
+  act(() => {
+    emitJobSnapshot(completed);
+    emitJobSnapshot(createJob({ status: "running" }));
+  });
+  expect(result.current.jobs.map((job) => job.id)).toEqual(["job-2"]);
 });

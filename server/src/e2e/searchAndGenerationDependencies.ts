@@ -197,15 +197,6 @@ function selectedRegenerationHandler(state: E2eSearchAndGenerationState) {
   };
 }
 
-function streamCapsuleEventsImpl(state: E2eSearchAndGenerationState) {
-  return async (_req, res, { email, capsuleId, snapshot }) => {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection", "keep-alive");
-    state.generationMemory.subscribe({ email, capsuleId, res, snapshot });
-  };
-}
-
 function regenerateCapsuleWardrobeHandler(state: E2eSearchAndGenerationState) {
   return async (req, res) => {
     const capsuleId = normalizeCapsuleId(req.params?.id);
@@ -339,7 +330,6 @@ export function searchAndGenerationDependencies(
       state.selectedRegenerationMemory.getJob(email, capsuleId),
     getWardrobeJobImpl: (email, capsuleId) =>
       state.generationMemory.getJob(email, capsuleId),
-    streamCapsuleEventsImpl: streamCapsuleEventsImpl(state),
     regenerateCapsuleWardrobeHandler: regenerateCapsuleWardrobeHandler(state),
     regenerateSelectedCapsuleItemsHandler: selectedRegenerationHandler(state),
     generateOutfitSetImageHandler: generateOutfitSetImageHandler(state),

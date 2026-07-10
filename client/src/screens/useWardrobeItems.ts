@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { sortWardrobeItems } from "../../../shared/wardrobeOrder.js";
-import type { JobSnapshot } from "../api/jobs";
+import { addJobSnapshotListener, type JobSnapshot } from "../api/jobs";
 import { usePaginatedPersonalItems } from "../hooks/usePaginatedPersonalItems";
 import type { MainScreenItem } from "./mainScreen/MainScreenTypes";
 import { getSourceFilter, type WardrobeFilter } from "./WardrobeToolbar";
@@ -14,7 +14,7 @@ import {
   type WardrobeItemsChangedReason,
 } from "./wardrobeItemActions";
 
-// eslint-disable-next-line max-params
+// eslint-disable-next-line max-lines-per-function, max-params
 export function useWardrobeItems(
   filter: WardrobeFilter,
   likedOnly: boolean,
@@ -40,6 +40,7 @@ export function useWardrobeItems(
   const [isMutating, setIsMutating] = useState(false);
   const [removeConfirmItem, setRemoveConfirmItem] =
     useState<MainScreenItem | null>(null);
+  const handledUploadJobsRef = useRef(new Set<string>());
   const productMenuState = useWardrobeProductMenuState();
   const downloadPdfAction = useWardrobeDownloadPdfAction({
     setError,
@@ -77,6 +78,30 @@ export function useWardrobeItems(
   useEffect(() => {
     setError(query.error ? t("wardrobe.loadFailed") : "");
   }, [query.error, t]);
+
+  useEffect(
+    () =>
+      addJobSnapshotListener((job) => {
+        if (
+          !["personalItemUploadFiles", "personalItemUploadUrls"].includes(
+            job.kind,
+          ) ||
+          (job.status !== "completed" && job.status !== "failed")
+        ) {
+          return;
+        }
+        const key = `${job.id}:${job.updatedAt}`;
+        if (handledUploadJobsRef.current.has(key)) return;
+        handledUploadJobsRef.current.add(key);
+        if (job.status === "completed") {
+          void query.refresh();
+          options.onItemsChanged?.("upload");
+        } else {
+          setError(t("wardrobe.uploadFailed"));
+        }
+      }),
+    [options, query, t],
+  );
 
   return {
     closeProductMenu: productMenuState.closeProductMenu,

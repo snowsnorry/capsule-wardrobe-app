@@ -8,11 +8,12 @@ import { createInMemoryJobService } from "./jobs/inMemoryJobService.js";
 import { createJobQueue } from "./jobs/jobQueue.js";
 import {
   getJobMetrics,
+  getLatestOwnedJobEventCursor,
   getOwnedJobSnapshot,
   listActiveJobsForEntity,
   listActiveJobSnapshotsForEntity,
   listOwnedJobSnapshots,
-  replayJobEvents,
+  replayOwnedJobEvents,
 } from "./jobs/jobStore.js";
 import { createJobWorker } from "./jobs/jobWorker.js";
 
@@ -30,7 +31,8 @@ export function createJobDependencies(deps: Record<string, unknown>) {
     getJobSnapshotImpl: getOwnedJobSnapshot,
     listActiveJobsForEntityImpl: listActiveJobsForEntity,
     listActiveJobSnapshotsForEntityImpl: listActiveJobSnapshotsForEntity,
-    listJobEventsAfterImpl: replayJobEvents,
+    getLatestJobEventIdImpl: getLatestOwnedJobEventCursor,
+    listJobEventsAfterImpl: replayOwnedJobEvents,
     listJobSnapshotsImpl: listOwnedJobSnapshots,
   };
   const worker = createJobWorker({

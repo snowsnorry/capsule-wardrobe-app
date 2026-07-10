@@ -14,6 +14,11 @@ export {
   markJobRunStarted,
   updateJobRunProgress,
 } from "./jobRunLifecycle.js";
-export { appendJobEvent, listJobEventsAfter } from "./jobEvents.js";
+export {
+  appendJobEvent,
+  getLatestOwnedJobEventId,
+  listJobEventsAfter,
+  listOwnedJobEventsAfter,
+} from "./jobEvents.js";
 export { clearJobRunsForEmail } from "./jobCleanup.js";
 export { getJobRunMetrics } from "./jobMetricsPersistence.js";

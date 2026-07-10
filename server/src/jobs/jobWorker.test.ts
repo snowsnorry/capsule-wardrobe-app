@@ -10,11 +10,12 @@ const storeApi = vi.hoisted(() => ({
 const handlerApi = vi.hoisted(() => ({
   runJobHandler: vi.fn(),
 }));
-
-vi.mock("../logger.js", () => ({
+const loggerApi = vi.hoisted(() => ({
   logError: vi.fn(),
   logInfo: vi.fn(),
 }));
+
+vi.mock("../logger.js", () => loggerApi);
 vi.mock("./jobStore.js", () => storeApi);
 vi.mock("./jobHandlers.js", () => handlerApi);
 
@@ -36,6 +37,8 @@ beforeEach(() => {
   storeApi.startJobRun.mockReset();
   storeApi.writeJobProgress.mockReset();
   handlerApi.runJobHandler.mockReset();
+  loggerApi.logError.mockReset();
+  loggerApi.logInfo.mockReset();
 });
 
 test("job worker skips backend registration when disabled", async () => {
@@ -100,6 +103,19 @@ test("job worker starts queued jobs, reports progress, and completes successful 
   expect(storeApi.completeJobRun).toHaveBeenCalledWith({
     id: "job-1",
     result: { ok: true },
+  });
+  expect(loggerApi.logInfo).toHaveBeenCalledWith("[jobs][run-started]", {
+    jobId: "job-1",
+    kind: "personalItemsReportGenerate",
+    entityType: undefined,
+    entityId: undefined,
+  });
+  expect(loggerApi.logInfo).toHaveBeenCalledWith("[jobs][run-completed]", {
+    jobId: "job-1",
+    kind: "personalItemsReportGenerate",
+    entityType: undefined,
+    entityId: undefined,
+    durationMs: expect.any(Number),
   });
 });
 

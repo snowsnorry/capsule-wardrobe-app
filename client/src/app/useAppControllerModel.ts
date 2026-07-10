@@ -11,6 +11,7 @@ import { useAppNavigation } from "./useAppNavigation";
 import { useAppNotifications } from "./useAppNotifications";
 import { useAppState } from "./useAppState";
 import { useJobTracker } from "./useActiveSidebarJobs";
+import { useJobEntityReconciliation } from "./useJobEntityReconciliation";
 import { usePasskeyPrompt } from "./usePasskeyPrompt";
 import { useProfileOptions } from "./useProfileOptions";
 import {
@@ -87,6 +88,12 @@ export function useAppControllerModel() {
     setLocale,
     shareRoute,
     t,
+  });
+  useJobEntityReconciliation({
+    appState,
+    operations,
+    resolveErrorMessage,
+    userEmail: appState.user?.email || "",
   });
   useAppLifecycleEffects({ appState, locale });
   return buildControllerModel({

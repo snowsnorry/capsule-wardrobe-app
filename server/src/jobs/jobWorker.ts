@@ -124,6 +124,13 @@ export function createJobWorker({
         if (!job) {
           return;
         }
+        const startedAt = Date.now();
+        logInfo("[jobs][run-started]", {
+          jobId: job.id,
+          kind: job.kind,
+          entityType: job.entityType,
+          entityId: job.entityId,
+        });
 
         try {
           const result = await runJobHandlerWithDeadline({
@@ -133,6 +140,13 @@ export function createJobWorker({
             jobRunTimeoutMs,
           });
           await completeJobRun({ id: job.id, result });
+          logInfo("[jobs][run-completed]", {
+            jobId: job.id,
+            kind: job.kind,
+            entityType: job.entityType,
+            entityId: job.entityId,
+            durationMs: Date.now() - startedAt,
+          });
         } catch (error) {
           await failJobRun({
             id: job.id,

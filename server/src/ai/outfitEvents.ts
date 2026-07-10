@@ -1,5 +1,3 @@
-import { createCapsuleEventHub } from "./capsuleEventHub.js";
-
 function buildOutfitEventSnapshot({
   outfit = null,
   pendingImage = false,
@@ -11,6 +9,4 @@ function buildOutfitEventSnapshot({
   };
 }
 
-const outfitEventHub = createCapsuleEventHub();
-
-export { buildOutfitEventSnapshot, outfitEventHub };
+export { buildOutfitEventSnapshot };

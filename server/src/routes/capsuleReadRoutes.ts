@@ -125,7 +125,6 @@ function registerCapsuleLookupRoutes(app, context) {
     listWardrobeItemsImpl,
     listLikedItemUrlsImpl,
     requireAuth,
-    streamCapsuleEventsHandler,
     toCapsuleResponse,
     annotateWardrobeSavedItems,
     annotateLikedItems,
@@ -168,8 +167,6 @@ function registerCapsuleLookupRoutes(app, context) {
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
-
-  app.get("/capsules/:id/events", requireAuth, streamCapsuleEventsHandler);
 }
 
 async function listSavedCatalogUrls(listWardrobeItemsImpl, email: string) {

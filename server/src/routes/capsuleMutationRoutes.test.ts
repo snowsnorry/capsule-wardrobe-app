@@ -84,7 +84,6 @@ function createQueuedJob(input) {
 }
 
 test("capsule action routes cover wardrobe handlers and pdf download", async (t) => {
-  let wardrobeCalled = false;
   let fullRegenerateCalled = false;
   let regenerateCalled = false;
   let pdfLocale = null;
@@ -130,10 +129,6 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
         saved: null,
         status: "new",
       }),
-      streamCapsuleEventsImpl: async (_req, res, { snapshot }) => {
-        wardrobeCalled = true;
-        res.json({ ok: true, snapshot });
-      },
       regenerateCapsuleWardrobeHandler: async (_req, res) => {
         fullRegenerateCalled = true;
         res.status(202).json({ ok: true, status: "pending", items: [] });
@@ -173,11 +168,10 @@ test("capsule action routes cover wardrobe handlers and pdf download", async (t)
     },
   });
 
-  const wardrobe = await requestJson(baseUrl, "/capsules/capsule-1/events", {
+  const wardrobe = await requestJson(baseUrl, "/capsules/capsule-1", {
     cookie: AUTH_COOKIE,
   });
   expect(wardrobe.response.status).toBe(200);
-  expect(wardrobeCalled).toBe(true);
   expect(wardrobe.json.snapshot.status).toBe("ready");
 
   const fullRegenerate = await requestJson(

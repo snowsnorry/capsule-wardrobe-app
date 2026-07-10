@@ -32,7 +32,6 @@ import {
   searchOutfits,
   selectOutfit,
   setOutfitPin,
-  subscribeOutfitEvents,
   updateOutfitItems,
 } from "./outfits";
 
@@ -323,35 +322,6 @@ describe("outfits api", () => {
     await expect(generateOutfitReport("outfit-1")).rejects.toThrow(
       "service_unavailable",
     );
-  });
-
-  test("subscribes to saved outfit event streams and parses messages", async () => {
-    eventSourceApi.fetchEventSource.mockImplementationOnce(
-      async (_url, options) => {
-        await options.onopen({
-          ok: true,
-          status: 200,
-          headers: { get: () => "text/event-stream" },
-        });
-        options.onmessage({
-          event: "snapshot",
-          data: JSON.stringify({ status: "ready" }),
-        });
-        expect(options.onerror(new Error("retry"))).toBe(1000);
-      },
-    );
-    const onMessage = vi.fn();
-
-    await subscribeOutfitEvents({ outfitId: "outfit-1", onMessage });
-
-    expect(eventSourceApi.fetchEventSource).toHaveBeenCalledWith(
-      "https://api.example.test/outfits/outfit-1/events",
-      expect.objectContaining({ credentials: "include" }),
-    );
-    expect(onMessage).toHaveBeenCalledWith({
-      event: "snapshot",
-      data: { status: "ready" },
-    });
   });
 
   test("downloads outfit PDFs with RFC 5987 filenames and fallback filenames", async () => {

@@ -4,7 +4,6 @@ import { fromContext, type AppActionContext } from "./actionContext";
 import { runContentOperation } from "./capsuleActionOperation";
 import { refreshCapsuleList } from "./capsuleListActions";
 import { buildCapsuleStatus } from "./capsuleState";
-import { watchCapsuleGenerationJob } from "./wardrobeActions";
 import type {
   CapsuleDraft,
   CapsuleMeta,
@@ -69,7 +68,7 @@ async function applyCapsuleFilters(context: AppActionContext) {
       regenerate: true,
     })) as CapsuleMutationResponse;
     throwIfFilterRegenerationFailed(result);
-    applyFilterUpdateResult(context, result, draft, capsuleId);
+    applyFilterUpdateResult(context, result, draft);
     await refreshCapsuleList(context);
     startFilterRegeneration(context, result, capsuleId);
     fromContext<(value: unknown) => void>(
@@ -110,14 +109,17 @@ function throwIfFilterRegenerationFailed(result: CapsuleMutationResponse) {
 function shouldStartFilterRegenerationStream(result: CapsuleMutationResponse) {
   if (result?.status === "pending") return true;
   const job = result?.job;
-  return Boolean(job && job.kind === "capsuleGenerate");
+  return Boolean(
+    job &&
+    job.kind === "capsuleGenerate" &&
+    (job.status === "queued" || job.status === "running"),
+  );
 }
 
 function applyFilterUpdateResult(
   context: AppActionContext,
   result: CapsuleMutationResponse,
   draft: CapsuleDraft,
-  capsuleId: string,
 ) {
   fromContext<
     (
@@ -137,6 +139,12 @@ function applyFilterUpdateResult(
     };
     return { ...next, status: buildCapsuleStatus(next) };
   });
+}
+
+function prepareFilterRegenerationState(
+  context: AppActionContext,
+  capsuleId: string,
+) {
   fromContext<(value: []) => void>(context, "setProfileItems")([]);
   fromContext<(value: []) => void>(context, "setProfileOutfitSets")([]);
   fromContext<(value: []) => void>(context, "setPendingImageSetIndexes")([]);
@@ -151,8 +159,9 @@ function startFilterRegeneration(
   result: CapsuleMutationResponse,
   capsuleId: string,
 ) {
-  fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(true);
   if (shouldStartFilterRegenerationStream(result)) {
+    prepareFilterRegenerationState(context, capsuleId);
+    fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(true);
     fromContext<(kind: string) => void>(
       context,
       "startPendingNotificationFlow",
@@ -161,9 +170,6 @@ function startFilterRegeneration(
       context,
       "startCapsuleEventStream",
     )(capsuleId);
-    if (result?.job?.id) {
-      watchCapsuleGenerationJob(context, capsuleId, result.job.id);
-    }
     return;
   }
   fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(false);

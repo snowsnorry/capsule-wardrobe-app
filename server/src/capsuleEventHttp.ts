@@ -4,21 +4,16 @@ import {
   getCapsuleSnapshotRegeneration,
 } from "./capsuleStore.js";
 import { buildCapsuleEventSnapshot } from "./ai/capsuleEvents.js";
-import { logError } from "./logger.js";
 
 function isActiveWardrobeJob(job) {
   return ["pending", "queued", "running"].includes(job?.status);
 }
 
 export function createCapsuleEventHandlers({
-  getCapsuleImpl,
   getOutfitSetImageJobImpl,
   getPartialRegenerationJobImpl,
-  listLikedItemUrlsImpl,
   getWardrobeJobImpl,
-  streamCapsuleEventsImpl,
   updateCapsuleSnapshotImpl,
-  annotateLikedItems,
 }) {
   async function getCapsuleEventSnapshot(email, capsule) {
     const capsuleId = String(capsule?.id || "").trim();
@@ -65,34 +60,5 @@ export function createCapsuleEventHandlers({
     });
   }
 
-  async function streamCapsuleEventsHandler(req, res) {
-    try {
-      const capsuleId = String(req.params?.id || "").trim();
-      if (!capsuleId) {
-        return res.status(400).json({ error: "invalid_payload" });
-      }
-
-      const capsule = await getCapsuleImpl(req.user.email, capsuleId);
-      if (!capsule) {
-        return res.status(404).json({ error: "not_found" });
-      }
-
-      const snapshot = await getCapsuleEventSnapshot(req.user.email, capsule);
-      const likedUrls = await listLikedItemUrlsImpl(req.user.email);
-      await streamCapsuleEventsImpl(req, res, {
-        email: req.user.email,
-        capsuleId,
-        snapshot: annotateLikedItems(snapshot, likedUrls),
-      });
-      return undefined;
-    } catch (error) {
-      logError("[capsules/events]", error);
-      if (!res.headersSent) {
-        return res.status(503).json({ error: "service_unavailable" });
-      }
-      return undefined;
-    }
-  }
-
-  return { getCapsuleEventSnapshot, streamCapsuleEventsHandler };
+  return { getCapsuleEventSnapshot };
 }

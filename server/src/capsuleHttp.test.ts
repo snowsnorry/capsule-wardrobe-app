@@ -9,7 +9,7 @@ describe("capsule HTTP responses", () => {
     expect(isApiPath("/mcp")).toBe(true);
     expect(isApiPath("/mcp/session")).toBe(true);
     expect(isApiPath("/jobs")).toBe(true);
-    expect(isApiPath("/jobs/job-1/events")).toBe(true);
+    expect(isApiPath("/jobs/events")).toBe(true);
     expect(isApiPath("/healthall")).toBe(true);
     expect(isApiPath("/healthall/missing")).toBe(true);
 

@@ -109,6 +109,7 @@ async function invokeRoute({
 
 function createContext(overrides = {}) {
   return {
+    getLatestJobEventIdImpl: vi.fn(async () => 0),
     getJobSnapshotImpl: vi.fn(async () => createJob()),
     listJobEventsAfterImpl: vi.fn(async () => []),
     listJobSnapshotsImpl: vi.fn(async () => [createJob()]),
@@ -187,14 +188,19 @@ test("GET /jobs/:jobId enforces ownership through context lookup", async () => {
   expect(found.body).toEqual({ ok: true, job: createJob() });
 });
 
-test("GET /jobs/:jobId/events sends initial snapshot and replayed terminal events", async () => {
+test("GET /jobs/events syncs active jobs and replays owned terminal events", async () => {
+  vi.useFakeTimers();
   const app = createFakeApp();
   const completed = createJob({
     status: "completed",
     completedAt: "2026-01-01T00:01:00.000Z",
   });
   const context = createContext({
-    getJobSnapshotImpl: vi.fn(async () => createJob({ status: "running" })),
+    getLatestJobEventIdImpl: vi.fn(async () => 3),
+    listJobSnapshotsImpl: vi
+      .fn()
+      .mockResolvedValueOnce([createJob({ status: "running" })])
+      .mockResolvedValue([]),
     listJobEventsAfterImpl: vi.fn(async () => [
       {
         id: 4,
@@ -207,27 +213,76 @@ test("GET /jobs/:jobId/events sends initial snapshot and replayed terminal event
   });
   registerJobRoutes(app, context);
 
-  const res = await invokeRoute({
+  const responsePromise = invokeRoute({
     app,
-    path: "/jobs/:jobId/events",
+    path: "/jobs/events",
     req: {
       headers: { "last-event-id": "3" },
-      params: { jobId: "job-1" },
       user: { email: "person@example.com" },
     },
   });
+  await vi.advanceTimersByTimeAsync(2500);
+  const res = await responsePromise;
 
   expect(res.statusCode).toBe(200);
   expect(res.headers.get("content-type")).toBe("text/event-stream");
   expect(res.flushHeaders).toHaveBeenCalledTimes(1);
   expect(res.end).toHaveBeenCalledTimes(1);
-  expect(res.chunks.join("")).toContain("event: snapshot");
+  expect(res.chunks.join("")).toContain("event: sync");
   expect(res.chunks.join("")).toContain("id: 4");
   expect(res.chunks.join("")).toContain("event: complete");
   expect(context.listJobEventsAfterImpl).toHaveBeenCalledWith({
-    jobId: "job-1",
+    email: "person@example.com",
     afterId: 3,
+    limit: 100,
   });
+  vi.useRealTimers();
+});
+
+test("GET /jobs/events drains multi-job backlogs before closing", async () => {
+  vi.useFakeTimers();
+  const app = createFakeApp();
+  const first = createJob();
+  const second = createJob({
+    id: "job-2",
+    entity: { type: "outfit", id: "outfit-1" },
+  });
+  const events = Array.from({ length: 101 }, (_, index) => ({
+    id: index + 1,
+    jobId: index === 100 ? "job-2" : "job-1",
+    eventType: index === 100 ? "complete" : "progress",
+    data: { job: index === 100 ? { ...second, status: "completed" } : first },
+    createdAt: "2026-01-01T00:01:00.000Z",
+  }));
+  const context = createContext({
+    getLatestJobEventIdImpl: vi.fn(async () => 0),
+    listJobEventsAfterImpl: vi.fn(async ({ afterId, limit }) =>
+      events.filter((event) => event.id > afterId).slice(0, limit),
+    ),
+    listJobSnapshotsImpl: vi
+      .fn()
+      .mockResolvedValueOnce([first, second])
+      .mockResolvedValueOnce([second])
+      .mockResolvedValue([]),
+  });
+  registerJobRoutes(app, context);
+
+  const responsePromise = invokeRoute({
+    app,
+    path: "/jobs/events",
+    req: { headers: {}, user: { email: "person@example.com" } },
+  });
+  await vi.advanceTimersByTimeAsync(3000);
+  const res = await responsePromise;
+
+  expect(res.chunks.join("")).toContain('"id":"job-2"');
+  expect(res.chunks.join("")).toContain("id: 101");
+  expect(context.listJobEventsAfterImpl).toHaveBeenCalledWith({
+    email: "person@example.com",
+    afterId: 100,
+    limit: 100,
+  });
+  vi.useRealTimers();
 });
 
 test("job routes map service failures to service_unavailable without leaking details", async () => {
@@ -256,38 +311,22 @@ test("job routes map service failures to service_unavailable without leaking det
   });
 });
 
-test("GET /jobs/:jobId/events maps missing jobs and stream failures", async () => {
+test("GET /jobs/events emits streamError after an opened stream fails", async () => {
   const app = createFakeApp();
-  const context = createContext({
-    getJobSnapshotImpl: vi.fn(async () => null),
-  });
+  const context = createContext();
   registerJobRoutes(app, context);
-
-  const missing = await invokeRoute({
-    app,
-    path: "/jobs/:jobId/events",
-    req: {
-      headers: {},
-      params: { jobId: "missing" },
-      user: { email: "person@example.com" },
-    },
-  });
-  expect(missing.statusCode).toBe(404);
-  expect(missing.body).toEqual({ error: "not_found" });
-
-  context.getJobSnapshotImpl.mockResolvedValueOnce(createJob());
   context.listJobEventsAfterImpl = vi.fn(async () => {
     throw new Error("db_down");
   });
   const failed = await invokeRoute({
     app,
-    path: "/jobs/:jobId/events",
+    path: "/jobs/events",
     req: {
       headers: {},
-      params: { jobId: "job-1" },
       user: { email: "person@example.com" },
     },
   });
-  expect(failed.chunks.join("")).toContain("event: failed");
+  expect(failed.chunks.join("")).toContain("event: streamError");
   expect(failed.end).toHaveBeenCalledTimes(1);
+  expect(app.routes.has("/jobs/:jobId/events")).toBe(false);
 });

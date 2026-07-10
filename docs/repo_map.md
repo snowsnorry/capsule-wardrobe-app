@@ -81,7 +81,7 @@ Capsule Wardrobe App is a full-stack prototype for passwordless sign-in, passkey
 ### 7. Queued jobs flow
 - Long-running generation, report, image, and Personal items upload work returns `JobSnapshot` payloads instead of relying only on process-local state
 - Client job API helpers live in `client/src/api/jobs.ts`; active sidebar discovery and wait orchestration live in `client/src/app/useActiveSidebarJobs.ts`
-- Authenticated job HTTP behavior lives in `server/src/routes/jobRoutes.ts`: `GET /jobs`, `GET /jobs/:jobId`, and `GET /jobs/:jobId/events`
+- Authenticated job HTTP behavior lives in `server/src/routes/jobRoutes.ts`: `GET /jobs`, `GET /jobs/:jobId`, and the profile-wide `GET /jobs/events` stream
 - Production job dependencies are selected in `server/src/appDependencyJobs.ts`, persisted through `server/src/db/jobs.ts` plus split `server/src/db/job*.ts` helpers, and backed by schema assets `100` through `107` under `server/src/db/sql/schema/`
 - Production queue execution uses `pg_boss` through `server/src/jobs/pgBossQueueBackend.ts`; workers, handlers, metrics, snapshots, and staging helpers live under `server/src/jobs/`
 - `server/src/serverStartup.ts` starts search cache invalidation and job workers after the HTTP server is listening, then stops them on server shutdown or startup failure
