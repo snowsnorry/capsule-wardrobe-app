@@ -47,6 +47,21 @@ function createTimeoutControls() {
   };
 }
 
+function createIntervalControls() {
+  const callbacks: Array<() => void> = [];
+  const intervals: Array<NodeJS.Timeout & { unref: ReturnType<typeof vi.fn> }> =
+    [];
+  const setIntervalImpl = vi.fn((callback: () => void, _delay?: number) => {
+    const interval = { unref: vi.fn() } as unknown as NodeJS.Timeout & {
+      unref: ReturnType<typeof vi.fn>;
+    };
+    callbacks.push(callback);
+    intervals.push(interval);
+    return interval;
+  });
+  return { callbacks, intervals, setIntervalImpl };
+}
+
 test("search cache invalidation listens for product catalog notifications", async () => {
   const client = createFakeClient();
   const markStale = vi.fn();
@@ -59,6 +74,7 @@ test("search cache invalidation listens for product catalog notifications", asyn
     clearIntervalImpl,
     createClientImpl: () => client,
     databaseUrl: "postgresql://example.test/db",
+    heartbeatIntervalMs: 0,
     logErrorImpl,
     logInfoImpl,
     markStale,
@@ -125,6 +141,39 @@ test("search cache invalidation logs listener end events", async () => {
     timeoutControls.timeouts[0],
   );
   expect(client.end).not.toHaveBeenCalled();
+});
+
+test("search cache invalidation keeps its listener connection active", async () => {
+  const client = createFakeClient();
+  const clearIntervalImpl = vi.fn();
+  const intervalControls = createIntervalControls();
+  const service = createSearchCacheInvalidationService({
+    clearIntervalImpl,
+    createClientImpl: () => client,
+    databaseUrl: "postgresql://example.test/db",
+    heartbeatIntervalMs: 25_000,
+    intervalMs: 0,
+    markStale: vi.fn(),
+    setIntervalImpl:
+      intervalControls.setIntervalImpl as unknown as typeof setInterval,
+  });
+
+  await service.start();
+  expect(intervalControls.setIntervalImpl).toHaveBeenCalledWith(
+    expect.any(Function),
+    25_000,
+  );
+  expect(intervalControls.intervals[0]?.unref).toHaveBeenCalledTimes(1);
+
+  intervalControls.callbacks[0]?.();
+  await vi.waitFor(() => {
+    expect(client.query).toHaveBeenCalledWith("SELECT 1");
+  });
+
+  client.emit("end");
+  expect(clearIntervalImpl).toHaveBeenCalledWith(intervalControls.intervals[0]);
+
+  await service.stop();
 });
 
 test("search cache invalidation reconnects after listener end events", async () => {
