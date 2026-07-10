@@ -1,11 +1,13 @@
 import { createApp } from "../index.js";
 import { logError } from "../logger.js";
 import { createStartServer } from "../serverStartup.js";
+import { installE2eLogFilter } from "./logFilter.js";
 import { registerE2eRoutes } from "./routes.js";
 import { createE2eDependencies, e2eState } from "./state.js";
 
 const port = process.env.PORT || 5310;
 const clientOrigin = process.env.CLIENT_ORIGIN || `http://127.0.0.1:${port}`;
+installE2eLogFilter();
 const app = createApp(createE2eDependencies());
 
 registerE2eRoutes(app);
