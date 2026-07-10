@@ -6,6 +6,10 @@ import {
 import { buildCapsuleEventSnapshot } from "./ai/capsuleEvents.js";
 import { logError } from "./logger.js";
 
+function isActiveWardrobeJob(job) {
+  return ["pending", "queued", "running"].includes(job?.status);
+}
+
 export function createCapsuleEventHandlers({
   getCapsuleImpl,
   getOutfitSetImageJobImpl,
@@ -26,7 +30,7 @@ export function createCapsuleEventHandlers({
     if (
       capsuleId &&
       getCapsuleSnapshotRegeneration(getEffectiveCapsuleSnapshot(capsule)) &&
-      activeJob?.status !== "pending"
+      !isActiveWardrobeJob(activeJob)
     ) {
       const clearedSnapshot = buildCapsuleSnapshotWithRegeneration(
         getEffectiveCapsuleSnapshot(capsule),

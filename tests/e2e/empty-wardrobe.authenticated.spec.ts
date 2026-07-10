@@ -137,3 +137,29 @@ test("empty wardrobe recovers from one failed full regeneration and persists ret
   await expect(page.getByRole("alert")).toHaveCount(0);
   expect(externalRequests).toEqual([]);
 });
+
+test("full regeneration shows an error when its pending capsule stream fails", async ({
+  page,
+  resetAndLogin,
+}) => {
+  await resetAndLogin("empty-wardrobe");
+  await openApp(page);
+
+  const pendingModeResponse = await page
+    .context()
+    .request.post("/__e2e/generation/mode", { data: { mode: "pending" } });
+  await expect(pendingModeResponse).toBeOK();
+
+  await page.getByRole("button", { name: "Regenerate all" }).click();
+  await expect(page.getByRole("progressbar")).toBeVisible();
+
+  const failureResponse = await page
+    .context()
+    .request.post("/__e2e/generation/fail", { data: { capsuleId } });
+  await expect(failureResponse).toBeOK();
+  await expect(page.getByRole("alert")).toContainText(
+    "Failed to regenerate the capsule. Your previous capsule was restored.",
+  );
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
+  await expectEmptyWardrobe(page);
+});

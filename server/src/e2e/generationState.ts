@@ -29,6 +29,7 @@ type E2eGenerationFailureState = {
 type E2ePendingWardrobeJob = WardrobeJobState & {
   capsuleId: string;
   email: string;
+  failedSnapshot: CapsuleSnapshot;
   readySnapshot: CapsuleSnapshot;
 };
 
@@ -80,6 +81,7 @@ function cloneWardrobeJob(job: E2ePendingWardrobeJob): WardrobeJobState {
   const {
     capsuleId: _capsuleId,
     email: _email,
+    failedSnapshot: _failedSnapshot,
     readySnapshot: _snapshot,
     ...rest
   } = job;
@@ -198,7 +200,11 @@ export class E2eGenerationMemory {
       capsuleMemory,
       normalizedCapsuleId,
     );
-    if (!pendingSnapshot || !readySnapshot) return null;
+    const failedSnapshot = buildCapsuleSnapshotWithRegeneration(
+      cloneEffectiveCapsuleSnapshot(capsuleMemory.get(normalizedCapsuleId)),
+      null,
+    );
+    if (!pendingSnapshot || !readySnapshot || !failedSnapshot) return null;
 
     const updatedCapsule = capsuleMemory.update(
       normalizedCapsuleId,
@@ -218,6 +224,7 @@ export class E2eGenerationMemory {
         .trim()
         .toLowerCase(),
       capsuleId: normalizedCapsuleId,
+      failedSnapshot,
       readySnapshot,
     };
     this.jobs.set(key, job);
@@ -248,6 +255,32 @@ export class E2eGenerationMemory {
     job.result = deepClone(
       job.readySnapshot.data.wardrobe,
     ) as StoredWardrobePayloadLike;
+    this.jobs.set(generationKey(job.email, job.capsuleId), job);
+    return deepClone(job);
+  }
+
+  failWardrobeJob({
+    capsuleMemory,
+    capsuleId,
+    email,
+  }: {
+    capsuleMemory: E2eCapsuleMemory;
+    capsuleId?: unknown;
+    email?: unknown;
+  }): E2ePendingWardrobeJob | null {
+    const job = this.findPendingJob(email, capsuleId);
+    if (!job) return null;
+
+    const updatedCapsule = capsuleMemory.update(
+      job.capsuleId,
+      job.failedSnapshot,
+    );
+    if (!updatedCapsule) return null;
+
+    job.status = "failed";
+    job.phase = "failed";
+    job.updatedAt = this.counter + 1;
+    job.error = new Error("e2e_forced_failure");
     this.jobs.set(generationKey(job.email, job.capsuleId), job);
     return deepClone(job);
   }

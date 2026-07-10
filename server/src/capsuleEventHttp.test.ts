@@ -111,6 +111,46 @@ test("getCapsuleEventSnapshot clears stale regeneration markers", async () => {
   expect(snapshot.status).toBe("failed");
 });
 
+test.each(["queued", "running"])(
+  "getCapsuleEventSnapshot keeps regeneration markers for an active %s job",
+  async (status) => {
+    const updates = [];
+    const handlers = createHandlers({
+      getWardrobeJobImpl: () => ({ status }),
+      updateCapsuleSnapshotImpl: async (_email, _capsuleId, snapshot) => {
+        updates.push(snapshot);
+        return createCapsule({ draft: snapshot });
+      },
+    });
+    const capsule = createCapsule({
+      draft: {
+        filters: {},
+        data: {
+          wardrobe: {
+            items: [{ id: "top-1", category: "top" }],
+            outfitSets: [],
+          },
+          rejectedUrls: [],
+          regeneration: {
+            status: "pending",
+            kind: "full",
+            startedAt: new Date(0).toISOString(),
+            requestId: "request-1",
+          },
+        },
+      },
+    });
+
+    const snapshot = await handlers.getCapsuleEventSnapshot(
+      "person@example.com",
+      capsule,
+    );
+
+    expect(updates).toEqual([]);
+    expect(snapshot.status).toBe("pending");
+  },
+);
+
 test("streamCapsuleEventsHandler streams snapshots and maps unhandled errors", async () => {
   const streamed = createResponse();
   await createHandlers().streamCapsuleEventsHandler(
