@@ -71,6 +71,7 @@ function renderDialog(
         "locale.options.en": "English",
         "locale.options.ru": "Russian",
         "settings.llmOptions.openai:gpt-5.5": "OpenAI GPT-5.5",
+        "settings.llmOptions.openai:gpt-5.6-terra": "GPT-5.6 Terra",
         "settings.llmOptions.claude:claude-opus-4-7": "Claude Opus 4.7",
         "settings.llmOptions.gemini:gemini-2.5-pro": "Gemini 2.5 Pro",
         "settings.llmOptions.deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct":
@@ -192,6 +193,18 @@ describe("SettingsDialog", () => {
 
     deferred.resolve();
     await deferred.promise;
+  });
+
+  test("shows GPT-5.6 Terra as a selectable stylist model", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.click(screen.getByRole("button", { name: "AI" }));
+    await user.click(screen.getByRole("combobox", { name: "Stylist Model" }));
+
+    expect(
+      screen.getByRole("option", { name: "GPT-5.6 Terra" }),
+    ).toBeInTheDocument();
   });
 
   test("hides deepinfra llm options while preserving a saved deepinfra value", async () => {

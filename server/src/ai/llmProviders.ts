@@ -2,6 +2,7 @@ import { DEFAULT_PROFILE_LLM } from "../../../shared/profileSettings.js";
 import { logWarn } from "../logger.js";
 
 const OPENAI_PROFILE_LLM = "openai:gpt-5.5";
+const OPENAI_ALLOWED_MODELS = ["gpt-5.5", "gpt-5.6-terra"];
 const CLAUDE_ALLOWED_MODELS = ["claude-opus-4-7"];
 const GEMINI_PROFILE_LLM = "gemini:gemini-2.5-pro";
 const DEEPINFRA_ALLOWED_MODELS = [
@@ -53,8 +54,11 @@ function resolveBuiltInProvider(llm: string): LlmProviderResolution | null {
     return { mode: "none", llm, requestedLlm: llm };
   }
 
-  if (llm === OPENAI_PROFILE_LLM) {
-    return { provider: "openai", model: "gpt-5.5", llm, requestedLlm: llm };
+  if (llm.startsWith("openai:")) {
+    const model = llm.slice("openai:".length).trim();
+    if (OPENAI_ALLOWED_MODELS.includes(model)) {
+      return { provider: "openai", model, llm, requestedLlm: llm };
+    }
   }
 
   if (llm === GEMINI_PROFILE_LLM) {

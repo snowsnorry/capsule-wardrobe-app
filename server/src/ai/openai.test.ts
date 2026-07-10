@@ -297,6 +297,24 @@ test("OpenAI client helpers shape embedding and response requests", async () => 
   expect(Array.isArray(responseCalls[0].input)).toBeTruthy();
 });
 
+test("OpenAI client uses the model selected in the profile", async () => {
+  const responseCalls = [];
+  const client = {
+    responses: {
+      create: async (payload) => {
+        responseCalls.push(payload);
+        return { output_text: '{"ok":true}' };
+      },
+    },
+  };
+
+  await generateJsonWithLlmWithClient(client, "Return JSON", {
+    userProfile: { llm: "openai:gpt-5.6-terra" },
+  });
+
+  expect(responseCalls[0].model).toBe("gpt-5.6-terra");
+});
+
 test("OpenAI client helpers reject invalid embeddings and rethrow response failures", async () => {
   await expect(() =>
     getPromptEmbeddingsWithClient(

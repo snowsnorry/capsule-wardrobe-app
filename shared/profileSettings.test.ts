@@ -21,6 +21,7 @@ test("profile setting option lists expose supported providers", () => {
   expect(
     PROFILE_LLM_VALUES.some((value) => value.startsWith("openai:")),
   ).toBeTruthy();
+  expect(PROFILE_LLM_VALUES).toContain("openai:gpt-5.6-terra");
   expect(
     PROFILE_LLM_VALUES.some((value) => value.startsWith("claude:")),
   ).toBeTruthy();

@@ -16,6 +16,9 @@ describe("settingsDialogModel", () => {
     expect(normalizeThemeValue("dark")).toBe("dark");
     expect(normalizeThemeValue("unknown")).toBe("system");
     expect(normalizeLlmValue("none")).toBe("none");
+    expect(normalizeLlmValue("openai:gpt-5.6-terra")).toBe(
+      "openai:gpt-5.6-terra",
+    );
     expect(
       normalizeLlmValue("deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct"),
     ).toBe("deepinfra:Qwen/Qwen3-VL-235B-A22B-Instruct");
@@ -34,6 +37,7 @@ describe("settingsDialogModel", () => {
       "deepinfra:google/gemma-4-31B-it",
     );
     expect(PROFILE_LLM_OPTIONS).toContain("openai:gpt-5.5");
+    expect(PROFILE_LLM_OPTIONS).toContain("openai:gpt-5.6-terra");
   });
 
   test("builds a settings draft from partial profile values", () => {

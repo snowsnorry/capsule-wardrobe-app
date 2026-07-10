@@ -21,6 +21,13 @@ test("resolveLlmProvider maps supported profile llm values to providers", () => 
     requestedLlm: "openai:gpt-5.5",
   });
 
+  expect(resolveLlmProvider({ llm: "openai:gpt-5.6-terra" })).toEqual({
+    provider: "openai",
+    model: "gpt-5.6-terra",
+    llm: "openai:gpt-5.6-terra",
+    requestedLlm: "openai:gpt-5.6-terra",
+  });
+
   expect(
     resolveLlmProvider({ llm: "deepinfra:google/gemma-4-31B-it" }),
   ).toEqual({

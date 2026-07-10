@@ -5,6 +5,7 @@ import {
   buildSystemPrompt,
   splitSystemAndUserPrompt,
 } from "./llmPrompts.js";
+import { resolveLlmProvider } from "./llmProviders.js";
 import type {
   ImageAssetLike,
   LlmGenerateOptions,
@@ -116,8 +117,12 @@ function buildOpenAiResponsesRequest({
   systemPrompt,
   userProfile,
 }) {
+  const resolved = resolveLlmProvider(userProfile);
   return {
-    model: DEFAULT_CHAT_MODEL,
+    model:
+      resolved.provider === "openai" && resolved.model
+        ? resolved.model
+        : DEFAULT_CHAT_MODEL,
     instructions: systemPrompt || undefined,
     input,
     reasoning: { effort: "low" },
@@ -173,16 +178,17 @@ async function generateJsonWithLlmWithClient(
   onPayloadBuilt?.();
   throwIfAborted(signal);
   const requestStartedAt = Date.now();
+  const request = buildOpenAiResponsesRequest({
+    format,
+    input,
+    systemPrompt,
+    userProfile,
+  });
   let response;
 
   try {
     response = await client.responses.create(
-      buildOpenAiResponsesRequest({
-        format,
-        input,
-        systemPrompt,
-        userProfile,
-      }),
+      request,
       signal ? { signal } : undefined,
     );
     throwIfAborted(signal);
@@ -190,7 +196,7 @@ async function generateJsonWithLlmWithClient(
     logError(
       "[openai][request-failed]",
       JSON.stringify({
-        model: DEFAULT_CHAT_MODEL,
+        model: request.model,
         durationMs: Date.now() - requestStartedAt,
         imageCount: Array.isArray(images) ? images.length : 0,
         hasSystemPrompt: Boolean(systemPrompt),

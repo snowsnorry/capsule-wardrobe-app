@@ -85,7 +85,7 @@ test("profile mutation routes cover update, locale update, and delete branches",
       body: {
         locale: "en",
         theme: "system",
-        llm: "openai:gpt-5.5",
+        llm: "openai:gpt-5.6-terra",
         imageLlm: "openai:gpt-image-2",
         fullname: null,
       },
