@@ -189,7 +189,7 @@ export function registerJobRoutes(app, context) {
       });
       return res.json({ ok: true, jobs });
     } catch (error) {
-      logError("[jobs/list]", error);
+      logError("jobs.list.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -198,7 +198,7 @@ export function registerJobRoutes(app, context) {
     try {
       return await streamJobEvents(req, res, context);
     } catch (error) {
-      logError("[jobs/events]", error);
+      logError("jobs.events.failed", error);
       if (!res.headersSent) {
         return res.status(503).json({ error: "service_unavailable" });
       }
@@ -219,7 +219,7 @@ export function registerJobRoutes(app, context) {
       if (!job) return res.status(404).json({ error: "not_found" });
       return res.json({ ok: true, job });
     } catch (error) {
-      logError("[jobs/get]", error);
+      logError("jobs.get.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });

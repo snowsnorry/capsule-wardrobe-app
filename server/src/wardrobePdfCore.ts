@@ -145,8 +145,6 @@ export type WardrobePdfForkLike = (
   options?: Record<string, unknown>,
 ) => WardrobePdfChildProcessLike;
 export {
-  formatLogPayload,
-  formatLogValue,
   hasNonLatinText,
   logPdfEvent,
   productNeedsUnicodeFallback,
@@ -314,7 +312,9 @@ export async function loadImageBytes(
       stats,
     });
   } catch (error) {
-    logError("[wardrobe-pdf][image]", resolvedImageUrl, error);
+    logError("pdf.image.download.failed", error, {
+      imageUrl: resolvedImageUrl,
+    });
     return null;
   }
 }

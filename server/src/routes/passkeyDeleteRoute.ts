@@ -29,7 +29,7 @@ export function registerPasskeyDeleteRoute(app, context) {
         }
         return res.json({ ok: true });
       } catch (error) {
-        logError("[auth/passkeys/delete]", error);
+        logError("auth.passkeys.delete.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

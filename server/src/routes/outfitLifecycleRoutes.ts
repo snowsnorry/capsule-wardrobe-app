@@ -20,7 +20,7 @@ function registerOutfitStateRoutes(app, context) {
         );
         return sendOutfitMutationResponse(req, res, outfit, context);
       } catch (error) {
-        logError("[outfits/save]", error);
+        logError("outfit.save.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -39,7 +39,7 @@ function registerOutfitStateRoutes(app, context) {
         );
         return sendOutfitMutationResponse(req, res, outfit, context);
       } catch (error) {
-        logError("[outfits/revert]", error);
+        logError("outfit.revert.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -66,7 +66,7 @@ function registerOutfitMetadataRoutes(app, context) {
         );
         return sendOutfitMutationResponse(req, res, outfit, context);
       } catch (error) {
-        logError("[outfits/pin]", error);
+        logError("outfit.pin.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -90,7 +90,7 @@ function registerOutfitMetadataRoutes(app, context) {
         );
         return sendOutfitMutationResponse(req, res, outfit, context);
       } catch (error) {
-        logError("[outfits/rename]", error);
+        logError("outfit.rename.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -116,7 +116,7 @@ function registerOutfitMetadataRoutes(app, context) {
           outfit: await buildAnnotatedOutfitResponse(outfit, req, context),
         });
       } catch (error) {
-        logError("[outfits/duplicate]", error);
+        logError("outfit.duplicate.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -142,7 +142,7 @@ function registerOutfitSelectionRoutes(app, context) {
         }
         return res.json({ ok: true, outfitId: outfit.id });
       } catch (error) {
-        logError("[outfits/select]", error);
+        logError("outfit.select.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -164,7 +164,7 @@ function registerOutfitSelectionRoutes(app, context) {
         }
         return res.json({ ok: true });
       } catch (error) {
-        logError("[outfits/delete]", error);
+        logError("outfit.delete.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

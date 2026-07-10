@@ -180,7 +180,7 @@ test("buildPromptDebugImages skips failed downloads and still produces outputs",
   muteExpectedStructuredLog(
     t,
     "warn",
-    "[prompt-images][asset-download-failed]",
+    "ai.prompt.images.asset.download.failed",
   );
 
   usePromptImageDownloader(t, async ({ url }) => {

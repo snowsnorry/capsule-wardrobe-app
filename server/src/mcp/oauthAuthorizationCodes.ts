@@ -48,7 +48,7 @@ export async function redirectWithAuthorizationCode({
   const redirectUrl = new URL(authRequest.redirectUri);
   redirectUrl.searchParams.set("code", code);
   redirectUrl.searchParams.set("state", authRequest.state);
-  logInfo("[mcp/oauth/authorize/success]", {
+  logInfo("mcp.oauth.authorize.completed", {
     clientId: authRequest.clientId,
     scopes: scopesToKey(authRequest.scopes),
     subject: userEmail,

@@ -119,9 +119,7 @@ const defaultCreateGeminiClient: CreateGeminiClientImpl = ({
 function logGeminiFinishReason(response) {
   const finishReason = response?.candidates?.[0]?.finishReason;
   if (finishReason && finishReason !== "STOP") {
-    logWarn(
-      `[gemini][generation-aborted] Generation was interrupted by the server: ${finishReason}`,
-    );
+    logWarn("ai.gemini.generation.aborted", { finishReason });
   }
 }
 

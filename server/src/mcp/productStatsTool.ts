@@ -100,7 +100,7 @@ export function registerStatsTool(
         if (isInvalidPayloadError(error)) {
           return toToolError("invalid_payload");
         }
-        logError("[mcp/stats]", error);
+        logError("mcp.stats.failed", error);
         return toToolError("service_unavailable");
       }
     },

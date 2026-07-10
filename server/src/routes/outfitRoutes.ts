@@ -57,7 +57,7 @@ function registerOutfitRecentRoute(app, context) {
         pagination: buildOutfitPaginationResponse(paginationRequest, total),
       });
     } catch (error) {
-      logError("[outfits/recent]", error);
+      logError("outfit.recent.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -79,7 +79,7 @@ function registerOutfitSearchRoute(app, context) {
         : await listRecentOutfitsImpl(req.user.email, 25);
       return res.json({ ok: true, outfits: outfits.map(toOutfitSummary) });
     } catch (error) {
-      logError("[outfits/search]", error);
+      logError("outfit.search.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -103,7 +103,7 @@ function registerOutfitGetRoute(app, context) {
         outfit: await buildAnnotatedOutfitResponse(outfit, req, context),
       });
     } catch (error) {
-      logError("[outfits/get]", error);
+      logError("outfit.get.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });

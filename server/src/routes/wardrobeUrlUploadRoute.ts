@@ -136,7 +136,7 @@ async function processWardrobeUploadUrlResult({
 }) {
   const source = processingResult?.source || null;
   if (!source) {
-    logError("[wardrobe/items/upload-url][item]", {
+    logError("wardrobe.item.upload.url.failed", {
       error: processingResult?.message || "wardrobe_upload_url_failed",
     });
     advanceWardrobeUploadProgress(progress, {
@@ -167,7 +167,7 @@ async function processWardrobeUploadUrlResult({
       res,
     });
   } catch (error) {
-    logError("[wardrobe/items/upload-url][item]", { source }, error);
+    logError("wardrobe.item.upload.url.failed", error, { source });
     advanceWardrobeUploadProgress(progress, {
       completedSteps: 3,
       failed: 1,
@@ -207,7 +207,7 @@ function registerWardrobeUrlUploadRoute(app, context) {
         if (jobError) {
           return jobError;
         }
-        logError("[wardrobe/items/upload-url]", error);
+        logError("wardrobe.item.upload.url.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

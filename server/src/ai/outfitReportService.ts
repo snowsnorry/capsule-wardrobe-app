@@ -237,9 +237,8 @@ async function generateOutfitReport(
     });
   } catch (error) {
     if (isOutfitReportDomainError(error)) throw error;
-    logError("[outfit-report]", {
+    logError("ai.outfit.report.failed", error, {
       outfitId: context.normalizedOutfitId,
-      message: error instanceof Error ? error.message : "unknown_error",
       code: (error as { code?: string })?.code ?? null,
     });
     throw buildOutfitReportError("service_unavailable");

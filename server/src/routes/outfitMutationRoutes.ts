@@ -268,7 +268,7 @@ async function handleOutfitCreate(req, res, context) {
       outfit: await buildAnnotatedOutfitResponse(outfit, req, context),
     });
   } catch (error) {
-    logError("[outfits/create]", error);
+    logError("outfit.create.failed", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 }
@@ -293,7 +293,7 @@ async function handleOutfitItemsUpdate(req, res, context) {
     );
     return sendOutfitMutationResponse(req, res, outfit, context);
   } catch (error) {
-    logError("[outfits/items]", error);
+    logError("outfit.items.update.failed", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 }

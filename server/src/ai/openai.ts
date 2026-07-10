@@ -60,14 +60,11 @@ function buildResponsesInput(user: string, images: ImageAssetLike[] = []) {
   for (const image of images) {
     const imageUrl = buildImageDataUrl(image);
     if (!imageUrl) {
-      logWarn(
-        "[openai][image-skipped]",
-        JSON.stringify({
-          category: image?.category ?? null,
-          filename: image?.filename ?? null,
-          reason: "missing_buffer",
-        }),
-      );
+      logWarn("ai.openai.image.skipped", {
+        category: image?.category ?? null,
+        filename: image?.filename ?? null,
+        reason: "missing_buffer",
+      });
       continue;
     }
 
@@ -193,17 +190,13 @@ async function generateJsonWithLlmWithClient(
     );
     throwIfAborted(signal);
   } catch (error) {
-    logError(
-      "[openai][request-failed]",
-      JSON.stringify({
-        model: request.model,
-        durationMs: Date.now() - requestStartedAt,
-        imageCount: Array.isArray(images) ? images.length : 0,
-        hasSystemPrompt: Boolean(systemPrompt),
-        userChars: user.length,
-      }),
-      error,
-    );
+    logError("ai.openai.request.failed", error, {
+      model: request.model,
+      durationMs: Date.now() - requestStartedAt,
+      imageCount: Array.isArray(images) ? images.length : 0,
+      hasSystemPrompt: Boolean(systemPrompt),
+      userChars: user.length,
+    });
     throw error;
   }
 

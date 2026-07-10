@@ -205,9 +205,9 @@ async function addSwimwearIfNeeded(
       throw error;
     }
     logError(
-      "[wardrobe-ai][swimwear]",
-      buildErrorLogContext(logContext),
+      "ai.wardrobe.swimwear.failed",
       error,
+      buildErrorLogContext(logContext),
     );
     logCapsuleTotalCompleted(deps, job.startedAt, baseResult.items, logContext);
     return baseResult.currentCapsule;
@@ -265,9 +265,9 @@ async function restoreRollbackSnapshot(
     );
   } catch (rollbackError) {
     logError(
-      "[wardrobe-ai][rollback]",
-      buildErrorLogContext(logContext),
+      "ai.wardrobe.rollback.failed",
       rollbackError,
+      buildErrorLogContext(logContext),
     );
     return currentCapsule;
   }
@@ -292,7 +292,7 @@ async function markWardrobeJobFailed(
   job.phase = "failed";
   job.updatedAt = deps.nowMsImpl();
   job.error = error;
-  logError("[wardrobe-ai]", buildErrorLogContext(logContext), error);
+  logError("ai.wardrobe.job.failed", error, buildErrorLogContext(logContext));
   const restoredCapsule =
     errorCode === "job_aborted" || errorCode === "job_deadline_exceeded"
       ? currentCapsule

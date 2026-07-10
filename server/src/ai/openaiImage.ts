@@ -74,7 +74,7 @@ async function buildOpenAiImageFiles(images: ImageAssetLike[] = []) {
 
   for (const [index, image] of images.entries()) {
     if (!hasOpenAiImageBuffer(image)) {
-      logWarn("[openai-image][image-skipped]", {
+      logWarn("ai.openai.image.skipped", {
         category: image?.category ?? null,
         filename: image?.filename ?? null,
         reason: "missing_buffer",

@@ -32,55 +32,12 @@ export function getSqlRows<TRow>(result: TRow[] | { count: number }): TRow[] {
   return Array.isArray(result) ? result : [];
 }
 
-function formatLogValue(value) {
-  if (value === null) {
-    return "null";
-  }
-
-  if (value === undefined) {
-    return "undefined";
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-
-  return JSON.stringify(value);
-}
-
-export function formatLogPayload(payload = {}) {
-  return Object.entries(payload)
-    .filter(([, value]) => value !== undefined)
-    .map(([key, value]) => `${key}: ${formatLogValue(value)}`)
-    .join(", ");
-}
-
-export function getShortRequestId(logContext = null) {
-  const capsuleRequestId = String(logContext?.capsuleRequestId || "").trim();
-  if (!capsuleRequestId) {
-    return "";
-  }
-
-  return capsuleRequestId.split("-")[0] || capsuleRequestId.slice(0, 8);
-}
-
 export function logWardrobeInfo(event, payload = {}, logContext = null) {
-  const shortRequestId = getShortRequestId(logContext);
-  const prefix = shortRequestId
-    ? `[${shortRequestId}][wardrobe-ai][${event}]`
-    : `[wardrobe-ai][${event}]`;
-  const message = formatLogPayload(payload);
-
-  if (message) {
-    logInfo(`${prefix} ${message}`);
-    return;
-  }
-
-  logInfo(prefix);
+  const capsuleRequestId = String(logContext?.capsuleRequestId || "").trim();
+  logInfo(`ai.${String(event).replace(/[-_]+/g, ".")}`, {
+    ...(capsuleRequestId ? { capsuleRequestId } : {}),
+    ...payload,
+  });
 }
 
 export function buildLastPromptArtifact(prompt, userProfile = null) {
@@ -120,6 +77,28 @@ export function countItemsByKey(
     result[value] = (result[value] || 0) + 1;
     return result;
   }, {});
+}
+
+export function getSelectionSummary(selection: unknown) {
+  const capsule =
+    selection && typeof selection === "object"
+      ? (selection as { capsule?: unknown }).capsule
+      : null;
+  if (!capsule || typeof capsule !== "object") {
+    return { selectedItemsTotal: 0, selectedItemsByCategory: {} };
+  }
+  const selectedItemsByCategory = Object.fromEntries(
+    Object.entries(capsule as Record<string, unknown>)
+      .filter((entry): entry is [string, unknown[]] => Array.isArray(entry[1]))
+      .map(([category, ids]) => [category, ids.length]),
+  );
+  return {
+    selectedItemsTotal: Object.values(selectedItemsByCategory).reduce(
+      (total, count) => total + count,
+      0,
+    ),
+    selectedItemsByCategory,
+  };
 }
 
 export function getRequestedWardrobeParams(

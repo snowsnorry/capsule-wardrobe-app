@@ -168,7 +168,7 @@ function logEmptySelectionResponse(
   }
 
   logWarn(
-    "[wardrobe-ai][selected-json-empty]",
+    "ai.capsule.selection.empty",
     buildEmptySelectionLogPayload(selectionResponse),
   );
 }
@@ -176,13 +176,12 @@ function logEmptySelectionResponse(
 function buildEmptySelectionLogPayload(
   selectionResponse: CapsuleSelectionResponse | null | undefined,
 ) {
+  const outputText = getRawSelectionText(selectionResponse);
   return {
-    outputText: getRawSelectionText(selectionResponse),
-    output: selectionResponse?.output ?? null,
-    outputParsed: selectionResponse?.output_parsed ?? null,
     finishReason: selectionResponse?.status ?? null,
-    incompleteDetails: selectionResponse?.incomplete_details ?? null,
-    usage: selectionResponse?.usage ?? null,
+    incomplete: Boolean(selectionResponse?.incomplete_details),
+    outputTextLength: outputText?.length ?? 0,
+    ...extractLlmUsage(selectionResponse?.usage),
   };
 }
 

@@ -15,12 +15,11 @@ import {
   buildCapsuleGenerationResult,
   buildNoLlmCapsuleResult,
 } from "./aiGenerationResults.js";
-import { logWardrobeInfo } from "./aiCommon.js";
+import { getSelectionSummary, logWardrobeInfo } from "./aiCommon.js";
 import {
   expandCategoriesForAnchors,
   splitAnchorSelectionRows,
 } from "./anchorGeneration.js";
-import { logInfo } from "../logger.js";
 
 export function createGenerateCapsuleWardrobe(
   deps: CapsuleGenerationDeps = {},
@@ -98,7 +97,11 @@ export function createGenerateCapsuleWardrobe(
         logContext,
         deps: resolvedDeps,
       });
-    logInfo("[wardrobe-ai][selected-json]", parsedSelection);
+    logWardrobeInfo(
+      "capsule-selection-completed",
+      getSelectionSummary(parsedSelection),
+      logContext,
+    );
     logEmptySelectionResponse(parsedSelection, selectionResponse);
 
     return buildCapsuleGenerationResult({

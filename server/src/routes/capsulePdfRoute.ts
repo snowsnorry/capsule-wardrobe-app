@@ -146,7 +146,7 @@ export function registerCapsulePdfRoute(app, context) {
         );
         return res.status(200).send(pdfBuffer);
       } catch (error) {
-        logError("[capsules/pdf]", error);
+        logError("capsule.pdf.generate.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

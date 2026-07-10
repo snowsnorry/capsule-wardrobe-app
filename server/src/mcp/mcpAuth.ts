@@ -76,7 +76,7 @@ export function createMcpAuthMiddleware(context) {
 
     const token = parseBearerToken(req);
     if (!token) {
-      logInfo("[mcp/access/failure]", { error: "missing_token" });
+      logInfo("mcp.access.failed", { error: "missing_token" });
       return missingToken(res, config);
     }
 
@@ -99,7 +99,7 @@ export function createMcpAuthMiddleware(context) {
       !hasReadScope ||
       !scopesAreSupported
     ) {
-      logInfo("[mcp/access/failure]", {
+      logInfo("mcp.access.failed", {
         error: "invalid_token",
         reason: claims ? "claims" : "signature",
       });

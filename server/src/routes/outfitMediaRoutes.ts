@@ -69,7 +69,7 @@ function registerOutfitReportRoute(app, context) {
         }
         const status = getOutfitReportErrorStatus(error);
         if (status === 503) {
-          logError("[outfits/report]", error);
+          logError("outfit.report.generate.failed", error);
         }
         return res
           .status(status)
@@ -92,7 +92,7 @@ function registerOutfitReportRoute(app, context) {
         );
         return sendOutfitMutationResponse(req, res, outfit, context);
       } catch (error) {
-        logError("[outfits/report/delete]", error);
+        logError("outfit.report.delete.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -147,7 +147,7 @@ function registerOutfitImageRoutes(app, context) {
         if (jobError) {
           return jobError;
         }
-        logError("[outfits/image][enqueue]", error);
+        logError("outfit.image.enqueue.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -202,7 +202,7 @@ function registerOutfitPdfRoute(app, context) {
         );
         return res.status(200).send(pdfBuffer);
       } catch (error) {
-        logError("[outfits/pdf]", error);
+        logError("outfit.pdf.generate.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

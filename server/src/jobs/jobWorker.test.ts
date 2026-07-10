@@ -104,13 +104,13 @@ test("job worker starts queued jobs, reports progress, and completes successful 
     id: "job-1",
     result: { ok: true },
   });
-  expect(loggerApi.logInfo).toHaveBeenCalledWith("[jobs][run-started]", {
+  expect(loggerApi.logInfo).toHaveBeenCalledWith("jobs.run.started", {
     jobId: "job-1",
     kind: "personalItemsReportGenerate",
     entityType: undefined,
     entityId: undefined,
   });
-  expect(loggerApi.logInfo).toHaveBeenCalledWith("[jobs][run-completed]", {
+  expect(loggerApi.logInfo).toHaveBeenCalledWith("jobs.run.completed", {
     jobId: "job-1",
     kind: "personalItemsReportGenerate",
     entityType: undefined,

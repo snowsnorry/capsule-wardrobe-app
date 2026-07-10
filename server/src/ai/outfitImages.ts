@@ -75,8 +75,7 @@ async function hasOtherActiveOutfitImageJob({ deps, email, outfitId, jobId }) {
     });
     return jobs.some((job) => String(job?.id || "") !== String(jobId || ""));
   } catch (error) {
-    logError("[outfit-image][pending-jobs]", {
-      message: error?.message || "unknown_error",
+    logError("ai.outfit.image.pending.jobs.failed", error, {
       outfitId,
     });
     return false;
@@ -230,9 +229,7 @@ async function runOutfitImageJob({
       generatedImage,
     });
   } catch (error) {
-    logError("[outfit-image]", {
-      message: error?.message || "unknown_error",
-      stack: typeof error?.stack === "string" ? error.stack : null,
+    logError("ai.outfit.image.failed", error, {
       outfitId,
     });
     if (rethrowErrors) {

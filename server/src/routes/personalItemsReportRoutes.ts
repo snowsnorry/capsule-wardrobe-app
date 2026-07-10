@@ -78,7 +78,7 @@ function registerPersonalItemsReportRoutes(app, context) {
           : false,
       });
     } catch (error) {
-      logError("[wardrobe/items/report]", error);
+      logError("wardrobe.items.report.read.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -113,7 +113,7 @@ function registerPersonalItemsReportRoutes(app, context) {
         }
         const status = getPersonalItemsReportErrorStatus(error);
         if (status === 503) {
-          logError("[wardrobe/items/report][generate]", error);
+          logError("wardrobe.items.report.generate.failed", error);
         }
         return res
           .status(status)
@@ -134,7 +134,7 @@ function registerPersonalItemsReportRoutes(app, context) {
         );
         return res.json({ ok: true, removed });
       } catch (error) {
-        logError("[wardrobe/items/report][delete]", error);
+        logError("wardrobe.items.report.delete.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

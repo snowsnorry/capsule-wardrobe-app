@@ -6,7 +6,7 @@ import {
   parseCookies,
   readCsrfHeader,
 } from "./httpCookies.js";
-import { logError, logInfo, runWithRequestLogContext } from "./logger.js";
+import { logError, logWarn, runWithRequestLogContext } from "./logger.js";
 import {
   recordHttpRequestMetric,
   recordRejectionMetric,
@@ -19,6 +19,7 @@ type SecurityMiddlewareOptions = {
 
 const REQUEST_ID_HEADER = "X-Request-Id";
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+const SLOW_REQUEST_THRESHOLD_MS = 1_000;
 
 function resolveRequestId(req): string {
   const headerValue = req.get?.(REQUEST_ID_HEADER);
@@ -28,8 +29,12 @@ function resolveRequestId(req): string {
   return REQUEST_ID_PATTERN.test(requestId) ? requestId : crypto.randomUUID();
 }
 
-function shouldLogHttpRequest({ method, path, statusCode }) {
-  return !(method === "GET" && path === "/health" && statusCode < 400);
+export function getHttpRequestLogLevel({ durationMs, statusCode }) {
+  if (statusCode >= 500) return "error";
+  if (statusCode >= 400 || durationMs >= SLOW_REQUEST_THRESHOLD_MS) {
+    return "warn";
+  }
+  return null;
 }
 
 export function applyObservabilityMiddleware(app) {
@@ -49,18 +54,24 @@ export function applyObservabilityMiddleware(app) {
           method,
           statusCode: res.statusCode,
         });
-        if (
-          !shouldLogHttpRequest({ method, path, statusCode: res.statusCode })
-        ) {
-          return;
-        }
-        logInfo("http_request", {
-          event: "http_request",
+        const logLevel = getHttpRequestLogLevel({
+          durationMs: roundedDurationMs,
+          statusCode: res.statusCode,
+        });
+        if (!logLevel) return;
+        const fields = {
           method,
           path,
           statusCode: res.statusCode,
           durationMs: roundedDurationMs,
-        });
+        };
+        if (logLevel === "error") {
+          logError("http.request.failed", fields);
+        } else if (res.statusCode >= 400) {
+          logWarn("http.request.failed", fields);
+        } else {
+          logWarn("http.request.slow", fields);
+        }
       });
       return next();
     });
@@ -317,7 +328,7 @@ export function createRequestGuards({ nodeEnv, clientOrigin, getSessionImpl }) {
     try {
       session = await getSessionImpl(sessionId);
     } catch (error) {
-      logError("[requireAuth]", error);
+      logError("auth.require.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
 

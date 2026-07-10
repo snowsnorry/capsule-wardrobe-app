@@ -117,7 +117,7 @@ async function runPartialRegenerationJob({
     job.phase = "failed";
     job.updatedAt = deps.nowMsImpl();
     job.error = error;
-    logError("[wardrobe-ai][regenerate-selected]", error);
+    logError("ai.wardrobe.regenerate.selected.failed", error);
     if (rethrowErrors) {
       throw error;
     }

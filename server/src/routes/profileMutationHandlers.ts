@@ -29,7 +29,7 @@ export function createInitializeProfileHandler({
       }
       return res.json({ ok: true, profile: toProfileResponse(profile) });
     } catch (error) {
-      logError("[profile/initialize]", error);
+      logError("profile.initialize.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   };
@@ -53,7 +53,7 @@ export function createUpdateProfileHandler({
       }
       return res.json({ ok: true, profile: toProfileResponse(profile) });
     } catch (error) {
-      logError("[profile/update]", error);
+      logError("profile.update.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   };
@@ -76,7 +76,7 @@ export function createUpdateProfileLocaleHandler({
       }
       return res.json({ ok: true, profile: toProfileResponse(profile) });
     } catch (error) {
-      logError("[profile/locale]", error);
+      logError("profile.locale.update.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   };
@@ -101,14 +101,14 @@ export function createDeleteProfileHandler({
       await clearAccountTransientStateImpl?.(req.user.email);
       if (imageKeys.length > 0) {
         await deleteR2ObjectsImpl({ keys: imageKeys }).catch((error) => {
-          logError("[profile/delete][r2]", error);
+          logError("profile.delete.r2.failed", error);
         });
       }
       clearSessionCookie(res, nodeEnv);
       clearPasskeyChallengeCookie(res, nodeEnv);
       return res.json({ ok: true });
     } catch (error) {
-      logError("[profile/delete]", error);
+      logError("profile.delete.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   };

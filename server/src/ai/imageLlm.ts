@@ -37,14 +37,11 @@ function resolveImageLlmProvider(
     }
   }
 
-  logWarn(
-    "[wardrobe-ai][image-llm-unknown-model]",
-    JSON.stringify({
-      requestedImageLlm: imageLlm,
-      fallbackProvider: "openai",
-      fallbackModel: "gpt-image-2",
-    }),
-  );
+  logWarn("ai.image.llm.unknown.model", {
+    requestedImageLlm: imageLlm,
+    fallbackProvider: "openai",
+    fallbackModel: "gpt-image-2",
+  });
 
   return {
     provider: "openai",

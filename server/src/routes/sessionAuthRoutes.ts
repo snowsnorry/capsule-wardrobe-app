@@ -73,7 +73,7 @@ function registerGoogleAuthRoute(app, context) {
       }
       email = payload.email.trim().toLowerCase();
     } catch (error) {
-      logError("[auth/google-verify]", error);
+      logError("auth.google.verify.failed", error);
       return res.status(401).json({ error: "invalid_google_token" });
     }
 
@@ -83,7 +83,7 @@ function registerGoogleAuthRoute(app, context) {
       setCsrfCookie(res, session.csrfToken, nodeEnv);
       return res.json({ ok: true, user: { email } });
     } catch (error) {
-      logError("[auth/google-create-session]", error);
+      logError("auth.google.session.create.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -107,7 +107,7 @@ function registerSessionLifecycleRoutes(app, context) {
       try {
         await revokeSessionImpl(req.auth.sessionId);
       } catch (error) {
-        logError("[auth/logout]", error);
+        logError("auth.logout.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
       clearSessionCookie(res, nodeEnv);

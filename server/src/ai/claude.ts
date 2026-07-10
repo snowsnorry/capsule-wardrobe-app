@@ -122,14 +122,11 @@ function buildClaudeImageContent(
   image: ImageAssetLike | null | undefined,
 ): ClaudeMessageContent | null {
   if (!Buffer.isBuffer(image?.buffer) || image.buffer.length === 0) {
-    logWarn(
-      "[claude][image-skipped]",
-      JSON.stringify({
-        category: image?.category ?? null,
-        filename: image?.filename ?? null,
-        reason: "missing_buffer",
-      }),
-    );
+    logWarn("ai.claude.image.skipped", {
+      category: image?.category ?? null,
+      filename: image?.filename ?? null,
+      reason: "missing_buffer",
+    });
     return null;
   }
 

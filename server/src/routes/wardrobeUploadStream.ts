@@ -80,7 +80,7 @@ async function markUploadedItemFailed({ context, email, id }) {
       processingStatus: "failed",
     })
     .catch((updateError) => {
-      logError("[wardrobe/items/upload][metadata-status]", updateError);
+      logError("wardrobe.item.upload.metadata.status.failed", updateError);
       return null;
     });
 }
@@ -143,11 +143,10 @@ async function updateUploadedItemWithReviewableMetadata({
   try {
     embedding = await context.createUploadedWardrobeItemEmbeddingImpl(metadata);
   } catch (embeddingError) {
-    logError(
-      "[wardrobe/items/upload][embedding]",
-      { id, imageUrl },
-      embeddingError,
-    );
+    logError("wardrobe.item.upload.embedding.failed", embeddingError, {
+      id,
+      imageUrl,
+    });
     processingStatus = "failed";
   }
 
@@ -250,7 +249,7 @@ async function processUploadedWardrobeItemMetadata({
     writeWardrobeUploadEvent(res, "progress", progress);
     return filterItem(updated || { ...item, processingStatus });
   } catch (error) {
-    logError("[wardrobe/items/upload][metadata]", { id, imageUrl }, error);
+    logError("wardrobe.item.upload.metadata.failed", error, { id, imageUrl });
     const updated = await markUploadedItemFailed({ context, email, id });
     advanceWardrobeUploadProgress(progress, {
       completedSteps: metadataAccepted ? 1 : 2,

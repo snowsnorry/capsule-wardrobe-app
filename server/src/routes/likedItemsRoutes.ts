@@ -35,7 +35,7 @@ function registerLikedItemsRoutes(app, context) {
           isLiked: true,
         });
       } catch (error) {
-        logError("[liked-items][create]", error);
+        logError("liked.items.create.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -59,7 +59,7 @@ function registerLikedItemsRoutes(app, context) {
         });
         return res.json({ ok: true, itemUrl, isLiked: false });
       } catch (error) {
-        logError("[liked-items][delete]", error);
+        logError("liked.items.delete.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

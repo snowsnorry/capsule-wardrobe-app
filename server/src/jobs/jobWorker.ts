@@ -108,7 +108,7 @@ export function createJobWorker({
   return {
     async start() {
       if (!enabled) {
-        logInfo("[jobs][worker] disabled");
+        logInfo("jobs.worker.disabled");
         return;
       }
 
@@ -125,7 +125,7 @@ export function createJobWorker({
           return;
         }
         const startedAt = Date.now();
-        logInfo("[jobs][run-started]", {
+        logInfo("jobs.run.started", {
           jobId: job.id,
           kind: job.kind,
           entityType: job.entityType,
@@ -140,7 +140,7 @@ export function createJobWorker({
             jobRunTimeoutMs,
           });
           await completeJobRun({ id: job.id, result });
-          logInfo("[jobs][run-completed]", {
+          logInfo("jobs.run.completed", {
             jobId: job.id,
             kind: job.kind,
             entityType: job.entityType,
@@ -153,11 +153,11 @@ export function createJobWorker({
             errorCode: getErrorCode(error),
             errorMessage: String((error as Error | null)?.message || error),
           });
-          logError("[jobs][worker]", { jobId: job.id }, error);
+          logError("jobs.worker.failed", error, { jobId: job.id });
           throw error;
         }
       });
-      logInfo("[jobs][worker] started");
+      logInfo("jobs.worker.started");
     },
     stop() {
       return backend.stop();

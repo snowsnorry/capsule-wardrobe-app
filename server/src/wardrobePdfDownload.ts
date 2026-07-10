@@ -52,7 +52,7 @@ export function createDownloadWardrobePdf({
         pollAfterMs: WARDROBE_PDF_POLL_AFTER_MS,
       });
     } catch (error) {
-      logError("[wardrobe-pdf]", error);
+      logError("pdf.download.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   }

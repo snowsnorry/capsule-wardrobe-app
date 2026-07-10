@@ -95,7 +95,7 @@ function registerAppBootstrapRoutes(app, context) {
         ...profilePayload,
       });
     } catch (error) {
-      logError("[app/bootstrap]", error);
+      logError("app.bootstrap.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });

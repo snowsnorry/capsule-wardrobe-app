@@ -33,7 +33,7 @@ function createBoss() {
 
 function attachBossErrorHandler(boss: PgBoss): PgBoss {
   boss.on("error", (error) => {
-    logError("[jobs][pg-boss]", error);
+    logError("jobs.pg.boss.failed", error);
   });
   return boss;
 }

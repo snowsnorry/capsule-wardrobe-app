@@ -17,10 +17,9 @@ const {
   buildWardrobePayload,
   countItemsByKey,
   extractLlmUsage,
-  formatLogPayload,
+  getSelectionSummary,
   getRequiredCapsule,
   getRequestedWardrobeParams,
-  getShortRequestId,
   getSqlRows,
   saveLastPromptArtifacts,
 } = await import("./aiCommon.js");
@@ -32,23 +31,19 @@ afterEach(() => {
   delete process.env.NODE_ENV;
 });
 
-test("aiCommon formats log payloads and request identifiers", () => {
+test("aiCommon summarizes selected items without retaining the raw selection", () => {
   expect(getSqlRows([{ id: 1 }])).toEqual([{ id: 1 }]);
   expect(getSqlRows({ count: 1 })).toEqual([]);
   expect(
-    formatLogPayload({
-      string: "value",
-      number: 2,
-      bool: false,
-      nullish: null,
-      missing: undefined,
-      object: { ok: true },
-    }),
-  ).toBe(
-    'string: value, number: 2, bool: false, nullish: null, object: {"ok":true}',
-  );
-  expect(getShortRequestId({ capsuleRequestId: "abc-def-ghi" })).toBe("abc");
-  expect(getShortRequestId({ capsuleRequestId: "  " })).toBe("");
+    getSelectionSummary({ capsule: { top: ["1", "2"], shoes: ["3"] } }),
+  ).toEqual({
+    selectedItemsTotal: 3,
+    selectedItemsByCategory: { top: 2, shoes: 1 },
+  });
+  expect(getSelectionSummary(null)).toEqual({
+    selectedItemsTotal: 0,
+    selectedItemsByCategory: {},
+  });
 });
 
 test("last prompt artifacts handle non-string prompts and development writes", () => {

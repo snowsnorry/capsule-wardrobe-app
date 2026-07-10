@@ -137,23 +137,20 @@ function logDeepInfraRequestFailure({
       errno?: string | number;
     };
   };
-  warnImpl(
-    "[deepinfra][request-failed]",
-    JSON.stringify({
-      model,
-      durationMs: Math.max(0, nowImpl() - requestStartedAt),
-      imageCount,
-      payloadBytes,
-      status: requestError.status,
-      requestId: requestError.request_id,
-      code: requestError.code,
-      type: requestError.type,
-      causeName: requestError.cause?.name ?? null,
-      causeMessage: requestError.cause?.message ?? null,
-      causeCode: requestError.cause?.code ?? null,
-      causeErrno: requestError.cause?.errno ?? null,
-    }),
-  );
+  warnImpl("ai.deepinfra.request.failed", {
+    model,
+    durationMs: Math.max(0, nowImpl() - requestStartedAt),
+    imageCount,
+    payloadBytes,
+    status: requestError.status,
+    requestId: requestError.request_id,
+    code: requestError.code,
+    type: requestError.type,
+    causeName: requestError.cause?.name ?? null,
+    causeMessage: requestError.cause?.message ?? null,
+    causeCode: requestError.cause?.code ?? null,
+    causeErrno: requestError.cause?.errno ?? null,
+  });
 }
 
 function createSdkDeepInfraClient({
@@ -214,7 +211,7 @@ function createDeepInfraClient({
   getApiKeyImpl = () => process.env.DEEPINFRA_API_KEY,
   cache = true,
   nowImpl = () => Date.now(),
-  warnImpl = (...args) => logWarn(...args),
+  warnImpl = (event, fields) => logWarn(event, fields),
 }: {
   createClientImpl?: ({
     apiKey,
@@ -228,7 +225,7 @@ function createDeepInfraClient({
   getApiKeyImpl?: () => string | undefined;
   cache?: boolean;
   nowImpl?: () => number;
-  warnImpl?: (...args: unknown[]) => void;
+  warnImpl?: (event: string, fields: Record<string, unknown>) => void;
 } = {}) {
   let localCachedClient = null;
   function getOpenAiClient() {

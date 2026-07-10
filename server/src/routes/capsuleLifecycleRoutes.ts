@@ -20,7 +20,7 @@ function registerCapsuleStateRoutes(app, context) {
         );
         return sendCapsuleMutationResponse(req, res, capsule, context);
       } catch (error) {
-        logError("[capsules/save]", error);
+        logError("capsule.save.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -39,7 +39,7 @@ function registerCapsuleStateRoutes(app, context) {
         );
         return sendCapsuleMutationResponse(req, res, capsule, context);
       } catch (error) {
-        logError("[capsules/revert]", error);
+        logError("capsule.revert.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -66,7 +66,7 @@ function registerCapsuleMetadataRoutes(app, context) {
         );
         return sendCapsuleMutationResponse(req, res, capsule, context);
       } catch (error) {
-        logError("[capsules/pin]", error);
+        logError("capsule.pin.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -90,7 +90,7 @@ function registerCapsuleMetadataRoutes(app, context) {
         );
         return sendCapsuleMutationResponse(req, res, capsule, context);
       } catch (error) {
-        logError("[capsules/rename]", error);
+        logError("capsule.rename.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -116,7 +116,7 @@ function registerCapsuleMetadataRoutes(app, context) {
           capsule: await buildAnnotatedCapsuleResponse(capsule, req, context),
         });
       } catch (error) {
-        logError("[capsules/duplicate]", error);
+        logError("capsule.duplicate.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -145,7 +145,7 @@ function registerCapsuleSelectionRoutes(app, context) {
           capsuleId: capsule.id,
         });
       } catch (error) {
-        logError("[capsules/select]", error);
+        logError("capsule.select.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -167,7 +167,7 @@ function registerCapsuleSelectionRoutes(app, context) {
         }
         return res.json({ ok: true });
       } catch (error) {
-        logError("[capsules/delete]", error);
+        logError("capsule.delete.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

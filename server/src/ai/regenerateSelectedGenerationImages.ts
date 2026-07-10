@@ -68,7 +68,7 @@ function logPromptImageBuildFailure(error, logContext) {
       logContext,
     );
   }
-  logWarn("[prompt-images][build-failed]", {
+  logWarn("ai.prompt.images.build.failed", {
     message: error?.message || "unknown_error",
   });
 }
@@ -104,7 +104,7 @@ async function buildCurrentCapsuleCollage(
     );
     return currentCapsuleCollage;
   } catch (error) {
-    logWarn("[prompt-images][current-capsule-build-failed]", {
+    logWarn("ai.prompt.images.current.capsule.build.failed", {
       message: error?.message || "unknown_error",
     });
     return null;

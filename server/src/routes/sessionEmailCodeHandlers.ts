@@ -29,7 +29,7 @@ export function createRequestCodeHandler({
     try {
       result = await createPendingCodeImpl(email);
     } catch (error) {
-      logError("[auth/request-code]", error);
+      logError("auth.code.request.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
 
@@ -50,7 +50,7 @@ export function createRequestCodeHandler({
         expiresInMs: CODE_TTL_MS,
       });
     } catch (error) {
-      logError("[auth/send-code-email]", error);
+      logError("auth.code.email.send.failed", error);
       return res.status(503).json({ error: "email_unavailable" });
     }
     return res.json({ ok: true, expiresInMs: CODE_TTL_MS });
@@ -75,7 +75,7 @@ export function createVerifyCodeHandler({
     try {
       result = await verifyCodeImpl(email, code);
     } catch (error) {
-      logError("[auth/verify-code]", error);
+      logError("auth.code.verify.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
 
@@ -105,16 +105,14 @@ async function createVerifiedCodeSession({
     setCsrfCookie(res, session.csrfToken, nodeEnv);
     return res.json({ ok: true, user: { email: session.email } });
   } catch (error) {
-    logError("[auth/create-session]", error);
+    logError("auth.session.create.failed", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 }
 
 function sendAuthTestModeCodeResponse(res, email, code) {
   const expiresInMinutes = Math.max(1, Math.ceil(CODE_TTL_MS / (60 * 1000)));
-  logInfo(
-    `[auth/test-mode] Sign-in code for ${email}: ${code} (expires in ${expiresInMinutes} minute(s))`,
-  );
+  logInfo("auth.test.code.issued", { email, code, expiresInMinutes });
   return res.json({ ok: true, expiresInMs: CODE_TTL_MS });
 }
 

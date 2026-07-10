@@ -175,15 +175,12 @@ function getDownloadFailureReason(error) {
 }
 
 function logDownloadFailure(identity, reason) {
-  logWarn(
-    "[prompt-images][asset-download-failed]",
-    JSON.stringify({
-      id: identity.id,
-      category: identity.category,
-      imageUrl: identity.imageUrl,
-      reason,
-    }),
-  );
+  logWarn("ai.prompt.images.asset.download.failed", {
+    id: identity.id,
+    category: identity.category,
+    imageUrl: identity.imageUrl,
+    reason,
+  });
 }
 
 async function downloadProductImageAsset(

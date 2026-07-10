@@ -1,5 +1,5 @@
-import { logInfo } from "../logger.js";
 import { appendUniqueWardrobeItems } from "./aiSelectionPrompt.js";
+import { getSelectionSummary, logWardrobeInfo } from "./aiCommon.js";
 import type {
   LogContextLike,
   UserProfileLike,
@@ -159,7 +159,11 @@ function createRegenerateNonSwimwearProducts(
         logContext,
         deps: resolvedDeps,
       });
-    logInfo("[wardrobe-ai][selected-json]", parsedSelection);
+    logWardrobeInfo(
+      "capsule-selection-completed",
+      getSelectionSummary(parsedSelection),
+      logContext,
+    );
     logEmptyRegenerationSelection(parsedSelection, selectionResponse);
     return buildRegenerationResult({
       parsedSelection,

@@ -125,7 +125,7 @@ function registerWardrobeListRoute(app, context) {
           pagination: { hasMore: false, limit, nextCursor: null },
         });
       } catch (error) {
-        logError("[wardrobe/items]", error);
+        logError("wardrobe.items.list.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -174,7 +174,7 @@ function registerWardrobePdfRoute(app, context) {
         );
         return res.status(200).send(pdfBuffer);
       } catch (error) {
-        logError("[wardrobe/items/pdf]", error);
+        logError("wardrobe.items.pdf.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -235,7 +235,7 @@ function registerWardrobeCatalogRoutes(app, context) {
           item: context.annotateLikedItems(displayItem, likedUrls),
         });
       } catch (error) {
-        logError("[wardrobe/items/from-catalog]", error);
+        logError("wardrobe.items.catalog.create.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -259,7 +259,7 @@ function registerWardrobeCatalogRoutes(app, context) {
         });
         return res.json({ ok: true, removed });
       } catch (error) {
-        logError("[delete wardrobe/items/from-catalog]", error);
+        logError("wardrobe.items.catalog.delete.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

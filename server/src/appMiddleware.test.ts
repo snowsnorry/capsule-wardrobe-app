@@ -5,6 +5,7 @@ import {
   requestJson,
   startTestServer,
 } from "./test/serverRouteTestUtils.js";
+import { getHttpRequestLogLevel } from "./appMiddleware.js";
 
 test("production security headers allow local image previews and popup auth", async (t) => {
   const { baseUrl } = await startTestServer(t);
@@ -92,7 +93,7 @@ test("observability middleware generates and reuses request ids", async (t) => {
   );
 });
 
-test("observability access logs include request metadata without query or email", async (t) => {
+test("observability middleware suppresses routine successful access logs", async (t) => {
   const writes: string[] = [];
   const stdout = vi
     .spyOn(process.stdout, "write")
@@ -113,43 +114,42 @@ test("observability access logs include request metadata without query or email"
   );
   expect(response.response.status).toBe(200);
 
-  const accessLog = writes
-    .map((line) => JSON.parse(line))
-    .find((record) => record.message === "http_request");
-
-  expect(accessLog).toMatchObject({
-    level: "info",
-    requestId: "client-req-2",
-    values: [
-      "http_request",
-      {
-        event: "http_request",
-        method: "GET",
-        path: "/auth/me",
-        statusCode: 200,
-      },
-    ],
-  });
-  expect(accessLog.values[1].durationMs).toEqual(expect.any(Number));
-  expect(JSON.stringify(accessLog)).not.toContain("person@example.com");
+  expect(writes).toEqual([]);
 });
 
-test("observability middleware suppresses successful health access logs", async (t) => {
-  const writes: string[] = [];
-  const stdout = vi
-    .spyOn(process.stdout, "write")
-    .mockImplementation((chunk: string | Uint8Array) => {
-      writes.push(String(chunk));
-      return true;
-    });
-  t.onTestFinished(() => stdout.mockRestore());
+test("observability middleware logs failures as readable warnings without query data", async (t) => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  t.onTestFinished(() => warn.mockRestore());
 
   const { baseUrl } = await startTestServer(t);
-  const health = await requestJson(baseUrl, "/health");
-  expect(health.response.status).toBe(200);
+  const response = await requestJson(
+    baseUrl,
+    "/auth/me?email=person@example.com",
+    {
+      headers: { "X-Request-Id": "client-req-3" },
+    },
+  );
+  expect(response.response.status).toBe(401);
 
-  const accessLogs = writes
-    .map((line) => JSON.parse(line))
-    .filter((record) => record.message === "http_request");
-  expect(accessLogs).toEqual([]);
+  const line = String(warn.mock.calls.at(-1)?.[0]);
+  expect(line).toContain(
+    "WARN event=http.request.failed requestId=client-req-3",
+  );
+  expect(line).toContain("path=/auth/me");
+  expect(line).not.toContain("person@example.com");
+});
+
+test("access log policy records failures and successful requests over one second", () => {
+  expect(
+    getHttpRequestLogLevel({ durationMs: 12, statusCode: 200 }),
+  ).toBeNull();
+  expect(getHttpRequestLogLevel({ durationMs: 1_000, statusCode: 200 })).toBe(
+    "warn",
+  );
+  expect(getHttpRequestLogLevel({ durationMs: 12, statusCode: 404 })).toBe(
+    "warn",
+  );
+  expect(getHttpRequestLogLevel({ durationMs: 12, statusCode: 500 })).toBe(
+    "error",
+  );
 });

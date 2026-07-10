@@ -18,7 +18,7 @@ export function registerHealthImageRoutes(app, context) {
         dependencies: { database: "ok" },
       });
     } catch (error) {
-      logError("[healthall]", error);
+      logError("health.images.failed", error);
       return res.status(503).json({
         ok: false,
         release: releaseMetadata,

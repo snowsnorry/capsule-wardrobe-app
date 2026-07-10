@@ -11,7 +11,7 @@ function shouldStartServer(env: NodeJS.ProcessEnv) {
 }
 
 function handleStartServerError(error: unknown) {
-  logError("[server/start]", error);
+  logError("server.start.failed", error);
   process.exitCode = 1;
 }
 

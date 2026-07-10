@@ -1,41 +1,5 @@
 import { test, expect } from "vitest";
-import {
-  countItemsByKey,
-  extractLlmUsage,
-  formatLogPayload,
-  formatLogValue,
-  getShortRequestId,
-} from "./swimwearLogging.js";
-
-test("formatLogValue serializes nullish, scalar, and object values", () => {
-  expect(formatLogValue(null)).toBe("null");
-  expect(formatLogValue(undefined)).toBe("undefined");
-  expect(formatLogValue("ready")).toBe("ready");
-  expect(formatLogValue(3)).toBe("3");
-  expect(formatLogValue(false)).toBe("false");
-  expect(formatLogValue({ a: 1 })).toBe('{"a":1}');
-});
-
-test("formatLogPayload omits undefined values and preserves key labels", () => {
-  expect(
-    formatLogPayload({
-      total: 2,
-      skipped: undefined,
-      tags: ["summer", "beach"],
-    }),
-  ).toBe('total: 2, tags: ["summer","beach"]');
-  expect(formatLogPayload()).toBe("");
-});
-
-test("getShortRequestId returns the first request id segment", () => {
-  expect(getShortRequestId({ capsuleRequestId: "abc12345-def" })).toBe(
-    "abc12345",
-  );
-  expect(getShortRequestId({ capsuleRequestId: "  singleid  " })).toBe(
-    "singleid",
-  );
-  expect(getShortRequestId(null)).toBe("");
-});
+import { countItemsByKey, extractLlmUsage } from "./swimwearLogging.js";
 
 test("countItemsByKey counts non-empty category values", () => {
   expect(

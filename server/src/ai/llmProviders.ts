@@ -94,7 +94,7 @@ function resolveLlmProvider(userProfile = null): LlmProviderResolution {
     return resolvedProvider;
   }
 
-  logWarn("[wardrobe-ai][llm-unknown-model]", {
+  logWarn("ai.llm.unknown.model", {
     requestedLlm: llm,
     fallbackProvider: "openai",
     fallbackModel: "gpt-5.5",

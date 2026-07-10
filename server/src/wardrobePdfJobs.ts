@@ -135,7 +135,7 @@ async function buildAndStoreWardrobePdf({
   );
   const missingUrls = productUrls.filter((url) => !foundUrls.has(url));
   if (missingUrls.length > 0) {
-    logWarn("[wardrobe-pdf][missing-products]", { email, missingUrls });
+    logWarn("pdf.products.missing", { email, missingUrls });
   }
 
   if (products.length === 0) {
@@ -265,7 +265,7 @@ function createStartWardrobePdfJob({
         job.status = "failed";
         job.updatedAt = Date.now();
         job.error = error;
-        logError("[wardrobe-pdf][job]", error);
+        logError("pdf.job.failed", error);
       } finally {
         scheduleWardrobePdfJobCleanup(email, job);
       }

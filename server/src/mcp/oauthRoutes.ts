@@ -74,7 +74,7 @@ function registerOAuthClientRegistrationRoute(app, context, config) {
     async (req, res) => {
       const registration = validateRegistrationRequest(req.body, config);
       if ("error" in registration) {
-        logInfo("[mcp/oauth/register/failure]", { error: registration.error });
+        logInfo("mcp.oauth.register.failed", { error: registration.error });
         return res.status(400).json({ error: registration.error });
       }
 
@@ -86,13 +86,13 @@ function registerOAuthClientRegistrationRoute(app, context, config) {
           redirectUris: registration.redirectUris,
           scope: registration.scope,
         });
-        logInfo("[mcp/oauth/register/success]", {
+        logInfo("mcp.oauth.register.completed", {
           clientId: client.clientId,
           redirectUriCount: client.redirectUris.length,
         });
         return res.status(201).json(buildRegistrationResponse(client));
       } catch (error) {
-        logError("[mcp/oauth/register]", error);
+        logError("mcp.oauth.register.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -112,7 +112,7 @@ function registerOAuthAuthorizeGetRoute(app, context, config) {
       context,
     );
     if ("error" in authRequest) {
-      logInfo("[mcp/oauth/authorize/failure]", { error: authRequest.error });
+      logInfo("mcp.oauth.authorize.failed", { error: authRequest.error });
       return res.status(400).json({ error: authRequest.error });
     }
 
@@ -120,7 +120,7 @@ function registerOAuthAuthorizeGetRoute(app, context, config) {
     try {
       sessionInfo = await readAppSession(req, context);
     } catch (error) {
-      logError("[mcp/oauth/authorize/session]", error);
+      logError("mcp.oauth.authorize.session.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
 
@@ -169,7 +169,7 @@ function registerOAuthAuthorizePostRoute(app, context, config) {
       context,
     );
     if ("error" in authRequest) {
-      logInfo("[mcp/oauth/authorize/consent-failure]", {
+      logInfo("mcp.oauth.authorize.consent.failed", {
         error: authRequest.error,
       });
       return res.status(400).json({ error: authRequest.error });
@@ -179,7 +179,7 @@ function registerOAuthAuthorizePostRoute(app, context, config) {
     try {
       sessionInfo = await readAppSession(req, context);
     } catch (error) {
-      logError("[mcp/oauth/authorize/consent-session]", error);
+      logError("mcp.oauth.authorize.consent.session.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
 
@@ -200,7 +200,7 @@ function registerOAuthAuthorizePostRoute(app, context, config) {
     }
 
     if (readString(req.body?.decision) !== "allow") {
-      logInfo("[mcp/oauth/authorize/denied]", {
+      logInfo("mcp.oauth.authorize.denied", {
         clientId: authRequest.clientId,
         subject: sessionInfo.session.email,
       });
@@ -234,7 +234,7 @@ function registerOAuthAuthorizePostRoute(app, context, config) {
 function registerOAuthTokenRoute(app, context, config) {
   app.post("/oauth/token", context.oauthTokenLimiter, async (req, res) => {
     if (req.headers.authorization || readString(req.body?.client_secret)) {
-      logInfo("[mcp/oauth/token/failure]", { error: "invalid_client" });
+      logInfo("mcp.oauth.token.failed", { error: "invalid_client" });
       return res.status(400).json({ error: "invalid_client" });
     }
 
@@ -247,7 +247,7 @@ function registerOAuthTokenRoute(app, context, config) {
       return handleRefreshTokenGrantRequest({ config, context, req, res });
     }
 
-    logInfo("[mcp/oauth/token/failure]", { error: "invalid_request" });
+    logInfo("mcp.oauth.token.failed", { error: "invalid_request" });
     return res.status(400).json({ error: "invalid_request" });
   });
 }

@@ -240,7 +240,7 @@ async function buildPromptDebugImagesInChild({
       });
       addTiming(result.timings, "debugSaveMs", debugSaveStartedAt);
     } catch (error) {
-      logWarn("[prompt-images][debug-save-failed]", {
+      logWarn("ai.prompt.images.debug.save.failed", {
         message: getErrorMessage(error),
       });
     }

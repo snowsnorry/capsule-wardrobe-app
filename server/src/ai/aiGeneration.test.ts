@@ -125,7 +125,8 @@ test("generateCapsuleWardrobe builds a no-LLM result from SQL candidates", async
     undefined,
   ]);
   expect(loggerApi.logInfo).toHaveBeenCalledWith(
-    expect.stringContaining("[wardrobe-ai][capsule-llm-resolved]"),
+    "ai.capsule.llm.resolved",
+    expect.objectContaining({ llmProvider: "none", requestedLlm: "none" }),
   );
 });
 

@@ -136,7 +136,7 @@ export async function handleAuthorizationCodeTokenRequest({
 }) {
   const input = parseAuthorizationCodeTokenInput(req, config);
   if ("error" in input) {
-    logInfo("[mcp/oauth/token/failure]", { error: input.error });
+    logInfo("mcp.oauth.token.failed", { error: input.error });
     return res.status(400).json({ error: input.error });
   }
 
@@ -150,7 +150,7 @@ export async function handleAuthorizationCodeTokenRequest({
     });
 
     if (!authCode) {
-      logInfo("[mcp/oauth/token/failure]", { error: "invalid_grant" });
+      logInfo("mcp.oauth.token.failed", { error: "invalid_grant" });
       return res.status(400).json({ error: "invalid_grant" });
     }
 
@@ -168,7 +168,7 @@ export async function handleAuthorizationCodeTokenRequest({
         })
       : undefined;
 
-    logInfo("[mcp/oauth/token/success]", {
+    logInfo("mcp.oauth.token.completed", {
       clientId: input.clientId,
       subject: authCode.userEmail,
     });
@@ -183,7 +183,7 @@ export async function handleAuthorizationCodeTokenRequest({
       }),
     );
   } catch (error) {
-    logError("[mcp/oauth/token]", error);
+    logError("mcp.oauth.token.failed", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 }
@@ -231,7 +231,7 @@ export async function handleRefreshTokenGrantRequest({
 }) {
   const input = parseRefreshTokenInput(req, config);
   if ("error" in input) {
-    logInfo("[mcp/oauth/token/failure]", { error: input.error });
+    logInfo("mcp.oauth.token.failed", { error: input.error });
     return res.status(400).json({ error: input.error });
   }
 
@@ -244,14 +244,14 @@ export async function handleRefreshTokenGrantRequest({
       resource: input.resource,
     });
     if (!matchingRefreshToken) {
-      logInfo("[mcp/oauth/token/failure]", { error: "invalid_grant" });
+      logInfo("mcp.oauth.token.failed", { error: "invalid_grant" });
       return res.status(400).json({ error: "invalid_grant" });
     }
 
     if (
       !(await clientAllowsRefreshToken({ clientId: input.clientId, context }))
     ) {
-      logInfo("[mcp/oauth/token/failure]", { error: "invalid_grant" });
+      logInfo("mcp.oauth.token.failed", { error: "invalid_grant" });
       return res.status(400).json({ error: "invalid_grant" });
     }
 
@@ -275,11 +275,11 @@ export async function handleRefreshTokenGrantRequest({
     });
 
     if (!rotated) {
-      logInfo("[mcp/oauth/token/failure]", { error: "invalid_grant" });
+      logInfo("mcp.oauth.token.failed", { error: "invalid_grant" });
       return res.status(400).json({ error: "invalid_grant" });
     }
 
-    logInfo("[mcp/oauth/token/refresh-success]", {
+    logInfo("mcp.oauth.token.refresh.completed", {
       clientId: input.clientId,
       subject: rotated.userEmail,
     });
@@ -294,7 +294,7 @@ export async function handleRefreshTokenGrantRequest({
       }),
     );
   } catch (error) {
-    logError("[mcp/oauth/token]", error);
+    logError("mcp.oauth.token.failed", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 }
@@ -314,13 +314,13 @@ function resolveRefreshTokenScopes({
 
   const scopes = parseScopes(config, requestedScope);
   if (!scopes) {
-    logInfo("[mcp/oauth/token/failure]", { error: "invalid_scope" });
+    logInfo("mcp.oauth.token.failed", { error: "invalid_scope" });
     return null;
   }
 
   const requestedScopes = scopesToKey(scopes);
   if (!isScopeSubset(requestedScopes, existingScopes)) {
-    logInfo("[mcp/oauth/token/failure]", { error: "invalid_scope" });
+    logInfo("mcp.oauth.token.failed", { error: "invalid_scope" });
     return null;
   }
 

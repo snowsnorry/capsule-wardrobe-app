@@ -148,7 +148,7 @@ async function handleMcpRequest(req, res, context) {
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
-    logError("[mcp/request]", error);
+    logError("mcp.request.failed", error);
     sendMcpInternalError(res);
   } finally {
     await transport?.close();
@@ -282,7 +282,7 @@ async function handleStatefulMcpInitialize(req, res, context) {
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
-    logError("[mcp/request]", error);
+    logError("mcp.request.failed", error);
     sendMcpInternalError(res);
   } finally {
     if (!sessionId) {
@@ -301,7 +301,7 @@ async function handleStatefulMcpSessionRequest(req, res) {
   try {
     await session.transport.handleRequest(req, res, req.body);
   } catch (error) {
-    logError("[mcp/request]", error);
+    logError("mcp.request.failed", error);
     sendMcpInternalError(res);
   }
 }
@@ -331,7 +331,7 @@ export function registerMcpRoutes(app, context) {
       try {
         await handleMcpTransportRequest(req, res, context);
       } catch (error) {
-        logError("[mcp/request]", error);
+        logError("mcp.request.failed", error);
         sendMcpInternalError(res);
       }
     },

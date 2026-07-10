@@ -6,16 +6,29 @@ type RequestLogContext = {
 };
 
 type LogLevel = "info" | "warn" | "error";
+type LogFields = Record<string, unknown>;
 
 const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}/gi;
 const EMAIL_KEY_PATTERN = /(^email$|email$)/i;
 const MAX_SANITIZE_DEPTH = 8;
+const MAX_ERROR_STACK_LENGTH = 4_096;
+const CORRELATION_FIELD_ORDER = ["requestId", "jobId", "capsuleRequestId"];
 const requestLogStorage = new AsyncLocalStorage<RequestLogContext>();
 const isTestEnv =
   process.env.NODE_ENV === "test" || process.env.VITEST === "true";
 const defaultStdoutWrite = process.stdout.write;
 const defaultConsoleWarn = globalThis.console.warn;
 const defaultConsoleError = globalThis.console.error;
+const SCALAR_LOG_VALUE_SANITIZERS: Record<string, (value: unknown) => unknown> =
+  {
+    string: (value) => redactEmailsInString(String(value)),
+    number: (value) => value,
+    boolean: (value) => value,
+    undefined: () => undefined,
+    bigint: (value) => (value as bigint).toString(),
+    symbol: (value) => String(value),
+    function: (value) => String(value),
+  };
 
 function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
@@ -31,10 +44,7 @@ function hashEmail(value: string): string {
 
 function maskEmail(value: string): string {
   const [localPart = "", domain = ""] = normalizeEmail(value).split("@");
-  if (!domain) {
-    return "***";
-  }
-
+  if (!domain) return "***";
   const maskedLocal =
     localPart.length <= 1
       ? "*"
@@ -49,14 +59,8 @@ function redactEmailsInString(value: string): string {
 }
 
 function sanitizeEmailField(value: unknown) {
-  if (typeof value !== "string") {
-    return sanitizeLogValue(value);
-  }
-
-  return {
-    masked: maskEmail(value),
-    hash: hashEmail(value),
-  };
+  if (typeof value !== "string") return sanitizeLogValue(value);
+  return { masked: maskEmail(value), hash: hashEmail(value) };
 }
 
 function sanitizeError(error: Error, depth: number, seen: WeakSet<object>) {
@@ -65,9 +69,11 @@ function sanitizeError(error: Error, depth: number, seen: WeakSet<object>) {
     message: redactEmailsInString(error.message || ""),
   };
   if (error.stack) {
-    result.stack = redactEmailsInString(error.stack);
+    result.stack = redactEmailsInString(error.stack).slice(
+      0,
+      MAX_ERROR_STACK_LENGTH,
+    );
   }
-
   for (const key of Object.keys(error)) {
     const errorRecord = error as unknown as Record<string, unknown>;
     result[key] = EMAIL_KEY_PATTERN.test(key)
@@ -91,92 +97,146 @@ function sanitizeObject(
   return result;
 }
 
-function sanitizeScalarLogValue(value: unknown): { value: unknown } | null {
-  if (typeof value === "string") {
-    return { value: redactEmailsInString(value) };
-  }
-  if (
-    value === null ||
-    value === undefined ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return { value };
-  }
-  if (typeof value === "bigint") {
-    return { value: value.toString() };
-  }
-  if (typeof value === "symbol" || typeof value === "function") {
-    return { value: String(value) };
-  }
-  return null;
-}
-
-function sanitizeStructuredLogValue(
-  value: object,
-  depth: number,
-  seen: WeakSet<object>,
-): unknown {
-  if (value instanceof Error) {
-    return sanitizeError(value, depth, seen);
-  }
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeLogValue(item, depth + 1, seen));
-  }
-  if (seen.has(value)) {
-    return "[Circular]";
-  }
-  seen.add(value);
-  return sanitizeObject(value as Record<string, unknown>, depth, seen);
-}
-
 function sanitizeLogValue(
   value: unknown,
   depth = 0,
   seen = new WeakSet<object>(),
 ): unknown {
-  const scalar = sanitizeScalarLogValue(value);
-  if (scalar) return scalar.value;
-  if (depth >= MAX_SANITIZE_DEPTH) {
-    return "[MaxDepth]";
+  if (value === null) return null;
+  const scalarSanitizer = SCALAR_LOG_VALUE_SANITIZERS[typeof value];
+  if (scalarSanitizer) return scalarSanitizer(value);
+  if (depth >= MAX_SANITIZE_DEPTH) return "[MaxDepth]";
+  if (value instanceof Error) return sanitizeError(value, depth, seen);
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeLogValue(item, depth + 1, seen));
   }
   if (typeof value === "object") {
-    return sanitizeStructuredLogValue(value, depth, seen);
+    if (seen.has(value)) return "[Circular]";
+    seen.add(value);
+    return sanitizeObject(value as Record<string, unknown>, depth, seen);
   }
-
-  return String(value);
+  return "[Unsupported]";
 }
 
-function buildLogRecord(level: LogLevel, values: readonly unknown[]) {
+function normalizeEvent(event: string): string {
+  return (
+    event
+      .trim()
+      .replace(/[\s/_-]+/g, ".")
+      .replace(/\.+/g, ".")
+      .replace(/^\.|\.$/g, "")
+      .toLowerCase() || "server.log"
+  );
+}
+
+function isFields(value: unknown): value is LogFields {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    !(value instanceof Error)
+  );
+}
+
+function toError(value: unknown): Error {
+  if (value instanceof Error) return value;
+  return new Error(typeof value === "string" ? value : "unknown_error");
+}
+
+function formatLogfmtValue(value: unknown): string {
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  if (typeof value === "string" && /^[A-Za-z0-9._:/@+-]+$/.test(value)) {
+    return value;
+  }
+  return JSON.stringify(value).replace(/\n/g, "\\n");
+}
+
+function orderedFieldEntries(fields: LogFields): [string, unknown][] {
+  const correlation = CORRELATION_FIELD_ORDER.flatMap((key) =>
+    fields[key] === undefined
+      ? []
+      : ([[key, fields[key]]] as [string, unknown][]),
+  );
+  const rest = Object.entries(fields)
+    .filter(
+      ([key, value]) =>
+        value !== undefined && !CORRELATION_FIELD_ORDER.includes(key),
+    )
+    .sort(([left], [right]) => left.localeCompare(right));
+  return [...correlation, ...rest];
+}
+
+function buildLogLine(
+  level: LogLevel,
+  event: string,
+  fields: LogFields = {},
+  error?: unknown,
+): string {
   const context = requestLogStorage.getStore();
-  const sanitizedValues = values.map((value) => sanitizeLogValue(value));
-  const firstValue = sanitizedValues[0];
-  return {
-    time: new Date().toISOString(),
-    level,
+  const fieldsWithContext: LogFields = {
     ...(context?.requestId ? { requestId: context.requestId } : {}),
-    ...(typeof firstValue === "string" ? { message: firstValue } : {}),
-    values: sanitizedValues,
+    ...fields,
   };
+  const sanitizedFields = sanitizeLogValue(fieldsWithContext) as LogFields;
+  if (error !== undefined) {
+    const sanitizedError = sanitizeError(
+      toError(error),
+      0,
+      new WeakSet<object>(),
+    );
+    sanitizedFields.errorName = sanitizedError.name;
+    sanitizedFields.errorMessage = sanitizedError.message;
+    if (sanitizedError.stack)
+      sanitizedFields.errorStack = String(sanitizedError.stack).replace(
+        /\s*\n\s*/g,
+        " | ",
+      );
+    for (const [key, value] of Object.entries(sanitizedError)) {
+      if (
+        !(key in sanitizedFields) &&
+        key !== "name" &&
+        key !== "message" &&
+        key !== "stack"
+      ) {
+        sanitizedFields[`error.${key}`] = value;
+      }
+    }
+  }
+  const serializedFields = orderedFieldEntries(sanitizedFields)
+    .map(([key, value]) => `${key}=${formatLogfmtValue(value)}`)
+    .join(" ");
+  return [
+    new Date().toISOString(),
+    level.toUpperCase(),
+    `event=${normalizeEvent(event)}`,
+    serializedFields,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
-function writeStructuredLog(
-  stream: NodeJS.WriteStream,
+function writeLog(
   level: LogLevel,
-  values: readonly unknown[],
+  event: string,
+  fields: LogFields = {},
+  error?: unknown,
 ): void {
-  stream.write(`${JSON.stringify(buildLogRecord(level, values))}\n`);
-}
-
-function writeConsoleLog(
-  writer: (...values: unknown[]) => void,
-  level: LogLevel,
-  values: readonly unknown[],
-): void {
-  writer(JSON.stringify(buildLogRecord(level, values)));
+  const line = buildLogLine(level, event, fields, error);
+  if (level === "info") {
+    if (isTestEnv && process.stdout.write === defaultStdoutWrite) return;
+    process.stdout.write(`${line}\n`);
+    return;
+  }
+  const writer =
+    level === "warn" ? globalThis.console.warn : globalThis.console.error;
+  const defaultWriter =
+    level === "warn" ? defaultConsoleWarn : defaultConsoleError;
+  if (isTestEnv && writer === defaultWriter) return;
+  writer(line);
 }
 
 export function runWithRequestLogContext<T>(
@@ -190,17 +250,28 @@ export function sanitizeForLog(value: unknown): unknown {
   return sanitizeLogValue(value);
 }
 
-export function logInfo(...values: unknown[]): void {
-  if (isTestEnv && process.stdout.write === defaultStdoutWrite) return;
-  writeStructuredLog(process.stdout, "info", values);
+export function logInfo(event: string, fields?: LogFields): void {
+  writeLog("info", event, fields);
 }
 
-export function logWarn(...values: unknown[]): void {
-  if (isTestEnv && globalThis.console.warn === defaultConsoleWarn) return;
-  writeConsoleLog(globalThis.console.warn, "warn", values);
+export function logWarn(event: string, fields?: LogFields): void {
+  writeLog("warn", event, fields);
 }
 
-export function logError(...values: unknown[]): void {
-  if (isTestEnv && globalThis.console.error === defaultConsoleError) return;
-  writeConsoleLog(globalThis.console.error, "error", values);
+export function logError(event: string, fields?: LogFields): void;
+export function logError(
+  event: string,
+  error: unknown,
+  fields?: LogFields,
+): void;
+export function logError(
+  event: string,
+  errorOrFields?: unknown,
+  fields?: LogFields,
+): void {
+  if (fields === undefined && isFields(errorOrFields)) {
+    writeLog("error", event, errorOrFields);
+    return;
+  }
+  writeLog("error", event, fields, errorOrFields);
 }

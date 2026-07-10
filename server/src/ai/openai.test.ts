@@ -206,9 +206,9 @@ test("buildResponsesInput skips invalid image buffers and releaseImageBuffers cl
   expect(images[0].buffer).toBe(null);
   expect(images[1].buffer).toBe(null);
   expect(warnings.length).toBe(1);
-  expect(JSON.parse(String(warnings[0][0]))).toMatchObject({
-    message: "[openai][image-skipped]",
-  });
+  expect(String(warnings[0][0])).toContain(
+    "WARN event=ai.openai.image.skipped",
+  );
 });
 
 test("OpenAI response helpers build system prompts and parse JSON from noisy output", () => {
@@ -345,14 +345,8 @@ test("OpenAI client helpers reject invalid embeddings and rethrow response failu
     ),
   ).rejects.toThrow(/transport/);
   expect(errors.length).toBe(1);
-  expect(JSON.parse(String(errors[0][0]))).toMatchObject({
-    message: "[openai][request-failed]",
-    values: [
-      "[openai][request-failed]",
-      expect.any(String),
-      {
-        message: "transport",
-      },
-    ],
-  });
+  expect(String(errors[0][0])).toContain(
+    "ERROR event=ai.openai.request.failed",
+  );
+  expect(String(errors[0][0])).toContain("errorMessage=transport");
 });

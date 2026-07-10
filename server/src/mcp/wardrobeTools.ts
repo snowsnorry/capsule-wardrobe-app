@@ -307,7 +307,7 @@ function registerWardrobeItemsTool(server, deps: WardrobeToolsDeps) {
           buildWardrobeItemsMeta(normalizedItems),
         );
       } catch (error) {
-        logError("[mcp/wardrobe_items]", error);
+        logError("mcp.wardrobe.items.failed", error);
         return toToolError("service_unavailable");
       }
     },

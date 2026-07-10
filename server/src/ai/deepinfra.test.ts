@@ -141,11 +141,9 @@ test("buildChatMessages trims empty prompts and skips unusable image assets", ()
       type: "text",
       text: "Describe remaining images",
     });
-    const warning = JSON.parse(String(warn.mock.calls[0][0]));
-    expect(warning).toMatchObject({
-      message: "[deepinfra][image-skipped]",
-    });
-    expect(warning.values[1]).toContain('"filename":"missing.jpg"');
+    const warning = String(warn.mock.calls[0][0]);
+    expect(warning).toContain("WARN event=ai.deepinfra.image.skipped");
+    expect(warning).toContain("filename=missing.jpg");
   } finally {
     warn.mockRestore();
   }
@@ -375,8 +373,8 @@ test("deepinfra client logs transport diagnostics before rethrowing request erro
   ).rejects.toThrow(/Connection error/);
 
   expect(warnings.length).toBe(1);
-  expect(warnings[0][0]).toBe("[deepinfra][request-failed]");
-  const payload = JSON.parse(warnings[0][1]);
+  expect(warnings[0][0]).toBe("ai.deepinfra.request.failed");
+  const payload = warnings[0][1];
   expect(payload.model).toBe("Qwen/Qwen3-VL-235B-A22B-Instruct");
   expect(payload.durationMs).toBe(125);
   expect(payload.imageCount).toBe(1);

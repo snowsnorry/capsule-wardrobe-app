@@ -1,10 +1,8 @@
-import { test, expect } from "vitest";
+import { test, expect, vi } from "vitest";
 import sharp from "sharp";
 import { muteExpectedStructuredLog } from "./test/structuredLogSpies.js";
 import {
   createWardrobePdfGenerationKey,
-  formatLogPayload,
-  formatLogValue,
   getPdfLocale,
   getStoredWardrobeItems,
   hasNonLatinText,
@@ -33,25 +31,20 @@ async function createPngBuffer() {
 }
 
 test("wardrobe pdf core helpers normalize logging, locale, stored data, and generation keys", () => {
-  expect(formatLogValue(null)).toBe("null");
-  expect(formatLogValue(undefined)).toBe("undefined");
-  expect(formatLogValue("value")).toBe("value");
-  expect(formatLogValue(42)).toBe("42");
-  expect(formatLogValue(true)).toBe("true");
-  expect(formatLogValue({ ok: true })).toBe('{"ok":true}');
-  expect(formatLogPayload({ a: 1, skipped: undefined, b: null })).toBe(
-    "a: 1, b: null",
-  );
-
-  const messages = [];
-  const originalInfo = console.log;
-  console.log = (message) => messages.push(message);
-  try {
-    logPdfEvent("empty");
-    logPdfEvent("payload", { count: 2 });
-  } finally {
-    console.log = originalInfo;
-  }
+  const writes: string[] = [];
+  const stdout = vi
+    .spyOn(process.stdout, "write")
+    .mockImplementation((chunk: string | Uint8Array) => {
+      writes.push(String(chunk));
+      return true;
+    });
+  logPdfEvent("empty");
+  logPdfEvent("payload", { count: 2 });
+  stdout.mockRestore();
+  expect(writes).toEqual([
+    expect.stringContaining("event=pdf.empty"),
+    expect.stringContaining("event=pdf.payload count=2"),
+  ]);
 
   expect(getPdfLocale("ru-RU")).toBe("ru");
   expect(getPdfLocale("unsupported")).toBe("en");
@@ -188,7 +181,7 @@ test("loadImageBytes downloads external images and tracks failures without throw
     status: 500,
     url,
   }));
-  muteExpectedStructuredLog(t, "error", "[wardrobe-pdf][image]");
+  muteExpectedStructuredLog(t, "error", "pdf.image.download.failed");
   expect(
     await loadImageBytes("https://example.com/fail.png", null, null, stats),
   ).toBe(null);
@@ -204,7 +197,7 @@ test("loadImageBytes treats over-limit downloads as unavailable images", async (
     setPdfImageDownloadBufferImplForTests(null);
   });
 
-  muteExpectedStructuredLog(t, "error", "[wardrobe-pdf][image]");
+  muteExpectedStructuredLog(t, "error", "pdf.image.download.failed");
 
   await expect(
     loadImageBytes("https://example.com/large.png", null, null, stats),

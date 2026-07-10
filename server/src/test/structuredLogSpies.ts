@@ -3,28 +3,23 @@ import type { TestContext } from "vitest";
 
 type ConsoleMethod = "error" | "warn";
 
-function isStructuredLogMessage(value: unknown, expectedMessage: string) {
+function isStructuredLogEvent(value: unknown, expectedEvent: string) {
   if (typeof value !== "string") {
     return false;
   }
 
-  try {
-    const record = JSON.parse(value) as { message?: unknown };
-    return record.message === expectedMessage;
-  } catch {
-    return value === expectedMessage;
-  }
+  return value.includes(`event=${expectedEvent}`);
 }
 
 export function muteExpectedStructuredLog(
   testContext: TestContext,
   method: ConsoleMethod,
-  expectedMessage: string,
+  expectedEvent: string,
 ) {
   const consoleObject = globalThis.console;
   const originalWriter = consoleObject[method].bind(consoleObject);
   const spy = vi.spyOn(consoleObject, method).mockImplementation((...args) => {
-    if (isStructuredLogMessage(args[0], expectedMessage)) {
+    if (isStructuredLogEvent(args[0], expectedEvent)) {
       return;
     }
 

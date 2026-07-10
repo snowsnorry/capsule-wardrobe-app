@@ -173,7 +173,7 @@ import {
 import { createJobDependencies } from "./appDependencyJobs.js";
 
 const sharpConfig = configureSharp();
-logInfo("[sharp][configured]", {
+logInfo("image.sharp.configured", {
   cache: sharpConfig.cache,
   concurrency: sharpConfig.concurrency,
 });

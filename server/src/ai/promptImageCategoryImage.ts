@@ -71,15 +71,12 @@ function handleCategoryTileBuildError({
       ? "timeout"
       : getErrorMessage(error, "tile_build_failed");
 
-  logWarn(
-    "[prompt-images][tile-build-failed]",
-    JSON.stringify({
-      id: entry.result.id,
-      category,
-      imageUrl: entry.result.imageUrl,
-      reason,
-    }),
-  );
+  logWarn("ai.prompt.images.tile.build.failed", {
+    id: entry.result.id,
+    category,
+    imageUrl: entry.result.imageUrl,
+    reason,
+  });
 
   entry.result.status = "skipped";
   entry.result.reason = reason;

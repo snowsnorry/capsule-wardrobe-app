@@ -219,9 +219,8 @@ async function generateCapsuleReport(
     });
   } catch (error) {
     if (isCapsuleReportDomainError(error)) throw error;
-    logError("[capsule-report]", {
+    logError("ai.capsule.report.failed", error, {
       capsuleId: context.normalizedCapsuleId,
-      message: error instanceof Error ? error.message : "unknown_error",
       code: (error as { code?: string })?.code ?? null,
     });
     throw buildCapsuleReportError("service_unavailable");

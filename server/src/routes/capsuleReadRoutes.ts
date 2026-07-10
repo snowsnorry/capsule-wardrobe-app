@@ -43,7 +43,7 @@ function registerCapsuleListRoutes(app, context) {
         pagination: buildCapsulePaginationResponse(paginationRequest, total),
       });
     } catch (error) {
-      logError("[capsules/recent]", error);
+      logError("capsule.recent.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -56,7 +56,7 @@ function registerCapsuleListRoutes(app, context) {
         : await listRecentCapsulesImpl(req.user.email, 25);
       return res.json({ ok: true, capsules: items.map(toCapsuleSummary) });
     } catch (error) {
-      logError("[capsules/search]", error);
+      logError("capsule.search.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -163,7 +163,7 @@ function registerCapsuleLookupRoutes(app, context) {
         ),
       });
     } catch (error) {
-      logError("[capsules/get]", error);
+      logError("capsule.get.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -213,7 +213,7 @@ function registerCapsuleShareRoutes(app, context) {
         if (errorResponse) {
           return errorResponse;
         }
-        logError("[capsules/share]", error);
+        logError("capsule.share.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -227,7 +227,7 @@ function registerCapsuleShareRoutes(app, context) {
       }
       return res.json({ ok: true, ...shared });
     } catch (error) {
-      logError("[shared-capsules/get]", error);
+      logError("shared.capsule.get.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -257,7 +257,7 @@ function registerCapsuleShareRoutes(app, context) {
         if (errorResponse) {
           return errorResponse;
         }
-        logError("[shared-capsules/import]", error);
+        logError("shared.capsule.import.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -357,7 +357,7 @@ function registerCapsuleActionRoutes(app, context) {
         if (jobError) {
           return jobError;
         }
-        logError("[capsules/regenerate][enqueue]", error);
+        logError("capsule.regenerate.enqueue.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -406,7 +406,7 @@ function registerCapsuleActionRoutes(app, context) {
         if (jobError) {
           return jobError;
         }
-        logError("[capsules/regenerate-selected][enqueue]", error);
+        logError("capsule.regenerate.selected.enqueue.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -426,7 +426,7 @@ function registerCapsuleActionRoutes(app, context) {
         if (jobError) {
           return jobError;
         }
-        logError("[capsules/outfit-set-image][enqueue]", error);
+        logError("capsule.outfit.set.image.enqueue.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

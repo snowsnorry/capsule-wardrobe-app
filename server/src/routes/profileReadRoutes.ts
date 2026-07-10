@@ -12,7 +12,7 @@ export function registerProfileReadRoutes(app, context) {
       }
       return res.json({ ok: true, profile: toProfileResponse(profile) });
     } catch (error) {
-      logError("[profile/me]", error);
+      logError("profile.me.read.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -24,7 +24,7 @@ export function registerProfileReadRoutes(app, context) {
         ...(await buildWardrobeFilters(context, req.user.email)),
       });
     } catch (error) {
-      logError("[wardrobe/filters]", error);
+      logError("wardrobe.filters.read.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });

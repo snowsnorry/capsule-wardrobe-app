@@ -25,7 +25,7 @@ function registerUploadedWardrobeItemUpdateRoute(app, context, filterItem) {
           embedding =
             await context.createUploadedWardrobeItemEmbeddingImpl(details);
         } catch (embeddingError) {
-          logError("[wardrobe/items/uploaded/:id][embedding]", embeddingError);
+          logError("wardrobe.item.uploaded.embedding.failed", embeddingError);
           processingStatus = "failed";
         }
         const item = await context.updateUploadedWardrobeItemDetailsImpl({
@@ -45,7 +45,7 @@ function registerUploadedWardrobeItemUpdateRoute(app, context, filterItem) {
           item: context.annotateLikedItems(filterItem(item), likedUrls),
         });
       } catch (error) {
-        logError("[wardrobe/items/uploaded/:id]", error);
+        logError("wardrobe.item.uploaded.update.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -77,7 +77,7 @@ function registerUploadedWardrobeItemDetailRoute(app, context, filterItem) {
           item: context.annotateLikedItems(filterItem(item), likedUrls),
         });
       } catch (error) {
-        logError("[wardrobe/items/uploaded/:id][get]", error);
+        logError("wardrobe.item.uploaded.get.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -108,13 +108,13 @@ function registerUploadedWardrobeItemDeleteRoute(app, context) {
         const keys = getOwnedWardrobeR2KeysFromItem(item, req.user.email);
         if (keys.length > 0) {
           await context.deleteR2ObjectsImpl({ keys }).catch((error) => {
-            logError("[delete wardrobe/items/uploaded/:id][r2]", error);
+            logError("wardrobe.item.uploaded.r2.delete.failed", error);
           });
         }
 
         return res.json({ ok: true, removed: true });
       } catch (error) {
-        logError("[delete wardrobe/items/uploaded/:id]", error);
+        logError("wardrobe.item.uploaded.delete.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

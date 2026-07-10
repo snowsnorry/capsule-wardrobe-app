@@ -58,8 +58,7 @@ async function getOtherActiveOutfitSetImageJob({
       ? { status: "pending", pendingSetIndexes }
       : null;
   } catch (error) {
-    logError("[outfit-set-image][pending-jobs]", {
-      message: error?.message || "unknown_error",
+    logError("ai.outfit.set.image.pending.jobs.failed", error, {
       capsuleId,
     });
     return null;
@@ -279,9 +278,7 @@ async function runOutfitSetImageJob({
       updateCapsuleSnapshotImpl,
     });
   } catch (error) {
-    logError("[outfit-set-image]", {
-      message: error?.message || "unknown_error",
-      stack: typeof error?.stack === "string" ? error.stack : null,
+    logError("ai.outfit.set.image.failed", error, {
       capsuleId,
       setIndex,
     });

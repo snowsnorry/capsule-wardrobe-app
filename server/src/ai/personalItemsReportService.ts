@@ -216,8 +216,7 @@ async function generatePersonalItemsReport(
     });
   } catch (error) {
     if (isPersonalItemsReportDomainError(error)) throw error;
-    logError("[personal-items-report]", {
-      message: error instanceof Error ? error.message : "unknown_error",
+    logError("ai.personal.items.report.failed", error, {
       code: (error as { code?: string })?.code ?? null,
     });
     throw buildPersonalItemsReportError("service_unavailable");

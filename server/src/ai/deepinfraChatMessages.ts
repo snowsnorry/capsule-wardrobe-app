@@ -17,14 +17,11 @@ function buildChatMessages(
   for (const image of images) {
     const imageUrl = buildDeepInfraImageUrl(image);
     if (!imageUrl) {
-      logWarn(
-        "[deepinfra][image-skipped]",
-        JSON.stringify({
-          category: image?.category ?? null,
-          filename: image?.filename ?? null,
-          reason: "missing_buffer_or_url",
-        }),
-      );
+      logWarn("ai.deepinfra.image.skipped", {
+        category: image?.category ?? null,
+        filename: image?.filename ?? null,
+        reason: "missing_buffer_or_url",
+      });
       continue;
     }
 

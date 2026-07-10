@@ -271,7 +271,7 @@ export async function runJobHandler(
     }
   } catch (error) {
     if (!(error as { suppressJobHandlerLog?: unknown }).suppressJobHandlerLog) {
-      logError("[jobs][handler]", { jobId: job.id, kind: job.kind }, error);
+      logError("jobs.handler.failed", error, { jobId: job.id, kind: job.kind });
     }
     (error as Error & { code?: string }).code = getErrorCode(error);
     throw error;

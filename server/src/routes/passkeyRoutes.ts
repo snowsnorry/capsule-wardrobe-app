@@ -40,7 +40,7 @@ function registerPasskeyListRoute(app, context) {
       const passkeys = await listPasskeysImpl(req.user.email);
       return res.json({ ok: true, passkeys: passkeys.map(toPasskeyMetadata) });
     } catch (error) {
-      logError("[auth/passkeys/list]", error);
+      logError("auth.passkeys.list.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -99,7 +99,7 @@ function registerPasskeyRegistrationOptionsRoute(app, context) {
         setPasskeyChallengeCookie(res, challengeId, nodeEnv);
         return res.json({ ok: true, options });
       } catch (error) {
-        logError("[auth/passkeys/register/options]", error);
+        logError("auth.passkeys.register.options.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -142,7 +142,7 @@ function registerPasskeyRegistrationVerifyRoute(app, context) {
           kind: "registration" as PasskeyChallengeKind,
         });
       } catch (error) {
-        logError("[auth/passkeys/register/challenge]", error);
+        logError("auth.passkeys.register.challenge.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
       clearPasskeyChallengeCookie(res, nodeEnv);
@@ -162,7 +162,7 @@ function registerPasskeyRegistrationVerifyRoute(app, context) {
           supportedAlgorithmIDs: [-7, -257],
         });
       } catch (error) {
-        logError("[auth/passkeys/register/verify]", error);
+        logError("auth.passkeys.register.verify.failed", error);
         return res.status(400).json({ error: "passkey_registration_failed" });
       }
 
@@ -193,7 +193,7 @@ function registerPasskeyRegistrationVerifyRoute(app, context) {
           passkey: passkey ? toPasskeyMetadata(passkey) : null,
         });
       } catch (error) {
-        logError("[auth/passkeys/register/store]", error);
+        logError("auth.passkeys.register.store.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -236,7 +236,7 @@ function registerPasskeyAuthenticationOptionsRoute(app, context) {
         setPasskeyChallengeCookie(res, challengeId, nodeEnv);
         return res.json({ ok: true, options });
       } catch (error) {
-        logError("[auth/passkeys/authenticate/options]", error);
+        logError("auth.passkeys.authenticate.options.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -279,7 +279,7 @@ function registerPasskeyAuthenticationVerifyRoute(app, context) {
           kind: "authentication" as PasskeyChallengeKind,
         });
       } catch (error) {
-        logError("[auth/passkeys/authenticate/challenge]", error);
+        logError("auth.passkeys.authenticate.challenge.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
       clearPasskeyChallengeCookie(res, nodeEnv);
@@ -292,7 +292,7 @@ function registerPasskeyAuthenticationVerifyRoute(app, context) {
       try {
         passkey = await getPasskeyByCredentialIdImpl(response.id);
       } catch (error) {
-        logError("[auth/passkeys/authenticate/lookup]", error);
+        logError("auth.passkeys.authenticate.lookup.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
       if (!passkey) {
@@ -310,7 +310,7 @@ function registerPasskeyAuthenticationVerifyRoute(app, context) {
           requireUserVerification: true,
         });
       } catch (error) {
-        logError("[auth/passkeys/authenticate/verify]", error);
+        logError("auth.passkeys.authenticate.verify.failed", error);
         return res.status(400).json({ error: "passkey_login_failed" });
       }
 
@@ -332,7 +332,7 @@ function registerPasskeyAuthenticationVerifyRoute(app, context) {
         setCsrfCookie(res, session.csrfToken, nodeEnv);
         return res.json({ ok: true, user: { email: passkey.profileEmail } });
       } catch (error) {
-        logError("[auth/passkeys/authenticate/session]", error);
+        logError("auth.passkeys.authenticate.session.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },

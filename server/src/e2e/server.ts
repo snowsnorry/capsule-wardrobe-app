@@ -34,6 +34,6 @@ startServer({
   nodeEnv: "development",
   port,
 }).catch((error) => {
-  logError("[e2e/server]", error);
+  logError("e2e.server.failed", error);
   process.exitCode = 1;
 });

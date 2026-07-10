@@ -77,7 +77,7 @@ async function handleCapsuleCreate(req, res, context) {
     if (isInvalidPayloadError(error)) {
       return res.status(400).json({ error: "invalid_payload" });
     }
-    logError("[capsules/create]", error);
+    logError("capsule.create.failed", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 }
@@ -136,7 +136,7 @@ async function handleCapsuleFiltersUpdate(req, res, context) {
     if (isInvalidPayloadError(error)) {
       return res.status(400).json({ error: "invalid_payload" });
     }
-    logError("[capsules/filters]", error);
+    logError("capsule.filters.update.failed", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 }
@@ -240,7 +240,7 @@ function registerCapsuleReportRoutes(app, context) {
         }
         const status = getCapsuleReportErrorStatus(error);
         if (status === 503) {
-          logError("[capsules/report]", error);
+          logError("capsule.report.generate.failed", error);
         }
         return res
           .status(status)
@@ -263,7 +263,7 @@ function registerCapsuleReportRoutes(app, context) {
         );
         return sendCapsuleMutationResponse(req, res, capsule, context);
       } catch (error) {
-        logError("[capsules/report/delete]", error);
+        logError("capsule.report.delete.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -318,7 +318,7 @@ async function updateRejectedUrls(req, res, context) {
 
     return sendCapsuleMutationResponse(req, res, nextCapsule, context);
   } catch (error) {
-    logError("[capsules/rejected-urls]", error);
+    logError("capsule.rejected.urls.failed", error);
     return res.status(503).json({ error: "service_unavailable" });
   }
 }

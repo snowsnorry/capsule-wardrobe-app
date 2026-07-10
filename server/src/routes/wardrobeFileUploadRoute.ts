@@ -85,7 +85,7 @@ function runWardrobeUploadMiddleware(req, res, uploadDir) {
         return;
       }
 
-      logError("[wardrobe/items/upload][parse]", error);
+      logError("wardrobe.items.upload.parse.failed", error);
       res.status(400).json({ error: "invalid_payload" });
       resolve(false);
     });
@@ -344,7 +344,10 @@ function registerWardrobeUploadRoute(app, context) {
         const jobError = sendJobEnqueueError(res, error);
         if (jobError) {
           await cleanupStagedUploadFiles(stagedFiles).catch((cleanupError) => {
-            logError("[wardrobe/items/upload][staging-cleanup]", cleanupError);
+            logError(
+              "wardrobe.items.upload.staging.cleanup.failed",
+              cleanupError,
+            );
           });
           return jobError;
         }
@@ -352,13 +355,16 @@ function registerWardrobeUploadRoute(app, context) {
           return res.status(400).json({ error: "invalid_image" });
         }
         await cleanupStagedUploadFiles(stagedFiles).catch((cleanupError) => {
-          logError("[wardrobe/items/upload][staging-cleanup]", cleanupError);
+          logError(
+            "wardrobe.items.upload.staging.cleanup.failed",
+            cleanupError,
+          );
         });
         if (error?.code === "storage_unavailable") {
           return res.status(503).json({ error: "storage_unavailable" });
         }
 
-        logError("[wardrobe/items/upload]", error);
+        logError("wardrobe.items.upload.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       } finally {
         await rm(uploadDir, { recursive: true, force: true }).catch(() => {});
@@ -433,7 +439,10 @@ async function processQueuedWardrobeFileUploadImpl({
   } finally {
     await hydrated.cleanup();
     await cleanupStagedUploadFiles(stagedFiles).catch((cleanupError) => {
-      logError("[wardrobe/items/upload][job-staging-cleanup]", cleanupError);
+      logError(
+        "wardrobe.items.upload.job.staging.cleanup.failed",
+        cleanupError,
+      );
     });
   }
 }

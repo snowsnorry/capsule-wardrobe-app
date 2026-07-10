@@ -42,7 +42,7 @@ export function registerSearchRoutes(app, context) {
         ) {
           return res.status(400).json({ error: "invalid_payload" });
         }
-        logError("[search/run]", error);
+        logError("search.run.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -59,7 +59,7 @@ function registerSearchReadRoutes(app, context) {
       const options = await getSearchOptionsImpl(req.user.email);
       return res.json({ ok: true, ...options });
     } catch (error) {
-      logError("[search/options]", error);
+      logError("search.options.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -69,7 +69,7 @@ function registerSearchReadRoutes(app, context) {
       const search = await getSavedSearchImpl(req.user.email);
       return res.json({ ok: true, search });
     } catch (error) {
-      logError("[search/me]", error);
+      logError("search.me.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   });
@@ -98,7 +98,7 @@ function registerSearchStatsRoute(app, context) {
         ) {
           return res.status(400).json({ error: "invalid_payload" });
         }
-        logError("[search/stats]", error);
+        logError("search.stats.failed", error);
         return res.status(503).json({ error: "service_unavailable" });
       }
     },
@@ -128,7 +128,7 @@ function createProductDetailHandler({
         item: annotateLikedItems(item, likedUrls),
       });
     } catch (error) {
-      logError("[search/product]", error);
+      logError("search.product.failed", error);
       return res.status(503).json({ error: "service_unavailable" });
     }
   };
