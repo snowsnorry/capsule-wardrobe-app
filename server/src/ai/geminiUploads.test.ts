@@ -158,7 +158,7 @@ test("uploadBufferToGemini skips missing buffers with a warning", async () => {
 
     expect(uploaded).toBeNull();
     const warning = String(warnings[0][0]);
-    expect(warning).toContain("WARN event=gemini.image.skipped");
+    expect(warning).toContain("WARN event=ai.gemini.image.skipped");
     expect(warning).toContain(
       "category=top filename=top.jpg reason=missing_buffer",
     );
@@ -205,7 +205,7 @@ test("cleanupUploadedGeminiFiles logs delete failures", async () => {
     );
 
     const warning = String(warnings[0][0]);
-    expect(warning).toContain("WARN event=gemini.file.delete.failed");
+    expect(warning).toContain("WARN event=ai.gemini.file.delete.failed");
     expect(warning).toContain('message="delete failed" name=files/fail');
   } finally {
     console.warn = originalWarn;

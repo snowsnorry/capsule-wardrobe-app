@@ -77,9 +77,7 @@ test("resolveLlmProvider warns and falls back for unknown model", () => {
   }
 
   expect(calls.length).toBe(1);
-  expect(String(calls[0][0])).toContain(
-    "WARN event=wardrobe.ai.llm.unknown.model",
-  );
+  expect(String(calls[0][0])).toContain("WARN event=ai.llm.unknown.model");
   expect(String(calls[0][0])).toContain(
     "fallbackModel=gpt-5.5 fallbackProvider=openai requestedLlm=deepinfra:unknown-model",
   );
@@ -102,9 +100,7 @@ test("resolveLlmProvider warns and falls back for unknown claude model", () => {
   }
 
   expect(calls.length).toBe(1);
-  expect(String(calls[0][0])).toContain(
-    "WARN event=wardrobe.ai.llm.unknown.model",
-  );
+  expect(String(calls[0][0])).toContain("WARN event=ai.llm.unknown.model");
   expect(String(calls[0][0])).toContain(
     "fallbackModel=gpt-5.5 fallbackProvider=openai requestedLlm=claude:unknown-model",
   );

@@ -23,7 +23,7 @@ test("extractGeneratedImage reads base64 image output", () => {
 });
 
 test("buildOpenAiImageFiles converts only valid buffers", async (t) => {
-  muteExpectedStructuredLog(t, "warn", "openai.image.image.skipped");
+  muteExpectedStructuredLog(t, "warn", "ai.openai.image.skipped");
 
   const files = await buildOpenAiImageFiles([
     {

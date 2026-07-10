@@ -42,6 +42,6 @@ test("getPromptDebugImages falls back when image building throws a non-error", a
     stitched: null,
   });
   expect(String(vi.mocked(console.warn).mock.calls[0][0])).toContain(
-    "WARN event=prompt.images.build.failed message=unknown_error",
+    "WARN event=ai.prompt.images.build.failed message=unknown_error",
   );
 });
