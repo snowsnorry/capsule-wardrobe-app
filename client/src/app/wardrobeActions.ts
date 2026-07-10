@@ -2,8 +2,8 @@ import {
   regenerateCapsuleWardrobe,
   regenerateSelectedWardrobeItems,
 } from "../api/wardrobe";
-import { downloadCapsulePdf } from "../api/capsules";
-import type { JobResponse } from "../api/jobs";
+import { downloadCapsulePdf, fetchCapsule } from "../api/capsules";
+import type { JobResponse, JobSnapshot } from "../api/jobs";
 import { fromContext, type AppActionContext } from "./actionContext";
 import {
   clearNotificationFlow,
@@ -34,6 +34,59 @@ function failWardrobeStream(context: AppActionContext, error?: unknown) {
 function throwIfJobFailed(response: JobResponse) {
   if (response.job.status !== "failed") return;
   throw new Error(response.job.error?.code || "service_unavailable");
+}
+
+function isMounted(context: AppActionContext) {
+  return fromContext<{ current: boolean }>(context, "isMountedRef").current;
+}
+
+async function reconcileCapsuleGenerationJob(
+  context: AppActionContext,
+  capsuleId: string,
+  job: JobSnapshot,
+) {
+  if (!isMounted(context)) return;
+
+  try {
+    const result = (await fetchCapsule(capsuleId)) as {
+      snapshot?: Record<string, unknown>;
+    };
+    if (!isMounted(context) || !result.snapshot) return;
+
+    if (job.status === "failed") {
+      result.snapshot = { ...result.snapshot, status: "failed" };
+    }
+    await fromContext<(snapshot: unknown, capsuleId: string) => Promise<void>>(
+      context,
+      "applyWardrobeSnapshot",
+    )(result.snapshot, capsuleId);
+  } catch {
+    if (!isMounted(context) || job.status !== "failed") return;
+    await fromContext<(snapshot: unknown, capsuleId: string) => Promise<void>>(
+      context,
+      "applyWardrobeSnapshot",
+    )(
+      {
+        status: "failed",
+        items: fromContext<WardrobeItem[] | null>(context, "profileItems"),
+        outfitSets: fromContext<unknown[]>(context, "profileOutfitSets"),
+      },
+      capsuleId,
+    );
+  }
+}
+
+export function watchCapsuleGenerationJob(
+  context: AppActionContext,
+  capsuleId: string,
+  jobId: string,
+) {
+  void fromContext<(jobId: string) => Promise<JobSnapshot>>(
+    context,
+    "waitForJobCompletion",
+  )(jobId)
+    .then((job) => reconcileCapsuleGenerationJob(context, capsuleId, job))
+    .catch(() => undefined);
 }
 
 export async function refreshWardrobe(context: AppActionContext) {
@@ -69,12 +122,14 @@ export async function refreshWardrobe(context: AppActionContext) {
   }));
   fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(true);
   try {
-    throwIfJobFailed(await regenerateCapsuleWardrobe({ capsuleId }));
+    const response = await regenerateCapsuleWardrobe({ capsuleId });
+    throwIfJobFailed(response);
     fromContext<(kind: string, llm?: string) => void>(
       context,
       "startPendingNotificationFlow",
     )("full");
     startCapsuleEventStream(context, capsuleId);
+    watchCapsuleGenerationJob(context, capsuleId, response.job.id);
   } catch (error) {
     failWardrobeStream(context);
     fromContext<(updater: (current: unknown) => unknown) => void>(

@@ -297,7 +297,7 @@ test("useJobTracker keeps active UI and waiters when disappeared job reconciles 
   expect(result.current.activeJobEntityKeys).toEqual(["capsule:capsule-1"]);
 });
 
-test("useJobTracker waitForJobCompletion delegates to shared job watchdog", async () => {
+test("useJobTracker waits for a tracked job without a second event stream", async () => {
   const queued = createJob();
   const failed = createJob({
     status: "failed",
@@ -305,18 +305,19 @@ test("useJobTracker waitForJobCompletion delegates to shared job watchdog", asyn
     failedAt: "2026-01-01T00:01:00.000Z",
   });
   jobsApi.fetchActiveJobs.mockResolvedValue({ ok: true, jobs: [queued] });
-  jobsApi.waitForJob.mockResolvedValue(failed);
-
   const { result } = renderHook(() => useJobTracker("person@test.com"));
 
   await act(async () => {
     await flushPromises();
   });
 
-  await expect(result.current.waitForJobCompletion("job-1")).resolves.toEqual(
-    failed,
-  );
-  expect(jobsApi.waitForJob).toHaveBeenCalledWith("job-1");
+  const completion = result.current.waitForJobCompletion("job-1");
+  act(() => {
+    emitJobSnapshot(failed);
+  });
+
+  await expect(completion).resolves.toEqual(failed);
+  expect(jobsApi.waitForJob).not.toHaveBeenCalled();
 });
 
 test("useJobTracker does not fetch job details when SSE fails for a still-active job", async () => {

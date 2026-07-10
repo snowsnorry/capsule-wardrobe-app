@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Mock } from "vitest";
-import { downloadCapsulePdf } from "../api/capsules";
+import { downloadCapsulePdf, fetchCapsule } from "../api/capsules";
 import {
   removeCatalogItemFromPersonalItems,
   saveCatalogItemToPersonalItems,
@@ -31,6 +31,7 @@ import { createActionContext } from "./testUtils";
 
 vi.mock("../api/capsules", () => ({
   downloadCapsulePdf: vi.fn(),
+  fetchCapsule: vi.fn(),
 }));
 vi.mock("../api/personalItems", () => ({
   removeCatalogItemFromPersonalItems: vi.fn(),
@@ -694,6 +695,39 @@ describe("wardrobeActions", () => {
     expect(context.applyWardrobeSnapshot).not.toHaveBeenCalled();
     expect(subscribeCapsuleEvents).toHaveBeenCalledWith(
       expect.objectContaining({ capsuleId: "capsule-1" }),
+    );
+  });
+
+  test("refreshWardrobe reconciles a failed job through its persisted capsule snapshot", async () => {
+    const failedJob = createFailedJobResponse().job;
+    vi.mocked(regenerateCapsuleWardrobe).mockResolvedValueOnce(
+      createJobResponse(),
+    );
+    vi.mocked(fetchCapsule).mockResolvedValueOnce({
+      capsule: { id: "capsule-1" },
+      snapshot: {
+        status: "ready",
+        items: [{ id: "top-1", url: "https://example.com/top-1" }],
+      },
+    });
+    vi.mocked(subscribeCapsuleEvents).mockReturnValue(
+      new Promise(() => undefined),
+    );
+    const context = createActionContext({
+      waitForJobCompletion: vi.fn(async () => failedJob),
+    });
+
+    await refreshWardrobe(context);
+    await vi.waitFor(() =>
+      expect(context.waitForJobCompletion).toHaveBeenCalledWith("job-1"),
+    );
+    await vi.waitFor(() =>
+      expect(fetchCapsule).toHaveBeenCalledWith("capsule-1"),
+    );
+
+    expect(context.applyWardrobeSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "failed" }),
+      "capsule-1",
     );
   });
 

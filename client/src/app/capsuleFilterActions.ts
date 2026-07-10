@@ -4,6 +4,7 @@ import { fromContext, type AppActionContext } from "./actionContext";
 import { runContentOperation } from "./capsuleActionOperation";
 import { refreshCapsuleList } from "./capsuleListActions";
 import { buildCapsuleStatus } from "./capsuleState";
+import { watchCapsuleGenerationJob } from "./wardrobeActions";
 import type {
   CapsuleDraft,
   CapsuleMeta,
@@ -160,6 +161,9 @@ function startFilterRegeneration(
       context,
       "startCapsuleEventStream",
     )(capsuleId);
+    if (result?.job?.id) {
+      watchCapsuleGenerationJob(context, capsuleId, result.job.id);
+    }
     return;
   }
   fromContext<(value: boolean) => void>(context, "setIsLoadingItems")(false);

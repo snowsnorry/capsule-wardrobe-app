@@ -127,7 +127,10 @@ function useWaitForJobCompletion({
         waiters.push(waiter);
         waitersRef.current.set(jobId, waiters);
       });
-      return Promise.race([trackedPromise, waitForJob(jobId)]).finally(() => {
+      const completion = existingJob
+        ? trackedPromise
+        : Promise.race([trackedPromise, waitForJob(jobId)]);
+      return completion.finally(() => {
         const waiters = waitersRef.current.get(jobId);
         if (!waiters) return;
         const nextWaiters = waiters.filter((item) => item !== waiter);
