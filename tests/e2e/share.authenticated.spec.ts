@@ -19,8 +19,13 @@ async function openApp(page: Page) {
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto("/capsule/capsule-e2e");
   await expect(
-    page.getByRole("button", { name: "Regenerate all" }),
+    page.getByRole("button", {
+      name: "Rename capsule Playwright capsule",
+    }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open capsule menu" }),
+  ).toBeEnabled();
 }
 
 async function openCapsuleMenu(page: Page) {
