@@ -23,7 +23,7 @@
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.1.2",
     "@simplewebauthn/browser": "^13.3.0",
-    "@tailwindcss/vite": "^4.3.2",
+    "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-virtual": "^3.14.6",
     "clsx": "^2.1.1",
     "express": "^5.2.1",
