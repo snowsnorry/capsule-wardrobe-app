@@ -69,8 +69,8 @@
     "esbuild@0.28.1": true,
     "fsevents@2.3.3": true,
     "fsevents@2.3.2": true,
-    "protobufjs@7.6.4": true,
     "sharp@0.34.5": true,
-    "@google/genai@2.12.0": true
+    "@google/genai@2.12.0": true,
+    "protobufjs@7.6.5": true
   }
 }
