@@ -51,7 +51,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.0",
     "@vitest/coverage-v8": "^4.1.10",
     "concurrently": "^10.0.3",
     "dependency-cruiser": "^18.1.0",
