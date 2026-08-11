@@ -71,6 +71,6 @@
     "fsevents@2.3.2": true,
     "sharp@0.34.5": true,
     "protobufjs@7.6.5": true,
-    "@google/genai@2.13.0": true
+    "@google/genai@2.16.0": true
   }
 }
