@@ -328,5 +328,4 @@ function SignInScreen({
   );
 }
 
-export type { SignInScreenProps, SignInStatus } from "./SignInScreenTypes";
 export default SignInScreen;
