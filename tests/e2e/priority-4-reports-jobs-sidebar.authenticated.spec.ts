@@ -195,11 +195,14 @@ test("sidebar capsule and outfit search dialogs support load more empty state an
 }) => {
   await resetAndLogin("with-profile");
   await seedSidebarLists(page);
-  await page.setViewportSize({ width: 1440, height: 960 });
-  await page.goto("/capsule/capsule-e2e");
+  await openCapsule(page);
 
-  await expect(page.getByRole("button", { name: "Show 3 more" })).toBeVisible();
-  await page.getByRole("button", { name: "Show 3 more" }).click();
+  const showMoreCapsules = page
+    .getByTestId("sidebar-navigation-list")
+    .getByRole("button", { name: "Show 2 more" })
+    .last();
+  await expect(showMoreCapsules).toBeVisible();
+  await showMoreCapsules.click();
   await expect(
     page.getByRole("button", { name: "Sidebar capsule 01", exact: true }),
   ).toBeVisible();
