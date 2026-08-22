@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { translateOption } from "../../i18n";
+import { buildProductImageThumbnails } from "../../utils/productImageThumbnails";
 import { buildProductDetailGroups } from "../../../../shared/productDetail.js";
 import ColorSwatch from "../ColorSwatch";
 import {
@@ -103,10 +104,12 @@ function ColorValues({
 
 function ProductImage({
   bottomMargin = 0,
+  fallbackToLargestThumbnail = false,
   item,
   t,
 }: {
   bottomMargin?: number;
+  fallbackToLargestThumbnail?: boolean;
   item: ProductDetailItem;
   t: ProductDetailSectionsProps["t"];
 }) {
@@ -116,14 +119,17 @@ function ProductImage({
   const showImageToggle = hasUploadedProductImageVersions(item);
   const imageUrl =
     showImageToggle && imageMode === "original" ? rawImageUrl : aiImageUrl;
-  const [imageFailed, setImageFailed] = useState(false);
+  const { displayImageUrl, handleImageError } = useProductImageFallback({
+    fallbackToLargestThumbnail,
+    imageUrl,
+    source: item.source,
+  });
 
   useEffect(() => {
     setImageMode("ai");
-    setImageFailed(false);
   }, [aiImageUrl, rawImageUrl]);
 
-  if (!imageUrl || imageFailed) {
+  if (!displayImageUrl) {
     return null;
   }
 
@@ -132,9 +138,9 @@ function ProductImage({
       <Box sx={{ position: "relative" }}>
         <Box
           component="img"
-          src={imageUrl}
+          src={displayImageUrl}
           alt={item.name || ""}
-          onError={() => setImageFailed(true)}
+          onError={handleImageError}
           sx={{
             display: "block",
             width: "100%",
@@ -156,6 +162,67 @@ function ProductImage({
       </Box>
     </Box>
   );
+}
+
+function useProductImageFallback({
+  fallbackToLargestThumbnail,
+  imageUrl,
+  source,
+}: {
+  fallbackToLargestThumbnail: boolean;
+  imageUrl: string | null;
+  source: unknown;
+}) {
+  const [largestThumbnailUrl, setLargestThumbnailUrl] = useState<string | null>(
+    null,
+  );
+  const [originalFailed, setOriginalFailed] = useState(false);
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    setLargestThumbnailUrl(null);
+    setOriginalFailed(false);
+    setThumbnailFailed(false);
+
+    if (fallbackToLargestThumbnail && imageUrl) {
+      void buildProductImageThumbnails(imageUrl, { source }).then(
+        (thumbnails) => {
+          if (isActive) {
+            setLargestThumbnailUrl(thumbnails?.src ?? null);
+          }
+        },
+      );
+    }
+
+    return () => {
+      isActive = false;
+    };
+  }, [fallbackToLargestThumbnail, imageUrl, source]);
+
+  const displayImageUrl = originalFailed
+    ? thumbnailFailed
+      ? null
+      : largestThumbnailUrl
+    : imageUrl;
+
+  return {
+    displayImageUrl,
+    handleImageError() {
+      if (!originalFailed && fallbackToLargestThumbnail) {
+        setOriginalFailed(true);
+        return;
+      }
+
+      if (originalFailed) {
+        setThumbnailFailed(true);
+        return;
+      }
+
+      setOriginalFailed(true);
+    },
+  };
 }
 
 export { ProductDetailGroups, ProductImage };

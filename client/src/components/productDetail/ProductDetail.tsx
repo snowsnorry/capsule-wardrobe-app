@@ -25,6 +25,7 @@ type ProductDetailProps = {
   mobileBackAction?: (() => void) | null;
   reserveHeaderActionsSpace?: boolean;
   showImage?: boolean;
+  fallbackToLargestThumbnail?: boolean;
   onRemoveFromPersonalItems?: (item: ProductDetailItem) => Promise<void> | void;
   onEditUploadedWardrobeItem?: (item: ProductDetailItem) => void;
   onSetItemLike?: (
@@ -43,6 +44,7 @@ function ProductDetail({
   mobileBackAction = null,
   reserveHeaderActionsSpace = false,
   showImage = true,
+  fallbackToLargestThumbnail = false,
   onRemoveFromPersonalItems,
   onEditUploadedWardrobeItem,
   onSetItemLike,
@@ -89,6 +91,7 @@ function ProductDetail({
           item={normalizedItem}
           t={t}
           bottomMargin={bodyBottomPadding}
+          fallbackToLargestThumbnail={fallbackToLargestThumbnail}
         />
       ) : null}
     </Stack>
