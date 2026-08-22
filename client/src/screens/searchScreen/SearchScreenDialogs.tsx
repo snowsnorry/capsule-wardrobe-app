@@ -99,6 +99,7 @@ function SearchFiltersDialog({
             }}
             onReset={search.resetSearch}
             autoApply
+            showExactColorFilter
             showFooterActions={false}
           />
         </Box>

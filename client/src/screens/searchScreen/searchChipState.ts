@@ -31,6 +31,10 @@ function getSearchStateWithoutChip({
     return { ...currentState, query: "", page: 1 };
   }
 
+  if (chip.field === "exactColor") {
+    return { ...currentState, exactColor: null, page: 1 };
+  }
+
   return { ...currentState, [chip.field]: [], page: 1 };
 }
 

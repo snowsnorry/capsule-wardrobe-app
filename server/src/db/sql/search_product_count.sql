@@ -50,9 +50,11 @@ WITH query_params AS (
     $22::text AS text_search_mode,
     -- Maximum semantic distance accepted for hybrid and semantic searches.
     $23::double precision AS semantic_distance_threshold
+    /* EXACT_COLOR_PARAMS */
 ),
 filtered_products AS (
   SELECT
+    products.url,
     CASE
       WHEN params.embedding_vector_text IS NULL THEN NULL
       WHEN products.embedding IS NULL THEN NULL
@@ -131,6 +133,7 @@ filtered_products AS (
 SELECT count(*)::integer AS total
 FROM filtered_products
 CROSS JOIN query_params AS params
+/* EXACT_COLOR_JOIN */
 WHERE
   params.text_search_mode = 'none'
   OR (params.text_search_mode = 'lexical' AND lexical_score > 0)

@@ -1,5 +1,6 @@
 export type SearchPayload = {
   query: string;
+  exactColor: string | null;
   likedOnly: boolean;
   brand: string[];
   priceMin: number | null;

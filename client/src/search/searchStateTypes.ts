@@ -24,6 +24,7 @@ export type SearchOptions = {
 
 export type SearchState = {
   query: string;
+  exactColor: string | null;
   likedOnly: boolean;
   brand: SearchFilterValue[];
   priceMin: number | null;
@@ -109,4 +110,5 @@ export type ActiveFilterChip = {
   optionGroup?: string;
   title?: string;
   valueLabels?: string[];
+  swatchColor?: string;
 };

@@ -8,6 +8,7 @@ const INVALID_SEARCH_ARRAY_VALUE = "\u0000invalid-search-array-value";
 
 export const DEFAULT_SEARCH_STATE = Object.freeze({
   query: "",
+  exactColor: null,
   likedOnly: false,
   brand: [],
   priceMin: null,
@@ -82,11 +83,28 @@ function normalizeBoolean(value: unknown): boolean {
   return value === true;
 }
 
+const INVALID_EXACT_COLOR = "\u0000invalid-exact-color";
+const EXACT_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
+
+function normalizeExactColor(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (typeof value !== "string") {
+    return INVALID_EXACT_COLOR;
+  }
+  const normalized = value.trim().toLowerCase();
+  return EXACT_COLOR_PATTERN.test(normalized)
+    ? normalized
+    : INVALID_EXACT_COLOR;
+}
+
 export function normalizeSearchPayload(
   payload: Partial<Record<keyof SearchPayload, unknown>> = {},
 ): SearchPayload {
   return {
     query: normalizeQuery(payload.query),
+    exactColor: normalizeExactColor(payload.exactColor),
     likedOnly: normalizeBoolean(payload.likedOnly),
     brand: normalizeStringArray(payload.brand),
     priceMin: normalizePriceValue(payload.priceMin),
@@ -115,6 +133,7 @@ export function serializeSearchRow(
 
   return {
     query: typeof row.query === "string" ? row.query : "",
+    exactColor: normalizeExactColor(row.exactColor),
     likedOnly: normalizeBoolean(row.likedOnly),
     brand: serializeStringArray(row.brand),
     priceMin:

@@ -183,6 +183,7 @@ function SearchDesktopFilters({
         }}
         onReset={search.resetSearch}
         autoApply
+        showExactColorFilter
       />
     </Box>
   );

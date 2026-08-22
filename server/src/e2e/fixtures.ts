@@ -288,6 +288,7 @@ export function buildE2eEmptyWardrobeCapsule() {
 export function buildE2eSearchPayload(payload: Record<string, unknown> = {}) {
   return {
     query: "",
+    exactColor: null,
     likedOnly: false,
     brand: [],
     priceMin: null,

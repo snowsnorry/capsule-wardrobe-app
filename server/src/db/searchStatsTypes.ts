@@ -9,6 +9,7 @@ export type SearchStatsInput = Omit<
   | "limit"
   | "textQuery"
   | "textSearchMode"
+  | "exactColor"
 >;
 export type SearchStatsFilters = Required<Omit<SearchStatsInput, "urlPrefix">>;
 export type SearchStatsFacetKey = Exclude<

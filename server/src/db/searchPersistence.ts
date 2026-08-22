@@ -18,6 +18,7 @@ import {
   querySearchProductCount,
   querySearchProductItems,
 } from "./searchProductQueries.js";
+import { hexToLabVector } from "../colorLab.js";
 
 type ProductSearchInput = SearchProductsInput & {
   profileEmail?: string | null;
@@ -52,6 +53,7 @@ export async function getSearchByEmail(
     select
       email,
       query,
+      exact_color as "exactColor",
       embedding,
       liked_only as "likedOnly",
       brand,
@@ -82,6 +84,7 @@ export async function getSearchByEmail(
 export async function upsertSearchByEmail({
   email,
   query,
+  exactColor,
   embedding,
   likedOnly,
   brand,
@@ -104,17 +107,18 @@ export async function upsertSearchByEmail({
   const row = getFirstRow(
     await sql<SearchRowQuery>`
 	    insert into search (
-	      email, query, embedding, liked_only, brand, price_min, price_max, audience, category, season,
+	      email, query, exact_color, embedding, liked_only, brand, price_min, price_max, audience, category, season,
 	      formality_level, style, occasions, color, pattern, silhouette, fit, closure_type, page
 	    )
 	    values (
-	      ${email}, ${query}, ${embedding === null ? null : JSON.stringify(embedding)}, ${likedOnly}, ${brand},
+	      ${email}, ${query}, ${exactColor}, ${embedding === null ? null : JSON.stringify(embedding)}, ${likedOnly}, ${brand},
 	      ${priceMin}, ${priceMax}, ${audience}, ${category}, ${season}, ${formalityLevel},
 	      ${style}, ${occasions}, ${color}, ${pattern}, ${silhouette}, ${fit}, ${closureType}, ${page}
 	    )
 	    on conflict (email)
 	    do update set
 	      query = excluded.query, embedding = excluded.embedding, liked_only = excluded.liked_only,
+	      exact_color = excluded.exact_color,
 	      brand = excluded.brand,
 	      price_min = excluded.price_min, price_max = excluded.price_max, audience = excluded.audience,
 	      category = excluded.category, season = excluded.season, formality_level = excluded.formality_level,
@@ -123,7 +127,7 @@ export async function upsertSearchByEmail({
 	      closure_type = excluded.closure_type, page = excluded.page,
 	      updated_at = now()
 	    returning
-	      email, query, embedding, liked_only as "likedOnly", brand, price_min as "priceMin", price_max as "priceMax",
+	      email, query, exact_color as "exactColor", embedding, liked_only as "likedOnly", brand, price_min as "priceMin", price_max as "priceMax",
 	      audience, category, season, formality_level as "formalityLevel", style, occasions,
 	      color, pattern, silhouette, fit, closure_type as "closureType", page,
 	      created_at as "createdAt", updated_at as "updatedAt"
@@ -176,6 +180,12 @@ function getEmbeddingVector(queryEmbedding) {
     : null;
 }
 
+function getExactColorLab(exactColor) {
+  return typeof exactColor === "string" && /^#[0-9a-f]{6}$/.test(exactColor)
+    ? hexToLabVector(exactColor)
+    : null;
+}
+
 function getNormalizedUrlPrefix(urlPrefix) {
   return typeof urlPrefix === "string" && urlPrefix.trim()
     ? `${urlPrefix.trim()}%`
@@ -223,6 +233,7 @@ function buildSearchQueryParams(input) {
     category: getSearchArray(input, "category"),
     closureType: getSearchArray(input, "closureType"),
     color: getSearchArray(input, "color"),
+    exactColorLab: getExactColorLab(input.exactColor),
     embeddingVector: getEmbeddingVector(input.queryEmbedding),
     fit: getSearchArray(input, "fit"),
     formalityLevel: getSearchArray(input, "formalityLevel"),

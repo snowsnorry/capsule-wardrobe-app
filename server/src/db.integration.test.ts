@@ -69,6 +69,7 @@ type SessionRow = {
 type SearchRow = {
   email: string;
   query: string | null;
+  exactColor: string | null;
   embedding: number[] | null;
   likedOnly: boolean | null;
   brand: string[];
@@ -324,6 +325,7 @@ test("db integration shapes search persistence and searchProducts queries", asyn
       {
         email: "user@example.com",
         query: "linen shirt",
+        exactColor: "#203a5f",
         embedding: [0.1, 0.2],
         likedOnly: false,
         brand: ["uniqlo"],
@@ -347,6 +349,7 @@ test("db integration shapes search persistence and searchProducts queries", asyn
       {
         email: "user@example.com",
         query: "linen shirt",
+        exactColor: "#203a5f",
         embedding: [0.1, 0.2],
         likedOnly: false,
         brand: ["uniqlo"],
@@ -382,6 +385,7 @@ test("db integration shapes search persistence and searchProducts queries", asyn
   const upserted = await upsertSearchByEmail({
     email: "user@example.com",
     query: "linen shirt",
+    exactColor: "#203a5f",
     embedding: [0.1, 0.2],
     likedOnly: false,
     brand: ["uniqlo"],
@@ -433,7 +437,8 @@ test("db integration shapes search persistence and searchProducts queries", asyn
   expect(calls[0].values).toEqual(["user@example.com"]);
   expect(calls[1].text).toMatch(/insert into search/i);
   expect(calls[1].values[0]).toBe("user@example.com");
-  expect(calls[1].values[2]).toBe(JSON.stringify([0.1, 0.2]));
+  expect(calls[1].values[2]).toBe("#203a5f");
+  expect(calls[1].values[3]).toBe(JSON.stringify([0.1, 0.2]));
   expect(countCall.text).toMatch(
     /select count\(\*\)::integer as total\s+from filtered_products/i,
   );

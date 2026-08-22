@@ -308,6 +308,7 @@ function SearchFiltersSidebarFrame({
         options={props.options}
         updateDraftState={updateDraftState}
         t={t}
+        showExactColorFilter={props.showExactColorFilter === true}
       />
       <SearchStyleSections
         options={props.options}

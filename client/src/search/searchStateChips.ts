@@ -91,6 +91,15 @@ export function buildActiveFilterChips({
       label: t("search.filters.query", { query: queryPreview }),
     });
   }
+  if (state.exactColor) {
+    chips.push({
+      key: `exactColor:${state.exactColor}`,
+      field: "exactColor",
+      value: state.exactColor,
+      label: `${t("search.filters.exactColor")}: ${state.exactColor}`,
+      swatchColor: state.exactColor,
+    });
+  }
   pushSearchFacetChips(chips, {
     state,
     options,

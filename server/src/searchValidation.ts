@@ -47,6 +47,13 @@ function hasInvalidSearchPriceRange(normalized: SearchPayload): boolean {
   );
 }
 
+function hasInvalidExactColor(normalized: SearchPayload): boolean {
+  return (
+    normalized.exactColor !== null &&
+    !/^#[0-9a-f]{6}$/.test(normalized.exactColor)
+  );
+}
+
 function throwInvalidSearchPayload(): never {
   const error = new Error("invalid_payload");
   (error as Error & { code?: string }).code = "invalid_payload";
@@ -75,6 +82,9 @@ export function getSearchPayloadValidationFailure(
   }
   if (hasInvalidSearchPriceRange(normalized)) {
     return "price";
+  }
+  if (hasInvalidExactColor(normalized)) {
+    return "facet";
   }
   return null;
 }

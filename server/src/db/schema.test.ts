@@ -232,6 +232,11 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   ).toBeTruthy();
   expect(
     statements.some((statement) =>
+      statement.includes("exact_color text null check"),
+    ),
+  ).toBeTruthy();
+  expect(
+    statements.some((statement) =>
       statement.includes(
         "create table if not exists mcp_oauth_authorization_codes",
       ),
@@ -263,7 +268,9 @@ test("ensure auth, profile, passkey, capsule, shared capsule, and search schemas
   const joined = statements.join("\n");
   expect(joined).not.toMatch(/alter table profiles/i);
   expect(joined).not.toMatch(/alter table profile_passkeys/i);
-  expect(joined).not.toMatch(/alter table search/i);
+  expect(joined).toMatch(
+    /alter table search\s+add column if not exists exact_color/i,
+  );
   expect(joined).not.toMatch(/alter table mcp_oauth_registered_clients/i);
   expect(joined).not.toMatch(/update profiles\s+set\s+llm/i);
 });

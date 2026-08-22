@@ -123,6 +123,10 @@ export type ProductRow = {
 
 export type ProductSearchRow = ProductRow & {
   distance: number | string | null;
+  matchedColor?: string | null;
+  matchedColorShare?: number | string | null;
+  matchedColorIndex?: number | string | null;
+  colorDistance?: number | string | null;
   isSavedToWardrobe?: boolean | null;
   isLiked?: boolean | null;
 };
@@ -135,6 +139,7 @@ export type ProductWithEmbeddingRow = ProductRow &
 export type SearchRow = {
   email: string;
   query: string | null;
+  exactColor: string | null;
   embedding: number[] | null;
   likedOnly: boolean | null;
   brand: string[];
@@ -165,6 +170,7 @@ export type SearchRowQuery = Omit<SearchRow, "priceMin" | "priceMax"> & {
 export type UpsertSearchInput = {
   email: string;
   query: string | null;
+  exactColor: string | null;
   embedding: number[] | null;
   likedOnly: boolean;
   brand: string[];
@@ -191,6 +197,7 @@ export type SearchProductsInput = {
   textSearchMode?: "none" | "lexical" | "hybrid" | "semantic" | null;
   urlPrefix?: string | null;
   profileEmail?: string | null;
+  exactColor?: string | null;
   likedOnly?: boolean;
   brand?: string[];
   priceMin?: number | null;

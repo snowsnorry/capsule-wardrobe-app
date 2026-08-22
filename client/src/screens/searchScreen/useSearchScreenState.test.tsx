@@ -59,6 +59,7 @@ function makeSavedSearch(overrides = {}) {
   return {
     search: {
       query: "linen shirt",
+      exactColor: null,
       likedOnly: true,
       brand: ["uniqlo"],
       category: [],
@@ -141,6 +142,7 @@ describe("useSearchScreenState", () => {
     expect(searchApi.fetchSavedSearch).toHaveBeenCalledWith({ force: true });
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "linen shirt",
+      exactColor: null,
       likedOnly: true,
       brand: ["uniqlo"],
       priceMin: null,
@@ -225,6 +227,7 @@ describe("useSearchScreenState", () => {
     );
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "https://example.com/products/linen-shirt",
+      exactColor: null,
       likedOnly: false,
       brand: [],
       priceMin: null,
@@ -438,6 +441,7 @@ describe("useSearchScreenState", () => {
     });
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "",
+      exactColor: null,
       likedOnly: false,
       brand: [],
       priceMin: null,

@@ -231,6 +231,7 @@ describe("SearchScreen", () => {
     ).toBeInTheDocument();
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "https://example.com/products/linen-shirt",
+      exactColor: null,
       likedOnly: false,
       brand: [],
       priceMin: null,

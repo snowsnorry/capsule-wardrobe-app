@@ -55,6 +55,7 @@ describe("searchState", () => {
 
     expect(serializeDraftState(nextState)).toEqual({
       query: "linen shirt",
+      exactColor: null,
       likedOnly: true,
       brand: ["uniqlo"],
       priceMin: 15,
@@ -104,6 +105,31 @@ describe("searchState", () => {
       priceEnabled: true,
       priceMinDraft: 10,
       priceMaxDraft: 100,
+    });
+  });
+
+  test("normalizes and serializes the exact color filter", () => {
+    const state = createSearchState(
+      { exactColor: " #AABBCC " },
+      EMPTY_SEARCH_OPTIONS.priceRange,
+    );
+
+    expect(state.exactColor).toBe("#aabbcc");
+    expect(serializeDraftState(state).exactColor).toBe("#aabbcc");
+
+    const chips = buildActiveFilterChips({
+      state,
+      options: EMPTY_SEARCH_OPTIONS,
+      locale: "en",
+      t: (key) => (key === "search.filters.exactColor" ? "Exact color" : key),
+      translateOption: (_group, value) => value,
+    });
+    expect(chips).toContainEqual({
+      key: "exactColor:#aabbcc",
+      field: "exactColor",
+      value: "#aabbcc",
+      label: "Exact color: #aabbcc",
+      swatchColor: "#aabbcc",
     });
   });
 

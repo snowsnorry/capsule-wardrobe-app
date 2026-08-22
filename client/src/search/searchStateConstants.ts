@@ -6,6 +6,7 @@ import type {
 
 export const INITIAL_SEARCH_STATE = Object.freeze({
   query: "",
+  exactColor: null,
   likedOnly: false,
   brand: [],
   priceMin: null,

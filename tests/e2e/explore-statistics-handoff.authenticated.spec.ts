@@ -94,6 +94,75 @@ test("search hydrates saved filters, applies filters, and opens product detail",
   ).toBeHidden();
 });
 
+test("Explore applies, persists, and clears the exact color filter", async ({
+  page,
+  resetAndLogin,
+}) => {
+  await resetAndLoginFresh(page, resetAndLogin, "with-profile", "/explore");
+
+  const toggle = page.getByRole("switch", { name: "Enable color matching" });
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+  const exactColorInput = page.getByLabel("HEX color");
+  const exactColorField = exactColorInput.locator("..");
+  const colorSwatch = exactColorField.locator("[data-color-swatch]");
+  const [fieldBox, swatchBox] = await Promise.all([
+    exactColorField.boundingBox(),
+    colorSwatch.boundingBox(),
+  ]);
+  expect(fieldBox).not.toBeNull();
+  expect(swatchBox).not.toBeNull();
+  if (fieldBox && swatchBox) {
+    const leftGap = swatchBox.x - fieldBox.x;
+    const topGap = swatchBox.y - fieldBox.y;
+    const bottomGap =
+      fieldBox.y + fieldBox.height - swatchBox.y - swatchBox.height;
+    expect(leftGap).toBe(topGap);
+    expect(leftGap).toBe(bottomGap);
+  }
+  await exactColorInput.fill("203A5F");
+
+  await expect(page.getByText("Color match: #203a5f")).toBeVisible();
+  await expect(page.getByText("2 results")).toBeVisible();
+  const exactColorResults = page.getByRole("button", {
+    name: /(?:Navy relaxed shirt|Sporty navy overshirt) E2E Studio/,
+  });
+  await expect(exactColorResults).toHaveCount(2);
+  await expect(exactColorResults.nth(0)).toHaveAccessibleName(
+    /Navy relaxed shirt/,
+  );
+  await expect(exactColorResults.nth(1)).toHaveAccessibleName(
+    /Sporty navy overshirt/,
+  );
+  await expect(
+    page.getByRole("button", { name: /Straight black trousers E2E Studio/ }),
+  ).toBeHidden();
+
+  await page.reload();
+  await expect(toggle).toBeChecked();
+  await expect(page.getByLabel("HEX color")).toHaveValue("203a5f");
+  await expect(page.getByText("2 results")).toBeVisible();
+
+  await deleteActiveChip(page, "exactColor");
+  await expect(toggle).not.toBeChecked();
+  await expect(page.getByText("3 results")).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Open filters" }).click();
+  const mobileToggle = page.getByRole("switch", {
+    name: "Enable color matching",
+  });
+  await mobileToggle.check();
+  await page.getByLabel("HEX color").fill("203A5F");
+  await page.getByRole("button", { name: "Close filters" }).click();
+  await expect(page.getByText("2 results")).toBeVisible();
+
+  await page.getByRole("button", { name: "Open filters" }).click();
+  await mobileToggle.uncheck();
+  await page.getByRole("button", { name: "Close filters" }).click();
+  await expect(page.getByText("3 results")).toBeVisible();
+});
+
 test("capsule product card opens product detail without leaving capsule", async ({
   page,
   resetAndLogin,

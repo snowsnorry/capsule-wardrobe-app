@@ -157,6 +157,42 @@ test("searchProducts keeps array filters and vector distance aligned with the pr
   expect(joinedStatements).not.toContain(
     "coalesce(products.color_base, ARRAY[]::text[]) && params.color",
   );
+  expect(joinedStatements).not.toContain("product_colors");
+});
+
+test("searchProducts adds exact-color matching only when exactColor is active", async () => {
+  const statements: string[] = [];
+  const values: unknown[][] = [];
+  const sql = createSearchSqlRecorder({ statements, values });
+  setSqlClientOverride(sql);
+
+  await searchProducts({ exactColor: "#808080" });
+
+  expect(statements).toHaveLength(2);
+  expect(
+    statements.every((statement) => statement.includes("product_colors")),
+  ).toBe(true);
+  expect(statements.every((statement) => statement.includes("share >="))).toBe(
+    true,
+  );
+  expect(
+    statements.every((statement) => statement.includes("color_distance")),
+  ).toBe(true);
+  const countValues =
+    values[findStatementIndex(statements, "count(*)::integer")];
+  const itemValues = values[findStatementIndex(statements, "result_limit")];
+  expect(countValues.slice(-3)).toEqual([
+    expect.stringMatching(/^\[/),
+    0.08,
+    10,
+  ]);
+  expect(itemValues.slice(-3)).toEqual([
+    expect.stringMatching(/^\[/),
+    0.08,
+    10,
+  ]);
+  expect(statements.join("\n")).toContain('AS "matchedColor"');
+  expect(statements.join("\n")).toContain("matching_products.url ASC");
 });
 
 function createSearchSqlRecorder({
