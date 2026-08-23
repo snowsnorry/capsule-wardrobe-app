@@ -54,6 +54,7 @@ WITH query_params AS (
     $24::integer AS result_limit,
     -- Product row offset for pagination.
     $25::integer AS result_offset
+    /* EXACT_COLOR_PARAMS */
 ),
 filtered_products AS (
   SELECT
@@ -257,8 +258,10 @@ SELECT
       AND user_liked_items.item_url = matching_products.url
   ) AS "isLiked",
   matching_products.distance
+  /* EXACT_COLOR_SELECT */
 FROM matching_products
 CROSS JOIN query_params AS params
+/* EXACT_COLOR_JOIN */
 ORDER BY
   CASE
     WHEN params.text_search_mode = 'hybrid' THEN
@@ -277,7 +280,9 @@ ORDER BY
   CASE WHEN params.text_search_mode = 'lexical' THEN matching_products.lexical_score ELSE NULL END DESC NULLS LAST,
   CASE WHEN params.text_search_mode = 'semantic' THEN matching_products.distance ELSE NULL END ASC NULLS LAST,
   CASE WHEN params.text_search_mode = 'semantic' THEN matching_products.lexical_score ELSE NULL END DESC NULLS LAST,
+  /* EXACT_COLOR_ORDER */
   lower(coalesce(matching_products.brand, '')) ASC,
-  lower(coalesce(matching_products.name, '')) ASC
+  lower(coalesce(matching_products.name, '')) ASC,
+  matching_products.url ASC
 LIMIT (SELECT result_limit FROM query_params)
 OFFSET (SELECT result_offset FROM query_params)

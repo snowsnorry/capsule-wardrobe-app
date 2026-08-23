@@ -11,6 +11,7 @@ import type {
   SearchStateSource,
   SerializedSearchState,
 } from "./searchStateTypes";
+import { normalizeExactColorRange } from "./exactColorRange";
 
 function normalizeSearchArrayValue(
   value: SearchFilterValue | SearchFilterValue[] | undefined,
@@ -20,6 +21,16 @@ function normalizeSearchArrayValue(
 
 function normalizeBoolean(value: unknown): boolean {
   return value === true;
+}
+
+const EXACT_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
+
+function normalizeExactColor(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim().toLowerCase();
+  return EXACT_COLOR_PATTERN.test(normalized) ? normalized : null;
 }
 
 export function createSearchState(
@@ -44,6 +55,8 @@ export function createSearchState(
   return {
     ...base,
     ...normalizedArrays,
+    exactColor: normalizeExactColor(base.exactColor),
+    exactColorRange: normalizeExactColorRange(base.exactColorRange),
     likedOnly: normalizeBoolean(base.likedOnly),
     priceEnabled: hasPriceBounds,
     priceMinDraft: hasPriceBounds ? priceMinDraft : rangeMin,
@@ -76,6 +89,8 @@ export function serializeDraftState(
 
   return {
     query: state.query,
+    exactColor: state.exactColor,
+    exactColorRange: state.exactColorRange,
     likedOnly: state.likedOnly,
     brand: state.brand,
     priceMin: hasPriceFilter ? Number(state.priceMinDraft) : null,

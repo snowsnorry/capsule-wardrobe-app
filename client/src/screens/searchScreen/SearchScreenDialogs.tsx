@@ -99,6 +99,7 @@ function SearchFiltersDialog({
             }}
             onReset={search.resetSearch}
             autoApply
+            showExactColorFilter
             showFooterActions={false}
           />
         </Box>
@@ -176,6 +177,7 @@ function SearchProductDialog({
               t={t}
               locale={locale}
               bodyBottomPadding={1}
+              fallbackToLargestThumbnail
             />
           </Box>
         </Stack>

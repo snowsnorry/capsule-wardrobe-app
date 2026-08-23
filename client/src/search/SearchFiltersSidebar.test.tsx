@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
+import { EXACT_COLOR_RANGE_VALUES } from "./exactColorRange";
 import SearchFiltersSidebar from "./SearchFiltersSidebar";
 import { createSearchState } from "./searchState";
 
@@ -70,6 +71,153 @@ afterEach(() => {
 });
 
 describe("SearchFiltersSidebar", () => {
+  test("shows the Explore-only exact color filter and enables neutral gray", () => {
+    const onDraftStateChange = vi.fn();
+    renderSidebar({ showExactColorFilter: true, onDraftStateChange });
+
+    const toggle = screen.getByRole("switch", {
+      name: "Enable color matching",
+    });
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText("Color match")).toBeVisible();
+    expect(
+      screen.getByText("Find items with a similar visible shade."),
+    ).toBeVisible();
+    expect(screen.queryByLabelText("HEX color")).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    const nextState = onDraftStateChange.mock.calls[0][0](
+      createSearchState(null, options.priceRange),
+    );
+    expect(nextState).toMatchObject({ exactColor: "#808080", page: 1 });
+    expect(onDraftStateChange).toHaveBeenCalledWith(expect.any(Function), {
+      submit: true,
+    });
+  });
+
+  test("normalizes valid HEX input and blocks incomplete values", () => {
+    const onDraftStateChange = vi.fn();
+    renderSidebar({
+      showExactColorFilter: true,
+      onDraftStateChange,
+      draftState: createSearchState(
+        { exactColor: "#808080" },
+        options.priceRange,
+      ),
+    });
+
+    const input = screen.getByLabelText("HEX color");
+    expect(input).toHaveValue("808080");
+    fireEvent.change(input, { target: { value: "AABBCC" } });
+    const validState = onDraftStateChange.mock.calls[0][0](
+      createSearchState({ exactColor: "#808080" }, options.priceRange),
+    );
+    expect(validState).toMatchObject({ exactColor: "#aabbcc", page: 1 });
+    expect(input).toHaveValue("aabbcc");
+
+    onDraftStateChange.mockClear();
+    fireEvent.paste(input, {
+      clipboardData: { getData: () => "#445566" },
+    });
+    const pastedState = onDraftStateChange.mock.calls[0][0](
+      createSearchState({ exactColor: "#aabbcc" }, options.priceRange),
+    );
+    expect(pastedState).toMatchObject({ exactColor: "#445566", page: 1 });
+    expect(input).toHaveValue("445566");
+
+    onDraftStateChange.mockClear();
+    fireEvent.change(screen.getByLabelText("Choose a shade"), {
+      target: { value: "#112233" },
+    });
+    expect(onDraftStateChange).toHaveBeenCalledTimes(1);
+
+    onDraftStateChange.mockClear();
+    fireEvent.change(input, { target: { value: "123" } });
+    expect(
+      screen.queryByText("Use a 6-digit HEX value, for example #808080."),
+    ).not.toBeInTheDocument();
+    expect(onDraftStateChange).not.toHaveBeenCalled();
+
+    fireEvent.blur(input);
+    expect(
+      screen.getByText("Use a 6-digit HEX value, for example #808080."),
+    ).toBeVisible();
+    expect(onDraftStateChange).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onDraftStateChange).not.toHaveBeenCalled();
+  });
+
+  test("renders five exact-color range stops and commits only marked values", () => {
+    const onDraftStateChange = vi.fn();
+    const { container } = renderSidebar({
+      showExactColorFilter: true,
+      onDraftStateChange,
+      draftState: createSearchState(
+        { exactColor: "#808080" },
+        options.priceRange,
+      ),
+    });
+
+    const slider = screen.getByRole("slider", { name: "Color match range" });
+    expect(slider).toHaveValue("2");
+    expect(container.querySelectorAll(".MuiSlider-mark")).toHaveLength(5);
+    expect(screen.getByText("Closer")).toBeVisible();
+    expect(screen.getAllByText("Balanced")).toHaveLength(2);
+    expect(screen.getByText("Broader")).toBeVisible();
+    expect(
+      screen.getByTestId("exact-color-range-current-value"),
+    ).toHaveTextContent("Balanced");
+
+    fireEvent.change(slider, { target: { value: "2.5" } });
+    const snappedState = onDraftStateChange.mock.calls[0][0](
+      createSearchState({ exactColor: "#808080" }, options.priceRange),
+    );
+    expect(EXACT_COLOR_RANGE_VALUES).toContain(snappedState.exactColorRange);
+    onDraftStateChange.mockClear();
+
+    fireEvent.change(slider, { target: { value: "4" } });
+    const previewState = onDraftStateChange.mock.calls[0][0](
+      createSearchState({ exactColor: "#808080" }, options.priceRange),
+    );
+    expect(previewState).toMatchObject({
+      exactColorRange: "broadest",
+      page: 1,
+    });
+    expect(onDraftStateChange.mock.calls[0][1]).toEqual({ submit: false });
+
+    fireEvent.mouseUp(slider);
+    expect(onDraftStateChange).toHaveBeenLastCalledWith(expect.any(Function), {
+      submit: true,
+    });
+  });
+
+  test("switching the active exact color off clears the filter", () => {
+    const onDraftStateChange = vi.fn();
+    renderSidebar({
+      showExactColorFilter: true,
+      onDraftStateChange,
+      draftState: createSearchState(
+        { exactColor: "#808080" },
+        options.priceRange,
+      ),
+    });
+
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Enable color matching" }),
+    );
+    const nextState = onDraftStateChange.mock.calls[0][0](
+      createSearchState({ exactColor: "#808080" }, options.priceRange),
+    );
+    expect(nextState).toMatchObject({ exactColor: null, page: 1 });
+  });
+
+  test("does not render the exact color filter outside Explore", () => {
+    renderSidebar();
+    expect(
+      screen.queryByRole("switch", { name: "Enable color matching" }),
+    ).not.toBeInTheDocument();
+  });
+
   test("renders liked only as the first filter and toggles the boolean state", () => {
     const onDraftStateChange = vi.fn();
     renderSidebar({ onDraftStateChange });

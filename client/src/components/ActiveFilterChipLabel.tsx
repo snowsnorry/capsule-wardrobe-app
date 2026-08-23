@@ -8,6 +8,33 @@ function ActiveFilterChipLabel({
 }: {
   chip: ActiveFilterChip;
 }): ReactNode {
+  if (chip.swatchColor) {
+    return (
+      <Stack
+        aria-label={chip.label}
+        component="span"
+        direction="row"
+        spacing={0.75}
+        sx={{ alignItems: "center" }}
+      >
+        <Box
+          component="span"
+          aria-hidden="true"
+          sx={{
+            width: 14,
+            height: 14,
+            flex: "0 0 auto",
+            border: 1,
+            borderColor: "divider",
+            borderRadius: "50%",
+            bgcolor: chip.swatchColor,
+          }}
+        />
+        <Box component="span">{chip.label}</Box>
+      </Stack>
+    );
+  }
+
   if (chip.optionGroup !== "patterns" || !chip.values?.length) {
     return chip.label;
   }

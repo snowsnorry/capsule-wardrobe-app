@@ -23,6 +23,8 @@ const options: SearchOptions = {
 
 function payload(overrides: Partial<SearchPayload> = {}): SearchPayload {
   return {
+    exactColor: null,
+    exactColorRange: "balanced",
     brand: ["uniqlo"],
     audience: ["woman"],
     category: ["top"],
@@ -102,4 +104,37 @@ test("getSearchPayloadValidationFailure classifies facet and price failures", ()
     ),
   ).toBe("price");
   expect(getSearchPayloadValidationFailure(payload(), options)).toBe(null);
+});
+
+test("search validation rejects malformed exact colors", () => {
+  expect(
+    getSearchPayloadValidationFailure(
+      payload({ exactColor: "not-a-color" }),
+      options,
+    ),
+  ).toBe("facet");
+  expectInvalidPayload(() =>
+    assertValidSearchPayload(payload({ exactColor: "#12345g" }), options),
+  );
+});
+
+test("search validation accepts known exact color ranges and rejects unknown ones", () => {
+  expect(
+    getSearchPayloadValidationFailure(
+      payload({ exactColorRange: "broadest" }),
+      options,
+    ),
+  ).toBe(null);
+  expectInvalidPayload(() =>
+    assertValidSearchPayload(
+      payload({ exactColorRange: "unsupported" as "balanced" }),
+      options,
+    ),
+  );
+  expectInvalidPayload(() =>
+    assertValidSearchPayload(
+      payload({ exactColorRange: "" as "balanced" }),
+      options,
+    ),
+  );
 });

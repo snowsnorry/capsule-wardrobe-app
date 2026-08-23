@@ -49,3 +49,25 @@ export async function executeSqlFile<TRow = unknown>(
     }
   )<TRow>(query, values);
 }
+
+export async function executeTransformedSqlFile<TRow = unknown>(
+  sql: TemplateSqlClientLike,
+  fileUrl: URL,
+  values: readonly unknown[],
+  transform: (query: string) => string,
+): Promise<SqlResultLike<TRow>> {
+  const query = transform(await readSqlFile(fileUrl));
+  const rawSql = sql as TemplateSqlClientLike & Partial<RawSqlClientLike>;
+  if (rawSql.query) {
+    return rawSql.query<TRow>(query, values);
+  }
+
+  return (
+    sql as TemplateSqlClientLike & {
+      <TRow = unknown>(
+        query: string,
+        values?: readonly unknown[],
+      ): Promise<SqlResultLike<TRow>>;
+    }
+  )<TRow>(query, values);
+}

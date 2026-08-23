@@ -22,6 +22,7 @@ type SearchFiltersSidebarProps = {
   autoApply?: boolean;
   showApplyButton?: boolean;
   showFooterActions?: boolean;
+  showExactColorFilter?: boolean;
 };
 
 type SelectItem = {

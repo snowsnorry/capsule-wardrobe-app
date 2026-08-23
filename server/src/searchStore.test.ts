@@ -51,6 +51,8 @@ test("normalizeSearchPayload normalizes nullable values and array filters", () =
   expect(
     normalizeSearchPayload({
       query: "  linen summer shirt ",
+      exactColor: "#AABBCC",
+      exactColorRange: "broad",
       likedOnly: true,
       brand: [" Cos ", "cos", "", null],
       audience: [" WOMAN ", "woman"],
@@ -70,6 +72,8 @@ test("normalizeSearchPayload normalizes nullable values and array filters", () =
     }),
   ).toEqual({
     query: "linen summer shirt",
+    exactColor: "#aabbcc",
+    exactColorRange: "broad",
     likedOnly: true,
     brand: ["cos"],
     priceMin: 12.5,
@@ -103,6 +107,8 @@ test("serializeSearchRow maps persisted row fields to client shape", () => {
   expect(
     serializeSearchRow({
       query: "blue blazer",
+      exactColor: "#203a5f",
+      exactColorRange: "close",
       likedOnly: true,
       brand: ["cos"],
       priceMin: 10,
@@ -122,6 +128,8 @@ test("serializeSearchRow maps persisted row fields to client shape", () => {
     }),
   ).toEqual({
     query: "blue blazer",
+    exactColor: "#203a5f",
+    exactColorRange: "close",
     likedOnly: true,
     brand: ["cos"],
     priceMin: 10,

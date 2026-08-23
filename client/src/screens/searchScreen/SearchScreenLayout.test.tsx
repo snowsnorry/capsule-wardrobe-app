@@ -14,8 +14,13 @@ vi.mock("../../search/SearchFiltersSidebar", () => ({
   ),
 }));
 vi.mock("../../components/productDetail/ProductDetail", () => ({
-  default: ({ item, mobileBackAction, onSaveToPersonalItems }) => (
-    <div>
+  default: ({
+    item,
+    mobileBackAction,
+    fallbackToLargestThumbnail,
+    onSaveToPersonalItems,
+  }) => (
+    <div data-thumbnail-fallback={fallbackToLargestThumbnail || undefined}>
       <span>detail {item?.id || "none"}</span>
       {onSaveToPersonalItems ? (
         <button type="button" onClick={() => onSaveToPersonalItems(item)}>
@@ -181,6 +186,10 @@ describe("SearchScreenLayout", () => {
     );
 
     expect(screen.queryByText("Catalog: Explore")).not.toBeInTheDocument();
+    expect(screen.getByText("detail item-1").parentElement).toHaveAttribute(
+      "data-thumbnail-fallback",
+      "true",
+    );
     fireEvent.click(screen.getByRole("button", { name: "apply filters" }));
     fireEvent.click(screen.getByRole("button", { name: "reset filters" }));
     fireEvent.click(screen.getByRole("button", { name: "save detail" }));

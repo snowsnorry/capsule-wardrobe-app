@@ -5,7 +5,9 @@ import {
   type CountRow,
   type ProductSearchRow,
 } from "./core.js";
-import { executeSqlFile } from "./sqlFiles.js";
+import { executeSqlFile, executeTransformedSqlFile } from "./sqlFiles.js";
+
+const EXACT_COLOR_MINIMUM_SHARE = 0.08;
 
 const SEARCH_PRODUCT_COUNT_SQL_FILE = new URL(
   "./sql/search_product_count.sql",
@@ -22,6 +24,8 @@ type SearchQueryParams = {
   category: string[];
   closureType: string[];
   color: string[];
+  exactColorLab: string | null;
+  exactColorMaximumDistance: number;
   embeddingVector: string | null;
   fit: string[];
   formalityLevel: string[];
@@ -102,19 +106,113 @@ function buildSearchQuerySqlValues({
 function buildSearchItemsSqlValues(
   params: SearchItemsQueryParams,
 ): readonly unknown[] {
-  return [...buildSearchQuerySqlValues(params), params.limit, params.offset];
+  const values = [
+    ...buildSearchQuerySqlValues(params),
+    params.limit,
+    params.offset,
+  ];
+  return params.exactColorLab
+    ? [
+        ...values,
+        params.exactColorLab,
+        EXACT_COLOR_MINIMUM_SHARE,
+        params.exactColorMaximumDistance,
+      ]
+    : values;
+}
+
+function buildSearchCountSqlValues(params: SearchQueryParams) {
+  const values = [...buildSearchQuerySqlValues(params)];
+  return params.exactColorLab
+    ? [
+        ...values,
+        params.exactColorLab,
+        EXACT_COLOR_MINIMUM_SHARE,
+        params.exactColorMaximumDistance,
+      ]
+    : values;
+}
+
+function addExactColorItemsSql(query: string): string {
+  return query
+    .replace(
+      "/* EXACT_COLOR_PARAMS */",
+      `, $26::vector(3) AS exact_color_lab
+       , $27::double precision AS exact_color_minimum_share
+       , $28::double precision AS exact_color_maximum_distance`,
+    )
+    .replace(
+      "/* EXACT_COLOR_SELECT */",
+      `, matched_color.hex AS "matchedColor"
+       , matched_color.share AS "matchedColorShare"
+       , matched_color.color_index AS "matchedColorIndex"
+       , matched_color.color_distance AS "colorDistance"`,
+    )
+    .replace(
+      "/* EXACT_COLOR_JOIN */",
+      `JOIN LATERAL (
+         SELECT
+           product_colors.hex,
+           product_colors.share,
+           product_colors.color_index,
+           product_colors.lab <-> params.exact_color_lab AS color_distance
+         FROM product_colors
+         WHERE product_colors.product_url = matching_products.url
+           AND product_colors.share >= params.exact_color_minimum_share
+         ORDER BY
+           product_colors.lab <-> params.exact_color_lab,
+           product_colors.share DESC,
+           product_colors.color_index
+         LIMIT 1
+       ) AS matched_color
+         ON matched_color.color_distance <= params.exact_color_maximum_distance`,
+    )
+    .replace(
+      "/* EXACT_COLOR_ORDER */",
+      `matched_color.color_distance ASC,
+       matched_color.share DESC,`,
+    );
+}
+
+function addExactColorCountSql(query: string): string {
+  return query
+    .replace(
+      "/* EXACT_COLOR_PARAMS */",
+      `, $24::vector(3) AS exact_color_lab
+       , $25::double precision AS exact_color_minimum_share
+       , $26::double precision AS exact_color_maximum_distance`,
+    )
+    .replace(
+      "/* EXACT_COLOR_JOIN */",
+      `JOIN LATERAL (
+         SELECT product_colors.lab <-> params.exact_color_lab AS color_distance
+         FROM product_colors
+         WHERE product_colors.product_url = filtered_products.url
+           AND product_colors.share >= params.exact_color_minimum_share
+         ORDER BY
+           product_colors.lab <-> params.exact_color_lab,
+           product_colors.share DESC,
+           product_colors.color_index
+         LIMIT 1
+       ) AS matched_color
+         ON matched_color.color_distance <= params.exact_color_maximum_distance`,
+    );
 }
 
 async function querySearchProductCount(
   sql: ReturnType<typeof getSqlClient>,
   params: SearchQueryParams,
 ): Promise<CountRow | null> {
+  const values = buildSearchCountSqlValues(params);
   return getFirstRow(
-    await executeSqlFile<CountRow>(
-      sql,
-      SEARCH_PRODUCT_COUNT_SQL_FILE,
-      buildSearchQuerySqlValues(params),
-    ),
+    await (params.exactColorLab
+      ? executeTransformedSqlFile<CountRow>(
+          sql,
+          SEARCH_PRODUCT_COUNT_SQL_FILE,
+          values,
+          addExactColorCountSql,
+        )
+      : executeSqlFile<CountRow>(sql, SEARCH_PRODUCT_COUNT_SQL_FILE, values)),
   );
 }
 
@@ -122,12 +220,20 @@ async function querySearchProductItems(
   sql: ReturnType<typeof getSqlClient>,
   params: SearchItemsQueryParams,
 ): Promise<ProductSearchRow[]> {
+  const values = buildSearchItemsSqlValues(params);
   return getResultRows(
-    await executeSqlFile<ProductSearchRow>(
-      sql,
-      SEARCH_PRODUCT_ITEMS_SQL_FILE,
-      buildSearchItemsSqlValues(params),
-    ),
+    await (params.exactColorLab
+      ? executeTransformedSqlFile<ProductSearchRow>(
+          sql,
+          SEARCH_PRODUCT_ITEMS_SQL_FILE,
+          values,
+          addExactColorItemsSql,
+        )
+      : executeSqlFile<ProductSearchRow>(
+          sql,
+          SEARCH_PRODUCT_ITEMS_SQL_FILE,
+          values,
+        )),
   );
 }
 

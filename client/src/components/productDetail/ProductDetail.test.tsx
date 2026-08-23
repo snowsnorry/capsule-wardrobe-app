@@ -155,6 +155,33 @@ describe("ProductDetail", () => {
     });
   });
 
+  test("falls back to the largest thumbnail when the Explore image fails", async () => {
+    renderProductDetail(
+      {
+        id: "coat",
+        name: "Coat",
+        imageUrl: "https://example.com/coat.jpg",
+      },
+      theme,
+      { fallbackToLargestThumbnail: true },
+    );
+
+    const image = await screen.findByRole("img", { name: "Coat" });
+    fireEvent.error(image);
+
+    await waitFor(() => {
+      expect(image.getAttribute("src")).toMatch(
+        /^https:\/\/assets\.capsule-wardrobe\.org\/thumbnails\/[a-f0-9]{64}_640\.webp$/,
+      );
+    });
+    expect(image).not.toHaveAttribute("srcset");
+
+    fireEvent.error(image);
+    await waitFor(() => {
+      expect(screen.queryByRole("img", { name: "Coat" })).toBeNull();
+    });
+  });
+
   test("shows unisex suffix for all-audience items and leaves other items unchanged", () => {
     renderProductDetail({
       id: "shirt",

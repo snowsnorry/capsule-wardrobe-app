@@ -1,5 +1,10 @@
+export type ExactColorRange =
+  "closest" | "close" | "balanced" | "broad" | "broadest";
+
 export type SearchPayload = {
   query: string;
+  exactColor: string | null;
+  exactColorRange: ExactColorRange;
   likedOnly: boolean;
   brand: string[];
   priceMin: number | null;

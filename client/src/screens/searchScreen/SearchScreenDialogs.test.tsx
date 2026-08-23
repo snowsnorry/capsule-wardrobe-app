@@ -29,8 +29,8 @@ vi.mock("../../search/SearchFiltersSidebar", () => ({
   ),
 }));
 vi.mock("../../components/productDetail/ProductDetail", () => ({
-  default: ({ item, onSetItemLike }) => (
-    <div>
+  default: ({ item, fallbackToLargestThumbnail, onSetItemLike }) => (
+    <div data-thumbnail-fallback={fallbackToLargestThumbnail || undefined}>
       <span>detail {item?.id || "none"}</span>
       {onSetItemLike ? (
         <button type="button">body product actions</button>
@@ -101,6 +101,10 @@ describe("SearchScreenDialogs", () => {
     );
 
     fireEvent.click(getFilterFooterApplyButton());
+    expect(screen.getByText("detail item-1").parentElement).toHaveAttribute(
+      "data-thumbnail-fallback",
+      "true",
+    );
     await waitFor(() => {
       expect(search.applyCurrentQuery).toHaveBeenCalled();
     });

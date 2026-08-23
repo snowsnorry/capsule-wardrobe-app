@@ -1,6 +1,9 @@
 create table if not exists search (
   email text primary key,
   query text null,
+  exact_color text null check (exact_color is null or exact_color ~ '^#[0-9a-f]{6}$'),
+  exact_color_range text not null default 'balanced'
+    check (exact_color_range in ('closest', 'close', 'balanced', 'broad', 'broadest')),
   embedding jsonb null,
   liked_only boolean not null default false,
   brand text[] not null default '{}'::text[],

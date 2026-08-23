@@ -1,4 +1,8 @@
-import type { SearchOptions, SearchPayload } from "./searchTypes.js";
+import type {
+  ExactColorRange,
+  SearchOptions,
+  SearchPayload,
+} from "./searchTypes.js";
 
 type SearchPayloadValidationFailure = "facet" | "price";
 
@@ -47,6 +51,25 @@ function hasInvalidSearchPriceRange(normalized: SearchPayload): boolean {
   );
 }
 
+function hasInvalidExactColor(normalized: SearchPayload): boolean {
+  return (
+    normalized.exactColor !== null &&
+    !/^#[0-9a-f]{6}$/.test(normalized.exactColor)
+  );
+}
+
+const EXACT_COLOR_RANGES = new Set<ExactColorRange>([
+  "closest",
+  "close",
+  "balanced",
+  "broad",
+  "broadest",
+]);
+
+function hasInvalidExactColorRange(normalized: SearchPayload): boolean {
+  return !EXACT_COLOR_RANGES.has(normalized.exactColorRange);
+}
+
 function throwInvalidSearchPayload(): never {
   const error = new Error("invalid_payload");
   (error as Error & { code?: string }).code = "invalid_payload";
@@ -75,6 +98,12 @@ export function getSearchPayloadValidationFailure(
   }
   if (hasInvalidSearchPriceRange(normalized)) {
     return "price";
+  }
+  if (
+    hasInvalidExactColor(normalized) ||
+    hasInvalidExactColorRange(normalized)
+  ) {
+    return "facet";
   }
   return null;
 }

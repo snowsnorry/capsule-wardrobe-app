@@ -149,6 +149,7 @@ function SearchScreenDesktop({
               item={search.selectedItem}
               t={t}
               locale={locale}
+              fallbackToLargestThumbnail
               onRemoveFromPersonalItems={onRemoveFromPersonalItems}
               onSetItemLike={onSetItemLike}
               onSaveToPersonalItems={onSaveToPersonalItems}
@@ -183,6 +184,7 @@ function SearchDesktopFilters({
         }}
         onReset={search.resetSearch}
         autoApply
+        showExactColorFilter
       />
     </Box>
   );

@@ -73,6 +73,20 @@ export function buildSearchResultItems(payload) {
     return items.filter((item) => item.id === "sporty-overshirt-e2e");
   }
 
+  if (payload?.exactColor === "#203a5f") {
+    return items
+      .filter((item) =>
+        ["top-e2e", "sporty-overshirt-e2e"].includes(String(item.id)),
+      )
+      .map((item, index) => ({
+        ...item,
+        matchedColor: index === 0 ? "#203a5f" : "#263e63",
+        matchedColorShare: index === 0 ? 0.82 : 0.48,
+        matchedColorIndex: 0,
+        colorDistance: index === 0 ? 0 : 3.4,
+      }));
+  }
+
   if (hasSavedFilterPayload(payload)) {
     return items.filter((item) => item.id === "top-e2e");
   }

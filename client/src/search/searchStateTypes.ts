@@ -1,3 +1,5 @@
+import type { ExactColorRange } from "./exactColorRange";
+
 export type SearchFilterValue = string;
 export type SearchBrandOption = string | { value: string; label?: string };
 
@@ -24,6 +26,8 @@ export type SearchOptions = {
 
 export type SearchState = {
   query: string;
+  exactColor: string | null;
+  exactColorRange: ExactColorRange;
   likedOnly: boolean;
   brand: SearchFilterValue[];
   priceMin: number | null;
@@ -56,7 +60,9 @@ export type SearchStateSource = Omit<
   | "silhouette"
   | "fit"
   | "closureType"
+  | "exactColorRange"
 > & {
+  exactColorRange?: unknown;
   brand?: SearchFilterValue | SearchFilterValue[];
   audience?: SearchFilterValue | SearchFilterValue[];
   category?: SearchFilterValue | SearchFilterValue[];
@@ -109,4 +115,5 @@ export type ActiveFilterChip = {
   optionGroup?: string;
   title?: string;
   valueLabels?: string[];
+  swatchColor?: string;
 };

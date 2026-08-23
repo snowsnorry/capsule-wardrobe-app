@@ -1,6 +1,7 @@
 import { Stack } from "@mui/material";
 import AccentColorChips from "../components/AccentColorChips";
 import { PatternSwatch } from "../components/PatternSwatch";
+import ExactColorFilter from "./ExactColorFilter";
 import {
   MultiSelectChips,
   SearchSection,
@@ -13,18 +14,53 @@ import type {
   UpdateDraftState,
 } from "./SearchFiltersSidebarTypes";
 
+function ExactColorFilterSection({
+  draftState,
+  updateDraftState,
+  t,
+}: {
+  draftState: SearchDraftState;
+  updateDraftState: UpdateDraftState;
+  t: (key: string) => string;
+}) {
+  return (
+    <ExactColorFilter
+      value={draftState.exactColor}
+      range={draftState.exactColorRange}
+      t={t}
+      onChange={(exactColor) =>
+        updateDraftState((current) => ({ ...current, exactColor, page: 1 }))
+      }
+      onRangeChange={(exactColorRange) =>
+        updateDraftState(
+          (current) => ({ ...current, exactColorRange, page: 1 }),
+          { submit: false },
+        )
+      }
+      onRangeChangeCommitted={(exactColorRange) =>
+        updateDraftState(
+          (current) => ({ ...current, exactColorRange, page: 1 }),
+          { submit: true },
+        )
+      }
+    />
+  );
+}
+
 function SearchFacetSections({
   draftState,
   filterItems,
   options,
   updateDraftState,
   t,
+  showExactColorFilter,
 }: {
   draftState: SearchDraftState;
   filterItems: SearchFilterItems;
   options: SearchFiltersSidebarProps["options"];
   updateDraftState: UpdateDraftState;
   t: (key: string) => string;
+  showExactColorFilter: boolean;
 }) {
   return (
     <>
@@ -78,6 +114,13 @@ function SearchFacetSections({
           }
         />
       </SearchSection>
+      {showExactColorFilter ? (
+        <ExactColorFilterSection
+          draftState={draftState}
+          updateDraftState={updateDraftState}
+          t={t}
+        />
+      ) : null}
     </>
   );
 }

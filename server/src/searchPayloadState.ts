@@ -1,4 +1,4 @@
-import type { SearchPayload } from "./searchTypes.js";
+import type { ExactColorRange, SearchPayload } from "./searchTypes.js";
 
 export type SearchRowLike = Partial<Record<keyof SearchPayload, unknown>> & {
   embedding?: number[] | null;
@@ -8,6 +8,8 @@ const INVALID_SEARCH_ARRAY_VALUE = "\u0000invalid-search-array-value";
 
 export const DEFAULT_SEARCH_STATE = Object.freeze({
   query: "",
+  exactColor: null,
+  exactColorRange: "balanced",
   likedOnly: false,
   brand: [],
   priceMin: null,
@@ -82,11 +84,47 @@ function normalizeBoolean(value: unknown): boolean {
   return value === true;
 }
 
+const INVALID_EXACT_COLOR = "\u0000invalid-exact-color";
+const EXACT_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
+const EXACT_COLOR_RANGES = new Set<ExactColorRange>([
+  "closest",
+  "close",
+  "balanced",
+  "broad",
+  "broadest",
+]);
+const INVALID_EXACT_COLOR_RANGE = "\u0000invalid-exact-color-range";
+
+function normalizeExactColor(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (typeof value !== "string") {
+    return INVALID_EXACT_COLOR;
+  }
+  const normalized = value.trim().toLowerCase();
+  return EXACT_COLOR_PATTERN.test(normalized)
+    ? normalized
+    : INVALID_EXACT_COLOR;
+}
+
+function normalizeExactColorRange(value: unknown): ExactColorRange {
+  if (value === null || value === undefined) {
+    return "balanced";
+  }
+  return typeof value === "string" &&
+    EXACT_COLOR_RANGES.has(value as ExactColorRange)
+    ? (value as ExactColorRange)
+    : (INVALID_EXACT_COLOR_RANGE as ExactColorRange);
+}
+
 export function normalizeSearchPayload(
   payload: Partial<Record<keyof SearchPayload, unknown>> = {},
 ): SearchPayload {
   return {
     query: normalizeQuery(payload.query),
+    exactColor: normalizeExactColor(payload.exactColor),
+    exactColorRange: normalizeExactColorRange(payload.exactColorRange),
     likedOnly: normalizeBoolean(payload.likedOnly),
     brand: normalizeStringArray(payload.brand),
     priceMin: normalizePriceValue(payload.priceMin),
@@ -115,6 +153,8 @@ export function serializeSearchRow(
 
   return {
     query: typeof row.query === "string" ? row.query : "",
+    exactColor: normalizeExactColor(row.exactColor),
+    exactColorRange: normalizeExactColorRange(row.exactColorRange),
     likedOnly: normalizeBoolean(row.likedOnly),
     brand: serializeStringArray(row.brand),
     priceMin:
