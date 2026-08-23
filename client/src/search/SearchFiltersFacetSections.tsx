@@ -14,6 +14,39 @@ import type {
   UpdateDraftState,
 } from "./SearchFiltersSidebarTypes";
 
+function ExactColorFilterSection({
+  draftState,
+  updateDraftState,
+  t,
+}: {
+  draftState: SearchDraftState;
+  updateDraftState: UpdateDraftState;
+  t: (key: string) => string;
+}) {
+  return (
+    <ExactColorFilter
+      value={draftState.exactColor}
+      range={draftState.exactColorRange}
+      t={t}
+      onChange={(exactColor) =>
+        updateDraftState((current) => ({ ...current, exactColor, page: 1 }))
+      }
+      onRangeChange={(exactColorRange) =>
+        updateDraftState(
+          (current) => ({ ...current, exactColorRange, page: 1 }),
+          { submit: false },
+        )
+      }
+      onRangeChangeCommitted={(exactColorRange) =>
+        updateDraftState(
+          (current) => ({ ...current, exactColorRange, page: 1 }),
+          { submit: true },
+        )
+      }
+    />
+  );
+}
+
 function SearchFacetSections({
   draftState,
   filterItems,
@@ -82,16 +115,10 @@ function SearchFacetSections({
         />
       </SearchSection>
       {showExactColorFilter ? (
-        <ExactColorFilter
-          value={draftState.exactColor}
+        <ExactColorFilterSection
+          draftState={draftState}
+          updateDraftState={updateDraftState}
           t={t}
-          onChange={(exactColor) =>
-            updateDraftState((current) => ({
-              ...current,
-              exactColor,
-              page: 1,
-            }))
-          }
         />
       ) : null}
     </>

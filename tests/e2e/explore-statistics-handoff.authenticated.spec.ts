@@ -122,7 +122,28 @@ test("Explore applies, persists, and clears the exact color filter", async ({
   }
   await exactColorInput.fill("203A5F");
 
-  await expect(page.getByText("Color match: #203a5f")).toBeVisible();
+  const rangeSlider = page.getByRole("slider", { name: "Color match range" });
+  const rangeValues = [
+    ["0", "Closest color match range"],
+    ["1", "Close color match range"],
+    ["2", "Balanced color match range"],
+    ["3", "Broad color match range"],
+    ["4", "Broadest color match range"],
+  ] as const;
+  for (const [value, accessibleValue] of rangeValues) {
+    await rangeSlider.fill(value);
+    await expect(rangeSlider).toHaveAttribute(
+      "aria-valuetext",
+      accessibleValue,
+    );
+  }
+  await rangeSlider.fill("3");
+  await rangeSlider.press("ArrowRight");
+  await expect(rangeSlider).toHaveAttribute("aria-valuenow", "4");
+  await rangeSlider.press("ArrowLeft");
+  await expect(rangeSlider).toHaveAttribute("aria-valuenow", "3");
+
+  await expect(page.getByText("Color match: #203a5f · Broad")).toBeVisible();
   await expect(page.getByText("2 results")).toBeVisible();
   const exactColorResults = page.getByRole("button", {
     name: /(?:Navy relaxed shirt|Sporty navy overshirt) E2E Studio/,
@@ -141,6 +162,7 @@ test("Explore applies, persists, and clears the exact color filter", async ({
   await page.reload();
   await expect(toggle).toBeChecked();
   await expect(page.getByLabel("HEX color")).toHaveValue("203a5f");
+  await expect(rangeSlider).toHaveAttribute("aria-valuenow", "3");
   await expect(page.getByText("2 results")).toBeVisible();
 
   await deleteActiveChip(page, "exactColor");

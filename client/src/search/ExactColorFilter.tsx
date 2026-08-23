@@ -2,15 +2,107 @@ import { useEffect, useState } from "react";
 import {
   Box,
   InputAdornment,
+  Slider,
   Stack,
   Switch,
   TextField,
   Typography,
 } from "@mui/material";
+import {
+  EXACT_COLOR_RANGE_VALUES,
+  getExactColorRangeLabelKey,
+  type ExactColorRange,
+} from "./exactColorRange";
 
 const DEFAULT_EXACT_COLOR = "#808080";
 const EXACT_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
-type Translate = (key: string) => string;
+type Translate = (key: string, params?: Record<string, unknown>) => string;
+
+function ExactColorRangeSlider({
+  value,
+  onChange,
+  onChangeCommitted,
+  t,
+}: {
+  value: ExactColorRange;
+  onChange: (value: ExactColorRange) => void;
+  onChangeCommitted: (value: ExactColorRange) => void;
+  t: Translate;
+}) {
+  const marks = EXACT_COLOR_RANGE_VALUES.map((range, index) => ({
+    value: index,
+    label:
+      index === 0
+        ? t("search.filters.exactColorRangeCloser")
+        : index === 2
+          ? t("search.filters.exactColorRangeBalanced")
+          : index === 4
+            ? t("search.filters.exactColorRangeBroader")
+            : undefined,
+  }));
+  const valueIndex = EXACT_COLOR_RANGE_VALUES.indexOf(value);
+  const getRange = (nextValue: number | number[]): ExactColorRange =>
+    EXACT_COLOR_RANGE_VALUES[Number(nextValue)] || value;
+
+  return (
+    <Stack spacing={0.75}>
+      <Stack
+        direction="row"
+        sx={{ alignItems: "baseline", justifyContent: "space-between" }}
+      >
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {t("search.filters.exactColorRange")}
+        </Typography>
+        <Typography
+          data-testid="exact-color-range-current-value"
+          variant="body2"
+          color="text.secondary"
+        >
+          {t(getExactColorRangeLabelKey(value))}
+        </Typography>
+      </Stack>
+      <Box sx={{ px: 1.75, pb: 2.5 }}>
+        <Slider
+          aria-label={t("search.filters.exactColorRangeAria")}
+          value={valueIndex}
+          min={0}
+          max={EXACT_COLOR_RANGE_VALUES.length - 1}
+          step={null}
+          marks={marks}
+          getAriaValueText={(nextValue) =>
+            t("search.filters.exactColorRangeValue", {
+              value: t(
+                getExactColorRangeLabelKey(
+                  EXACT_COLOR_RANGE_VALUES[nextValue] || value,
+                ),
+              ),
+            })
+          }
+          onChange={(_event, nextValue) => onChange(getRange(nextValue))}
+          onChangeCommitted={(_event, nextValue) =>
+            onChangeCommitted(getRange(nextValue))
+          }
+          sx={{
+            width: "100%",
+            display: "block",
+            "& .MuiSlider-mark": {
+              width: 4,
+              height: 4,
+              borderRadius: "50%",
+            },
+            "& .MuiSlider-markLabel": {
+              color: "text.secondary",
+              typography: "caption",
+            },
+          }}
+        />
+      </Box>
+      <Typography variant="body2" color="text.secondary">
+        {t("search.filters.exactColorRangeHint")}
+      </Typography>
+    </Stack>
+  );
+}
 
 function ColorInputAdornment({
   value,
@@ -173,11 +265,17 @@ function ExactColorInput({
 
 function ExactColorFilter({
   value,
+  range,
   onChange,
+  onRangeChange,
+  onRangeChangeCommitted,
   t,
 }: {
   value: string | null;
+  range: ExactColorRange;
   onChange: (value: string | null) => void;
+  onRangeChange: (value: ExactColorRange) => void;
+  onRangeChangeCommitted: (value: ExactColorRange) => void;
   t: Translate;
 }) {
   const [draft, setDraft] = useState(value || DEFAULT_EXACT_COLOR);
@@ -224,15 +322,23 @@ function ExactColorFilter({
         {t("search.filters.exactColorHint")}
       </Typography>
       {value ? (
-        <ExactColorInput
-          value={value}
-          draft={draft}
-          showError={showError}
-          setDraft={setDraft}
-          setShowError={setShowError}
-          commitDraft={commitDraft}
-          t={t}
-        />
+        <Stack spacing={2}>
+          <ExactColorInput
+            value={value}
+            draft={draft}
+            showError={showError}
+            setDraft={setDraft}
+            setShowError={setShowError}
+            commitDraft={commitDraft}
+            t={t}
+          />
+          <ExactColorRangeSlider
+            value={range}
+            onChange={onRangeChange}
+            onChangeCommitted={onRangeChangeCommitted}
+            t={t}
+          />
+        </Stack>
       ) : null}
     </Stack>
   );

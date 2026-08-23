@@ -60,6 +60,7 @@ function makeSavedSearch(overrides = {}) {
     search: {
       query: "linen shirt",
       exactColor: null,
+      exactColorRange: "balanced" as const,
       likedOnly: true,
       brand: ["uniqlo"],
       category: [],
@@ -143,6 +144,7 @@ describe("useSearchScreenState", () => {
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "linen shirt",
       exactColor: null,
+      exactColorRange: "balanced" as const,
       likedOnly: true,
       brand: ["uniqlo"],
       priceMin: null,
@@ -213,6 +215,27 @@ describe("useSearchScreenState", () => {
         priceRange: { min: 10, max: 150 },
       }),
     ).toEqual({ ...currentState, query: "", page: 1 });
+    expect(
+      getSearchStateWithoutChip({
+        chip: {
+          key: "exactColor:#563c10",
+          field: "exactColor",
+          label: "Color match: #563c10 · Broad",
+          value: "#563c10",
+        },
+        currentState: {
+          ...currentState,
+          exactColor: "#563c10",
+          exactColorRange: "broad",
+        },
+        priceRange: { min: 10, max: 150 },
+      }),
+    ).toEqual({
+      ...currentState,
+      exactColor: null,
+      exactColorRange: "broad",
+      page: 1,
+    });
   });
 
   test("uses initial query handoff instead of saved filters on first search", async () => {
@@ -228,6 +251,7 @@ describe("useSearchScreenState", () => {
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "https://example.com/products/linen-shirt",
       exactColor: null,
+      exactColorRange: "balanced",
       likedOnly: false,
       brand: [],
       priceMin: null,
@@ -442,6 +466,7 @@ describe("useSearchScreenState", () => {
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "",
       exactColor: null,
+      exactColorRange: "balanced",
       likedOnly: false,
       brand: [],
       priceMin: null,

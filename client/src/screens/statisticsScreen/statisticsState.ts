@@ -19,12 +19,16 @@ export function buildInitialStatsState(): StatisticsState {
 export function serializeStatisticsState(
   state: SearchDraftState,
   priceRange?: Parameters<typeof serializeDraftState>[1],
-): Omit<SerializedSearchState, "query" | "page" | "exactColor"> {
+): Omit<
+  SerializedSearchState,
+  "query" | "page" | "exactColor" | "exactColorRange"
+> {
   const payload = serializeDraftState(state, priceRange);
   const {
     query: _query,
     page: _page,
     exactColor: _exactColor,
+    exactColorRange: _exactColorRange,
     ...filters
   } = payload;
   return filters;

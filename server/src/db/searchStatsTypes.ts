@@ -10,6 +10,7 @@ export type SearchStatsInput = Omit<
   | "textQuery"
   | "textSearchMode"
   | "exactColor"
+  | "exactColorRange"
 >;
 export type SearchStatsFilters = Required<Omit<SearchStatsInput, "urlPrefix">>;
 export type SearchStatsFacetKey = Exclude<

@@ -56,6 +56,7 @@ describe("searchState", () => {
     expect(serializeDraftState(nextState)).toEqual({
       query: "linen shirt",
       exactColor: null,
+      exactColorRange: "balanced",
       likedOnly: true,
       brand: ["uniqlo"],
       priceMin: 15,
@@ -110,27 +111,46 @@ describe("searchState", () => {
 
   test("normalizes and serializes the exact color filter", () => {
     const state = createSearchState(
-      { exactColor: " #AABBCC " },
+      { exactColor: " #AABBCC ", exactColorRange: "broad" },
       EMPTY_SEARCH_OPTIONS.priceRange,
     );
 
     expect(state.exactColor).toBe("#aabbcc");
+    expect(state.exactColorRange).toBe("broad");
     expect(serializeDraftState(state).exactColor).toBe("#aabbcc");
 
     const chips = buildActiveFilterChips({
       state,
       options: EMPTY_SEARCH_OPTIONS,
       locale: "en",
-      t: (key) => (key === "search.filters.exactColor" ? "Exact color" : key),
+      t: (key, params) => {
+        if (key === "search.filters.exactColorRangeBroad") return "Broad";
+        if (key === "search.filters.exactColorChip") {
+          return `Color match: ${params?.color} · ${params?.range}`;
+        }
+        return key;
+      },
       translateOption: (_group, value) => value,
     });
     expect(chips).toContainEqual({
       key: "exactColor:#aabbcc",
       field: "exactColor",
       value: "#aabbcc",
-      label: "Exact color: #aabbcc",
+      label: "Color match: #aabbcc · Broad",
       swatchColor: "#aabbcc",
     });
+  });
+
+  test("defaults missing or invalid exact color ranges to balanced", () => {
+    expect(
+      createSearchState(null, EMPTY_SEARCH_OPTIONS.priceRange).exactColorRange,
+    ).toBe("balanced");
+    expect(
+      createSearchState(
+        { exactColorRange: "unsupported" },
+        EMPTY_SEARCH_OPTIONS.priceRange,
+      ).exactColorRange,
+    ).toBe("balanced");
   });
 
   test("buildSearchOptionsPayload maps API responses to a stable options shape", () => {

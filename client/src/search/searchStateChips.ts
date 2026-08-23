@@ -5,6 +5,7 @@ import type {
   SearchTranslator,
 } from "./searchStateTypes";
 import { isFullPriceRange } from "./searchStateDraft";
+import { getExactColorRangeLabelKey } from "./exactColorRange";
 
 function formatSearchPrice(locale: string, value: number): string {
   return new Intl.NumberFormat(locale, {
@@ -92,11 +93,15 @@ export function buildActiveFilterChips({
     });
   }
   if (state.exactColor) {
+    const rangeLabel = t(getExactColorRangeLabelKey(state.exactColorRange));
     chips.push({
       key: `exactColor:${state.exactColor}`,
       field: "exactColor",
       value: state.exactColor,
-      label: `${t("search.filters.exactColor")}: ${state.exactColor}`,
+      label: t("search.filters.exactColorChip", {
+        color: state.exactColor,
+        range: rangeLabel,
+      }),
       swatchColor: state.exactColor,
     });
   }

@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { LocaleProvider } from "../i18n/LocaleProvider";
+import { EXACT_COLOR_RANGE_VALUES } from "./exactColorRange";
 import SearchFiltersSidebar from "./SearchFiltersSidebar";
 import { createSearchState } from "./searchState";
 
@@ -144,6 +145,50 @@ describe("SearchFiltersSidebar", () => {
     expect(onDraftStateChange).not.toHaveBeenCalled();
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onDraftStateChange).not.toHaveBeenCalled();
+  });
+
+  test("renders five exact-color range stops and commits only marked values", () => {
+    const onDraftStateChange = vi.fn();
+    const { container } = renderSidebar({
+      showExactColorFilter: true,
+      onDraftStateChange,
+      draftState: createSearchState(
+        { exactColor: "#808080" },
+        options.priceRange,
+      ),
+    });
+
+    const slider = screen.getByRole("slider", { name: "Color match range" });
+    expect(slider).toHaveValue("2");
+    expect(container.querySelectorAll(".MuiSlider-mark")).toHaveLength(5);
+    expect(screen.getByText("Closer")).toBeVisible();
+    expect(screen.getAllByText("Balanced")).toHaveLength(2);
+    expect(screen.getByText("Broader")).toBeVisible();
+    expect(
+      screen.getByTestId("exact-color-range-current-value"),
+    ).toHaveTextContent("Balanced");
+
+    fireEvent.change(slider, { target: { value: "2.5" } });
+    const snappedState = onDraftStateChange.mock.calls[0][0](
+      createSearchState({ exactColor: "#808080" }, options.priceRange),
+    );
+    expect(EXACT_COLOR_RANGE_VALUES).toContain(snappedState.exactColorRange);
+    onDraftStateChange.mockClear();
+
+    fireEvent.change(slider, { target: { value: "4" } });
+    const previewState = onDraftStateChange.mock.calls[0][0](
+      createSearchState({ exactColor: "#808080" }, options.priceRange),
+    );
+    expect(previewState).toMatchObject({
+      exactColorRange: "broadest",
+      page: 1,
+    });
+    expect(onDraftStateChange.mock.calls[0][1]).toEqual({ submit: false });
+
+    fireEvent.mouseUp(slider);
+    expect(onDraftStateChange).toHaveBeenLastCalledWith(expect.any(Function), {
+      submit: true,
+    });
   });
 
   test("switching the active exact color off clears the filter", () => {

@@ -8,7 +8,6 @@ import {
 import { executeSqlFile, executeTransformedSqlFile } from "./sqlFiles.js";
 
 const EXACT_COLOR_MINIMUM_SHARE = 0.08;
-const EXACT_COLOR_MAXIMUM_DISTANCE = 10;
 
 const SEARCH_PRODUCT_COUNT_SQL_FILE = new URL(
   "./sql/search_product_count.sql",
@@ -26,6 +25,7 @@ type SearchQueryParams = {
   closureType: string[];
   color: string[];
   exactColorLab: string | null;
+  exactColorMaximumDistance: number;
   embeddingVector: string | null;
   fit: string[];
   formalityLevel: string[];
@@ -116,7 +116,7 @@ function buildSearchItemsSqlValues(
         ...values,
         params.exactColorLab,
         EXACT_COLOR_MINIMUM_SHARE,
-        EXACT_COLOR_MAXIMUM_DISTANCE,
+        params.exactColorMaximumDistance,
       ]
     : values;
 }
@@ -128,7 +128,7 @@ function buildSearchCountSqlValues(params: SearchQueryParams) {
         ...values,
         params.exactColorLab,
         EXACT_COLOR_MINIMUM_SHARE,
-        EXACT_COLOR_MAXIMUM_DISTANCE,
+        params.exactColorMaximumDistance,
       ]
     : values;
 }

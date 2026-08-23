@@ -3,10 +3,12 @@ import type {
   SearchOptions,
   SearchState,
 } from "./searchStateTypes";
+import { DEFAULT_EXACT_COLOR_RANGE } from "./exactColorRange";
 
 export const INITIAL_SEARCH_STATE = Object.freeze({
   query: "",
   exactColor: null,
+  exactColorRange: DEFAULT_EXACT_COLOR_RANGE,
   likedOnly: false,
   brand: [],
   priceMin: null,

@@ -195,6 +195,31 @@ test("searchProducts adds exact-color matching only when exactColor is active", 
   expect(statements.join("\n")).toContain("matching_products.url ASC");
 });
 
+test.each([
+  ["closest", 4],
+  ["close", 7],
+  ["balanced", 10],
+  ["broad", 15],
+  ["broadest", 20],
+] as const)(
+  "searchProducts maps the %s exact-color range to distance %i",
+  async (exactColorRange, expectedDistance) => {
+    const statements: string[] = [];
+    const values: unknown[][] = [];
+    const sql = createSearchSqlRecorder({ statements, values });
+    setSqlClientOverride(sql);
+
+    await searchProducts({ exactColor: "#808080", exactColorRange });
+
+    expect(
+      values[findStatementIndex(statements, "count(*)::integer")].at(-1),
+    ).toBe(expectedDistance);
+    expect(values[findStatementIndex(statements, "result_limit")].at(-1)).toBe(
+      expectedDistance,
+    );
+  },
+);
+
 function createSearchSqlRecorder({
   statements,
   values,

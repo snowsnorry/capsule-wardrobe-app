@@ -232,6 +232,7 @@ describe("SearchScreen", () => {
     expect(searchApi.runSearch).toHaveBeenCalledWith({
       query: "https://example.com/products/linen-shirt",
       exactColor: null,
+      exactColorRange: "balanced",
       likedOnly: false,
       brand: [],
       priceMin: null,

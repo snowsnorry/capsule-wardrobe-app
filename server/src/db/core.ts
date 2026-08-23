@@ -140,6 +140,7 @@ export type SearchRow = {
   email: string;
   query: string | null;
   exactColor: string | null;
+  exactColorRange: import("../searchTypes.js").ExactColorRange;
   embedding: number[] | null;
   likedOnly: boolean | null;
   brand: string[];
@@ -171,6 +172,7 @@ export type UpsertSearchInput = {
   email: string;
   query: string | null;
   exactColor: string | null;
+  exactColorRange: import("../searchTypes.js").ExactColorRange;
   embedding: number[] | null;
   likedOnly: boolean;
   brand: string[];
@@ -198,6 +200,7 @@ export type SearchProductsInput = {
   urlPrefix?: string | null;
   profileEmail?: string | null;
   exactColor?: string | null;
+  exactColorRange?: import("../searchTypes.js").ExactColorRange;
   likedOnly?: boolean;
   brand?: string[];
   priceMin?: number | null;
