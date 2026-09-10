@@ -31,7 +31,7 @@
     "file-type": "^22.0.2",
     "google-auth-library": "^11.0.2",
     "helmet": "^8.3.0",
-    "multer": "^2.1.1",
+    "multer": "^2.3.0",
     "mustache": "^4.2.0",
     "ollama": "^0.6.3",
     "openai": "^7.4.0",
