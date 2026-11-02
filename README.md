@@ -392,7 +392,7 @@ Related files:
 
 Minimum env for this path:
 
-- `NODE_VERSION=24.18.0`
+- `NODE_VERSION=24.22.2`
 - `NODE_ENV=production`
 - `CLIENT_ORIGIN=https://<your-service>.onrender.com` or your custom domain
 - `PASSKEY_RP_ID=<your-service>.onrender.com` or your custom domain hostname
@@ -404,7 +404,7 @@ Minimum env for this path:
 
 Minimum env for the cleanup cron:
 
-- `NODE_VERSION=24.18.0`
+- `NODE_VERSION=24.22.2`
 - `NODE_ENV=production`
 - `DATABASE_URL`
 
